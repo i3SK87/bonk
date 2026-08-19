@@ -1,7 +1,7 @@
 {
   "name": "bonk",
   "productName": "BONK",
-  "version": "1.11.0",
+  "version": "1.11.1",
   "description": "Gestor de finanzas personales para Windows",
   "author": "okli2",
   "private": true,
@@ -14,7 +14,7 @@
     "test": "esbuild test/smoke.ts --bundle --platform=node --format=esm --outfile=out/test/smoke.mjs --external:node:* --alias:@shared=./src/shared && node out/test/smoke.mjs",
     "dist": "npm run build && electron-builder --win --config electron-builder.yml",
     "pack": "npm run build && electron-builder --win --dir --config electron-builder.yml",
-    "deploy": "npm run pack && node scripts/deploy.mjs"
+    "deploy": "npm run build && node scripts/deploy.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

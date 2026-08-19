@@ -3,6 +3,21 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.11.1
+
+- **`npm run deploy` deja de empaquetar e instalar.** Compila y pone al día los
+  accesos directos, y ya. Escribía 712 MB por vuelta —la aplicación empaquetada
+  en `release/` y otra copia en `%LOCALAPPDATA%\Programs\BONK`— que nadie
+  ejecutaba: lo que se abre en el equipo de desarrollo es el motor de Electron
+  sobre la propia carpeta del proyecto. De minuto y medio a menos de tres
+  segundos.
+- Empaquetar sigue siendo cosa de `npm run dist`, que es lo que fabrica lo que
+  se publica para otros equipos.
+- Se probó a apuntar los accesos directos al ejecutable empaquetado y duró una
+  versión: el Control inteligente de aplicaciones decide por reputación y cada
+  compilación es un archivo nuevo sin ninguna, así que una arranca y la
+  siguiente no.
+
 ## Novedades de la 1.11.0
 
 - **El archivo de datos pasa a llamarse `bonk.db`**, y el puente entre la

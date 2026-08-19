@@ -101,13 +101,21 @@ npm test           # las comprobaciones de la capa de datos
 npm run typecheck  # TypeScript en modo estricto
 ```
 
-Para generar la versión que se distribuye:
+```
+npm run deploy  # compila y pone al día los accesos directos de este equipo
+```
+
+Y para generar lo que se publica en Releases:
 
 ```
-npm run dist    # instalador NSIS en release/
-npm run pack    # la carpeta sin empaquetar, en release/win-unpacked
-npm run deploy  # compila e instala en este equipo, rehaciendo los accesos directos
+npm run dist    # instalador NSIS y zip portable, en release/
+npm run pack    # solo la carpeta sin empaquetar, en release/win-unpacked
 ```
+
+En el equipo de desarrollo la aplicación se abre arrancando el motor de Electron
+sobre la propia carpeta del proyecto, no desde una copia instalada: el Control
+inteligente de aplicaciones de Windows decide por reputación, y cada compilación
+es un ejecutable nuevo sin ninguna, así que una arranca y la siguiente no.
 
 El historial de versiones está en [CHANGELOG.md](CHANGELOG.md).
 
