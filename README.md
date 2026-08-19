@@ -112,4 +112,4 @@ npm run deploy  # compila e instala en este equipo, rehaciendo los accesos direc
 El historial de versiones está en [CHANGELOG.md](CHANGELOG.md).
 
 Inspirado en Money Flow, la aplicación de Hermann Wagenleitner para iOS y Mac,
-que no tiene versión para Windows. Hasta la 0.28.0 se llamó Money Flow.
+que no tiene versión para Windows.

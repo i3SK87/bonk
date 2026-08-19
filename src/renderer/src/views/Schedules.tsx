@@ -27,6 +27,14 @@ const FREQUENCIES: Array<{ value: Frequency; singular: string; plural: string }>
   { value: 'yearly', singular: 'año', plural: 'años' }
 ]
 
+/**
+ * Cómo se llama una programación en la lista. Las nuevas solo tienen nota; las
+ * de antes podían tener además un nombre, y ese manda mientras exista.
+ */
+function titleOf(row: Pick<ScheduledView, 'name' | 'note' | 'categoryName'>): string {
+  return row.name || row.note || row.categoryName || 'Movimiento programado'
+}
+
 function describeFrequency(freq: Frequency, interval: number): string {
   const entry = FREQUENCIES.find((item) => item.value === freq)
   if (!entry) return ''
@@ -128,11 +136,11 @@ export function SchedulesView(): ReactNode {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="row tight">
                   <span style={{ fontWeight: 570 }} className="truncate">
-                    {row.name || row.note || row.categoryName || 'Movimiento programado'}
+                    {titleOf(row)}
                   </span>
                   {/* La categoría manda en los informes, así que se ve sin abrir la ficha.
                       Solo estorba cuando el nombre ya es la propia categoría. */}
-                  {row.categoryName && row.categoryName !== row.name && (
+                  {row.categoryName && row.categoryName !== titleOf(row) && (
                     <span className="pill">{row.categoryName}</span>
                   )}
                   {!row.active && (
@@ -218,9 +226,9 @@ export function SchedulesView(): ReactNode {
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="row tight">
                   <span style={{ fontWeight: 570 }} className="truncate">
-                    {row.name || row.note || row.categoryName || 'Movimiento programado'}
+                    {titleOf(row)}
                   </span>
-                  {row.categoryName && row.categoryName !== row.name && (
+                  {row.categoryName && row.categoryName !== titleOf(row) && (
                     <span className="pill">{row.categoryName}</span>
                   )}
                 </div>
@@ -249,7 +257,7 @@ export function SchedulesView(): ReactNode {
         <Confirm
           title="Finalizar la cuota"
           message={
-            `«${finishing.name || finishing.categoryName || 'La programación'}» dejará de generar ` +
+            `«${titleOf(finishing)}» dejará de generar ` +
             'movimientos y se le pondrá fecha de fin hoy. Los pagos ya registrados se quedan como están.'
           }
           confirmLabel="Finalizar"
@@ -293,7 +301,6 @@ interface ScheduleModalProps {
 function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: ScheduleModalProps): ReactNode {
   const { accounts, categories, settings } = useStore()
   const preferredAccountId = usePreferredAccountId()
-  const [name, setName] = useState(schedule?.name ?? '')
   const [type, setType] = useState<TxType>(schedule?.type ?? 'expense')
   const [amount, setAmount] = useState(schedule?.amount ?? 0)
   const [accountId, setAccountId] = useState(schedule?.accountId ?? preferredAccountId)
@@ -305,7 +312,10 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
   const [endDate, setEndDate] = useState(schedule?.endDate ?? '')
   const [autoPost, setAutoPost] = useState(schedule?.autoPost ?? true)
   const [remind, setRemind] = useState(schedule?.remind ?? true)
-  const [note, setNote] = useState(schedule?.note ?? '')
+  // Las programaciones de antes tenían nombre además de nota. Al abrir una de
+  // esas, su nombre pasa a la nota: es lo que la lista enseñaba, y así no se
+  // pierde al guardar sin el campo que ya no existe.
+  const [note, setNote] = useState(schedule?.note || schedule?.name || '')
   const [refundForScheduledId, setRefundForScheduledId] = useState<number | null>(
     schedule?.refundForScheduledId ?? null
   )
@@ -324,7 +334,7 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
 
     const saved = await onSave({
       id: schedule?.id,
-      name: name.trim() || null,
+      name: null,
       type,
       accountId,
       toAccountId: type === 'transfer' ? toAccountId : null,
@@ -365,15 +375,6 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
           </>
         }
       >
-        <Field label="Nombre" hint="Opcional: sirve para reconocerla en la lista.">
-          <input
-            className="input"
-            value={name}
-            placeholder="Alquiler, Netflix, nómina…"
-            onChange={(event) => setName(event.target.value)}
-          />
-        </Field>
-
         <div className="row" style={{ justifyContent: 'center' }}>
           <Segmented
             value={type}
@@ -499,8 +500,13 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
         </div>
 
 
-        <Field label="Notas">
-          <textarea className="textarea" value={note} onChange={(event) => setNote(event.target.value)} />
+        <Field label="Notas" hint="Es lo que se lee en la lista y lo que llevará cada movimiento que genere.">
+          <textarea
+            className="textarea"
+            value={note}
+            placeholder="Alquiler, Netflix, nómina…"
+            onChange={(event) => setNote(event.target.value)}
+          />
         </Field>
 
         <Checkbox

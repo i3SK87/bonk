@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.10.5
+
+- **Las programaciones ya no tienen nombre, solo notas**, igual que los
+  movimientos. Eran dos campos para lo mismo. La nota es lo que se lee en la
+  lista y lo que llevará cada movimiento que genere.
+- Las que ya tenían nombre no lo pierden: al abrir su ficha, el nombre aparece
+  en la nota, que es justo lo que la lista enseñaba.
+
 ## Novedades de la 1.10.4
 
 - **«Gasto que te devuelven» pasa detrás de la categoría**, en el formulario de
