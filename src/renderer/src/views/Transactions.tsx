@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { nestByParent } from '../lib/nesting'
 import { Icon } from '../components/Icon'
-import { Avatar, EmptyState, Loading, Confirm, DropdownMenu } from '../components/ui'
+import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { CalculatorButton } from '../components/Calculator'
 import { formatMoney } from '@shared/money'
@@ -380,19 +380,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 Limpiar
               </button>
             )}
-
-            <DropdownMenu
-              items={[
-                {
-                  label: 'Exportar a CSV',
-                  icon: 'download',
-                  onClick: async () => {
-                    const result = await run(() => api.csv.exportTransactions(filter))
-                    if (result) toast(`${result.count} movimientos exportados a ${result.path}`, 'success')
-                  }
-                }
-              ]}
-            />
 
             {/* La última de la fila y separada: no filtra la lista, es una
                 herramienta aparte que se abre desde aquí. */}

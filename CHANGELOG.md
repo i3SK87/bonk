@@ -3,6 +3,15 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.11.2
+
+- **Limpiar los filtros sin abrir el panel.** El botón sale junto a «Filtros» en
+  cuanto hay alguno puesto, y quita también la búsqueda. Estaba solo dentro del
+  panel, que obligaba a abrirlo y cerrarlo para algo que se hace de un vistazo.
+- **Fuera la exportación a CSV de Movimientos.** El menú de los tres puntos ya no
+  está: la exportación sigue en Ajustes ▸ Datos, para todo, y en Informes, para
+  el periodo que se esté mirando.
+
 ## Novedades de la 1.11.1
 
 - **`npm run deploy` deja de empaquetar e instalar.** Compila y pone al día los
