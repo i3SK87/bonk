@@ -228,6 +228,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const activeFilters =
     types.length + accountIds.length + categoryIds.length + (search.trim() ? 1 : 0)
 
+  /** Deja la lista como recién entrada: sin filtros y sin búsqueda. */
+  function clearFilters(): void {
+    setTypes([])
+    setAccountIds([])
+    setCategoryIds([])
+    setSearch('')
+  }
+
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
   }
@@ -361,6 +369,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               Filtros{activeFilters ? ` (${activeFilters})` : ''}
             </button>
 
+            {/* Fuera del panel: limpiar no debería obligar a abrirlo y cerrarlo. */}
+            {activeFilters > 0 && (
+              <button
+                className="btn small ghost"
+                onClick={clearFilters}
+                title="Quitar la búsqueda y todos los filtros"
+              >
+                <Icon name="close" size={14} strokeWidth={2.2} />
+                Limpiar
+              </button>
+            )}
+
             <DropdownMenu
               items={[
                 {
@@ -462,21 +482,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             </div>
 
 
-            {activeFilters > 0 && (
-              <div>
-                <button
-                  className="link small"
-                  onClick={() => {
-                    setTypes([])
-                    setAccountIds([])
-                    setCategoryIds([])
-                    setSearch('')
-                  }}
-                >
-                  Limpiar todos los filtros
-                </button>
-              </div>
-            )}
           </div>
         )}
       </div>
