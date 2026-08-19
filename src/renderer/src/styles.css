@@ -1,0 +1,1754 @@
+/* ============================================================
+   BONK — sistema visual
+
+   Un único juego de variables gobierna todo. La paleta base es
+   Grafito; las demás solo redefinen doce tonos —acento, fondos,
+   textos, bordes y barra lateral— y el resto se recalcula solo
+   porque está expresado en función de ellos.
+
+   Los colores del dinero (verde y rojo) NO cambian con la paleta:
+   son significado, no decoración.
+
+   Todas las combinaciones de texto están medidas: 7:1 el texto
+   principal, 4,5:1 el atenuado, los importes y el blanco sobre el
+   botón de acento, 3:1 el texto sutil.
+   ============================================================ */
+
+:root {
+  /* — Paleta base: Grafito, claro — */
+  --accent: #0b6bd3;
+  --accent-strong: #0b63c4;
+  --bg: #f2f3f7;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e9ebf0;
+  --fg: #14161a;
+  --fg-muted: #5c636e;
+  --fg-subtle: #767e8c;
+  --border: #dfe2e8;
+  --border-strong: #c8ccd4;
+  --sidebar-bg: #1c1f26;
+  --sidebar-fg: #a8b0bd;
+
+  /* — Significado: el dinero no cambia de color con la decoración — */
+  --positive: #157f3d;
+  --negative: #c0271c;
+  --warning: #a35a00;
+
+  /* — Derivados: se recalculan solos al cambiar de paleta — */
+  --accent-soft: color-mix(in srgb, var(--accent) 13%, transparent);
+  --accent-contrast: #ffffff;
+  --positive-soft: color-mix(in srgb, var(--positive) 14%, transparent);
+  --negative-soft: color-mix(in srgb, var(--negative) 13%, transparent);
+  --warning-soft: color-mix(in srgb, var(--warning) 15%, transparent);
+  --sidebar-fg-active: #ffffff;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --grid: var(--border);
+  --link-line: var(--border-strong);
+
+  /* Series de las gráficas. Azul y naranja en vez del verde/rojo del texto:
+     ese par no separa lo suficiente para daltonismo (ΔE 5,2 frente al mínimo de 8).
+     Son fijas en todas las paletas, por la misma razón que el verde y el rojo. */
+  --series-income: #2a78d6;
+  --series-expense: #eb6834;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 16px rgba(16, 24, 40, 0.1);
+  --shadow-lg: 0 18px 48px rgba(16, 24, 40, 0.18);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  --font: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "Cascadia Mono", "Consolas", monospace;
+}
+
+:root[data-theme="dark"] {
+  /* — Paleta base: Grafito, oscuro — */
+  --accent: #6fb0ff;
+  --accent-strong: #1f6feb;
+  --bg: #14161a;
+  --bg-elevated: #1d2027;
+  --bg-sunken: #101216;
+  --fg: #eef0f4;
+  --fg-muted: #98a1af;
+  --fg-subtle: #79828f;
+  --border: #2b303a;
+  --border-strong: #3a4150;
+  --sidebar-bg: #0f1115;
+  --sidebar-fg: #8b93a1;
+
+  --positive: #40d873;
+  --negative: #ff6961;
+  --warning: #ffb340;
+
+  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
+  --sidebar-active-bg: rgba(255, 255, 255, 0.08);
+  --series-income: #3987e5;
+  --series-expense: #d95926;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.6);
+}
+
+/* Índigo */
+:root[data-palette="indigo"] {
+  --accent: #5145cd;
+  --accent-strong: #4c3fc4;
+  --bg: #f2f2fa;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e9e9f5;
+  --fg: #1a1830;
+  --fg-muted: #5d5a75;
+  --fg-subtle: #7a7794;
+  --border: #e0dff0;
+  --border-strong: #c7c5de;
+  --sidebar-bg: #211f38;
+  --sidebar-fg: #aeaacb;
+}
+
+/* Marea */
+:root[data-palette="marea"] {
+  --accent: #00706b;
+  --accent-strong: #00695f;
+  --bg: #eef4f4;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e3eded;
+  --fg: #0f1e1e;
+  --fg-muted: #54666a;
+  --fg-subtle: #6f8286;
+  --border: #d8e4e4;
+  --border-strong: #bccbcb;
+  --sidebar-bg: #122726;
+  --sidebar-fg: #9db5b3;
+}
+
+/* Sepia */
+:root[data-palette="sepia"] {
+  --accent: #8a5416;
+  --accent-strong: #7d4c13;
+  --bg: #f4efe4;
+  --bg-elevated: #fffcf5;
+  --bg-sunken: #eae3d3;
+  --fg: #241f17;
+  --fg-muted: #655c4c;
+  --fg-subtle: #827865;
+  --border: #e2d9c7;
+  --border-strong: #c8bda6;
+  --sidebar-bg: #2b241a;
+  --sidebar-fg: #b8ac97;
+}
+
+/* Ciruela */
+:root[data-palette="ciruela"] {
+  --accent: #9c2f6d;
+  --accent-strong: #8f2b64;
+  --bg: #f8f1f5;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f0e5ec;
+  --fg: #22141d;
+  --fg-muted: #66535e;
+  --fg-subtle: #836f7b;
+  --border: #ecdfe7;
+  --border-strong: #d3c1cc;
+  --sidebar-bg: #2a1a24;
+  --sidebar-fg: #bda6b4;
+}
+
+:root[data-theme="dark"][data-palette="indigo"] {
+  --accent: #a5a0ff;
+  --accent-strong: #5b4fd6;
+  --bg: #151420;
+  --bg-elevated: #1f1d33;
+  --bg-sunken: #111020;
+  --fg: #eeecf7;
+  --fg-muted: #a09cc0;
+  --fg-subtle: #7d799e;
+  --border: #302d4c;
+  --border-strong: #413d64;
+  --sidebar-bg: #100f1c;
+  --sidebar-fg: #918dae;
+}
+
+:root[data-theme="dark"][data-palette="marea"] {
+  --accent: #5fd8c4;
+  --accent-strong: #0d7d70;
+  --bg: #0f1918;
+  --bg-elevated: #182625;
+  --bg-sunken: #0b1413;
+  --fg: #e8f2f0;
+  --fg-muted: #94aeab;
+  --fg-subtle: #748c8a;
+  --border: #263936;
+  --border-strong: #345049;
+  --sidebar-bg: #0a1211;
+  --sidebar-fg: #87a19e;
+}
+
+:root[data-theme="dark"][data-palette="sepia"] {
+  --accent: #e0ac5c;
+  --accent-strong: #8a5a17;
+  --bg: #1a1714;
+  --bg-elevated: #241f1b;
+  --bg-sunken: #13100e;
+  --fg: #f1ebe1;
+  --fg-muted: #ab9f8e;
+  --fg-subtle: #8a7f6f;
+  --border: #372f28;
+  --border-strong: #4b4238;
+  --sidebar-bg: #141110;
+  --sidebar-fg: #9b9081;
+}
+
+:root[data-theme="dark"][data-palette="ciruela"] {
+  --accent: #f090c4;
+  --accent-strong: #a03272;
+  --bg: #1a1218;
+  --bg-elevated: #241a21;
+  --bg-sunken: #120c10;
+  --fg: #f4eaf0;
+  --fg-muted: #b39aa8;
+  --fg-subtle: #8f7885;
+  --border: #3a2b34;
+  --border-strong: #4e3a46;
+  --sidebar-bg: #150e13;
+  --sidebar-fg: #a48f9c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  cursor: default;
+}
+
+/* Los datos se pueden seleccionar y copiar —un importe, una nota, una ruta—,
+   que para eso están. Lo que no se selecciona es la tramoya: botones, pestañas
+   y la barra lateral, donde arrastrar solo pinta texto en azul sin querer. */
+.sidebar,
+.btn,
+.nav-item,
+.segmented,
+.account-chip,
+.pill,
+.avatar,
+.day-heading,
+.modal-header,
+.table th {
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  margin: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: 24px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+
+p { margin: 0; }
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- Estructura ---------- */
+
+.app {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  height: 100vh;
+}
+
+.sidebar {
+  background: var(--sidebar-bg);
+  color: var(--sidebar-fg);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 12px 12px;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 18px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+/* El mismo archivo que el icono de la ventana y el de la barra de tareas: son
+   tres sitios donde se ve la marca y no tienen por qué parecerse, tienen que
+   ser idénticos. */
+.sidebar-brand .mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  flex: none;
+  object-fit: contain;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--sidebar-fg);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font-size: 13.5px;
+  font-weight: 550;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.nav-item.active {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-fg-active);
+}
+
+.nav-item .count {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--sidebar-fg);
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 10px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.sidebar-networth {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sidebar-fg);
+  opacity: 0.75;
+}
+
+.sidebar-networth strong {
+  display: block;
+  font-size: 19px;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+  text-transform: none;
+}
+
+.main {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 28px 14px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+  margin-right: auto;
+}
+
+.content {
+  padding: 22px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+}
+
+/* ---------- Tarjetas ---------- */
+
+.card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Una cabecera que no tiene nada debajo no separa nada: sin esto, su raya
+   quedaba flotando en el borde inferior de la tarjeta. */
+.card-header:last-child {
+  border-bottom: none;
+}
+
+.card-header h2,
+.card-header h3 {
+  margin-right: auto;
+}
+
+.card-body {
+  padding: 16px 18px;
+}
+
+.card-body.tight {
+  padding: 6px 8px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 1180px) {
+  .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Los de tres son cifras sueltas y caben de sobra: partirlos en 2 + 1 dejaba
+     una tarjeta huérfana en su propia fila. */
+}
+
+@media (max-width: 860px) {
+  .grid.cols-2,
+  .grid.cols-3,
+  .grid.cols-4 { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Indicadores ---------- */
+
+.stat {
+  padding: 16px 18px;
+}
+
+.stat .label {
+  font-size: 12px;
+  color: var(--fg-muted);
+  font-weight: 550;
+}
+
+.stat .value {
+  font-size: 26px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat .delta {
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.amount.positive { color: var(--positive); }
+.amount.negative { color: var(--negative); }
+.amount.neutral { color: var(--fg-muted); }
+
+/* ---------- Botones ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 570;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+}
+
+.btn:hover { background: var(--bg-sunken); }
+.btn:active { transform: scale(0.985); }
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* El acento de fondo es un punto más oscuro que el de texto: es el que tiene
+   que sostener el blanco encima con 4,5:1, y el claro no llegaba. */
+.btn.primary {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast);
+}
+.btn.primary:hover { background: color-mix(in srgb, var(--accent-strong) 88%, #000); }
+
+.btn.danger {
+  background: var(--negative);
+  border-color: var(--negative);
+  color: #fff;
+}
+.btn.danger:hover { background: color-mix(in srgb, var(--negative) 88%, #000); }
+
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-muted);
+}
+.btn.ghost:hover {
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+/* Eliminar va en rojo, pero sin relleno: es la salida del pie del formulario,
+   no la acción que se busca al abrirlo. */
+.btn.ghost.danger {
+  background: transparent;
+  border-color: transparent;
+  color: var(--negative);
+}
+.btn.ghost.danger:hover {
+  background: color-mix(in srgb, var(--negative) 14%, transparent);
+  color: var(--negative);
+}
+
+.btn.small {
+  padding: 5px 10px;
+  font-size: 12.5px;
+}
+
+.btn.icon {
+  padding: 7px;
+  width: 32px;
+  height: 32px;
+}
+
+/* ---------- Formularios ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field > label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 74px;
+  line-height: 1.45;
+}
+
+.input.amount-input {
+  font-size: 26px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  padding: 12px 14px;
+}
+
+.input.invalid,
+.select.invalid {
+  border-color: var(--negative);
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--negative);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--fg-subtle);
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  cursor: pointer;
+  padding: 3px 0;
+}
+
+.checkbox input {
+  margin: 2px 0 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex: none;
+}
+
+.checkbox .checkbox-text {
+  font-size: 13px;
+}
+
+.checkbox .checkbox-text small {
+  display: block;
+  color: var(--fg-subtle);
+  font-size: 12px;
+}
+
+.segmented {
+  display: inline-flex;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
+}
+
+.segmented button {
+  border: none;
+  background: transparent;
+  color: var(--fg-muted);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 570;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.segmented button.active {
+  background: var(--bg-elevated);
+  color: var(--fg);
+  box-shadow: var(--shadow-sm);
+}
+
+.segmented button.active[data-tone="expense"] { color: var(--negative); }
+.segmented button.active[data-tone="income"] { color: var(--positive); }
+.segmented button.active[data-tone="transfer"] { color: var(--accent); }
+.segmented button.active[data-tone="refund"] { color: var(--positive); }
+
+/* ---------- Reembolsos ---------- */
+
+.refund-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 11px 13px;
+  border-radius: var(--radius);
+  background: var(--positive-soft);
+  color: var(--fg);
+  border: 1px solid color-mix(in srgb, var(--positive) 30%, transparent);
+}
+
+.refund-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-size: 13px;
+}
+
+/* ---------- Patrimonio y cuentas sobre la lista ---------- */
+
+.networth-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.networth {
+  flex: none;
+  padding: 2px 22px 2px 4px;
+  border-right: 1px solid var(--border);
+}
+
+/* Los dos bloques son columnas para que sus rótulos arranquen a la misma altura. */
+.networth,
+.accounts-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.accounts-block {
+  flex: 1;
+  min-width: 0;
+  gap: 4px;
+}
+
+/* Dentro de la columna, la tira de cuentas conserva su alto: si creciera con
+   ella, las fichas se estirarían hasta la altura del patrimonio. */
+.accounts-block .account-chips {
+  flex: none;
+  align-items: flex-start;
+}
+
+/* El enlace no se estira con los bloques: se queda centrado a su lado. */
+.networth-strip .link {
+  align-self: center;
+}
+
+/* Es la cifra que se busca al entrar, así que gana por tamaño a las demás:
+   los totales del periodo van a 26 px y esta a 38. */
+.networth-strip .label {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.networth .value {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+/* Las cuentas ruedan en horizontal: con muchas, la tira no crece hacia abajo. */
+.account-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  flex: 1;
+  padding: 2px 2px 4px;
+  /* Sin `scrollbar-width`: al declararlo, Chromium ignora los estilos
+     ::-webkit-scrollbar de abajo y saca la barra nativa con flechas. */
+  /* El contenido que se sale se desvanece en vez de cortarse a media cifra. */
+  mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+}
+
+/* Barra fina y discreta: aquí es una ayuda, no un elemento de la interfaz. */
+.account-chips::-webkit-scrollbar {
+  height: 5px;
+}
+
+.account-chips::-webkit-scrollbar-thumb {
+  border: none;
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 13px 6px 7px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  cursor: pointer;
+  white-space: nowrap;
+  flex: none;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.account-chip:hover {
+  background: var(--bg-sunken);
+}
+
+.account-chip.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.chip-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+}
+
+.chip-name {
+  font-size: 12.5px;
+  font-weight: 570;
+  max-width: 150px;
+}
+
+.chip-balance {
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+
+/* ---------- Listas de movimientos ---------- */
+
+.day-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 10px 6px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--fg-muted);
+  /* Sin `capitalize`: en español solo va en mayúscula la primera palabra,
+     y de eso ya se encarga formatDayHeading. */
+}
+
+/* El total del día es el resumen de la jornada, no un movimiento más. Con el
+   mismo aspecto que los importes de abajo competía con ellos; en una cápsula
+   sobre fondo hundido se lee como parte del encabezado y destaca sin gritar. */
+.day-heading .day-total {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 12.5px;
+  text-transform: none;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+}
+
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.tx-row:hover {
+  background: var(--bg-sunken);
+}
+
+/* Lo que aún no ha pasado se ve apagado y con el borde punteado: está ahí para
+   que lo veas venir, no para que lo cuentes como hecho. */
+.tx-row.projected {
+  opacity: 0.5;
+  cursor: default;
+  border-style: dashed;
+  border-color: var(--border);
+}
+
+.tx-row.projected:hover {
+  opacity: 0.78;
+  background: transparent;
+}
+
+/* El botón de registrarla solo asoma al pasar por encima: si no, cada fila
+   futura enseñaría un botón que casi nunca se pulsa. */
+.tx-row.projected .btn {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.tx-row.projected:hover .btn,
+.tx-row.projected .btn:focus-visible {
+  opacity: 1;
+}
+
+.tx-row.selected {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Un gasto y sus devoluciones llevan la misma marca en el canto izquierdo. Al
+   pasar por encima de cualquiera de ellos, la familia entera se enciende: es la
+   forma de ver que ese ingreso no es un ingreso suelto, sino lo que te devuelven
+   de ese gasto. Va en el box-shadow para no pelearse con el borde de selección. */
+.tx-row.linked {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.tx-row.linked.linked-active {
+  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Una devolución colgada de su gasto: entra hacia dentro y se une a él con un
+   codo, como una rama. La línea la dibujan dos pseudoelementos porque el tramo
+   que sube hasta el gasto y el que sigue hacia la siguiente hermana son
+   independientes: la última de la lista no continúa. */
+.tx-row.nested {
+  position: relative;
+  margin-left: 34px;
+}
+
+.tx-row.nested::before,
+.list-row.nested::before {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: -2px;
+  height: 50%;
+  width: 12px;
+  border-left: 2px solid var(--link-line);
+  border-bottom: 2px solid var(--link-line);
+  border-bottom-left-radius: 7px;
+  pointer-events: none;
+}
+
+/* Tramo recto hasta la siguiente devolución del mismo gasto. */
+.tx-row.nested-continues::after,
+.list-row.nested-continues::after {
+  content: '';
+  position: absolute;
+  left: -18px;
+  top: 50%;
+  bottom: -2px;
+  border-left: 2px solid var(--link-line);
+  pointer-events: none;
+}
+
+/* En Programadas las filas van a sangre, con su raya inferior de lado a lado:
+   la sangría se hace con relleno para no partir esa raya. */
+.list-row.nested {
+  position: relative;
+  padding-left: 48px;
+}
+
+.list-row.nested::before,
+.list-row.nested-continues::after {
+  left: 22px;
+}
+
+.tx-row.nested.linked-active::before,
+.tx-row.nested.linked-active::after {
+  border-color: var(--accent);
+}
+
+.tx-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.tx-title {
+  font-weight: 570;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tx-sub {
+  font-size: 12px;
+  color: var(--fg-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La nota es lo que distingue un movimiento de otro de la misma categoría,
+   así que se lee algo más marcada que el resto del subtexto. */
+.tx-note {
+  color: var(--fg);
+  opacity: 0.75;
+}
+
+.tx-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+/* El importe hereda el grosor de la fila; .amount solo aporta color y cifras tabulares. */
+.tx-amount .amount {
+  font-weight: inherit;
+}
+
+.tx-amount small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--fg-subtle);
+}
+
+/* ---------- Iconos redondos de categoría y cuenta ---------- */
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  flex: none;
+}
+
+.avatar.small {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.avatar.large {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+}
+
+/* ---------- Píldoras y etiquetas ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  font-weight: 570;
+  background: var(--bg-sunken);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.pill.tag {
+  background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
+  color: var(--tag-color, var(--fg-muted));
+}
+
+/* Factura elegida pero todavía sin copiar: el borde punteado dice que aún no
+   está guardada, igual que en las programadas por venir. */
+.pill.pending {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+  color: var(--fg-subtle);
+}
+
+.pill button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0.7;
+}
+
+.pill button:hover { opacity: 1; }
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- Barras de progreso ---------- */
+
+.progress {
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.3s ease;
+}
+
+.progress-pace {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--fg-subtle);
+  opacity: 0.6;
+}
+
+/* ---------- Modales ---------- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.45);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  z-index: 100;
+  animation: fade 0.14s ease;
+  transition: background 0.2s ease, backdrop-filter 0.2s ease;
+}
+
+/* Al apartar el diálogo se retira el velo: la gracia de moverlo es ver el fondo.
+   Sigue capturando los clics para que nada se toque sin querer por detrás. */
+.overlay.moved {
+  background: rgba(8, 10, 14, 0.08);
+  backdrop-filter: none;
+}
+
+.modal-header.draggable {
+  cursor: grab;
+}
+
+.overlay.dragging .modal-header.draggable {
+  cursor: grabbing;
+}
+
+.overlay.dragging .modal {
+  box-shadow: var(--shadow-lg), 0 0 0 1px var(--accent);
+}
+
+.modal {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: min(560px, 100%);
+  max-height: calc(100vh - 56px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  animation: pop 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.modal.wide { width: min(760px, 100%); }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 { margin-right: auto; }
+
+.modal-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 9px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  justify-content: flex-end;
+}
+
+.modal-footer .spacer { margin-right: auto; }
+
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* ---------- Avisos ---------- */
+
+.toasts {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  font-size: 13.5px;
+  max-width: 420px;
+  animation: slide 0.18s ease;
+}
+
+.toast.error {
+  border-color: color-mix(in srgb, var(--negative) 45%, var(--border));
+  color: var(--negative);
+}
+
+.toast.success .dot { background: var(--positive); }
+.toast.error .dot { background: var(--negative); }
+
+.toast .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+
+@keyframes slide {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* ---------- Estados vacíos ---------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 52px 24px;
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+.empty .empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-sunken);
+  color: var(--fg-subtle);
+}
+
+.empty h3 { color: var(--fg); }
+
+.empty p { max-width: 380px; font-size: 13px; }
+
+/* ---------- Tablas ---------- */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th {
+  text-align: left;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--fg-subtle);
+  font-weight: 650;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table tr:last-child td { border-bottom: none; }
+
+.table td.num,
+.table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table tbody tr:hover { background: var(--bg-sunken); }
+
+/* ---------- Tabla de reparto por categorías ---------- */
+
+/* Sin rayas entre categorías: cada fila ya lleva su barra de color debajo, que
+   es la que marca dónde acaba una y empieza la siguiente. */
+.table.breakdown td { border-bottom: none; }
+
+/* La columna del nombre carga con la barra de reparto, así que se lleva el ancho. */
+.table.breakdown td:first-child,
+.table.breakdown th:first-child {
+  width: 42%;
+}
+
+/* La fila entera abre y cierra el desglose: apuntar al chevrón era hilar fino. */
+.table.breakdown tr.expandable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.table.breakdown tr.expandable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Solo el chevrón, que cuelga directamente de la fila del nombre. El icono de
+   la categoría va dentro del Avatar (`.avatar > svg`), fuera del alcance de
+   este selector: es blanco sobre su color y no debe apagarse nunca. */
+.table.breakdown tr.expandable .row > svg {
+  color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+
+.table.breakdown tr.expandable:hover .row > svg { color: var(--fg); }
+
+/* Sangría igual al ancho del chevrón: las categorías sin desglose no bailan. */
+.breakdown-flat {
+  padding-left: 20px;
+}
+
+.table.breakdown tr.subrow td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 13px;
+}
+
+.table.breakdown tr.subrow td:first-child {
+  padding-left: 46px;
+}
+
+/* La barra de la nota arranca donde el nombre, no bajo el icono del padre. */
+.table.breakdown tr.subrow .cat-bar {
+  margin-left: 0;
+  height: 5px;
+}
+
+.table.breakdown tr.subrow .note-name {
+  font-weight: 550;
+}
+
+/* Barra de reparto: el ancho lo pone React, el color es el de la categoría. */
+.cat-bar {
+  height: 6px;
+  margin: 6px 0 0 20px;
+  background: var(--bg-sunken);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.cat-bar > div {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* ---------- Utilidades ---------- */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.row.wrap { flex-wrap: wrap; }
+.row.tight { gap: 6px; }
+.spacer { margin-left: auto; }
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.muted { color: var(--fg-muted); }
+.subtle { color: var(--fg-subtle); }
+.small { font-size: 12px; }
+.center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* Separa dentro de una fila de botones: lo de la derecha no es del mismo grupo
+   que lo de la izquierda. */
+.divider.vertical {
+  width: 1px;
+  height: 24px;
+  margin: 0 4px;
+  flex: none;
+}
+
+.link {
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-decoration: none;
+}
+
+.link:hover { text-decoration: underline; }
+
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-row:last-child { border-bottom: none; }
+
+/* Listas sin rayas entre filas: en Programados el avatar y el aire ya separan,
+   y la retícula de líneas pesaba más que los datos. */
+.card.flush .list-row,
+.card.flush button.list-row { border-bottom: none; }
+
+.list-row.clickable { cursor: pointer; }
+.list-row.clickable:hover { background: var(--bg-sunken); }
+
+/* Las filas que se pueden abrir son botones de verdad, para que el tabulador
+   llegue a ellas; aquí se les quita el aspecto de botón. */
+button.list-row {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+button.list-row:last-child { border-bottom: none; }
+
+.tx-row:focus-visible,
+button.list-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  padding: 60px;
+  color: var(--fg-subtle);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Selector de icono y color ---------- */
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.icon-grid button {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: var(--bg-elevated);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--fg-muted);
+}
+
+.icon-grid button:hover { color: var(--fg); }
+
+.icon-grid button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* La casilla de «Nueva» en la rejilla de categorías: mismo hueco que las demás
+   pero de trazo discontinuo, para que se lea como sitio vacío y no como una
+   categoría más. */
+.icon-grid button.cat-new {
+  border: 1px dashed var(--border-strong);
+  background: transparent;
+  color: var(--fg-subtle);
+}
+
+.icon-grid button.cat-new:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.cat-new-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-sunken);
+}
+
+/* ---------- Calculadora de Movimientos ---------- */
+
+.calc-expr {
+  width: 100%;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.calc-result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.calc-value {
+  flex: 1;
+  text-align: right;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calc-keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.calc-key {
+  padding: 9px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--fg);
+  font-size: 14.5px;
+  font-weight: 570;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calc-key:hover { background: var(--bg-sunken); }
+.calc-key:active { transform: scale(0.96); }
+
+/* Las operaciones se distinguen del teclado numérico sin gritar: mismo hueco,
+   fondo hundido. */
+.calc-key.op {
+  background: var(--bg-sunken);
+  color: var(--accent);
+}
+
+.calc-key.clear { color: var(--negative); }
+
+.color-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  outline-offset: 2px;
+}
+
+.swatch.active {
+  border-color: var(--fg);
+  transform: scale(1.1);
+}
+
+/* ---------- Selector de paleta ---------- */
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 10px;
+}
+
+.palette-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  text-align: left;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.palette-card:hover { border-color: var(--border-strong); }
+
+.palette-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* La muestra es la paleta en pequeño: el fondo, la tarjeta encima y el acento. */
+.palette-swatch {
+  position: relative;
+  display: block;
+  height: 44px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.palette-swatch span {
+  position: absolute;
+  border-radius: 4px;
+}
+
+.palette-swatch span:first-child {
+  left: 8px;
+  right: 8px;
+  top: 9px;
+  bottom: 9px;
+}
+
+.palette-swatch span:last-child {
+  right: 13px;
+  top: 15px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.palette-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 570;
+  font-size: 13px;
+}
+
+/* Programaciones terminadas: se consultan, no se manejan. Van apagadas, como
+   las previsiones de la lista de movimientos, para que no compitan con las
+   vigentes. Al pasar por encima recuperan el color, que para eso están. */
+.list-row.finished {
+  opacity: 0.55;
+  transition: opacity 0.12s ease;
+}
+
+.list-row.finished:hover {
+  opacity: 1;
+}
+
+.list-row.finished .amount {
+  color: var(--fg-muted);
+}

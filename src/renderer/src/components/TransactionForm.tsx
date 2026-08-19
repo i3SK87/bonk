@@ -1,0 +1,525 @@
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Modal, Field, AmountInput, Avatar, Segmented, Confirm } from './ui'
+import { Icon } from './Icon'
+import { useStore, usePreferredAccountId } from '../lib/store'
+import { CategoryModal } from './CategoryForm'
+import { today, formatDate } from '@shared/dates'
+import { formatMoney } from '@shared/money'
+import type { Attachment, TransactionView, TxType } from '@shared/types'
+
+const api = window.moneyflow
+
+interface Props {
+  existing?: TransactionView | null
+  defaultAccountId?: number
+  /** Gasto del que se está registrando una devolución. */
+  refundFor?: TransactionView | null
+  onClose: () => void
+}
+
+export function TransactionForm({ existing, defaultAccountId, refundFor, onClose }: Props): ReactNode {
+  const { accounts, categories, run, toast, settings, fail } = useStore()
+  const preferredAccountId = usePreferredAccountId()
+
+  const [type, setType] = useState<TxType>(existing?.type ?? (refundFor ? 'refund' : 'expense'))
+  const [amount, setAmount] = useState(existing?.amount ?? 0)
+  const [accountId, setAccountId] = useState(
+    existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? preferredAccountId
+  )
+  const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
+  const [categoryId, setCategoryId] = useState<number | null>(
+    existing?.categoryId ?? refundFor?.categoryId ?? null
+  )
+  const [refundForId, setRefundForId] = useState<number | null>(existing?.refundForId ?? refundFor?.id ?? null)
+  const [candidates, setCandidates] = useState<TransactionView[]>([])
+  const [date, setDate] = useState(existing?.date ?? today())
+  // La hora no se pide, pero la que traiga el movimiento se conserva.
+  const time = existing?.time ?? ''
+  const [note, setNote] = useState(existing?.note ?? '')
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */
+  const [pending, setPending] = useState<Array<{ path: string; name: string }>>([])
+  const [previews, setPreviews] = useState<Record<number, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [refunds, setRefunds] = useState<TransactionView[]>([])
+  const [refunding, setRefunding] = useState(false)
+  const [creatingCategory, setCreatingCategory] = useState(false)
+
+  // Gastos a los que puede engancharse un reembolso suelto. Los que llegan por
+  // el botón «Registrar reembolso» ya vienen enlazados y no necesitan elegir.
+  useEffect(() => {
+    if (type !== 'refund' || refundFor || !categoryId) {
+      setCandidates([])
+      return
+    }
+    let cancelled = false
+    api.transactions
+      .refundCandidates(categoryId, date, existing?.id)
+      .then((rows) => {
+        if (!cancelled) setCandidates(rows)
+      })
+      .catch(fail('los gastos a los que enlazar'))
+    return () => {
+      cancelled = true
+    }
+  }, [type, refundFor, categoryId, date, existing?.id, fail])
+
+  const account = accounts.find((item) => item.id === accountId)
+  const currency = account?.currency ?? settings.baseCurrency
+  // Las facturas solo salen donde tienen sentido: lo decide la categoría.
+  const keepsInvoices = categories.some(
+    (category) => category.id === categoryId && category.keepsInvoices
+  )
+
+  const visibleCategories = useMemo(
+    () => categories.filter((category) => category.kind === (type === 'income' ? 'income' : 'expense')),
+    [categories, type]
+  )
+
+  // Si la cuenta elegida ya no está en la lista —porque los datos aún no habían
+  // llegado al montar, o porque se archivó— se vuelve a la principal.
+  useEffect(() => {
+    if (accounts.length > 0 && !accounts.some((item) => item.id === accountId)) {
+      setAccountId(existing?.accountId ?? defaultAccountId ?? preferredAccountId)
+    }
+  }, [accounts, accountId, existing, defaultAccountId, preferredAccountId])
+
+  // Al cambiar de gasto a ingreso la categoría anterior deja de tener sentido.
+  useEffect(() => {
+    if (type === 'transfer') {
+      setCategoryId(null)
+    } else if (categoryId && !visibleCategories.some((category) => category.id === categoryId)) {
+      setCategoryId(null)
+    }
+  }, [type, categoryId, visibleCategories])
+
+  useEffect(() => {
+    if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
+  }, [type, accountId, toAccountId])
+
+  useEffect(() => {
+    if (!existing) return
+    api.attachments.list(existing.id).then(setAttachments).catch(fail('las facturas'))
+  }, [existing])
+
+  // Un gasto puede tener varias devoluciones: la suscripción compartida entre
+  // cuatro son tres reembolsos sobre el mismo cobro.
+  useEffect(() => {
+    if (!existing || existing.type !== 'expense') return
+    api.transactions.refundsFor(existing.id).then(setRefunds).catch(fail('los reembolsos'))
+  }, [existing, refunding])
+
+  // Solo depende de la lista de adjuntos: si dependiera también de las
+  // miniaturas ya cargadas, se volvería a ejecutar entero con cada imagen.
+  useEffect(() => {
+    for (const attachment of attachments) {
+      if (!attachment.mime?.startsWith('image/')) continue
+      api.attachments
+        .data(attachment.id)
+        .then((data) => {
+          if (!data) return
+          setPreviews((current) => (current[attachment.id] ? current : { ...current, [attachment.id]: data }))
+        })
+        // Una miniatura que no carga no merece interrumpir: el archivo sigue ahí.
+        .catch(() => undefined)
+    }
+  }, [attachments])
+
+  /**
+   * Elegir la factura no depende de que el movimiento exista: se apunta el
+   * archivo y se copia al guardar. Así se sube en el mismo gesto en que se
+   * registra la compra, sin el paso intermedio de guardar y volver a entrar.
+   */
+  async function pickInvoices(): Promise<void> {
+    const picked = await run(() => api.attachments.pick())
+    if (picked && picked.length) setPending((current) => [...current, ...picked])
+  }
+
+  async function save(keepOpen = false): Promise<void> {
+    setError(null)
+    if (!accountId) return setError('Elige una cuenta')
+    if (amount <= 0) return setError('Escribe un importe mayor que cero')
+    if (type === 'transfer' && !toAccountId) return setError('Elige la cuenta de destino')
+    if (type === 'refund' && !categoryId) {
+      return setError('Elige la categoría del gasto que te están devolviendo')
+    }
+
+    setSaving(true)
+    const saved = await run(
+      () =>
+        api.transactions.save({
+          id: existing?.id,
+          type,
+          date,
+          time: time || null,
+          accountId,
+          toAccountId: type === 'transfer' ? toAccountId : null,
+          categoryId: type === 'transfer' ? null : categoryId,
+          amount,
+          note: note || null,
+          refundForId
+        }),
+      existing ? 'Movimiento actualizado' : 'Movimiento guardado'
+    )
+    setSaving(false)
+
+    if (!saved) return
+
+    if (pending.length > 0) {
+      const added = await run(() => api.attachments.attach(saved.id, pending.map((item) => item.path)))
+      // Si alguna factura falla, el movimiento ya está guardado y el aviso lo
+      // explica: no se deshace nada por un archivo que no se pudo copiar.
+      if (added) {
+        setAttachments((current) => [...current, ...added])
+        setPending([])
+      }
+    }
+
+    if (keepOpen) {
+      // "Guardar y otro": se conserva el contexto y se limpia lo que es de ese
+      // movimiento y no del siguiente.
+      setAmount(0)
+      setNote('')
+      setAttachments([])
+      setPreviews({})
+      setPending([])
+      toast('Listo para el siguiente', 'info')
+      return
+    }
+    onClose()
+  }
+
+  async function remove(): Promise<void> {
+    if (!existing) return
+    await run(() => api.transactions.remove(existing.id), 'Movimiento eliminado')
+    onClose()
+  }
+
+  const typeTone =
+    type === 'expense'
+      ? 'var(--negative)'
+      : type === 'transfer'
+        ? 'var(--accent)'
+        : 'var(--positive)'
+
+  return (
+    <>
+      <Modal
+        title={refundFor ? 'Registrar reembolso' : existing ? 'Editar movimiento' : 'Nuevo movimiento'}
+        onClose={onClose}
+        footer={
+          <>
+            {existing && (
+              <button className="btn ghost danger spacer" onClick={() => setConfirmDelete(true)}>
+                <Icon name="trash" size={16} />
+                Eliminar
+              </button>
+            )}
+            <button className="btn" onClick={onClose}>
+              Cancelar
+            </button>
+            {!existing && (
+              <button className="btn" onClick={() => save(true)} disabled={saving}>
+                Guardar y otro
+              </button>
+            )}
+            <button className="btn primary" onClick={() => save(false)} disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </>
+        }
+      >
+        {refundFor ? (
+          <div className="refund-banner">
+            <Icon name="refund" size={18} />
+            <div style={{ minWidth: 0 }}>
+              <strong>Devolución de un gasto</strong>
+              <div className="small muted truncate">
+                {refundFor.categoryName ?? 'Sin categoría'}
+                {refundFor.note ? ` · ${refundFor.note}` : ''} · {formatDate(refundFor.date)} ·{' '}
+                {formatMoney(refundFor.amount, refundFor.accountCurrency)}
+              </div>
+              {refundFor.refundedTotal > 0 && (
+                <div className="small muted">
+                  Ya reembolsado {formatMoney(refundFor.refundedTotal, refundFor.accountCurrency)}; quedan{' '}
+                  {formatMoney(refundFor.amount - refundFor.refundedTotal, refundFor.accountCurrency)}.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="row" style={{ justifyContent: 'center' }}>
+            <Segmented
+              value={type}
+              onChange={setType}
+              options={[
+                { value: 'expense', label: 'Gasto', tone: 'expense' },
+                { value: 'income', label: 'Ingreso', tone: 'income' },
+                { value: 'transfer', label: 'Traspaso', tone: 'transfer' },
+                { value: 'refund', label: 'Reembolso', tone: 'refund' }
+              ]}
+            />
+          </div>
+        )}
+
+        {type === 'refund' && !refundFor && (
+          <>
+            <p className="field-hint">
+              Un reembolso entra en tu cuenta pero descuenta del gasto de su categoría, en vez de contar como
+              ingreso. Elige la categoría del gasto que te devuelven.
+            </p>
+            <Field
+              label="Gasto que te devuelven"
+              hint={
+                candidates.length === 0
+                  ? 'Elige antes la categoría y la fecha; aquí saldrán los gastos de esa categoría con algo pendiente de devolver.'
+                  : 'Enlazarlo une los dos movimientos en la lista y descuenta la devolución de ese gasto en concreto.'
+              }
+            >
+              <select
+                className="select"
+                value={refundForId ?? ''}
+                disabled={candidates.length === 0}
+                onChange={(e) => setRefundForId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Sin enlazar a un gasto concreto</option>
+                {candidates.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {formatDate(item.date)} ·{' '}
+                    {/* Sin nota queda la categoría: una lista de fechas e importes sueltos
+                        no dice de qué gasto se trata. */}
+                    {item.note || item.categoryName || 'Sin categoría'} ·{' '}
+                    {formatMoney(item.amount, item.accountCurrency)}
+                    {item.refundedTotal > 0
+                      ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
+                      : ''}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </>
+        )}
+
+        <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
+          <Field label="Importe">
+            <AmountInput value={amount} currency={currency} onChange={setAmount} autoFocus invalid={amount <= 0 && error != null} />
+          </Field>
+        </div>
+
+        <div className="grid cols-2">
+          <Field label={type === 'transfer' ? 'Desde' : 'Cuenta'}>
+            <select className="select" value={accountId} onChange={(e) => setAccountId(Number(e.target.value))}>
+              {accounts.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {formatMoney(item.balance, item.currency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          {type === 'transfer' ? (
+            <Field label="Hacia">
+              <select
+                className="select"
+                value={toAccountId ?? ''}
+                onChange={(e) => setToAccountId(e.target.value ? Number(e.target.value) : null)}
+              >
+                <option value="">Elige una cuenta…</option>
+                {accounts
+                  .filter((item) => item.id !== accountId)
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} · {formatMoney(item.balance, item.currency)}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          ) : (
+            <Field label="Fecha">
+              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </Field>
+          )}
+        </div>
+
+        {type === 'transfer' && (
+          <Field label="Fecha">
+            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </Field>
+        )}
+
+        {type !== 'transfer' && (
+          <Field label="Categoría">
+            <div className="icon-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(74px, 1fr))', maxHeight: 190 }}>
+              {visibleCategories.map((category) => (
+                <button
+                  key={category.id}
+                  type="button"
+                  className={category.id === categoryId ? 'active' : undefined}
+                  style={{ aspectRatio: 'auto', padding: '8px 4px', flexDirection: 'column', gap: 4, display: 'flex', alignItems: 'center' }}
+                  onClick={() => setCategoryId(category.id === categoryId ? null : category.id)}
+                  title={category.name}
+                >
+                  <Avatar icon={category.icon} color={category.color} size="small" />
+                  <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: 'center' }} className="truncate">
+                    {category.name}
+                  </span>
+                </button>
+              ))}
+
+              {/* La categoría que falta se crea aquí mismo: salir a Categorías
+                  obligaba a tirar el movimiento a medio escribir. */}
+              <button
+                type="button"
+                className="cat-new"
+                style={{ aspectRatio: 'auto', padding: '8px 4px', flexDirection: 'column', gap: 4, display: 'flex', alignItems: 'center' }}
+                onClick={() => setCreatingCategory(true)}
+                title="Crear una categoría"
+              >
+                <span className="cat-new-mark">
+                  <Icon name="plus" size={16} strokeWidth={2.4} />
+                </span>
+                <span style={{ fontSize: 10.5, lineHeight: 1.15, textAlign: 'center' }} className="truncate">
+                  Nueva
+                </span>
+              </button>
+            </div>
+          </Field>
+        )}
+
+        <Field label="Notas">
+          <textarea
+            className="textarea"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={
+              type === 'refund' ? 'Quién te devuelve, de qué…' : 'Comercio, detalle, lo que quieras recordar…'
+            }
+          />
+        </Field>
+
+        {existing?.type === 'expense' && (
+          <Field label="Reembolsos">
+            {refunds.length > 0 && (
+              <div className="col" style={{ gap: 6, marginBottom: 8 }}>
+                {refunds.map((refund) => (
+                  <div key={refund.id} className="refund-row">
+                    <Icon name="refund" size={15} />
+                    <span className="truncate" style={{ flex: 1 }}>
+                      {refund.note || 'Devolución'}
+                      <span className="muted small"> · {formatDate(refund.date)}</span>
+                    </span>
+                    <span className="amount positive">
+                      {formatMoney(refund.amount, refund.accountCurrency)}
+                    </span>
+                  </div>
+                ))}
+                <div className="row small">
+                  <span className="muted">
+                    Devuelto {formatMoney(existing.refundedTotal, existing.accountCurrency)} de{' '}
+                    {formatMoney(existing.amount, existing.accountCurrency)}
+                  </span>
+                  <span className="spacer" />
+                  <strong>
+                    Te cuesta {formatMoney(existing.amount - existing.refundedTotal, existing.accountCurrency)}
+                  </strong>
+                </div>
+              </div>
+            )}
+            <button className="btn small" onClick={() => setRefunding(true)}>
+              <Icon name="refund" size={14} />
+              Registrar reembolso
+            </button>
+          </Field>
+        )}
+
+        {keepsInvoices && (
+          <Field label="Facturas">
+            {(attachments.length > 0 || pending.length > 0) && (
+              <div className="chip-row" style={{ marginBottom: 8 }}>
+                {attachments.map((attachment) => (
+                  <div key={attachment.id} className="pill" style={{ paddingRight: 4 }}>
+                    {previews[attachment.id] ? (
+                      <img
+                        src={previews[attachment.id]}
+                        alt={attachment.originalName}
+                        style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover', cursor: 'pointer' }}
+                        onClick={() => api.attachments.open(attachment.id)}
+                      />
+                    ) : (
+                      <Icon name="paperclip" size={13} />
+                    )}
+                    <span className="truncate" style={{ maxWidth: 130 }}>
+                      {attachment.originalName}
+                    </span>
+                    <button
+                      onClick={async () => {
+                        await run(() => api.attachments.remove(attachment.id))
+                        setAttachments((current) => current.filter((item) => item.id !== attachment.id))
+                      }}
+                      aria-label="Quitar factura"
+                    >
+                      <Icon name="close" size={12} />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Las elegidas y aún sin copiar van atenuadas: se guardan con el movimiento. */}
+                {pending.map((item) => (
+                  <div key={item.path} className="pill pending" style={{ paddingRight: 4 }}>
+                    <Icon name="paperclip" size={13} />
+                    <span className="truncate" style={{ maxWidth: 130 }}>
+                      {item.name}
+                    </span>
+                    <button
+                      onClick={() => setPending((current) => current.filter((p) => p.path !== item.path))}
+                      aria-label="Quitar factura"
+                    >
+                      <Icon name="close" size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn small" onClick={pickInvoices}>
+              <Icon name="paperclip" size={14} />
+              Subir factura
+            </button>
+          </Field>
+        )}
+
+        {error && <div className="field-error">{error}</div>}
+      </Modal>
+
+      {creatingCategory && (
+        <CategoryModal
+          category={null}
+          defaultKind={type === 'income' ? 'income' : 'expense'}
+          onClose={() => setCreatingCategory(false)}
+          onSave={async (input) => {
+            const saved = await run(() => api.categories.save(input), 'Categoría creada')
+            // Se crea desde aquí porque hace falta ahora: queda elegida.
+            if (saved) setCategoryId(saved.id)
+            return saved
+          }}
+        />
+      )}
+
+      {refunding && existing && (
+        <TransactionForm refundFor={existing} onClose={() => setRefunding(false)} />
+      )}
+
+      {confirmDelete && (
+        <Confirm
+          title="Eliminar movimiento"
+          message="El movimiento y sus adjuntos se borrarán definitivamente."
+          confirmLabel="Eliminar"
+          destructive
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={remove}
+        />
+      )}
+    </>
+  )
+}

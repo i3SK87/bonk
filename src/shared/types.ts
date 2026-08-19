@@ -1,0 +1,303 @@
+/** Tipos de dominio compartidos entre el proceso principal y la interfaz. */
+
+/**
+ * Un reembolso es dinero que vuelve a tu bolsillo por un gasto que ya hiciste:
+ * suma al saldo como un ingreso, pero en los informes y presupuestos resta del
+ * gasto de su categoría en vez de contar como ingreso nuevo.
+ */
+export type TxType = 'expense' | 'income' | 'transfer' | 'refund'
+export type CategoryKind = 'expense' | 'income'
+export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 'debt'
+export type BudgetPeriod = 'weekly' | 'monthly' | 'quarterly' | 'yearly'
+export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
+export type ThemeMode = 'light' | 'dark' | 'system'
+/** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
+export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela'
+
+export interface Account {
+  id: number
+  name: string
+  type: AccountType
+  currency: string
+  initialBalance: number
+  icon: string
+  color: string
+  excludeFromTotal: boolean
+  /** Si está en falso, la aplicación rechaza cualquier movimiento que deje la cuenta bajo cero. */
+  allowNegative: boolean
+  archived: boolean
+  sortOrder: number
+  note: string | null
+  createdAt: string
+}
+
+/** Cuenta con el saldo ya calculado a partir de sus movimientos. */
+export interface AccountWithBalance extends Account {
+  balance: number
+  balanceInBase: number
+}
+
+export interface Category {
+  id: number
+  name: string
+  kind: CategoryKind
+  parentId: number | null
+  icon: string
+  color: string
+  archived: boolean
+  sortOrder: number
+  /** Si el informe abre la categoría en sus notas (Deuda → 4Geeks, PC, Kindle). */
+  breakdownByNote: boolean
+  /** Si sus movimientos pueden llevar facturas adjuntas. */
+  keepsInvoices: boolean
+  /** Deuda a plazos: sus programaciones se finalizan en vez de pausarse. */
+  isDebt: boolean
+}
+
+export interface Tag {
+  id: number
+  name: string
+  color: string
+}
+
+export interface Attachment {
+  id: number
+  transactionId: number
+  filename: string
+  originalName: string
+  mime: string | null
+  size: number | null
+  createdAt: string
+}
+
+export interface Transaction {
+  id: number
+  type: TxType
+  date: string
+  time: string | null
+  accountId: number
+  toAccountId: number | null
+  categoryId: number | null
+  /** Importe en unidades mínimas (céntimos) y en la divisa de la cuenta de origen. Siempre positivo. */
+  amount: number
+  /** Importe recibido, solo en traspasos entre cuentas de distinta divisa. */
+  amountTo: number | null
+  payee: string | null
+  note: string | null
+  place: string | null
+  lat: number | null
+  lon: number | null
+  scheduledId: number | null
+  /** Gasto al que devuelve dinero este reembolso, cuando se registró desde él. */
+  refundForId: number | null
+  createdAt: string
+  updatedAt: string
+}
+
+/** Transacción enriquecida con los datos que la interfaz necesita para pintarla. */
+export interface TransactionView extends Transaction {
+  accountName: string
+  accountCurrency: string
+  accountColor: string
+  toAccountName: string | null
+  toAccountCurrency: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+  tags: Tag[]
+  attachmentCount: number
+  /** Suma de los reembolsos enlazados a este gasto, en su misma divisa. */
+  refundedTotal: number
+  /** Efecto sobre el patrimonio total, convertido a la divisa base. */
+  amountInBase: number
+}
+
+export interface TransactionInput {
+  id?: number
+  type: TxType
+  date: string
+  time?: string | null
+  accountId: number
+  toAccountId?: number | null
+  categoryId?: number | null
+  amount: number
+  amountTo?: number | null
+  payee?: string | null
+  note?: string | null
+  place?: string | null
+  lat?: number | null
+  lon?: number | null
+  tagIds?: number[]
+  refundForId?: number | null
+  /** Programada que lo ha creado; queda anotado para poder rastrear su origen. */
+  scheduledId?: number | null
+}
+
+export interface TransactionFilter {
+  from?: string
+  to?: string
+  accountIds?: number[]
+  categoryIds?: number[]
+  tagIds?: number[]
+  types?: TxType[]
+  search?: string
+  minAmount?: number
+  maxAmount?: number
+  limit?: number
+  offset?: number
+}
+
+export interface Goal {
+  id: number
+  name: string
+  /** Cuenta donde se junta el dinero; en la práctica, la hucha. */
+  accountId: number
+  targetAmount: number
+  /** Fecha para la que se quiere tener juntado; opcional. */
+  targetDate: string | null
+  icon: string
+  color: string
+  note: string | null
+  /** Se sella al darlo por cumplido; a partir de ahí deja de repartirse saldo. */
+  achievedAt: string | null
+  createdAt: string
+}
+
+/** Hito con lo que lleva juntado y el ritmo que hace falta, ya calculado. */
+export interface GoalProgress extends Goal {
+  accountName: string
+  /** Parte del saldo de la hucha que le toca a este hito. */
+  saved: number
+  missing: number
+  percent: number
+  /** Días que quedan hasta la fecha; negativo si ya pasó. */
+  daysLeft: number | null
+  /** Lo que habría que apartar cada mes para llegar a tiempo. */
+  perMonth: number | null
+  /** Ritmo de ahorro de los últimos noventa días en esa cuenta, al mes. */
+  recentPace: number
+  status: 'achieved' | 'complete' | 'onTrack' | 'behind' | 'late' | 'open'
+}
+
+export interface Scheduled {
+  id: number
+  name: string | null
+  type: TxType
+  accountId: number
+  toAccountId: number | null
+  categoryId: number | null
+  amount: number
+  amountTo: number | null
+  payee: string | null
+  note: string | null
+  freq: Frequency
+  interval: number
+  nextDate: string
+  endDate: string | null
+  autoPost: boolean
+  active: boolean
+  lastPosted: string | null
+  createdAt: string
+  /** Programada del gasto que esta devolución reembolsa, si cuelga de otra. */
+  refundForScheduledId: number | null
+  /** Avisa el día antes. Se puede silenciar una sin callar las demás. */
+  remind: boolean
+  /** Fecha de la ocurrencia ya avisada; evita repetir el aviso en cada arranque. */
+  remindedFor: string | null
+}
+
+export interface ScheduledView extends Scheduled {
+  accountName: string
+  accountCurrency: string
+  toAccountName: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+}
+
+/**
+ * Una repetición futura de una programada, proyectada para enseñarla en la lista.
+ * No existe en la base de datos: se calcula al vuelo y desaparece en cuanto la
+ * programada se registra de verdad.
+ */
+export interface ProjectedTransaction {
+  scheduledId: number
+  date: string
+  type: TxType
+  amount: number
+  /** Lo que llegaría al destino en un traspaso entre divisas distintas. */
+  amountTo: number | null
+  /** Efecto sobre el patrimonio en divisa base, para poder sumarlo a los totales. */
+  amountInBase: number
+  accountId: number
+  accountCurrency: string
+  accountName: string
+  toAccountId: number | null
+  toAccountName: string | null
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+  name: string | null
+  payee: string | null
+  note: string | null
+  /** Programada del gasto del que cuelga, para poder anidarla en la lista. */
+  refundForScheduledId: number | null
+  /** La primera pendiente se puede registrar de un clic; las siguientes, no. */
+  isNext: boolean
+}
+
+export interface Rate {
+  code: string
+  rate: number
+  updatedAt: string
+}
+
+export interface Settings {
+  baseCurrency: string
+  /** Cuenta que viene marcada por defecto en los desplegables. */
+  defaultAccountId: number | null
+  /** Enseña las repeticiones futuras de las programadas dentro de la lista de movimientos. */
+  showScheduledInList: boolean
+  theme: ThemeMode
+  palette: Palette
+  startOfWeek: 'monday' | 'sunday'
+  /** Se abre sola al iniciar sesión en Windows, y lo hace directa a la bandeja. */
+  startWithWindows: boolean
+  /** El aspa esconde la ventana en la bandeja en vez de cerrar la aplicación. */
+  closeToTray: boolean
+  /** Avisa por notificación de Windows el día antes de cada programación. */
+  remindersEnabled: boolean
+  lockEnabled: boolean
+  lockPin: string | null
+  lockDelaySeconds: number
+  lastBackupAt: string | null
+}
+
+export interface NoteTotal {
+  /** La nota tal y como se escribió; «Sin nota» cuando el movimiento no lleva ninguna. */
+  note: string
+  total: number
+  count: number
+  /** Porcentaje sobre el total de su categoría, no sobre el del periodo. */
+  percent: number
+}
+
+export interface CategoryTotal {
+  categoryId: number | null
+  name: string
+  icon: string
+  color: string
+  total: number
+  count: number
+  percent: number
+  /** Desglose por nota; vacío en las categorías fijas o sin notas. */
+  notes: NoteTotal[]
+}
+
+export interface MonthlyPoint {
+  month: string
+  income: number
+  expense: number
+  net: number
+}
+

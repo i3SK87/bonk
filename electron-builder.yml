@@ -1,0 +1,30 @@
+appId: com.bonk.desktop
+productName: BONK
+directories:
+  buildResources: resources
+  output: release
+files:
+  - out/**
+  - package.json
+  # El icono lo necesitan la ventana y el icono de la bandeja, en tiempo de ejecución.
+  - resources/icon.ico
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    # El zip es la vía de repuesto: si el filtro de Windows no deja pasar el
+    # instalador, la carpeta suelta se descomprime y se ejecuta igual.
+    - target: zip
+      arch: [x64]
+  # Vale para el zip; el instalador lleva el suyo, más abajo.
+  artifactName: ${productName}-${version}-portable.${ext}
+nsis:
+  artifactName: ${productName}-${version}-Setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: BONK
+  installerLanguages: [es_ES]
+  language: 1034
