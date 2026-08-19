@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, Menu, Tray, nativeTheme, nativeImage } from 'electron'
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { openDatabase, closeDatabase, makeBackup } from './db'
 import { registerIpc } from './ipc'
@@ -14,32 +14,6 @@ let tray: Tray | null = null
 let quitting = false
 
 const isDev = !app.isPackaged
-
-/**
- * La carpeta de datos la nombra la propia aplicación, así que al pasar de
- * «Money Flow» a «BONK» el programa se habría abierto vacío, con la base
- * intacta pero en la carpeta de antes. Si la nueva está sin estrenar y la
- * vieja tiene una base, se copia entera —base, adjuntos y copias de
- * seguridad—. Se copia y no se mueve: la de antes se queda como red.
- */
-function adoptOldData(): void {
-  const target = app.getPath('userData')
-  if (existsSync(join(target, 'moneyflow.db'))) return
-
-  const previous = join(app.getPath('appData'), 'Money Flow')
-  if (!existsSync(join(previous, 'moneyflow.db'))) return
-
-  try {
-    mkdirSync(target, { recursive: true })
-    for (const item of ['moneyflow.db', 'moneyflow.db-wal', 'moneyflow.db-shm', 'attachments', 'backups']) {
-      const from = join(previous, item)
-      if (existsSync(from)) cpSync(from, join(target, item), { recursive: true })
-    }
-    console.log('Datos traídos de la carpeta anterior:', previous)
-  } catch (error) {
-    console.error('No se pudieron traer los datos de la carpeta anterior:', error)
-  }
-}
 
 const iconPath = join(__dirname, '../../resources/icon.ico')
 
@@ -200,7 +174,6 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     app.setAppUserModelId(APP_ID)
 
-    adoptOldData()
     openDatabase(app.getPath('userData'))
 
     // Las recurrencias vencidas se generan al abrir, aunque la app lleve meses cerrada.

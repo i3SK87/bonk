@@ -43,7 +43,7 @@ function section(title: string): void {
   console.log(`\n${title}`)
 }
 
-const dir = mkdtempSync(join(tmpdir(), 'moneyflow-test-'))
+const dir = mkdtempSync(join(tmpdir(), 'bonk-test-'))
 
 try {
   openDatabase(dir)

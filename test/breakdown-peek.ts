@@ -3,7 +3,7 @@
  * COPIA de una base real. Sirve para ver qué saca el informe sin abrir la app.
  *
  *   npx esbuild test/breakdown-peek.ts --bundle --platform=node --format=esm \n *     --outfile=out/test/breakdown-peek.mjs --external:node:* --alias:@shared=./src/shared
- *   node out/test/breakdown-peek.mjs <carpeta con una copia de moneyflow.db>
+ *   node out/test/breakdown-peek.mjs <carpeta con una copia de bonk.db>
  */
 import { openDatabase, closeDatabase } from '../src/main/db'
 import * as categories from '../src/main/repos/categories'

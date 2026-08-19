@@ -14,7 +14,7 @@ import type { Category } from '@shared/types'
  * proceso principal no hay lienzo ni intérprete de SVG.
  */
 
-const api = window.moneyflow
+const api = window.bonk
 
 /** Lo ya dibujado, para no repetir el trabajo en cada recarga de catálogos. */
 const cache = new Map<string, string>()

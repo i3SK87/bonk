@@ -7,7 +7,7 @@ import { today, formatDate } from '@shared/dates'
 import { formatMoney } from '@shared/money'
 import type { Attachment, TransactionView, TxType } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 interface Props {
   existing?: TransactionView | null

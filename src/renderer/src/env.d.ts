@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
-import type { MoneyFlowApi } from '../../preload'
+import type { BonkApi } from '../../preload'
 
 declare global {
   interface Window {
-    moneyflow: MoneyFlowApi
+    bonk: BonkApi
   }
 }
 

@@ -49,17 +49,17 @@ export function App(): ReactNode {
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
-    const offNew = window.moneyflow.events.on('menu:new-transaction', () => setComposing(true))
-    const offBackup = window.moneyflow.events.on('menu:backup-done', () =>
+    const offNew = window.bonk.events.on('menu:new-transaction', () => setComposing(true))
+    const offBackup = window.bonk.events.on('menu:backup-done', () =>
       toast('Copia de seguridad creada', 'success')
     )
     // Las programadas que vencen se registran solas aunque la ventana lleve
     // días abierta; sin este aviso, la lista se quedaba en lo de ayer.
-    const offChanged = window.moneyflow.events.on('data:changed', () => {
+    const offChanged = window.bonk.events.on('data:changed', () => {
       refresh()
     })
     // Una programada que no puede entrar se quedaría intentándolo en silencio.
-    const offFailed = window.moneyflow.events.on('scheduled:failed', (detail) =>
+    const offFailed = window.bonk.events.on('scheduled:failed', (detail) =>
       toast(detail ?? 'Una programación vencida no se pudo registrar', 'error')
     )
     const onKey = (event: KeyboardEvent): void => {

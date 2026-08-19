@@ -9,7 +9,7 @@ import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading } from '@shared/dates'
 import type { ProjectedTransaction, TransactionFilter, TransactionView, TxType } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 type RangeId = 'month' | 'prev' | 'quarter' | 'year' | 'all' | 'custom'
 

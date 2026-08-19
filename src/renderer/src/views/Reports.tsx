@@ -15,7 +15,7 @@ import {
 } from '@shared/dates'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 type PeriodId = 'month' | 'prev' | 'quarter' | 'year' | 'prevYear'
 

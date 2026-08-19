@@ -5,7 +5,7 @@ import { Avatar, Segmented } from '../components/ui'
 import { CategoryModal } from '../components/CategoryForm'
 import type { Category, CategoryKind } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 export function CategoriesView(): ReactNode {
   const { categories, run } = useStore()

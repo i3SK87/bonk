@@ -17,7 +17,7 @@ import { formatMoney } from '@shared/money'
 import { formatDate, today } from '@shared/dates'
 import type { GoalProgress } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 const GOAL_ICONS = [
   'piggy',

@@ -3,7 +3,7 @@ import { Icon, CATEGORY_ICONS, PALETTE } from './Icon'
 import { Avatar, Modal, Field, IconPicker, ColorPicker, Confirm, Segmented, Checkbox } from './ui'
 import type { Category, CategoryKind } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 /**
  * La ficha de categoría vive aquí y no en su vista porque también se abre

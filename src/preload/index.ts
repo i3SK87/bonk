@@ -139,7 +139,7 @@ const api = {
   }
 }
 
-export type MoneyFlowApi = typeof api
+export type BonkApi = typeof api
 
 // El renderer corre aislado: solo ve este objeto, nunca Node ni Electron directamente.
-contextBridge.exposeInMainWorld('moneyflow', api)
+contextBridge.exposeInMainWorld('bonk', api)

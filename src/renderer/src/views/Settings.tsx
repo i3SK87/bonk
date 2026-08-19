@@ -17,7 +17,7 @@ const PALETAS: Array<{ id: Palette; label: string; hint: string; bg: string; car
   { id: 'ciruela', label: 'Ciruela', hint: 'Vino y rosa', bg: '#1a1218', card: '#241a21', accent: '#f090c4' }
 ]
 
-const api = window.moneyflow
+const api = window.bonk
 
 export function SettingsView(): ReactNode {
   const { settings, updateSettings, run, toast, refresh, fail } = useStore()

@@ -5,7 +5,7 @@ import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, C
 import { formatMoney } from '@shared/money'
 import type { Account, AccountType, AccountWithBalance } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 const ACCOUNT_TYPES: Array<{ value: AccountType; label: string; icon: string }> = [
   { value: 'cash', label: 'Efectivo', icon: 'wallet' },

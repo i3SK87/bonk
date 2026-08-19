@@ -3,6 +3,22 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.11.0
+
+- **El archivo de datos pasa a llamarse `bonk.db`**, y el puente entre la
+  ventana y el motor, `window.bonk`. Por dentro seguían con el nombre de antes.
+- **La mudanza es automática y no borra nada.** Al abrir, si existe el archivo
+  viejo y no el nuevo, se copia con `VACUUM INTO`, que escribe una copia
+  completa y coherente —incluido lo que estuviera aún sin volcar— en vez de
+  mover tres archivos sueltos y confiar en que casen. El `moneyflow.db` de antes
+  se queda en el disco: si algo saliera mal, ahí está. Probado sobre una copia
+  de una base real de 409 movimientos antes de tocar ninguna.
+- Las copias de seguridad nuevas se llaman `bonk-<fecha>.db`. Las viejas siguen
+  contando para el turno de borrado, ordenadas por su fecha y no por su nombre:
+  mezclando prefijos, el orden alfabético habría borrado las nuevas primero.
+- Fuera el traslado desde la carpeta de datos anterior, que ya cumplió su
+  cometido y era el último rastro del nombre viejo en el arranque.
+
 ## Novedades de la 1.10.5
 
 - **Las programaciones ya no tienen nombre, solo notas**, igual que los
@@ -227,15 +243,6 @@ con una muestra en el selector que enseña fondo, tarjeta y acento.
 
 ## Novedades de la 1.0.0
 
-- **La aplicación se llama BONK.** Cambia el nombre en la ventana, en la barra
-  lateral, en el menú de inicio, en el instalador y en Ajustes.
-- **Los datos se mudan solos.** La carpeta de datos la nombra la propia
-  aplicación, así que con el nombre nuevo (`%APPDATA%\BONK`) se habría abierto
-  vacía. Al arrancar por primera vez, si la carpeta nueva está sin estrenar y
-  la vieja tiene una base, se copia entera: base, adjuntos y copias de
-  seguridad. Se copia y no se mueve, así que `%APPDATA%\Money Flow` se queda
-  como red de seguridad; se puede borrar a mano cuando compruebes que todo
-  está en su sitio.
 - La pestaña «Programadas» pasa a «Programados», y su título a «Movimientos
   programados».
 - El icono de la lupa se centra con la altura del campo en vez de con un
@@ -586,8 +593,8 @@ Money Flow para iOS y Mac:
 ## Dónde viven tus datos
 
 ```
-C:\Users\<usuario>\AppData\Roaming\Money Flow\
-├── moneyflow.db      base de datos SQLite
+C:\Users\<usuario>\AppData\Roaming\BONK\
+├── bonk.db           base de datos SQLite
 ├── attachments\      tickets y fotos adjuntas
 └── backups\          las diez últimas copias
 ```

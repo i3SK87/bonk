@@ -18,7 +18,7 @@ import { formatMoney } from '@shared/money'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { Frequency, ScheduledView, TxType } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 const FREQUENCIES: Array<{ value: Frequency; singular: string; plural: string }> = [
   { value: 'daily', singular: 'día', plural: 'días' },

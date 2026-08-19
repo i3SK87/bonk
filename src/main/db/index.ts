@@ -23,12 +23,37 @@ export function attachmentsDir(): string {
 }
 
 export function dbPath(): string {
-  return join(dataDir, 'moneyflow.db')
+  return join(dataDir, 'bonk.db')
+}
+
+/**
+ * El archivo se llamó `moneyflow.db` mientras la aplicación tuvo otro nombre.
+ *
+ * Se pasa al nombre nuevo con `VACUUM INTO`, que escribe una copia completa y
+ * coherente —incluido lo que estuviera todavía en el WAL— en vez de mover tres
+ * archivos sueltos y confiar en que casen. El original no se toca: si algo
+ * saliera mal, sigue ahí.
+ */
+function adoptPreviousName(): void {
+  const target = dbPath()
+  if (existsSync(target)) return
+
+  const previous = join(dataDir, 'moneyflow.db')
+  if (!existsSync(previous)) return
+
+  const source = new DatabaseSync(previous)
+  try {
+    source.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`)
+    console.log('Base de datos renombrada:', previous, '→', target)
+  } finally {
+    source.close()
+  }
 }
 
 export function openDatabase(userDataPath: string): DatabaseSync {
   dataDir = userDataPath
   if (!existsSync(dataDir)) mkdirSync(dataDir, { recursive: true })
+  adoptPreviousName()
 
   const file = dbPath()
   const isNew = !existsSync(file)
@@ -83,12 +108,16 @@ export function makeBackup(keep = 10): string {
   getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)')
 
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-  const target = join(dir, `moneyflow-${stamp}.db`)
+  const target = join(dir, `bonk-${stamp}.db`)
   copyFileSync(dbPath(), target)
 
+  // Se cuentan también las copias con el nombre de antes, y se ordenan por su
+  // fecha y no por el archivo: mezclando prefijos, el orden alfabético habría
+  // borrado las nuevas primero.
+  const when = (file: string): string => file.replace(/^[a-z]+-/, '')
   const old = readdirSync(dir)
-    .filter((f) => f.startsWith('moneyflow-') && f.endsWith('.db'))
-    .sort()
+    .filter((f) => /^(bonk|moneyflow)-/.test(f) && f.endsWith('.db'))
+    .sort((a, b) => when(a).localeCompare(when(b)))
   while (old.length > keep) {
     const victim = old.shift()
     if (victim) unlinkSync(join(dir, victim))

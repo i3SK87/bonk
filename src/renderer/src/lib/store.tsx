@@ -11,7 +11,7 @@ import {
 import { pushCategoryIcons } from './notificationIcons'
 import type { AccountWithBalance, Category, Settings } from '@shared/types'
 
-const api = window.moneyflow
+const api = window.bonk
 
 export interface Toast {
   id: number

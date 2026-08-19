@@ -2,7 +2,7 @@
  * Abre una copia de una base de datos existente con el código actual, para
  * comprobar que una instalación anterior sigue funcionando tras actualizar.
  *
- *   node out/test/upgrade-check.mjs <carpeta con moneyflow.db>
+ *   node out/test/upgrade-check.mjs <carpeta con bonk.db>
  */
 import { DatabaseSync } from 'node:sqlite'
 import { join } from 'node:path'
@@ -21,7 +21,7 @@ if (!dir) {
 }
 
 // Versión del esquema ANTES de que el código nuevo la toque.
-const before = new DatabaseSync(join(dir, 'moneyflow.db'), { readOnly: true })
+const before = new DatabaseSync(join(dir, 'bonk.db'), { readOnly: true })
 const versionBefore = (before.prepare('PRAGMA user_version').get() as { user_version: number }).user_version
 const countBefore = (before.prepare('SELECT COUNT(*) AS n FROM transactions').get() as { n: number }).n
 const catsBefore = (before.prepare('SELECT COUNT(*) AS n FROM categories').get() as { n: number }).n
