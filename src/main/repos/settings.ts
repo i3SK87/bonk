@@ -68,32 +68,3 @@ export function setRate(code: string, rate: number): void {
 export function deleteRate(code: string): void {
   getDb().prepare('DELETE FROM rates WHERE code = ?').run(code.toUpperCase())
 }
-
-/**
- * Descarga tipos de cambio del Banco Central Europeo a través de Frankfurter.
- * Es la única llamada a internet de la aplicación y siempre la dispara el usuario.
- */
-export async function refreshRates(): Promise<{ updated: number; date: string }> {
-  const base = getSettings().baseCurrency
-  const codes = listRates()
-    .map((r) => r.code)
-    .filter((code) => code !== base)
-  if (codes.length === 0) return { updated: 0, date: '' }
-
-  const url = `https://api.frankfurter.app/latest?from=${encodeURIComponent(base)}&to=${codes.join(',')}`
-  const response = await fetch(url, { signal: AbortSignal.timeout(15000) })
-  if (!response.ok) throw new Error(`El servicio de tipos respondió ${response.status}`)
-
-  const data = (await response.json()) as { rates?: Record<string, number>; date?: string }
-  if (!data.rates) throw new Error('La respuesta del servicio de tipos no traía cotizaciones')
-
-  let updated = 0
-  for (const [code, rate] of Object.entries(data.rates)) {
-    if (typeof rate === 'number' && rate > 0) {
-      setRate(code, rate)
-      updated++
-    }
-  }
-  setRate(base, 1)
-  return { updated, date: data.date ?? '' }
-}
