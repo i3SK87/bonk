@@ -301,5 +301,25 @@ export const MIGRATIONS: string[] = [
   `
   ALTER TABLE scheduled ADD COLUMN remind INTEGER NOT NULL DEFAULT 1;
   ALTER TABLE scheduled ADD COLUMN reminded_for TEXT;
+  `,
+
+  // v10 — planes agotados y deudas saldadas.
+  //
+  // Una programación con fecha de fin dejaba de generar cuotas al llegar a
+  // ella, pero se quedaba encendida en la lista principal: nadie se enteraba de
+  // que la deuda estaba pagada. Ahora se apaga sola y pasa a Finalizadas.
+  //
+  // Hace falta `settled_at` porque apagada no significa terminada: una pausada
+  // también lo está, y esa se queda donde estaba esperando a que la reanuden.
+  // Terminada es la que tiene fecha aquí. `settled_notified` evita repetir la
+  // enhorabuena en cada repaso; las que ya estaban cerradas arrancan marcadas,
+  // que celebrar hoy una deuda saldada en marzo no tendría ninguna gracia.
+  `
+  ALTER TABLE scheduled ADD COLUMN settled_at TEXT;
+  ALTER TABLE scheduled ADD COLUMN settled_notified INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE scheduled
+     SET settled_at = end_date, settled_notified = 1
+   WHERE active = 0 AND end_date IS NOT NULL;
   `
 ]
