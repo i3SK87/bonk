@@ -3,6 +3,17 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.10.4
+
+- **«Gasto que te devuelven» pasa detrás de la categoría**, en el formulario de
+  reembolso. Salía delante, pidiendo elegir un gasto de una categoría que
+  todavía no se había elegido: el desplegable estaba siempre vacío la primera
+  vez que se miraba.
+- Y deja de hablar de fechas. Ahora dice lo que hace falta según el momento:
+  «elige antes la categoría» si no hay ninguna, «ningún gasto de esta categoría
+  tiene nada pendiente de devolver» si la hay pero está saldada, y qué gana uno
+  enlazando cuando sí hay de dónde elegir.
+
 ## Novedades de la 1.10.3
 
 - **La calculadora ya no redondea.** Repartir 33,99 entre cuatro da 8,4975, y

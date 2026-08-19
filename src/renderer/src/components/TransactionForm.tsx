@@ -265,41 +265,10 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         )}
 
         {type === 'refund' && !refundFor && (
-          <>
-            <p className="field-hint">
-              Un reembolso entra en tu cuenta pero descuenta del gasto de su categoría, en vez de contar como
-              ingreso. Elige la categoría del gasto que te devuelven.
-            </p>
-            <Field
-              label="Gasto que te devuelven"
-              hint={
-                candidates.length === 0
-                  ? 'Elige antes la categoría y la fecha; aquí saldrán los gastos de esa categoría con algo pendiente de devolver.'
-                  : 'Enlazarlo une los dos movimientos en la lista y descuenta la devolución de ese gasto en concreto.'
-              }
-            >
-              <select
-                className="select"
-                value={refundForId ?? ''}
-                disabled={candidates.length === 0}
-                onChange={(e) => setRefundForId(e.target.value ? Number(e.target.value) : null)}
-              >
-                <option value="">Sin enlazar a un gasto concreto</option>
-                {candidates.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {formatDate(item.date)} ·{' '}
-                    {/* Sin nota queda la categoría: una lista de fechas e importes sueltos
-                        no dice de qué gasto se trata. */}
-                    {item.note || item.categoryName || 'Sin categoría'} ·{' '}
-                    {formatMoney(item.amount, item.accountCurrency)}
-                    {item.refundedTotal > 0
-                      ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
-                      : ''}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </>
+          <p className="field-hint">
+            Un reembolso entra en tu cuenta pero descuenta del gasto de su categoría, en vez de contar como
+            ingreso. Elige la categoría del gasto que te devuelven.
+          </p>
         )}
 
         <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
@@ -385,6 +354,42 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
                 </span>
               </button>
             </div>
+          </Field>
+        )}
+
+        {/* Detrás de la categoría porque depende de ella: los gastos que salen
+            aquí son los suyos. Delante no había nada que elegir todavía. */}
+        {type === 'refund' && !refundFor && (
+          <Field
+            label="Gasto que te devuelven"
+            hint={
+              !categoryId
+                ? 'Elige antes la categoría: aquí saldrán sus gastos con algo pendiente de devolver.'
+                : candidates.length === 0
+                  ? 'Ningún gasto de esta categoría tiene nada pendiente de devolver.'
+                  : 'Enlazarlo une los dos movimientos en la lista y descuenta la devolución de ese gasto en concreto.'
+            }
+          >
+            <select
+              className="select"
+              value={refundForId ?? ''}
+              disabled={candidates.length === 0}
+              onChange={(e) => setRefundForId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Sin enlazar a un gasto concreto</option>
+              {candidates.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {formatDate(item.date)} ·{' '}
+                  {/* Sin nota queda la categoría: una lista de fechas e importes sueltos
+                      no dice de qué gasto se trata. */}
+                  {item.note || item.categoryName || 'Sin categoría'} ·{' '}
+                  {formatMoney(item.amount, item.accountCurrency)}
+                  {item.refundedTotal > 0
+                    ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
+                    : ''}
+                </option>
+              ))}
+            </select>
           </Field>
         )}
 
