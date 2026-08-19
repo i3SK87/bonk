@@ -11,7 +11,7 @@ internet en ningún momento.
 
 ## Cómo instalarla
 
-1. Entra en la pestaña **[Releases](../../releases)** de esta página y descarga
+1. Entra en la pestaña **[Releases](https://github.com/i3SK87/bonk/releases)** de esta página y descarga
    el archivo que acaba en `Setup.exe` (el de arriba del todo, que es el más
    reciente).
 2. Ábrelo cuando termine de bajar.
@@ -79,7 +79,7 @@ Para llevarte los datos a otro ordenador, copia esa carpeta entera.
 Si el instalador no pasa el filtro de Windows, se puede usar la aplicación sin
 instalarla:
 
-1. En **[Releases](../../releases)**, descarga el archivo `.zip` en vez del
+1. En **[Releases](https://github.com/i3SK87/bonk/releases)**, descarga el archivo `.zip` en vez del
    `Setup.exe`.
 2. Descomprímelo donde quieras, por ejemplo en `Documentos\BONK`.
 3. Dentro hay un `BONK.exe`. Ábrelo y ya está.
