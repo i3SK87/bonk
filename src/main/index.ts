@@ -202,7 +202,8 @@ if (!app.requestSingleInstanceLock()) {
       iconPath,
       showWindow,
       () => mainWindow?.webContents.send('data:changed'),
-      (reason) => mainWindow?.webContents.send('scheduled:failed', reason)
+      (reason) => mainWindow?.webContents.send('scheduled:failed', reason),
+      (settlements) => mainWindow?.webContents.send('debt:settled', settlements)
     )
 
     app.on('activate', () => {

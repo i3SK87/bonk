@@ -3,6 +3,7 @@ import { useStore } from './lib/store'
 import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
+import { Celebration } from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
@@ -11,6 +12,7 @@ import { SchedulesView } from './views/Schedules'
 import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
+import type { Settlement } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -46,6 +48,7 @@ export function App(): ReactNode {
   const { ready, accounts, settings, toast, refresh } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
+  const [settlements, setSettlements] = useState<Settlement[]>([])
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
@@ -60,8 +63,18 @@ export function App(): ReactNode {
     })
     // Una programada que no puede entrar se quedaría intentándolo en silencio.
     const offFailed = window.bonk.events.on('scheduled:failed', (detail) =>
-      toast(detail ?? 'Una programación vencida no se pudo registrar', 'error')
+      toast(
+        typeof detail === 'string' ? detail : 'Una programación vencida no se pudo registrar',
+        'error'
+      )
     )
+    // Una deuda saldada se celebra; si caen varias a la vez, van en cola.
+    const offSettled = window.bonk.events.on('debt:settled', (detail) => {
+      if (Array.isArray(detail) && detail.length > 0) {
+        setSettlements((current) => [...current, ...(detail as Settlement[])])
+        refresh()
+      }
+    })
     const onKey = (event: KeyboardEvent): void => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
@@ -74,6 +87,7 @@ export function App(): ReactNode {
       offBackup()
       offChanged()
       offFailed()
+      offSettled()
       window.removeEventListener('keydown', onKey)
     }
   }, [toast, refresh])
@@ -143,6 +157,13 @@ export function App(): ReactNode {
       </main>
 
       {ready && composing && <TransactionForm onClose={() => setComposing(false)} />}
+
+      {ready && settlements.length > 0 && (
+        <Celebration
+          settlement={settlements[0]}
+          onClose={() => setSettlements((current) => current.slice(1))}
+        />
+      )}
       <Toasts />
     </div>
   )

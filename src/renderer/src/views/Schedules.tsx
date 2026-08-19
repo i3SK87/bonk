@@ -76,12 +76,11 @@ export function SchedulesView(): ReactNode {
   }, [revision])
 
   /**
-   * Finalizada es la que ya no puede volver por su cuenta: apagada y con fecha
-   * de fin cumplida, sea porque se saldó la deuda o porque se agotó su plazo.
-   * Una pausada, en cambio, sigue en la lista principal esperando a reanudarse.
+   * Finalizada es la que lleva sello: el plan se agotó o se cerró a mano. Una
+   * pausada también está apagada, pero se queda en la lista principal en gris,
+   * esperando a que la reanuden.
    */
-  const isFinished = (row: ScheduledView): boolean =>
-    !row.active && row.endDate != null && row.endDate <= today()
+  const isFinished = (row: ScheduledView): boolean => row.settledAt != null
   const vigentes = rows.filter((row) => !isFinished(row))
   const finalizadas = rows.filter(isFinished)
 
@@ -127,7 +126,7 @@ export function SchedulesView(): ReactNode {
           nestByParent(vigentes, (row) => row.id, (row) => row.refundForScheduledId).map(({ row, nested, last }) => (
             <div
               key={row.id}
-              className={`list-row${nested ? ' nested' : ''}${nested && !last ? ' nested-continues' : ''}`}
+              className={`list-row${row.active ? '' : ' paused'}${nested ? ' nested' : ''}${nested && !last ? ' nested-continues' : ''}`}
             >
               <Avatar
                 icon={row.type === 'transfer' ? 'transfer' : (row.categoryIcon ?? 'repeat')}

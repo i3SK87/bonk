@@ -3,6 +3,26 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.12.0
+
+- **Una deuda que se acaba de pagar se celebra.** Cuando entra la última cuota
+  de un plan, BONK lo dice con una ventana —sello verde, confeti y el resumen
+  de lo que ha costado: cuántas cuotas, cuánto en total y desde cuándo— y con
+  una notificación de Windows con el icono de su categoría. Solo las categorías
+  marcadas como deuda a plazos: que se acabe una suscripción no es una buena
+  noticia, es que hay que renovarla.
+- **Un plan agotado se apaga solo y pasa a Finalizadas.** Antes dejaba de
+  generar cuotas pero se quedaba encendido en la lista principal, así que nadie
+  se enteraba de que la deuda estaba pagada.
+- **Pausada ya no es lo mismo que terminada.** Una en pausa se queda donde
+  estaba, en gris y con su etiqueta, esperando a que la reanudes; reanudarla le
+  quita el sello si se había dado por cerrada.
+- Finalizar a mano no espera al repaso de media hora: la enhorabuena sale en el
+  mismo gesto.
+- El confeti va en un lienzo, sin librerías: 110 papelillos con gravedad y giro
+  propios, en los colores de las categorías. Con el movimiento reducido del
+  sistema, caen de golpe y se quedan quietos.
+
 ## Novedades de la 1.11.2
 
 - **Limpiar los filtros sin abrir el panel.** El botón sale junto a «Filtros» en

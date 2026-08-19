@@ -204,6 +204,12 @@ export interface Scheduled {
   remind: boolean
   /** Fecha de la ocurrencia ya avisada; evita repetir el aviso en cada arranque. */
   remindedFor: string | null
+  /**
+   * Fecha en que el plan se dio por terminado, sea porque se agotó o porque se
+   * finalizó a mano. Apagada no es lo mismo que terminada: una pausada también
+   * está apagada, y esa espera a que la reanuden.
+   */
+  settledAt: string | null
 }
 
 export interface ScheduledView extends Scheduled {
@@ -271,6 +277,17 @@ export interface Settings {
   lockPin: string | null
   lockDelaySeconds: number
   lastBackupAt: string | null
+}
+
+/** Lo que se cuenta al saldar una deuda: cuántas cuotas, cuánto y desde cuándo. */
+export interface Settlement {
+  id: number
+  title: string
+  count: number
+  total: number
+  currency: string
+  firstDate: string | null
+  lastDate: string | null
 }
 
 export interface NoteTotal {

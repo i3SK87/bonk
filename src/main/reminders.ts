@@ -3,9 +3,16 @@ import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { addDays, today } from '@shared/dates'
 import { formatMoney } from '@shared/money'
-import { pendingReminders, markReminded, postDue } from './repos/scheduled'
+import {
+  pendingReminders,
+  markReminded,
+  postDue,
+  pendingSettlements,
+  markSettlementNotified,
+  debtSummary
+} from './repos/scheduled'
 import { getSettings } from './repos/settings'
-import type { ScheduledView } from '@shared/types'
+import type { ScheduledView, Settlement } from '@shared/types'
 
 /**
  * Avisos del día antes de cada movimiento programado.
@@ -143,6 +150,48 @@ export function checkReminders(icon: string, onClick: () => void): number {
   return rows.length
 }
 
+/**
+ * Deudas recién saldadas. Una sola enhorabuena por deuda: la programación queda
+ * marcada en cuanto se cuenta, para que el repaso de cada media hora no la
+ * repita.
+ */
+export function announceSettlements(icon: string, onClick: () => void): Settlement[] {
+  const done: Settlement[] = []
+
+  for (const row of pendingSettlements()) {
+    const summary = debtSummary(row.id)
+    const name = title(row)
+
+    if (Notification.isSupported()) {
+      notify(imageFor(icon, row.categoryId), onClick, {
+        title: `¡${name} pagado!`,
+        body: `${summary.count} cuotas y ya está. ${formatMoney(summary.total, summary.currency)} desde ${monthOf(summary.firstDate)}.`
+      })
+    }
+
+    markSettlementNotified(row.id)
+    done.push({
+      id: row.id,
+      title: name,
+      count: summary.count,
+      total: summary.total,
+      currency: summary.currency,
+      firstDate: summary.firstDate,
+      lastDate: summary.lastDate
+    })
+  }
+
+  return done
+}
+
+/** «agosto de 2025», para contar desde cuándo se pagaba. */
+function monthOf(date: string | null): string {
+  if (!date) return 'el principio'
+  return new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(
+    new Date(`${date}T12:00:00`)
+  )
+}
+
 /** Lo que se espera a que la ventana mande los iconos antes del primer repaso. */
 const FIRST_CHECK_MS = 6000
 
@@ -159,7 +208,8 @@ export function startBackgroundWork(
   icon: string,
   onClick: () => void,
   onDataChanged: () => void,
-  onFailure: (reason: string) => void
+  onFailure: (reason: string) => void,
+  onSettled: (settlements: Settlement[]) => void
 ): void {
   // El de la sesión anterior sigue ahí: se retira al arrancar para que el
   // centro de notificaciones enseñe BONK también en los avisos ya recibidos.
@@ -185,6 +235,14 @@ export function startBackgroundWork(
         failureReported = true
         onFailure(reason)
       }
+    }
+    try {
+      // Antes que los avisos: una deuda que se acaba de saldar merece su
+      // enhorabuena por delante del recordatorio del recibo de mañana.
+      const settled = announceSettlements(icon, onClick)
+      if (settled.length > 0) onSettled(settled)
+    } catch (error) {
+      console.error('No se pudo dar la enhorabuena:', error)
     }
     try {
       checkReminders(icon, onClick)

@@ -11,7 +11,7 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { applyAutoLaunch } from './autostart'
-import { sendTestNotification, setCategoryIcons } from './reminders'
+import { sendTestNotification, setCategoryIcons, announceSettlements } from './reminders'
 import type { TransactionFilter, CategoryKind, Settings } from '@shared/types'
 
 /**
@@ -85,7 +85,12 @@ export function registerIpc(
   handle('scheduled:save', (input) => scheduled.saveScheduled(input))
   handle('scheduled:delete', (id: number) => scheduled.deleteScheduled(id))
   handle('scheduled:setActive', (id: number, active: boolean) => scheduled.setScheduledActive(id, active))
-  handle('scheduled:finish', (id: number) => scheduled.finishScheduled(id))
+  // Finalizar a mano no espera al repaso de media hora: la enhorabuena sale en
+  // el mismo gesto, y de paso el aviso de Windows.
+  handle('scheduled:finish', (id: number) => {
+    scheduled.finishScheduled(id)
+    return announceSettlements(notifications.icon, notifications.onClick)
+  })
   handle('scheduled:postNow', (id: number) => scheduled.postNow(id))
   handle('scheduled:postDue', () => scheduled.postDue())
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))

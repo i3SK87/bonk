@@ -14,8 +14,10 @@ import type {
   Settings,
   TransactionFilter,
   TransactionInput,
-  TransactionView
+  TransactionView,
+  Settlement
 } from '@shared/types'
+
 
 interface Envelope<T> {
   ok: boolean
@@ -76,7 +78,7 @@ const api = {
     save: (input: unknown) => call<ScheduledView>('scheduled:save', input),
     remove: (id: number) => call<void>('scheduled:delete', id),
     setActive: (id: number, active: boolean) => call<void>('scheduled:setActive', id, active),
-    finish: (id: number) => call<void>('scheduled:finish', id),
+    finish: (id: number) => call<Settlement[]>('scheduled:finish', id),
     postNow: (id: number) => call<void>('scheduled:postNow', id),
     postDue: () => call<number>('scheduled:postDue'),
     project: (from: string, to: string) => call<ProjectedTransaction[]>('scheduled:project', from, to)
@@ -115,10 +117,15 @@ const api = {
   events: {
     /** Suscribe la interfaz a las órdenes del menú nativo. Devuelve la función para desuscribirse. */
     on: (
-      channel: 'menu:new-transaction' | 'menu:backup-done' | 'data:changed' | 'scheduled:failed',
-      callback: (detail?: string) => void
+      channel:
+        | 'menu:new-transaction'
+        | 'menu:backup-done'
+        | 'data:changed'
+        | 'scheduled:failed'
+        | 'debt:settled',
+      callback: (detail?: unknown) => void
     ) => {
-      const listener = (_event: unknown, detail?: string): void => callback(detail)
+      const listener = (_event: unknown, detail?: unknown): void => callback(detail)
       ipcRenderer.on(channel, listener)
       return () => {
         ipcRenderer.removeListener(channel, listener)

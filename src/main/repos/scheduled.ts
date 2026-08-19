@@ -27,6 +27,8 @@ interface ScheduledRow {
   refund_for_scheduled_id: number | null
   remind: number
   reminded_for: string | null
+  settled_at: string | null
+  settled_notified: number
 }
 
 interface ScheduledViewRow extends ScheduledRow {
@@ -60,7 +62,8 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
     remind: row.remind === 1,
-    remindedFor: row.reminded_for
+    remindedFor: row.reminded_for,
+    settledAt: row.settled_at
   }
 }
 
@@ -205,20 +208,95 @@ export function deleteScheduled(id: number): void {
   getDb().prepare('DELETE FROM scheduled WHERE id = ?').run(id)
 }
 
+/**
+ * Pausar apaga y nada más: la programación se queda en la lista esperando a que
+ * la reanuden. Reanudarla deshace también el sello de terminada, por si lo que
+ * se está reviviendo es un plan que se dio por cerrado.
+ */
 export function setScheduledActive(id: number, active: boolean): void {
-  getDb().prepare('UPDATE scheduled SET active = ? WHERE id = ?').run(active ? 1 : 0, id)
+  if (active) {
+    getDb()
+      .prepare('UPDATE scheduled SET active = 1, settled_at = NULL, settled_notified = 0 WHERE id = ?')
+      .run(id)
+    return
+  }
+  getDb().prepare('UPDATE scheduled SET active = 0 WHERE id = ?').run(id)
 }
 
 /**
- * Cierra una programación para siempre: la apaga y le pone fecha de fin en el
- * día en que se cierra. A diferencia de pausarla, no se puede reanudar sola ni
+ * Cierra una programación para siempre: la apaga, le pone fecha de fin y la
+ * sella como terminada. A diferencia de pausarla, no se puede reanudar sola ni
  * se proyecta hacia delante; es lo que toca cuando una deuda se salda antes de
  * tiempo y esas cuotas ya no van a existir.
  */
 export function finishScheduled(id: number, date = today()): void {
   getDb()
-    .prepare('UPDATE scheduled SET active = 0, end_date = ? WHERE id = ?')
+    .prepare('UPDATE scheduled SET active = 0, end_date = ?, settled_at = ? WHERE id = ?')
+    .run(date, date, id)
+}
+
+/**
+ * Da el plan por agotado: la última cuota ya entró y la siguiente caería más
+ * allá de la fecha de fin. Se apaga y se sella, que es lo que la manda a
+ * Finalizadas.
+ */
+function settleExhausted(id: number, date: string): void {
+  getDb()
+    .prepare('UPDATE scheduled SET active = 0, settled_at = ? WHERE id = ? AND settled_at IS NULL')
     .run(date, id)
+}
+
+export interface DebtSummary {
+  /** Cuotas registradas de esta programación. */
+  count: number
+  /** Suma de todas ellas, en unidades menores de la divisa de la cuenta. */
+  total: number
+  currency: string
+  firstDate: string | null
+  lastDate: string | null
+}
+
+/** Lo que ha costado un plan, para poder contarlo al terminar. */
+export function debtSummary(id: number): DebtSummary {
+  const row = getDb()
+    .prepare(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(t.amount), 0) AS total,
+              MIN(t.date) AS first_date, MAX(t.date) AS last_date
+         FROM transactions t
+        WHERE t.scheduled_id = ?`
+    )
+    .get(id) as unknown as { n: number; total: number; first_date: string | null; last_date: string | null }
+
+  const scheduled = getScheduled(id)
+  return {
+    count: row.n,
+    total: row.total,
+    currency: scheduled?.accountCurrency ?? getSettings().baseCurrency,
+    firstDate: row.first_date,
+    lastDate: row.last_date
+  }
+}
+
+/**
+ * Deudas recién saldadas de las que todavía no se ha dado la enhorabuena. Solo
+ * las de categorías marcadas como deuda a plazos: que se acabe una suscripción
+ * no es una buena noticia, es que hay que renovarla.
+ */
+export function pendingSettlements(): ScheduledView[] {
+  const rows = getDb()
+    .prepare(
+      `${VIEW_SELECT}
+        WHERE s.settled_at IS NOT NULL
+          AND s.settled_notified = 0
+          AND c.is_debt = 1
+        ORDER BY s.settled_at, s.id`
+    )
+    .all() as unknown as ScheduledViewRow[]
+  return rows.map(toView)
+}
+
+export function markSettlementNotified(id: number): void {
+  getDb().prepare('UPDATE scheduled SET settled_notified = 1 WHERE id = ?').run(id)
 }
 
 /**
@@ -258,10 +336,17 @@ function post(row: Scheduled, date: string): void {
   })
 
   const upcoming = nextOccurrence(date, row.freq, row.interval)
+  // Esta era la última: la siguiente caería más allá del fin. Se apaga y se
+  // sella, que es lo que la manda a Finalizadas y dispara la enhorabuena.
   const exhausted = row.endDate != null && upcoming > row.endDate
   getDb()
-    .prepare('UPDATE scheduled SET next_date = ?, last_posted = ?, active = ? WHERE id = ?')
-    .run(upcoming, date, exhausted ? 0 : 1, row.id)
+    .prepare(
+      `UPDATE scheduled
+          SET next_date = ?, last_posted = ?, active = ?,
+              settled_at = CASE WHEN ? = 1 AND settled_at IS NULL THEN ? ELSE settled_at END
+        WHERE id = ?`
+    )
+    .run(upcoming, date, exhausted ? 0 : 1, exhausted ? 1 : 0, date, row.id)
 }
 
 /**
@@ -269,12 +354,14 @@ function post(row: Scheduled, date: string): void {
  * así que si la app lleva meses cerrada recupera todo lo pendiente de una vez.
  */
 export function postDue(reference = today()): number {
-  // Los gastos van delante de sus devoluciones: si el reembolso se registrara
-  // primero, no habría todavía movimiento al que engancharlo.
+  // Se miran también las que ya no vencen: una cuyo plan se agotó con la última
+  // cuota tiene la siguiente fecha más allá del fin, así que nunca volvería a
+  // entrar aquí y se quedaría encendida para siempre.
   const rows = getDb()
     .prepare(
       `SELECT * FROM scheduled
-        WHERE active = 1 AND auto_post = 1 AND next_date <= ?
+        WHERE active = 1 AND auto_post = 1
+          AND (next_date <= ? OR (end_date IS NOT NULL AND next_date > end_date))
         ORDER BY (refund_for_scheduled_id IS NOT NULL), next_date, id`
     )
     .all(reference) as unknown as ScheduledRow[]
@@ -295,6 +382,14 @@ export function postDue(reference = today()): number {
           | undefined
         if (!refreshed) break
         current = mapScheduled(refreshed)
+      }
+
+      // El plan se ha agotado: la última cuota ya entró y la siguiente caería
+      // más allá del fin. Se comprueba fuera del bucle porque esa fecha suele
+      // quedar en el futuro, y entonces el bucle sale por su condición sin
+      // llegar nunca a la ruptura de dentro.
+      if (current.active && current.endDate && current.nextDate > current.endDate) {
+        settleExhausted(current.id, current.lastPosted ?? current.endDate)
       }
     }
   })

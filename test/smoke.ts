@@ -440,6 +440,45 @@ try {
   equal('ni genera movimientos nuevos', scheduled.postDue(addMonths(day, 3)), 0)
   check('registra la última ejecución', refreshed.lastPosted != null)
 
+  section('Planes que se agotan')
+  // Dos cuotas y se acabó: la fecha de fin cae justo en la segunda.
+  const deuda = categories.listCategories().find((category) => category.name === 'Deuda')
+  const plazos = scheduled.saveScheduled({
+    type: 'expense', name: null, note: 'Kindle', accountId: bank.id,
+    categoryId: deuda ? deuda.id : food.id,
+    amount: 1999, freq: 'monthly', interval: 1,
+    nextDate: addMonths(day, -1), endDate: day, autoPost: true
+  })
+  scheduled.postDue(day)
+  const saldada = scheduled.getScheduled(plazos.id)!
+  check('registra las cuotas del plan', saldada.lastPosted != null)
+  check('al agotarse el plan se apaga sola', saldada.active === false)
+  check('y queda sellada como terminada', saldada.settledAt != null, String(saldada.settledAt))
+
+  const resumen = scheduled.debtSummary(plazos.id)
+  equal('el resumen cuenta las cuotas pagadas', resumen.count, 2)
+  equal('y suma lo que ha costado', resumen.total, 3998)
+  equal('sabe desde cuándo se pagaba', resumen.firstDate, addMonths(day, -1))
+
+  // Pausar no es terminar: apaga, pero no sella.
+  const pausable = scheduled.saveScheduled({
+    type: 'expense', name: null, note: 'Gimnasio', accountId: bank.id, categoryId: food.id,
+    amount: 3000, freq: 'monthly', interval: 1, nextDate: addMonths(day, 1), autoPost: true
+  })
+  scheduled.setScheduledActive(pausable.id, false)
+  const pausada = scheduled.getScheduled(pausable.id)!
+  check('pausar apaga la programación', pausada.active === false)
+  equal('pero no la da por terminada', pausada.settledAt, null)
+
+  // Reanudar una cerrada le quita el sello: vuelve a estar viva.
+  scheduled.setScheduledActive(plazos.id, true)
+  equal('reanudar borra el sello', scheduled.getScheduled(plazos.id)!.settledAt, null)
+  scheduled.setScheduledActive(plazos.id, false)
+  scheduled.finishScheduled(plazos.id, day)
+  check('finalizar a mano sí sella', scheduled.getScheduled(plazos.id)!.settledAt === day)
+
+  for (const id of [plazos.id, pausable.id]) scheduled.deleteScheduled(id)
+
   section('Devoluciones programadas')
   // El alquiler entero se cobra cada mes y la parte del otro entra detrás:
   // dos programadas distintas que tienen que acabar enlazadas solas.
