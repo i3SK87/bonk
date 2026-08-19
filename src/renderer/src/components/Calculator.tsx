@@ -48,21 +48,19 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
   const result = useMemo(() => evaluate(expr), [expr])
   const decimals = currencyDecimals(currency)
 
-  // Lo que se copia es lo que cabe en un importe: dos decimales. El valor sin
-  // redondear se enseña aparte cuando difiere, que al repartir entre tres casi
-  // siempre difiere.
-  const rounded = result == null ? null : Math.round(result * 10 ** decimals) / 10 ** decimals
+  // El resultado sale entero, sin recortar decimales: repartir entre tres da
+  // 8,4975 y esa es la cifra, no 8,50. Redondearlo es decisión de quien lo
+  // apunte, no de la calculadora.
+  //
+  // El tope de diez decimales no es un redondeo sino la basura de la coma
+  // flotante: sin él, 0,1 + 0,2 se enseñaría como 0,30000000000000004.
   const shown =
-    rounded == null
+    result == null
       ? ''
       : new Intl.NumberFormat('es-ES', {
           minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals
-        }).format(rounded)
-  const exact =
-    result != null && rounded != null && Math.abs(result - rounded) > 1e-9
-      ? new Intl.NumberFormat('es-ES', { maximumFractionDigits: 6 }).format(result)
-      : null
+          maximumFractionDigits: 10
+        }).format(result)
 
   function press(key: string): void {
     if (key === 'C') setExpr('')
@@ -72,7 +70,7 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
   }
 
   async function copy(): Promise<void> {
-    if (rounded == null) return
+    if (result == null) return
     try {
       await navigator.clipboard.writeText(shown)
       toast(`${shown} copiado`, 'success')
@@ -126,14 +124,13 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
             <button
               className="btn ghost icon"
               onClick={copy}
-              disabled={rounded == null}
+              disabled={result == null}
               title="Copiar el resultado para pegarlo en el importe"
               aria-label="Copiar el resultado"
             >
               <Icon name="copy" size={15} />
             </button>
           </div>
-          {exact && <div className="small subtle">Sin redondear: {exact}</div>}
 
           <div className="calc-keys">
             {KEYS.flat().map((key) => (

@@ -3,6 +3,21 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.10.3
+
+- **La calculadora ya no redondea.** Repartir 33,99 entre cuatro da 8,4975, y
+  esa es la cifra; redondear es decisión de quien lo apunte. Antes enseñaba
+  8,50 en grande y el valor exacto en pequeño debajo: ahora sobra esa segunda
+  línea, y lo que se copia es el resultado entero.
+- Sigue habiendo un tope de diez decimales, que no es un redondeo sino la
+  basura de la coma flotante: sin él, 0,1 + 0,2 se enseñaría como
+  0,30000000000000004.
+- **Fuera la última llamada a internet del código.** `refreshRates` descargaba
+  tipos de cambio de un servicio externo. No estaba conectada a nada —ni
+  manejador IPC, ni puente, ni interfaz—, así que la aplicación ya no salía a
+  internet en la práctica, pero era un `fetch` vivo dentro de un programa que
+  promete lo contrario. Ahora no queda ninguna.
+
 ## Novedades de la 1.10.2
 
 - Fuera el «se registra solo» de los avisos: era decir lo que ya se da por
