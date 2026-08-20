@@ -3,6 +3,19 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.2
+
+- **Las pestañas van en otro orden**: Movimientos, Programados, Ahorro,
+  Categorías, Cuentas, Informes y Ajustes. De lo que se mira a diario a lo que
+  se configura una vez.
+- **Programados se resalta al pasar el ratón**, como Movimientos. Sin rayas
+  entre filas, el resalte es lo que sujeta la fila de punta a punta: del icono
+  al importe y a sus botones.
+- **Y la misma marca de familia**: un gasto programado que tiene devolución
+  lleva su señal en el canto izquierdo y, al pasar por encima de cualquiera de
+  los dos, se encienden juntos. Es lo que distingue un +377,00 € que devuelve
+  parte del alquiler de un ingreso suelto.
+
 ## Novedades de la 1.13.1
 
 - **Los traspasos entre cuentas se ven en verde.** El importe iba en el mismo
