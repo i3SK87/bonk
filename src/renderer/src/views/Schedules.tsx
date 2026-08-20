@@ -161,9 +161,7 @@ export function SchedulesView(): ReactNode {
 
               <div style={{ textAlign: 'right' }}>
                 <div
-                  className={`amount ${
-                    row.type === 'expense' ? 'negative' : row.type === 'transfer' ? 'neutral' : 'positive'
-                  }`}
+                  className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}
                 >
                   {formatMoney(
                     row.type === 'expense' ? -row.amount : row.amount,

@@ -680,7 +680,9 @@ function ProjectedRow({
       )}
 
       <div className="tx-amount">
-        <span className={`amount ${isTransfer ? 'neutral' : row.type === 'expense' ? 'negative' : 'positive'}`}>
+        {/* El traspaso va en verde como lo que entra: el dinero sigue siendo tuyo,
+            solo ha cambiado de cuenta. En gris parecía apagado, casi un error. */}
+        <span className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}>
           {isTransfer
             ? formatMoney(row.amount, row.accountCurrency)
             : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {
@@ -780,11 +782,7 @@ export function TransactionRow({
         </div>
       </div>
       <div className="tx-amount">
-        <span
-          className={`amount ${
-            isTransfer ? 'neutral' : row.type === 'expense' ? 'negative' : 'positive'
-          }`}
-        >
+        <span className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}>
           {isTransfer
             ? formatMoney(row.amount, row.accountCurrency)
             : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, { sign: true })}
