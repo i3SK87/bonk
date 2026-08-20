@@ -57,6 +57,7 @@ export function SchedulesView(): ReactNode {
   const [editing, setEditing] = useState<ScheduledView | null>(null)
   const [creating, setCreating] = useState(false)
   const [finishing, setFinishing] = useState<ScheduledView | null>(null)
+  const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
 
   /**
    * Una cuota de deuda no se pausa, se termina: si la saldas antes de tiempo
@@ -85,6 +86,21 @@ export function SchedulesView(): ReactNode {
   const finalizadas = rows.filter(isFinished)
 
   const overdue = rows.filter((row) => row.active && row.nextDate <= today())
+
+  /**
+   * Un gasto programado y la devolución que cuelga de él son la misma historia:
+   * el alquiler entero y la parte que pone el otro. Cada uno apunta a su familia
+   * —el id del gasto— para poder encenderlos juntos al pasar por encima, igual
+   * que en Movimientos.
+   */
+  const families = new Map<number, number>()
+  const conDevolucion = new Set(
+    rows.map((row) => row.refundForScheduledId).filter((id): id is number => id != null)
+  )
+  for (const row of rows) {
+    if (row.refundForScheduledId) families.set(row.id, row.refundForScheduledId)
+    else if (conDevolucion.has(row.id)) families.set(row.id, row.id)
+  }
 
   return (
     <>
@@ -123,89 +139,105 @@ export function SchedulesView(): ReactNode {
             }
           />
         ) : (
-          nestByParent(vigentes, (row) => row.id, (row) => row.refundForScheduledId).map(({ row, nested, last }) => (
-            <div
-              key={row.id}
-              className={`list-row${row.active ? '' : ' paused'}${nested ? ' nested' : ''}${nested && !last ? ' nested-continues' : ''}`}
-            >
-              <Avatar
-                icon={row.type === 'transfer' ? 'transfer' : (row.categoryIcon ?? 'repeat')}
-                color={row.type === 'transfer' ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
-              />
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div className="row tight">
-                  <span style={{ fontWeight: 570 }} className="truncate">
-                    {titleOf(row)}
-                  </span>
-                  {/* La categoría manda en los informes, así que se ve sin abrir la ficha.
-                      Solo estorba cuando el nombre ya es la propia categoría. */}
-                  {row.categoryName && row.categoryName !== titleOf(row) && (
-                    <span className="pill">{row.categoryName}</span>
-                  )}
-                  {!row.active && (
-                    <span className="pill">{isDebt(row) ? 'Finalizada' : 'En pausa'}</span>
-                  )}
-                </div>
-                <div className="small muted truncate">
-                  {row.type === 'refund' && (
-                    <span className="pill" style={{ marginRight: 6 }}>
-                      Reembolso
-                    </span>
-                  )}
-                  {describeFrequency(row.freq, row.interval)} · {row.accountName}
-                  {row.type === 'transfer' && row.toAccountName ? ` → ${row.toAccountName}` : ''}
-                  {row.endDate ? ` · hasta ${formatDate(row.endDate)}` : ''}
-                  {!row.autoPost && ' · registro manual'}
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <div
-                  className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}
-                >
-                  {formatMoney(
-                    row.type === 'expense' ? -row.amount : row.amount,
-                    row.accountCurrency,
-                    { sign: row.type !== 'transfer' }
-                  )}
-                </div>
-                <div className="small muted">
-                  {row.active ? `Próximo ${relativeDays(row.nextDate)}` : formatDate(row.nextDate)}
-                </div>
-              </div>
-
-              <button
-                className="btn small"
-                title="Registrar ahora sin esperar a la fecha"
-                onClick={async () => {
-                  await run(() => api.scheduled.postNow(row.id))
-                  toast('Movimiento registrado', 'success')
-                }}
+          nestByParent(vigentes, (row) => row.id, (row) => row.refundForScheduledId).map(({ row, nested, last }) => {
+            const family = families.get(row.id)
+            const active = family !== undefined && family === hoveredFamily
+            return (
+              <div
+                key={row.id}
+                className={[
+                  'list-row',
+                  row.active ? '' : 'paused',
+                  // La anidada ya se ve colgando: la marca del canto sobraría.
+                  family !== undefined && !nested ? 'linked' : '',
+                  active ? 'linked-active' : '',
+                  nested ? 'nested' : '',
+                  nested && !last ? 'nested-continues' : ''
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onMouseEnter={() => family !== undefined && setHoveredFamily(family)}
+                onMouseLeave={() => family !== undefined && setHoveredFamily(null)}
               >
-                <Icon name="check" size={15} />
-              </button>
-              {isDebt(row) && row.active ? (
+                <Avatar
+                  icon={row.type === 'transfer' ? 'transfer' : (row.categoryIcon ?? 'repeat')}
+                  color={row.type === 'transfer' ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
+                />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div className="row tight">
+                    <span style={{ fontWeight: 570 }} className="truncate">
+                      {titleOf(row)}
+                    </span>
+                    {/* La categoría manda en los informes, así que se ve sin abrir la ficha.
+                        Solo estorba cuando el nombre ya es la propia categoría. */}
+                    {row.categoryName && row.categoryName !== titleOf(row) && (
+                      <span className="pill">{row.categoryName}</span>
+                    )}
+                    {!row.active && (
+                      <span className="pill">{isDebt(row) ? 'Finalizada' : 'En pausa'}</span>
+                    )}
+                  </div>
+                  <div className="small muted truncate">
+                    {row.type === 'refund' && (
+                      <span className="pill" style={{ marginRight: 6 }}>
+                        Reembolso
+                      </span>
+                    )}
+                    {describeFrequency(row.freq, row.interval)} · {row.accountName}
+                    {row.type === 'transfer' && row.toAccountName ? ` → ${row.toAccountName}` : ''}
+                    {row.endDate ? ` · hasta ${formatDate(row.endDate)}` : ''}
+                    {!row.autoPost && ' · registro manual'}
+                  </div>
+                </div>
+  
+                <div style={{ textAlign: 'right' }}>
+                  <div
+                    className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}
+                  >
+                    {formatMoney(
+                      row.type === 'expense' ? -row.amount : row.amount,
+                      row.accountCurrency,
+                      { sign: row.type !== 'transfer' }
+                    )}
+                  </div>
+                  <div className="small muted">
+                    {row.active ? `Próximo ${relativeDays(row.nextDate)}` : formatDate(row.nextDate)}
+                  </div>
+                </div>
+  
                 <button
-                  className="btn ghost icon"
-                  title="Finalizar: la deuda queda saldada y no se generan más cuotas"
-                  onClick={() => setFinishing(row)}
+                  className="btn small"
+                  title="Registrar ahora sin esperar a la fecha"
+                  onClick={async () => {
+                    await run(() => api.scheduled.postNow(row.id))
+                    toast('Movimiento registrado', 'success')
+                  }}
                 >
-                  <Icon name="archive" size={16} />
+                  <Icon name="check" size={15} />
                 </button>
-              ) : (
-                <button
-                  className="btn ghost icon"
-                  title={row.active ? 'Pausar' : 'Reanudar'}
-                  onClick={() => run(() => api.scheduled.setActive(row.id, !row.active))}
-                >
-                  <Icon name={row.active ? 'minus' : 'repeat'} size={16} />
+                {isDebt(row) && row.active ? (
+                  <button
+                    className="btn ghost icon"
+                    title="Finalizar: la deuda queda saldada y no se generan más cuotas"
+                    onClick={() => setFinishing(row)}
+                  >
+                    <Icon name="archive" size={16} />
+                  </button>
+                ) : (
+                  <button
+                    className="btn ghost icon"
+                    title={row.active ? 'Pausar' : 'Reanudar'}
+                    onClick={() => run(() => api.scheduled.setActive(row.id, !row.active))}
+                  >
+                    <Icon name={row.active ? 'minus' : 'repeat'} size={16} />
+                  </button>
+                )}
+                <button className="btn ghost icon" onClick={() => setEditing(row)} aria-label="Editar">
+                  <Icon name="edit" size={16} />
                 </button>
-              )}
-              <button className="btn ghost icon" onClick={() => setEditing(row)} aria-label="Editar">
-                <Icon name="edit" size={16} />
-              </button>
-            </div>
-          ))
+              </div>
+            )
+          })
         )}
       </div>
 

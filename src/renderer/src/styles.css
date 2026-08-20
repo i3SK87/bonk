@@ -1494,6 +1494,35 @@ p { margin: 0; }
 .card.flush .list-row,
 .card.flush button.list-row { border-bottom: none; }
 
+/* Sin rayas, el resalte al pasar por encima es lo que sujeta la fila de punta a
+   punta —del icono al importe y a sus botones—, igual que en Movimientos. */
+.card.flush .list-row {
+  border-radius: var(--radius);
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.card.flush .list-row:hover { background-color: var(--bg-sunken); }
+
+/* Y la misma marca de familia que en Movimientos: el gasto programado que tiene
+   devolución lleva su canto izquierdo, y al pasar por encima de cualquiera de
+   los dos se encienden juntos. */
+.list-row.linked {
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
+  transition: box-shadow 0.12s ease, background-color 0.12s ease, opacity 0.12s ease;
+}
+
+/* El selector va tan cargado porque tiene que ganarle al resalte del ratón:
+   con la familia encendida manda el tinte del acento, no el gris de siempre. */
+.card.flush .list-row.linked.linked-active {
+  box-shadow: inset 3px 0 0 var(--accent);
+  background-color: var(--accent-soft);
+}
+
+.list-row.nested.linked-active::before,
+.list-row.nested.linked-active::after {
+  border-color: var(--accent);
+}
+
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }
 
