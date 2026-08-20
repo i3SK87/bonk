@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.1
+
+- **Los traspasos entre cuentas se ven en verde.** El importe iba en el mismo
+  gris que lo secundario y parecía un movimiento a medias. El dinero sigue
+  siendo tuyo, solo ha cambiado de cuenta. Sigue sin signo delante, porque ni
+  suma ni resta al patrimonio. Vale para la lista de Movimientos, para las
+  programadas previstas que salen en ella y para la pestaña Programados.
+
 ## Novedades de la 1.13.0
 
 - **Las categorías salen por orden alfabético.** En el selector del movimiento,
