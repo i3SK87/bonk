@@ -3,6 +3,23 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.0
+
+- **Las categorías salen por orden alfabético.** En el selector del movimiento,
+  en la pestaña Categorías, en los filtros y en los informes. Antes iban por
+  orden de creación, que no lo recuerda nadie. La ñ y los acentos caen donde
+  toca, y da igual mayúsculas o minúsculas.
+- **Un reembolso ya no pide categoría: pide el gasto.** Se elige el movimiento
+  que te devuelven y la categoría la hereda de él, que es de donde se descuenta.
+  Eran dos pasos para un solo dato, y encima podían acabar contradiciéndose.
+- **El desplegable enseña solo los gastos de ese día**, con lo que queda por
+  devolver en cada uno. Un reembolso se apunta cuando se reparte el gasto, así
+  que el del día es el que se busca; si la devolución llega semanas después,
+  sigue estando el botón «Registrar reembolso» dentro de la ficha del gasto,
+  que enlaza directo sin mirar fechas.
+- Al editar un reembolso antiguo, su gasto sigue en la lista aunque sea de otro
+  día: el desplegable no puede perder lo que ya estaba enlazado.
+
 ## Novedades de la 1.12.0
 
 - **Una deuda que se acaba de pagar se celebra.** Cuando entra la última cuota

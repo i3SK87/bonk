@@ -253,27 +253,30 @@ export function listRefundsFor(transactionId: number): TransactionView[] {
 }
 
 /**
- * Gastos a los que un reembolso se puede enganchar: los de su misma categoría,
- * anteriores a la fecha del reembolso (el dinero se devuelve después de pagarlo)
- * y con algo pendiente de devolver. El más reciente primero, que es el habitual.
+ * Gastos a los que un reembolso se puede enganchar: los de ese mismo día, con
+ * algo pendiente de devolver. Un reembolso se apunta cuando se reparte el gasto,
+ * así que el del día es el que se busca; para uno que llega semanas después está
+ * el botón «Registrar reembolso» de la ficha del gasto.
+ *
+ * `linkedId` mantiene en la lista el gasto ya enlazado aunque sea de otro día:
+ * al editar un reembolso antiguo, el desplegable no puede perder su valor.
  */
 export function refundCandidates(
-  categoryId: number,
   date: string,
   excludeId?: number,
+  linkedId?: number,
   limit = 25
 ): TransactionView[] {
   const rows = getDb()
     .prepare(
       `${VIEW_SELECT}
         WHERE t.type = 'expense'
-          AND t.category_id = ?
-          AND t.date <= ?
+          AND (t.date = ? OR t.id = ?)
           AND t.id <> ?
         ORDER BY t.date DESC, t.id DESC
         LIMIT ?`
     )
-    .all(categoryId, date, excludeId ?? -1, limit) as unknown as TxViewRow[]
+    .all(date, linkedId ?? -1, excludeId ?? -1, limit) as unknown as TxViewRow[]
   if (rows.length === 0) return []
 
   const ids = rows.map((row) => row.id)
@@ -282,7 +285,7 @@ export function refundCandidates(
   const base = getSettings().baseCurrency
   return rows
     .map((row) => toView(row, tagsForTransactions(ids), refunds, rates, base))
-    .filter((row) => row.refundedTotal < row.amount)
+    .filter((row) => row.refundedTotal < row.amount || row.id === linkedId)
 }
 
 function validate(input: TransactionInput): void {
@@ -299,8 +302,10 @@ function validate(input: TransactionInput): void {
     }
   }
   if (input.type === 'refund') {
-    // El reembolso resta de una categoría de gasto: sin categoría no sabríamos de cuál.
-    if (!input.categoryId) throw new Error('Elige la categoría del gasto que te están devolviendo')
+    // De un reembolso hay que saber de dónde sale el dinero que vuelve: el gasto
+    // concreto —de donde además se saca la categoría— o, para las devoluciones
+    // programadas que entran sueltas, al menos la categoría.
+    if (!input.refundForId && !input.categoryId) throw new Error('Elige el gasto que te devuelven')
     if (input.refundForId && input.refundForId === input.id) {
       throw new Error('Un movimiento no puede reembolsarse a sí mismo')
     }
@@ -314,9 +319,19 @@ export function saveTransaction(input: TransactionInput): TransactionView {
   return atomic(() => {
     const isTransfer = input.type === 'transfer'
     const toAccountId = isTransfer ? (input.toAccountId ?? null) : null
-    const categoryId = isTransfer ? null : (input.categoryId ?? null)
+    let categoryId = isTransfer ? null : (input.categoryId ?? null)
     // Solo un reembolso puede colgar de otro movimiento.
     const refundForId = input.type === 'refund' ? (input.refundForId ?? null) : null
+
+    // El reembolso hereda la categoría del gasto que devuelve: descuenta de ese
+    // gasto, así que no puede contar en una categoría distinta de la suya.
+    if (refundForId) {
+      const parent = db.prepare('SELECT category_id FROM transactions WHERE id = ?').get(refundForId) as
+        | { category_id: number | null }
+        | undefined
+      if (!parent) throw new Error('El gasto que quieres reembolsar ya no existe')
+      categoryId = parent.category_id
+    }
 
     // En traspasos entre divisas distintas guardamos además lo que entra en destino.
     let amountTo: number | null = null

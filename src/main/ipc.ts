@@ -55,7 +55,6 @@ export function registerIpc(
   handle('categories:save', (input) => categories.saveCategory(input))
   handle('categories:delete', (id: number) => categories.deleteCategory(id))
   handle('categories:count', (id: number) => categories.countCategoryTransactions(id))
-  handle('categories:reorder', (ids: number[]) => categories.reorderCategories(ids))
 
   // — Movimientos —
   handle('tx:list', (filter: TransactionFilter) => transactions.listTransactions(filter))
@@ -69,8 +68,8 @@ export function registerIpc(
   )
   handle('tx:duplicate', (id: number) => transactions.duplicateTransaction(id))
   handle('tx:refundsFor', (id: number) => transactions.listRefundsFor(id))
-  handle('tx:refundCandidates', (categoryId: number, date: string, excludeId?: number) =>
-    transactions.refundCandidates(categoryId, date, excludeId)
+  handle('tx:refundCandidates', (date: string, excludeId?: number, linkedId?: number) =>
+    transactions.refundCandidates(date, excludeId, linkedId)
   )
 
   // — Presupuestos —

@@ -49,8 +49,7 @@ const api = {
     list: (includeArchived = false) => call<Category[]>('categories:list', includeArchived),
     save: (input: unknown) => call<Category>('categories:save', input),
     remove: (id: number) => call<void>('categories:delete', id),
-    countTransactions: (id: number) => call<number>('categories:count', id),
-    reorder: (ids: number[]) => call<void>('categories:reorder', ids)
+    countTransactions: (id: number) => call<number>('categories:count', id)
   },
   transactions: {
     list: (filter: TransactionFilter = {}) => call<TransactionView[]>('tx:list', filter),
@@ -63,8 +62,8 @@ const api = {
       call<number>('tx:bulkCategory', ids, categoryId),
     duplicate: (id: number) => call<TransactionView>('tx:duplicate', id),
     refundsFor: (id: number) => call<TransactionView[]>('tx:refundsFor', id),
-    refundCandidates: (categoryId: number, date: string, excludeId?: number) =>
-      call<TransactionView[]>('tx:refundCandidates', categoryId, date, excludeId)
+    refundCandidates: (date: string, excludeId?: number, linkedId?: number) =>
+      call<TransactionView[]>('tx:refundCandidates', date, excludeId, linkedId)
   },
   goals: {
     list: () => call<Goal[]>('goals:list'),

@@ -31,10 +31,16 @@ function mapCategory(row: CategoryRow): Category {
   }
 }
 
+/** Ordena como se lee en español: la ñ y los acentos en su sitio, sin distinguir mayúsculas. */
+const byName = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
+
 export function listCategories(includeArchived = false): Category[] {
   const where = includeArchived ? '' : 'WHERE archived = 0'
-  const sql = `SELECT * FROM categories ${where} ORDER BY kind DESC, sort_order, id`
-  return (getDb().prepare(sql).all() as unknown as CategoryRow[]).map(mapCategory)
+  const sql = `SELECT * FROM categories ${where}`
+  const rows = (getDb().prepare(sql).all() as unknown as CategoryRow[]).map(mapCategory)
+  // Alfabético y no por orden de creación: con muchas categorías se encuentra
+  // una por su nombre, que es lo que se recuerda, no por cuándo se creó.
+  return rows.sort((a, b) => (a.kind === b.kind ? byName.compare(a.name, b.name) : a.kind < b.kind ? 1 : -1))
 }
 
 export function getCategory(id: number): Category | null {
@@ -108,9 +114,4 @@ export function countCategoryTransactions(id: number): number {
     n: number
   }
   return Number(row.n)
-}
-
-export function reorderCategories(ids: number[]): void {
-  const stmt = getDb().prepare('UPDATE categories SET sort_order = ? WHERE id = ?')
-  ids.forEach((id, index) => stmt.run(index, id))
 }

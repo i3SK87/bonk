@@ -52,6 +52,15 @@ try {
   const seededCategories = categories.listCategories()
   const seededAccounts = accounts.listAccounts()
   check('crea categorías por defecto', seededCategories.length >= 25, `hay ${seededCategories.length}`)
+  // Alfabéticas dentro de cada tipo, con la ñ y los acentos donde toca.
+  const gastos = seededCategories.filter((category) => category.kind === 'expense').map((c) => c.name)
+  const alfabeticas = [...gastos].sort(new Intl.Collator('es', { sensitivity: 'base' }).compare)
+  check('las categorías salen alfabéticas', gastos.join('|') === alfabeticas.join('|'), gastos.join(', '))
+  check(
+    'los ingresos van delante de los gastos',
+    seededCategories.findIndex((c) => c.kind === 'expense') >
+      seededCategories.findLastIndex((c) => c.kind === 'income')
+  )
   check('crea cuentas por defecto', seededAccounts.length === 2, `hay ${seededAccounts.length}`)
   equal('la divisa base es el euro', settings.getSettings().baseCurrency, 'EUR')
   equal('arranca con la paleta base', settings.getSettings().palette, 'grafito')
@@ -362,13 +371,24 @@ try {
   equal('el gasto sabe cuánto le han devuelto', parent.refundedTotal, 900)
   equal('lista sus tres reembolsos', transactions.listRefundsFor(premium.id).length, 3)
 
-  // Candidatos a los que enganchar un reembolso suelto, para poder enlazarlo
-  // después: el gasto sigue estando disponible mientras quede algo por devolver.
-  const candidates = transactions.refundCandidates(subs.id, day)
-  check('ofrece el gasto de su categoría', candidates.some((item) => item.id === premium.id))
-  check('no ofrece gastos de otra categoría', candidates.every((item) => item.categoryId === subs.id))
-  const otherCategory = transactions.refundCandidates(food.id, day)
-  check('cada categoría tiene los suyos', otherCategory.every((item) => item.id !== premium.id))
+  // Candidatos a los que enganchar un reembolso suelto: los gastos de ese mismo
+  // día, sean de la categoría que sean, mientras quede algo por devolver.
+  const candidates = transactions.refundCandidates(day)
+  check('ofrece los gastos del día', candidates.some((item) => item.id === premium.id))
+  check('y solo los de ese día', candidates.every((item) => item.date === day))
+  const otroDia = transactions.refundCandidates(addDays(day, -3))
+  check('otro día no ofrece el gasto de hoy', otroDia.every((item) => item.id !== premium.id))
+  check(
+    'salvo el que ya está enlazado, que no puede desaparecer del desplegable',
+    transactions.refundCandidates(addDays(day, -3), undefined, premium.id).some((item) => item.id === premium.id)
+  )
+  // La categoría del reembolso la manda el gasto, no lo que llegue del formulario.
+  const heredado = transactions.saveTransaction({
+    type: 'refund', date: day, accountId: bank.id, categoryId: food.id,
+    amount: 100, refundForId: premium.id
+  })
+  equal('el reembolso hereda la categoría del gasto', heredado.categoryId, subs.id)
+  transactions.deleteTransaction(heredado.id)
   // Una devolución más lo deja saldado: 3 × 3 € + 2,99 € = 11,99 €.
   transactions.saveTransaction({
     type: 'refund', date: day, accountId: bank.id, categoryId: subs.id,
@@ -376,7 +396,7 @@ try {
   })
   check(
     'un gasto ya devuelto del todo deja de ofrecerse',
-    transactions.refundCandidates(subs.id, day).every((item) => item.id !== premium.id)
+    transactions.refundCandidates(day).every((item) => item.id !== premium.id)
   )
   transactions.deleteTransactions(
     transactions.listRefundsFor(premium.id).filter((item) => item.amount === 299).map((item) => item.id)
@@ -388,7 +408,7 @@ try {
   } catch {
     refundRejected = true
   }
-  check('un reembolso sin categoría se rechaza', refundRejected)
+  check('un reembolso sin gasto ni categoría se rechaza', refundRejected)
 
   // Si se borra el gasto, las devoluciones siguen existiendo y siguen restando
   // de su categoría: el dinero volvió de verdad a la cuenta.

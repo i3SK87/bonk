@@ -47,24 +47,33 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
   const [refunding, setRefunding] = useState(false)
   const [creatingCategory, setCreatingCategory] = useState(false)
 
-  // Gastos a los que puede engancharse un reembolso suelto. Los que llegan por
-  // el botón «Registrar reembolso» ya vienen enlazados y no necesitan elegir.
+  // Gastos del día a los que puede engancharse un reembolso suelto. Los que
+  // llegan por el botón «Registrar reembolso» ya vienen enlazados y no eligen.
   useEffect(() => {
-    if (type !== 'refund' || refundFor || !categoryId) {
+    if (type !== 'refund' || refundFor) {
       setCandidates([])
       return
     }
     let cancelled = false
     api.transactions
-      .refundCandidates(categoryId, date, existing?.id)
+      .refundCandidates(date, existing?.id, existing?.refundForId ?? undefined)
       .then((rows) => {
-        if (!cancelled) setCandidates(rows)
+        if (cancelled) return
+        setCandidates(rows)
+        // Al cambiar de fecha, el gasto elegido puede dejar de estar en la lista.
+        setRefundForId((current) => (current && rows.some((row) => row.id === current) ? current : null))
       })
       .catch(fail('los gastos a los que enlazar'))
     return () => {
       cancelled = true
     }
-  }, [type, refundFor, categoryId, date, existing?.id, fail])
+  }, [type, refundFor, date, existing?.id, existing?.refundForId, fail])
+
+  /** El gasto elegido manda: la categoría del reembolso es la suya. */
+  function choose(id: number | null): void {
+    setRefundForId(id)
+    setCategoryId(candidates.find((item) => item.id === id)?.categoryId ?? null)
+  }
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
@@ -142,9 +151,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     if (!accountId) return setError('Elige una cuenta')
     if (amount <= 0) return setError('Escribe un importe mayor que cero')
     if (type === 'transfer' && !toAccountId) return setError('Elige la cuenta de destino')
-    if (type === 'refund' && !categoryId) {
-      return setError('Elige la categoría del gasto que te están devolviendo')
-    }
+    if (type === 'refund' && !refundForId) return setError('Elige el gasto que te devuelven')
 
     setSaving(true)
     const saved = await run(
@@ -266,8 +273,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
 
         {type === 'refund' && !refundFor && (
           <p className="field-hint">
-            Un reembolso entra en tu cuenta pero descuenta del gasto de su categoría, en vez de contar como
-            ingreso. Elige la categoría del gasto que te devuelven.
+            Un reembolso entra en tu cuenta pero descuenta del gasto al que lo enlaces, en vez de contar como
+            ingreso. Elige abajo el gasto que te devuelven.
           </p>
         )}
 
@@ -318,7 +325,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </Field>
         )}
 
-        {type !== 'transfer' && (
+        {/* El reembolso no elige categoría: se queda con la del gasto que devuelve. */}
+        {type !== 'transfer' && type !== 'refund' && (
           <Field label="Categoría">
             <div className="icon-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(74px, 1fr))', maxHeight: 190 }}>
               {visibleCategories.map((category) => (
@@ -357,33 +365,31 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </Field>
         )}
 
-        {/* Detrás de la categoría porque depende de ella: los gastos que salen
-            aquí son los suyos. Delante no había nada que elegir todavía. */}
+        {/* Lo único que hay que elegir: de ahí sale la categoría y de ahí se
+            descuenta la devolución. Solo los gastos del día que marque la fecha. */}
         {type === 'refund' && !refundFor && (
           <Field
             label="Gasto que te devuelven"
             hint={
-              !categoryId
-                ? 'Elige antes la categoría: aquí saldrán sus gastos con algo pendiente de devolver.'
-                : candidates.length === 0
-                  ? 'Ningún gasto de esta categoría tiene nada pendiente de devolver.'
-                  : 'Enlazarlo une los dos movimientos en la lista y descuenta la devolución de ese gasto en concreto.'
+              candidates.length === 0
+                ? `Ningún gasto del ${formatDate(date)} tiene algo pendiente de devolver. Cambia la fecha, o apunta el reembolso desde la ficha del gasto.`
+                : 'La devolución se descuenta de ese gasto y hereda su categoría.'
             }
           >
             <select
               className="select"
               value={refundForId ?? ''}
               disabled={candidates.length === 0}
-              onChange={(e) => setRefundForId(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) => choose(e.target.value ? Number(e.target.value) : null)}
             >
-              <option value="">Sin enlazar a un gasto concreto</option>
+              <option value="">Elige el gasto…</option>
               {candidates.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {formatDate(item.date)} ·{' '}
-                  {/* Sin nota queda la categoría: una lista de fechas e importes sueltos
+                  {/* Sin nota queda la categoría: una lista de importes sueltos
                       no dice de qué gasto se trata. */}
                   {item.note || item.categoryName || 'Sin categoría'} ·{' '}
                   {formatMoney(item.amount, item.accountCurrency)}
+                  {item.date !== date ? ` · ${formatDate(item.date)}` : ''}
                   {item.refundedTotal > 0
                     ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
                     : ''}
