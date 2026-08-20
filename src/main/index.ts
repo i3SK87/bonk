@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, Menu, Tray, nativeTheme, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, Menu, Tray, nativeTheme, nativeImage, screen } from 'electron'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { openDatabase, closeDatabase, makeBackup } from './db'
@@ -24,8 +24,10 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 840,
-    minWidth: 940,
-    minHeight: 620,
+    // El mínimo es el ancho de un teléfono: por debajo de 680 px la interfaz se
+    // reordena sola —el menú baja abajo y todo se apila— y sigue siendo usable.
+    minWidth: 360,
+    minHeight: 560,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#14161a' : '#f5f6f8',
@@ -108,6 +110,43 @@ function createTray(): void {
   tray.on('double-click', showWindow)
 }
 
+/** Ancho por debajo del cual la interfaz se reordena en formato teléfono. */
+const PHONE_WIDTH = 420
+const PHONE_HEIGHT = 880
+
+/** Tamaño de la ventana antes de encogerla, para poder devolverla a su sitio. */
+let deskBounds: Electron.Rectangle | null = null
+
+/**
+ * Encoge la ventana a proporción de teléfono y la devuelve al repetir. No hay
+ * una versión móvil aparte: por debajo de 680 px la misma pantalla se reordena
+ * —el menú baja al pulgar y las tarjetas se apilan—, así que esto solo pone la
+ * ventana a la medida en la que eso ocurre.
+ */
+function toggleMobileView(): void {
+  if (!mainWindow) return
+  if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false)
+  if (mainWindow.isMaximized()) mainWindow.unmaximize()
+
+  const current = mainWindow.getBounds()
+  if (current.width <= 680) {
+    mainWindow.setBounds(deskBounds ?? { ...current, width: 1280, height: 840 })
+    deskBounds = null
+    return
+  }
+
+  deskBounds = current
+  const area = screen.getDisplayMatching(current).workArea
+  const height = Math.min(PHONE_HEIGHT, area.height - 40)
+  mainWindow.setBounds({
+    width: PHONE_WIDTH,
+    height,
+    // Pegada al borde derecho de su pantalla, que es donde menos estorba.
+    x: Math.max(area.x, area.x + area.width - PHONE_WIDTH - 24),
+    y: Math.max(area.y, Math.round(area.y + (area.height - height) / 2))
+  })
+}
+
 function buildMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     {
@@ -152,6 +191,11 @@ function buildMenu(): void {
       submenu: [
         { label: 'Recargar', role: 'reload' },
         { label: 'Pantalla completa', role: 'togglefullscreen' },
+        {
+          label: 'Vista móvil',
+          accelerator: 'CmdOrCtrl+M',
+          click: toggleMobileView
+        },
         { type: 'separator' },
         { label: 'Acercar', role: 'zoomIn' },
         { label: 'Alejar', role: 'zoomOut' },

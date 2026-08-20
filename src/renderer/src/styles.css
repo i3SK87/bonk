@@ -1886,3 +1886,117 @@ button.list-row:focus-visible {
 .list-row.paused .amount {
   color: var(--fg-muted);
 }
+
+/* ---------- Formato teléfono ----------
+
+   No hay una versión móvil aparte: con la ventana estrecha esta misma pantalla
+   se reordena como una aplicación de teléfono. El menú lateral baja y se
+   convierte en la barra de abajo, que es donde llega el pulgar; lo que iba en
+   dos columnas se apila; y todo pierde márgenes, que en 420 px son puro lujo.
+   Ver ▸ Vista móvil (Ctrl+M) deja la ventana justo a esta medida. */
+
+@media (max-width: 680px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .main { order: 1; }
+
+  .sidebar {
+    order: 2;
+    flex-direction: row;
+    align-items: stretch;
+    padding: 6px 4px 8px;
+    gap: 1px;
+    /* Las siete pestañas se reparten el ancho: nada de deslizar para llegar a
+       Ajustes, que en una barra de navegación no lo busca nadie. */
+    overflow-x: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  /* La marca y el patrimonio se quedan fuera: la barra de abajo es para navegar
+     y cada pastilla necesita todo el ancho que pueda arañar. */
+  .sidebar-brand,
+  .sidebar-footer { display: none; }
+
+  .nav-item {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 7px 1px;
+    /* A 9 px entran las siete etiquetas enteras en 420 px, que es el ancho de
+       un teléfono: cortar «Movimient…» sería peor que la letra pequeña. */
+    font-size: 9px;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .nav-item .count { margin-left: 0; }
+
+  /* Las filas de la cabecera se parten en varias líneas: los periodos por un
+     lado y la búsqueda con sus botones por otro. */
+  .card-header > .row { flex-wrap: wrap; }
+
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 14px 12px;
+  }
+
+  .topbar h1 { font-size: 20px; }
+
+  .content { padding: 14px 14px 22px; gap: 14px; }
+
+  .card-header { flex-wrap: wrap; gap: 8px; }
+  .card-body { padding: 14px; }
+
+  /* El patrimonio deja de tener las cuentas al lado: una encima de otra. */
+  .networth-strip { flex-direction: column; gap: 12px; }
+
+  .networth {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0 0 10px;
+  }
+
+  .networth .value { font-size: 30px; }
+  .networth-strip .link { align-self: flex-start; }
+
+  /* Las cifras del periodo van apiladas: a 26 px cada una se comía media
+     pantalla antes de llegar al primer movimiento. */
+  .stat { padding: 12px 14px; }
+  .stat .value { font-size: 22px; }
+
+  /* Un diálogo estrecho es la pantalla entera menos un margen. */
+  .overlay { padding: 10px; }
+
+  .modal,
+  .modal.wide {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal-body { padding: 14px; }
+  .modal-footer { padding: 12px 14px; flex-wrap: wrap; }
+
+  /* Las tablas de Informes no se parten: se deslizan dentro de su tarjeta.
+     Solo esas: poner el desbordamiento en todas recortaría lo que sobresale. */
+  .card-body:has(table) { overflow-x: auto; }
+}
+
+/* Por debajo del ancho de un teléfono corriente las etiquetas ya no caben
+   enteras, y media palabra cortada no orienta a nadie: se quedan los iconos,
+   que es lo que hace cualquier aplicación en esa anchura. */
+@media (max-width: 400px) {
+  .nav-item {
+    font-size: 0;
+    gap: 0;
+    padding: 10px 1px;
+  }
+}

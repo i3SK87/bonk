@@ -24,12 +24,15 @@ type ViewId =
   | 'reports'
   | 'settings'
 
+// De lo que se mira a diario a lo que se toca de vez en cuando: primero los
+// movimientos y lo que viene, después el ahorro, y al final lo que solo se
+// configura una vez.
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
-  { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
-  { id: 'categories', label: 'Categorías', icon: 'tag' },
-  { id: 'goals', label: 'Ahorro', icon: 'target' },
   { id: 'schedules', label: 'Programados', icon: 'repeat' },
+  { id: 'goals', label: 'Ahorro', icon: 'target' },
+  { id: 'categories', label: 'Categorías', icon: 'tag' },
+  { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
   { id: 'settings', label: 'Ajustes', icon: 'settings' }
 ]
