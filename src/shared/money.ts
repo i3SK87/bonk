@@ -73,7 +73,9 @@ export function currencySymbol(code: string): string {
 }
 
 /**
- * Interpreta lo que el usuario teclea aceptando tanto "1.234,56" como "1234.56".
+ * Interpreta lo que el usuario teclea. La coma y el punto valen por igual como
+ * separador decimal —"12,50" y "12.50" son lo mismo— y también como separador
+ * de millares: "1.234,56", "1,234.56", "1.234" y "1,234" se leen todos bien.
  * Devuelve null si no hay ningún número reconocible.
  */
 export function parseAmount(input: string, code: string): number | null {
@@ -82,16 +84,29 @@ export function parseAmount(input: string, code: string): number | null {
   if (!text) return null
   const negative = /^[-−(]/.test(text)
   text = text.replace(/[-−()]/g, '')
-  const lastComma = text.lastIndexOf(',')
-  const lastDot = text.lastIndexOf('.')
-  if (lastComma > -1 && lastDot > -1) {
-    // El separador decimal es el que aparece más a la derecha.
-    if (lastComma > lastDot) text = text.replace(/\./g, '').replace(',', '.')
-    else text = text.replace(/,/g, '')
-  } else if (lastComma > -1) {
-    // Una coma sola separa decimales salvo que agrupe millares (1,234).
-    const decimalPart = text.length - lastComma - 1
-    text = decimalPart === 3 && text.length > 4 ? text.replace(/,/g, '') : text.replace(',', '.')
+  const commas = text.split(',').length - 1
+  const dots = text.split('.').length - 1
+
+  if (commas > 0 && dots > 0) {
+    // Con los dos puestos no hay duda: el decimal es el que va más a la
+    // derecha y el otro agrupa millares.
+    text =
+      text.lastIndexOf(',') > text.lastIndexOf('.')
+        ? text.replace(/\./g, '').replace(/,/g, '.')
+        : text.replace(/,/g, '')
+  } else if (commas + dots > 0) {
+    const separator = commas > 0 ? ',' : '.'
+    const at = text.lastIndexOf(separator)
+    const head = text.slice(0, at)
+    // Uno solo casi siempre es el decimal. Agrupa millares cuando hay varios
+    // ("1.234.567") o cuando deja detrás exactamente tres cifras y delante un
+    // grupo que puede serlo: "1.234" y "1,234" son mil doscientos treinta y
+    // cuatro, no un euro y pico. Quedan fuera el "0,123", que millar no es, y
+    // las divisas de tres decimales, donde esas tres cifras sí son decimales.
+    const groups =
+      commas + dots > 1 ||
+      (text.length - at - 1 === 3 && currencyDecimals(code) !== 3 && /^[1-9]\d{0,2}$/.test(head))
+    text = groups ? text.split(separator).join('') : `${head}.${text.slice(at + 1)}`
   }
   const value = Number(text)
   if (!Number.isFinite(value)) return null

@@ -19,6 +19,7 @@ import * as tags from '../src/main/repos/tags'
 import * as csv from '../src/main/repos/csv'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
+import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
 import { periodRange, addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
 
@@ -88,6 +89,35 @@ try {
   equal('interpreta "12,5"', parseAmount('12,5', 'EUR'), 1250)
   equal('interpreta "1,234" como millar', parseAmount('1,234', 'EUR'), 123400)
   equal('descarta texto sin números', parseAmount('hola', 'EUR'), null)
+  equal('interpreta "1.234" como millar', parseAmount('1.234', 'EUR'), 123400)
+  equal('y "1.234.567,89" con todos los millares', parseAmount('1.234.567,89', 'EUR'), 123456789)
+  // La coma y el punto valen por igual: nadie tiene que acordarse de cuál
+  // acepta el campo, ni cambiar de tecla según venga del teclado numérico.
+  for (const [coma, punto] of [
+    ['12,50', '12.50'],
+    ['0,5', '0.5'],
+    ['1,234', '1.234'],
+    ['1.234,56', '1,234.56'],
+    ['1500', '1500']
+  ]) {
+    equal(
+      `"${coma}" y "${punto}" se leen igual`,
+      parseAmount(coma, 'EUR'),
+      parseAmount(punto, 'EUR')
+    )
+  }
+  // Y en una divisa de tres decimales esas tres cifras sí son decimales.
+  equal('"1,234" en dinares son 1,234', parseAmount('1,234', 'KWD'), 1234)
+
+  // Lo que el campo de importe deja escribir, que es donde se perdía la coma
+  // de "1.234,56" y el importe se quedaba en 1,23 €.
+  const tecleado = (text: string): number | null =>
+    parseAmount(keepNumericChars(text, { decimals: true, grouping: true }), 'EUR')
+  equal('tecleando "1.234,56" entran 1.234,56 €', tecleado('1.234,56'), 123456)
+  equal('tecleando "1,234.56" también', tecleado('1,234.56'), 123456)
+  equal('tecleando "12.50" entran 12,50 €', tecleado('12.50'), 1250)
+  equal('tecleando "12,50" entran 12,50 €', tecleado('12,50'), 1250)
+  equal('un separador suelto no rompe nada', tecleado('12,'), 1200)
   equal('el yen no tiene decimales', toMinor(1500, 'JPY'), 1500)
   // Intl separa el símbolo con espacio duro; se normaliza para poder comparar.
   const plain = (value: string): string => value.replace(/ /g, ' ')

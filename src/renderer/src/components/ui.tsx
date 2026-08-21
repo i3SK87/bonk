@@ -357,7 +357,7 @@ export function AmountInput({ value, currency, onChange, autoFocus, invalid }: A
         }}
         onChange={(event) => {
           // Los importes son siempre positivos: el signo lo pone el tipo de movimiento.
-          const cleaned = keepNumericChars(event.target.value, { decimals: true })
+          const cleaned = keepNumericChars(event.target.value, { decimals: true, grouping: true })
           setText(cleaned)
           const parsed = parseAmount(cleaned, currency)
           if (parsed != null) onChange(Math.abs(parsed))
