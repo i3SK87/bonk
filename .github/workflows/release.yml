@@ -39,7 +39,10 @@ jobs:
       # falla, más vale no repartir un instalador.
       - run: npm test
 
-      - run: npm run dist
+      # Sin --publish never, electron-builder se cree que en CI hay que publicar
+      # solo y se para pidiendo un token. De colgar los archivos ya se encarga el
+      # paso siguiente, que sabe a qué release van.
+      - run: npm run dist -- --publish never
 
       - name: Colgar los archivos de la release
         env:
