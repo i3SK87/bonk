@@ -12,8 +12,8 @@ import {
   debtSummary
 } from './repos/scheduled'
 import { pendingGoals, markGoalReached } from './repos/goals'
-import { listAccountsWithBalance } from './repos/accounts'
-import { getSettings, getSetting, setSetting } from './repos/settings'
+import { listAccountsWithBalance, isLowBalanceWarned, setLowBalanceWarned } from './repos/accounts'
+import { getSettings } from './repos/settings'
 import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
 
 /**
@@ -41,23 +41,33 @@ function amountOf(row: ScheduledView): string {
 }
 
 /**
- * Los iconos de las categorías, dibujados por la ventana y guardados aquí como
- * PNG en base64. Se pierden al cerrar, y no importa: la ventana los vuelve a
- * mandar en cuanto arranca.
+ * Los iconos que dibuja la ventana, guardados aquí como PNG en base64. Las
+ * claves llevan de qué son: «c:3» una categoría, «a:1» una cuenta, «g:2» un
+ * hito. Se pierden al cerrar, y no importa: la ventana los vuelve a mandar en
+ * cuanto arranca.
  */
-const categoryIcons = new Map<number, string>()
+const drawnIcons = new Map<string, string>()
 
 export function setCategoryIcons(icons: Record<string, string>): void {
-  categoryIcons.clear()
-  for (const [id, data] of Object.entries(icons)) categoryIcons.set(Number(id), data)
+  drawnIcons.clear()
+  for (const [key, data] of Object.entries(icons)) drawnIcons.set(key, data)
 }
 
-/** El de la categoría si la ventana lo ha dibujado; si no, el de la aplicación. */
-function imageFor(fallback: string, categoryId: number | null): Electron.NativeImage | string | null {
-  const drawn = categoryId == null ? undefined : categoryIcons.get(categoryId)
+/** El suyo si la ventana lo ha dibujado; si no, el de la aplicación. */
+function imageFor(fallback: string, key: string | null): Electron.NativeImage | string | null {
+  const drawn = key == null ? undefined : drawnIcons.get(key)
   if (drawn) return nativeImage.createFromDataURL(drawn)
   return existsSync(fallback) ? fallback : null
 }
+
+const categoryImage = (fallback: string, id: number | null): Electron.NativeImage | string | null =>
+  imageFor(fallback, id == null ? null : `c:${id}`)
+
+const accountImage = (fallback: string, id: number): Electron.NativeImage | string | null =>
+  imageFor(fallback, `a:${id}`)
+
+const goalImage = (fallback: string, id: number): Electron.NativeImage | string | null =>
+  imageFor(fallback, `g:${id}`)
 
 /**
  * Windows saca el nombre y el icono de la cabecera del aviso del acceso directo
@@ -129,7 +139,7 @@ export function checkReminders(icon: string, onClick: () => void): number {
 
   if (rows.length <= MAX_INDIVIDUAL) {
     for (const row of rows) {
-      notify(imageFor(icon, row.categoryId), onClick, {
+      notify(categoryImage(icon, row.categoryId), onClick, {
         title: `Mañana: ${title(row)}`,
         // «Lo registras tú» solo cuando hay algo que hacer: decir que las demás
         // se registran solas es contar lo que ya se da por hecho.
@@ -139,7 +149,7 @@ export function checkReminders(icon: string, onClick: () => void): number {
   } else {
     const manual = rows.filter((row) => !row.autoPost).length
     // El resumen es de varias categorías a la vez: ahí manda el icono de la app.
-    notify(imageFor(icon, null), onClick, {
+    notify(categoryImage(icon, null), onClick, {
       title: `Mañana vencen ${rows.length} movimientos programados`,
       body:
         rows.map(title).slice(0, 4).join(', ') +
@@ -165,7 +175,7 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
     const name = title(row)
 
     if (Notification.isSupported()) {
-      notify(imageFor(icon, row.categoryId), onClick, {
+      notify(categoryImage(icon, row.categoryId), onClick, {
         title: `¡${name} pagado!`,
         body: `${summary.count} cuotas y ya está. ${formatMoney(summary.total, summary.currency)} desde ${monthOf(summary.firstDate)}.`
       })
@@ -196,7 +206,7 @@ export function announceGoals(icon: string, onClick: () => void): GoalReached[] 
 
   for (const goal of pendingGoals()) {
     if (Notification.isSupported()) {
-      notify(imageFor(icon, null), onClick, {
+      notify(goalImage(icon, goal.id), onClick, {
         title: `¡${goal.title} conseguido!`,
         body: `${formatMoney(goal.total, goal.currency)} juntados en ${goal.accountName}.`
       })
@@ -218,32 +228,30 @@ export function announceGoals(icon: string, onClick: () => void): GoalReached[] 
  * El aviso se da una vez y se vuelve a armar solo cuando el saldo remonta, para
  * no repetirlo cada media hora mientras dure la cuesta abajo.
  */
-export function checkLowBalance(icon: string, onClick: () => void): boolean {
-  const settings = getSettings()
-  const limit = settings.lowBalanceThreshold
-  if (limit <= 0 || settings.defaultAccountId == null) return false
+export function checkLowBalance(icon: string, onClick: () => void): number {
+  let avisadas = 0
 
-  const account = listAccountsWithBalance(true).find((row) => row.id === settings.defaultAccountId)
-  if (!account) return false
+  for (const account of listAccountsWithBalance()) {
+    if (account.lowBalanceThreshold <= 0) continue
 
-  const low = account.balance < limit
-  const warned = getSetting('lowBalanceWarned') === '1'
+    const low = account.balance < account.lowBalanceThreshold
+    if (!low) {
+      if (isLowBalanceWarned(account.id)) setLowBalanceWarned(account.id, false)
+      continue
+    }
+    if (isLowBalanceWarned(account.id)) continue
 
-  if (!low) {
-    if (warned) setSetting('lowBalanceWarned', false)
-    return false
+    setLowBalanceWarned(account.id, true)
+    avisadas++
+    if (Notification.isSupported()) {
+      const empty = account.balance <= 0
+      notify(accountImage(icon, account.id), onClick, {
+        title: `${account.name} ${empty ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}`,
+        body: formatMoney(account.balance, account.currency)
+      })
+    }
   }
-  if (warned) return false
-
-  setSetting('lowBalanceWarned', true)
-  if (Notification.isSupported()) {
-    const empty = account.balance <= 0
-    notify(imageFor(icon, null), onClick, {
-      title: `${account.name} ${empty ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}`,
-      body: formatMoney(account.balance, account.currency)
-    })
-  }
-  return true
+  return avisadas
 }
 
 /** «agosto de 2025», para contar desde cuándo se pagaba. */
@@ -344,8 +352,8 @@ export function sendTestNotification(icon: string, onClick: () => void): boolean
   if (!Notification.isSupported()) return false
   // Con el icono de una categoría cualquiera: el de prueba tiene que enseñar
   // cómo va a quedar el de verdad, y el de verdad lleva el de su categoría.
-  const sample = categoryIcons.values().next().value
-  notify(sample ? nativeImage.createFromDataURL(sample) : imageFor(icon, null), onClick, {
+  const sample = drawnIcons.values().next().value
+  notify(sample ? nativeImage.createFromDataURL(sample) : categoryImage(icon, null), onClick, {
     title: 'Mañana: Alquiler',
     body: '−753,00 € · BartBank'
   })

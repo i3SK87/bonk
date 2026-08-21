@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode
 } from 'react'
-import { pushCategoryIcons } from './notificationIcons'
+import { pushNotificationIcons } from './notificationIcons'
 import type { AccountWithBalance, Category, Settings } from '@shared/types'
 
 const api = window.bonk
@@ -53,7 +53,6 @@ const FALLBACK_SETTINGS: Settings = {
   startWithWindows: false,
   closeToTray: false,
   remindersEnabled: false,
-  lowBalanceThreshold: 5000,
   lockEnabled: false,
   lockPin: null,
   lockDelaySeconds: 0,
@@ -83,15 +82,17 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
   )
 
   const refreshCatalogues = useCallback(async () => {
-    const [nextAccounts, nextCategories] = await Promise.all([
+    const [nextAccounts, nextCategories, nextGoals] = await Promise.all([
       api.accounts.withBalance(),
-      api.categories.list()
+      api.categories.list(),
+      api.goals.list()
     ])
     setAccounts(nextAccounts)
     setCategories(nextCategories)
-    // Los avisos del día antes llevan el icono de su categoría, y dibujarlo
-    // solo se puede aquí: el proceso principal no tiene con qué rasterizar.
-    pushCategoryIcons(nextCategories).catch(() => undefined)
+    // Cada aviso enseña la cara de lo que cuenta —la categoría del recibo, la
+    // cuenta que se queda sin fondo, el hito conseguido— y dibujarlas solo se
+    // puede aquí: el proceso principal no tiene con qué rasterizar.
+    pushNotificationIcons(nextCategories, nextAccounts, nextGoals).catch(() => undefined)
   }, [])
 
   const refresh = useCallback(async () => {

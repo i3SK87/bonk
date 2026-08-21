@@ -323,6 +323,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     }
   }
 
+  /**
+   * Lo que un movimiento le hace al día que se está mirando.
+   *
+   * Sin cuenta elegida es su efecto sobre el patrimonio, y ahí un traspaso vale
+   * cero: el dinero sigue siendo tuyo. Pero mirando una cuenta concreta, ese
+   * mismo traspaso sale de ella y tiene que restar; si es el destino, suma lo que
+   * recibe. Entre dos cuentas elegidas vuelve a ser cero, que es la verdad.
+   */
+  function effectOn(item: { type: TxType; amount: number; amountTo: number | null; amountInBase: number; accountId: number; toAccountId: number | null }): number {
+    if (accountIds.length === 0 || item.type !== 'transfer') return item.amountInBase
+    const sale = accountIds.includes(item.accountId)
+    const entra = item.toAccountId != null && accountIds.includes(item.toAccountId)
+    if (sale && entra) return 0
+    if (sale) return -item.amount
+    if (entra) return item.amountTo ?? item.amount
+    return 0
+  }
+
   const showingProjected = projected.length > 0
   const nothingToShow = rows.length === 0 && projected.length === 0
 
@@ -350,13 +368,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       ? 'Patrimonio previsto'
       : 'Patrimonio'
 
-  /** La cuenta del día a día cuando se está quedando sin fondo. */
-  const runningLow = (() => {
-    const limit = settings.lowBalanceThreshold
-    if (limit <= 0 || settings.defaultAccountId == null) return null
-    const account = accounts.find((item) => item.id === settings.defaultAccountId)
-    return account && account.balance < limit ? account : null
-  })()
+  /** Las cuentas que se están quedando cortas, cada una con su propio suelo. */
+  const runningLow = accounts.filter(
+    (account) => account.lowBalanceThreshold > 0 && account.balance < account.lowBalanceThreshold
+  )
 
   return (
     <>
@@ -405,15 +420,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
         {/* El aviso, donde se mira el dinero. La notificación de Windows llega una
             vez; esto se queda a la vista mientras dure la cuesta abajo. */}
-        {runningLow && (
-          <div className={`low-balance${runningLow.balance <= 0 ? ' overdrawn' : ''}`}>
+        {runningLow.map((account) => (
+          <div
+            key={account.id}
+            className={`low-balance${account.balance <= 0 ? ' overdrawn' : ''}`}
+          >
             <Icon name="alert" size={16} />
             <span>
-              <b>{runningLow.name}</b>{' '}
-              {runningLow.balance <= 0 ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}
+              <b>{account.name}</b>{' '}
+              {account.balance <= 0 ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}
             </span>
           </div>
-        )}
+        ))}
       </div>
 
       <div className="card">
@@ -686,8 +704,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             {groups.map(([date, items]) => {
               // El total del día también cuenta lo previsto mientras se enseñe.
               const dayTotal =
-                items.real.reduce((sum, item) => sum + item.amountInBase, 0) +
-                items.upcoming.reduce((sum, item) => sum + item.amountInBase, 0)
+                items.real.reduce((sum, item) => sum + effectOn(item), 0) +
+                items.upcoming.reduce((sum, item) => sum + effectOn(item), 0)
               const onlyUpcoming = items.real.length === 0
               return (
                 <div key={date}>

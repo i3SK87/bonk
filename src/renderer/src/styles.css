@@ -642,6 +642,14 @@ p { margin: 0; }
   line-height: 1.45;
 }
 
+/* El mismo campo cuando el importe no es lo que se viene a escribir, sino un
+   ajuste de la ficha: el tamaño de titular ahí gritaba sin motivo. */
+.input.amount-input.compact {
+  font-size: 15px;
+  font-weight: 620;
+  padding: 9px 12px;
+}
+
 .input.amount-input {
   font-size: 26px;
   font-weight: 680;
@@ -981,8 +989,12 @@ p { margin: 0; }
   transition: background 0.12s ease;
 }
 
-.tx-row.linked.linked-active {
-  background: var(--accent-soft);
+/* Los dos con el mismo gris que cualquier fila al pasar por encima: el tinte de
+   acento en uno y el gris en el otro parecían dos cosas distintas, cuando lo que
+   se quiere decir es justo que son lo mismo. */
+.tx-row.linked-active,
+.tx-row.linked-active:hover {
+  background: var(--bg-sunken);
 }
 
 /* Una devolución colgada de su gasto: entra hacia dentro y se une a él con un
@@ -1029,23 +1041,48 @@ p { margin: 0; }
   pointer-events: none;
 }
 
-/* En Programadas las filas van a sangre, con su raya inferior de lado a lado:
-   la sangría se hace con relleno para no partir esa raya. */
+/* La sangría se hace con relleno y no con margen: la fila ya lleva el suyo para
+   despegarse del canto de la tarjeta. */
 .list-row.nested {
   position: relative;
-  padding-left: 48px;
 }
 
-/* Allí la sangría es relleno y no margen, así que la línea se sitúa sola: el
-   icono del padre está a 33px (14 de relleno y 19 de medio avatar). */
-.list-row.nested::before,
-.list-row.nested-continues::after {
-  left: 32px;
+.card.flush .list-row.nested {
+  padding-left: 44px;
 }
 
+/* Allí la sangría es relleno y no margen, así que la línea se sitúa sola: con el
+   mismo relleno que en Movimientos, el icono del padre cae a 29px. */
+.card.flush .list-row.nested::before,
+.card.flush .list-row.nested-continues::after {
+  left: 28px;
+}
+
+/* La rama sí se enciende: es la que dice de quién cuelga. */
 .tx-row.nested.linked-active::before,
 .tx-row.nested.linked-active::after {
   border-color: var(--accent);
+}
+
+/* Encendida la familia, las dos filas forman una sola mancha: se cuadran las
+   esquinas por donde se tocan y el canto derecho queda de una pieza. El
+   izquierdo conserva su escalón, que es lo que enseña de quién cuelga. */
+.tx-row.linked-active:not(.nested),
+.tx-row.nested.nested-continues.linked-active {
+  border-bottom-right-radius: 0;
+}
+
+.tx-row.nested.linked-active {
+  border-top-right-radius: 0;
+}
+
+.card.flush .list-row.linked-active:not(.nested),
+.card.flush .list-row.nested.nested-continues.linked-active {
+  border-bottom-right-radius: 0;
+}
+
+.card.flush .list-row.nested.linked-active {
+  border-top-right-radius: 0;
 }
 
 .tx-main {
@@ -1533,11 +1570,18 @@ p { margin: 0; }
 .card.flush button.list-row { border-bottom: none; }
 
 /* Sin rayas, el resalte al pasar por encima es lo que sujeta la fila de punta a
-   punta —del icono al importe y a sus botones—, igual que en Movimientos. */
+   punta —del icono al importe y a sus botones—, igual que en Movimientos. Y con
+   el mismo relleno y el mismo aire por los lados que allí, que pegado al canto
+   de la tarjeta el resalte se leía como otra cosa. */
 .card.flush .list-row {
+  padding: 9px 10px;
+  margin: 0 8px;
   border-radius: var(--radius);
   transition: background-color 0.12s ease, opacity 0.12s ease;
 }
+
+.card.flush .list-row:first-of-type { margin-top: 6px; }
+.card.flush .list-row:last-child { margin-bottom: 6px; }
 
 .card.flush .list-row:hover { background-color: var(--bg-sunken); }
 
@@ -1547,10 +1591,10 @@ p { margin: 0; }
   transition: background-color 0.12s ease, opacity 0.12s ease;
 }
 
-/* El selector va tan cargado porque tiene que ganarle al resalte del ratón:
-   con la familia encendida manda el tinte del acento, no el gris de siempre. */
-.card.flush .list-row.linked.linked-active {
-  background-color: var(--accent-soft);
+/* El selector va cargado porque tiene que ganarle al resalte del ratón. */
+.card.flush .list-row.linked-active,
+.card.flush .list-row.linked-active:hover {
+  background-color: var(--bg-sunken);
 }
 
 .list-row.nested.linked-active::before,
@@ -1565,9 +1609,9 @@ p { margin: 0; }
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  border-top: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
-  background: color-mix(in srgb, var(--negative) 10%, transparent);
-  color: var(--negative);
+  border-top: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
   font-size: 13px;
   border-bottom-left-radius: var(--radius);
   border-bottom-right-radius: var(--radius);
@@ -1579,8 +1623,9 @@ p { margin: 0; }
    sube el tono, que la diferencia entre ir justo y estar en descubierto es la
    que importa. */
 .low-balance.overdrawn {
-  background: color-mix(in srgb, var(--negative) 22%, transparent);
   border-top-color: color-mix(in srgb, var(--negative) 55%, transparent);
+  background: color-mix(in srgb, var(--negative) 22%, transparent);
+  color: var(--negative);
   font-weight: 600;
 }
 

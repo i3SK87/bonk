@@ -2,13 +2,16 @@ import { createElement } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { Icon } from '../components/Icon'
-import type { Category } from '@shared/types'
+import type { Account, Category, Goal } from '@shared/types'
 
 /**
- * Los avisos de Windows llevan una imagen, y los iconos de las categorías son
- * SVG que solo existen dentro de la interfaz. Aquí se dibuja cada uno como PNG
- * —el mismo cuadrado redondeado de color con el símbolo en blanco que se ve en
- * las listas— y se le pasan al proceso principal, que es quien manda el aviso.
+ * Los avisos de Windows llevan una imagen, y los iconos de la aplicación son SVG
+ * que solo existen dentro de la interfaz. Aquí se dibuja cada uno como PNG —el
+ * mismo cuadrado redondeado de color con el símbolo en blanco que se ve en las
+ * listas— y se le pasan al proceso principal, que es quien manda el aviso.
+ *
+ * Van los de las categorías, los de las cuentas y los de los hitos: cada aviso
+ * enseña la cara de lo que cuenta, no el icono genérico de BONK.
  *
  * Se hace en la ventana porque es la única que tiene con qué rasterizar: en el
  * proceso principal no hay lienzo ni intérprete de SVG.
@@ -57,15 +60,31 @@ async function draw(icon: string, color: string, size = 96): Promise<string> {
 /** Firma de la lista: si no cambia, no hay nada que volver a mandar. */
 let lastSignature = ''
 
-export async function pushCategoryIcons(categories: Category[]): Promise<void> {
-  const signature = categories.map((item) => `${item.id}:${item.icon}:${item.color}`).join('|')
-  if (signature === lastSignature || categories.length === 0) return
+/**
+ * Manda todos los iconos que un aviso puede necesitar.
+ *
+ * La clave lleva de qué es cada uno —«c:» categoría, «a:» cuenta, «g:» hito—,
+ * porque los números se repiten entre las tres tablas y sin la letra el aviso de
+ * una cuenta acabaría con la cara de una categoría.
+ */
+export async function pushNotificationIcons(
+  categories: Category[],
+  accounts: Account[],
+  goals: Goal[]
+): Promise<void> {
+  const fuentes: Array<[string, { id: number; icon: string; color: string }]> = [
+    ...categories.map((item) => ['c', item] as [string, Category]),
+    ...accounts.map((item) => ['a', item] as [string, Account]),
+    ...goals.map((item) => ['g', item] as [string, Goal])
+  ]
+  const signature = fuentes.map(([k, item]) => `${k}${item.id}:${item.icon}:${item.color}`).join('|')
+  if (signature === lastSignature || fuentes.length === 0) return
   lastSignature = signature
 
-  const icons: Record<number, string> = {}
-  for (const category of categories) {
+  const icons: Record<string, string> = {}
+  for (const [prefijo, item] of fuentes) {
     try {
-      icons[category.id] = await draw(category.icon, category.color)
+      icons[`${prefijo}:${item.id}`] = await draw(item.icon, item.color)
     } catch {
       // Un icono que no se deja dibujar no vale una pantalla en blanco: ese
       // aviso saldrá con el icono de la aplicación y ya está.

@@ -18,7 +18,6 @@ export function getSettings(): Settings {
     startWithWindows: map.get('startWithWindows') === '1',
     closeToTray: map.get('closeToTray') === '1',
     remindersEnabled: map.get('remindersEnabled') === '1',
-    lowBalanceThreshold: Number(map.get('lowBalanceThreshold') ?? 5000),
     lockEnabled: map.get('lockEnabled') === '1',
     lockPin: map.get('lockPin') || null,
     lockDelaySeconds: Number(map.get('lockDelaySeconds') || 0),

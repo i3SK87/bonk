@@ -169,6 +169,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
   const [icon, setIcon] = useState(account?.icon ?? 'bank')
   const [color, setColor] = useState(account?.color ?? '#0A84FF')
   const [excludeFromTotal, setExclude] = useState(account?.excludeFromTotal ?? false)
+  const [lowBalance, setLowBalance] = useState(account?.lowBalanceThreshold ?? 0)
   const [archived, setArchived] = useState(account?.archived ?? false)
   const [note, setNote] = useState(account?.note ?? '')
   const [allowNegative, setAllowNegative] = useState(
@@ -199,6 +200,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
       color,
       excludeFromTotal,
       allowNegative,
+      lowBalanceThreshold: lowBalance,
       archived,
       note: note.trim() || null
     })
@@ -308,6 +310,15 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             placeholder="Número parcial, banco, titular…"
             onChange={(event) => setNote(event.target.value)}
           />
+        </Field>
+
+        <Field
+          label="Avisarme si baja de"
+          hint="Notificación de Windows y un aviso en Movimientos, mientras dure. Se vuelve a armar solo cuando el saldo remonta. En cero no avisa nunca."
+        >
+          <div style={{ maxWidth: 200 }}>
+            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} compact />
+          </div>
         </Field>
 
         <Checkbox

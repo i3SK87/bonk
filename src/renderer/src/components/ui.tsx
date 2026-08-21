@@ -312,13 +312,15 @@ interface AmountInputProps {
   onChange: (minor: number) => void
   autoFocus?: boolean
   invalid?: boolean
+  /** Para los importes que no son el protagonista del formulario. */
+  compact?: boolean
 }
 
 /**
  * Trabaja con texto mientras se escribe y solo convierte a céntimos al soltar,
  * para que se puedan teclear estados intermedios como "12," sin pelearse con el campo.
  */
-export function AmountInput({ value, currency, onChange, autoFocus, invalid }: AmountInputProps): ReactNode {
+export function AmountInput({ value, currency, onChange, autoFocus, invalid, compact }: AmountInputProps): ReactNode {
   const [text, setText] = useState(() => (value ? String(value / 100).replace('.', ',') : ''))
   const [focused, setFocused] = useState(false)
   // El estado del foco también en una referencia: el efecto de abajo corre
@@ -336,7 +338,7 @@ export function AmountInput({ value, currency, onChange, autoFocus, invalid }: A
   return (
     <div style={{ position: 'relative' }}>
       <input
-        className={`input amount-input${invalid ? ' invalid' : ''}`}
+        className={`input amount-input${compact ? ' compact' : ''}${invalid ? ' invalid' : ''}`}
         inputMode="decimal"
         autoFocus={autoFocus}
         value={text}

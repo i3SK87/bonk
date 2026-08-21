@@ -348,5 +348,22 @@ export const MIGRATIONS: string[] = [
                              FROM transactions t WHERE t.type = 'transfer' AND t.to_account_id = a.id), 0)
              FROM accounts a WHERE a.id = goals.account_id
          );
+  `,
+
+  // v12 — el aviso de saldo bajo, por cuenta.
+  //
+  // Empezó siendo un ajuste único para la cuenta principal, pero cada cuenta
+  // tiene su suelo: en la del día a día cincuenta euros son poco, y en una hucha
+  // no significan nada. En cero no avisa, que es lo que le toca a casi todas.
+  //
+  // La marca de «ya avisado» vive aquí y no en los ajustes por lo mismo: se arma
+  // y se desarma cuenta por cuenta.
+  `
+  ALTER TABLE accounts ADD COLUMN low_balance_threshold INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE accounts ADD COLUMN low_balance_warned INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE accounts
+     SET low_balance_threshold = COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'lowBalanceThreshold'), 5000)
+   WHERE id = (SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'defaultAccountId');
   `
 ]

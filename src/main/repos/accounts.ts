@@ -17,6 +17,7 @@ interface AccountRow {
   archived: number
   sort_order: number
   note: string | null
+  low_balance_threshold: number
   created_at: string
 }
 
@@ -34,6 +35,7 @@ function mapAccount(row: AccountRow): Account {
     archived: row.archived === 1,
     sortOrder: row.sort_order,
     note: row.note,
+    lowBalanceThreshold: row.low_balance_threshold,
     createdAt: row.created_at
   }
 }
@@ -122,6 +124,7 @@ export interface AccountInput {
   excludeFromTotal: boolean
   allowNegative?: boolean
   note?: string | null
+  lowBalanceThreshold?: number
   archived?: boolean
 }
 
@@ -142,7 +145,8 @@ function saveAccountInner(input: AccountInput): Account {
     db.prepare(
       `UPDATE accounts
           SET name = ?, type = ?, currency = ?, initial_balance = ?, icon = ?, color = ?,
-              exclude_from_total = ?, allow_negative = ?, note = ?, archived = ?
+              exclude_from_total = ?, allow_negative = ?, note = ?,
+              low_balance_threshold = ?, archived = ?
         WHERE id = ?`
     ).run(
       input.name,
@@ -154,6 +158,7 @@ function saveAccountInner(input: AccountInput): Account {
       input.excludeFromTotal ? 1 : 0,
       allowNegative ? 1 : 0,
       bind(input.note),
+      Math.max(0, input.lowBalanceThreshold ?? 0),
       input.archived ? 1 : 0,
       input.id
     )
@@ -172,8 +177,8 @@ function saveAccountInner(input: AccountInput): Account {
     .prepare(
       `INSERT INTO accounts
          (name, type, currency, initial_balance, icon, color, exclude_from_total, allow_negative,
-          note, sort_order, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          note, low_balance_threshold, sort_order, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name,
@@ -185,6 +190,7 @@ function saveAccountInner(input: AccountInput): Account {
       input.excludeFromTotal ? 1 : 0,
       allowNegative ? 1 : 0,
       bind(input.note),
+      Math.max(0, input.lowBalanceThreshold ?? 0),
       Number(maxOrder.m) + 1,
       nowISO()
     )
@@ -291,6 +297,19 @@ export function countAccountTransactions(id: number): number {
     .prepare('SELECT COUNT(*) AS n FROM transactions WHERE account_id = ? OR to_account_id = ?')
     .get(id, id) as unknown as { n: number }
   return Number(row.n)
+}
+
+/** Si a esta cuenta ya se le ha dado el aviso de saldo bajo. */
+export function isLowBalanceWarned(id: number): boolean {
+  const row = getDb().prepare('SELECT low_balance_warned AS w FROM accounts WHERE id = ?').get(id) as
+    | { w: number }
+    | undefined
+  return row?.w === 1
+}
+
+/** Se arma al avisar y se desarma cuando el saldo remonta. */
+export function setLowBalanceWarned(id: number, warned: boolean): void {
+  getDb().prepare('UPDATE accounts SET low_balance_warned = ? WHERE id = ?').run(warned ? 1 : 0, id)
 }
 
 export function reorderAccounts(ids: number[]): void {
