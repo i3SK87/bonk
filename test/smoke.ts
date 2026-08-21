@@ -281,7 +281,11 @@ try {
   equal('el último mes acumula el gasto', series[11].expense, 6550)
 
   section('Desglose por notas')
-  const debt = categories.saveCategory({ name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30' })
+  // Marcada como deuda a plazos: es lo que la hace salir en la pestaña Deudas y
+  // lo que dispara la enhorabuena al saldarla.
+  const debt = categories.saveCategory({
+    name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30', isDebt: true
+  })
   check('una categoría nueva se desglosa por defecto', debt.breakdownByNote)
   check('y no guarda facturas hasta que se le diga', debt.keepsInvoices === false)
   check(
@@ -561,6 +565,38 @@ try {
     `sumó ${resumen.total}`
   )
   equal('sabe desde cuándo se pagaba', resumen.firstDate, addMonths(day, -1))
+
+  // La pantalla de Deudas: lo que se ve de una deuda a plazos.
+  const verDeuda = (): DebtProgress =>
+    scheduled.debtProgress(day).find((row) => row.scheduledId === plazos.id)!
+  const cerrada = verDeuda()
+  equal('la deuda saldada no espera más cuotas', cerrada.leftCount, 0)
+  equal('y su coste mensual pasa a cero', cerrada.monthlyCost, 0)
+
+  // Lo que la aplicación no vio: se paga desde antes del primer apunte.
+  scheduled.adjustDebt(plazos.id, 10000, null)
+  const conHistoria = verDeuda()
+  equal('lo pagado antes cuenta como pagado', conHistoria.paid, cerrada.paid + 10000)
+  equal(
+    'y lo que la aplicación ve se sigue diciendo aparte',
+    conHistoria.paidBySoftware,
+    cerrada.paid
+  )
+
+  // El total lo manda quien lo sabe: la última cuota casi nunca es entera.
+  scheduled.adjustDebt(plazos.id, 10000, 30000)
+  const conTotal = verDeuda()
+  equal('el total puesto a mano manda', conTotal.total, 30000)
+  equal('y lo que falta sale de él', conTotal.left, 30000 - conTotal.paid)
+  check(
+    'el porcentaje va sobre ese total',
+    Math.round(conTotal.percent!) === Math.round((conTotal.paid / 30000) * 100)
+  )
+
+  // Pagar de más no deja un pendiente negativo.
+  scheduled.adjustDebt(plazos.id, 100000, 30000)
+  equal('pagar de más no deja pendiente negativo', verDeuda().left, 0)
+  scheduled.adjustDebt(plazos.id, 0, null)
 
   // Pausar no es terminar: apaga, pero no sella.
   const pausable = scheduled.saveScheduled({

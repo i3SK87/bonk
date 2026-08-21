@@ -229,6 +229,16 @@ export interface Scheduled {
   refundForScheduledId: number | null
   /** Plan de ahorro al que va este traspaso, cuando entra en una hucha. */
   goalId: number | null
+  /**
+   * Lo que ya llevabas pagado de esta deuda antes del primer apunte. Sin esto,
+   * una deuda vieja con registros nuevos sale casi a cero.
+   */
+  debtPaidBefore: number
+  /**
+   * El total de verdad de la deuda, cuando no sale de multiplicar la cuota por
+   * las veces: la última suele ser más corta.
+   */
+  debtTotal: number | null
   /** Avisa el día antes. Se puede silenciar una sin callar las demás. */
   remind: boolean
   /** Fecha de la ocurrencia ya avisada; evita repetir el aviso en cada arranque. */
@@ -335,9 +345,11 @@ export interface DebtProgress {
   currency: string
   /** Lo que se paga cada vez. */
   installment: number
-  /** Cuántas cuotas se han pagado ya y cuánto suman. */
+  /** Cuántas cuotas se han pagado ya y cuánto suman, con lo de antes incluido. */
   paidCount: number
   paid: number
+  /** Solo lo que la aplicación ve en tus movimientos, sin lo que le hayas dicho. */
+  paidBySoftware: number
   /** Cuántas quedan y cuánto suman, cuando hay fecha de fin. */
   leftCount: number | null
   left: number | null
@@ -349,6 +361,8 @@ export interface DebtProgress {
   endDate: string | null
   /** Días hasta la última cuota; negativo si ya pasó. */
   daysLeft: number | null
+  /** Lo que le cuesta al mes, sea cual sea su frecuencia. */
+  monthlyCost: number
   /** Terminada: ya no genera cuotas. */
   settled: boolean
   settledAt: string | null

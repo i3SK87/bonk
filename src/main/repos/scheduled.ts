@@ -33,6 +33,8 @@ interface ScheduledRow {
   created_at: string
   refund_for_scheduled_id: number | null
   goal_id: number | null
+  debt_paid_before: number
+  debt_total: number | null
   remind: number
   reminded_for: string | null
   settled_at: string | null
@@ -70,6 +72,8 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
     goalId: row.goal_id,
+    debtPaidBefore: row.debt_paid_before,
+    debtTotal: row.debt_total,
     remind: row.remind === 1,
     remindedFor: row.reminded_for,
     settledAt: row.settled_at
@@ -272,6 +276,16 @@ export interface DebtSummary {
 }
 
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
+/**
+ * Ajusta lo que la aplicacion no vio de una deuda: lo que ya llevabas pagado
+ * antes del primer apunte y, si lo sabes, el total de verdad.
+ */
+export function adjustDebt(id: number, paidBefore: number, total: number | null): void {
+  getDb()
+    .prepare('UPDATE scheduled SET debt_paid_before = ?, debt_total = ? WHERE id = ?')
+    .run(Math.max(0, Math.round(paidBefore)), total == null ? null : Math.max(0, Math.round(total)), id)
+}
+
 export function debtSummary(id: number): DebtSummary {
   const scheduled = getScheduled(id)
 
@@ -327,6 +341,19 @@ export function debtSummary(id: number): DebtSummary {
  * la próxima cuota hasta la fecha de fin: sin fecha no hay plan que medir, y
  * entonces se dice lo pagado y nada más.
  */
+/**
+ * Lo que cuesta al mes, venga cada semana o cada año.
+ *
+ * «Cuánto pago al mes» es la pregunta, y una deuda semanal no se responde con
+ * su cuota. Cuatro semanas y pico al mes, treinta días, doce meses al año: son
+ * aproximaciones, pero es la cifra que se busca.
+ */
+function monthlyCost(amount: number, freq: Frequency, interval: number): number {
+  const veces =
+    freq === 'daily' ? 30 : freq === 'weekly' ? 4.348 : freq === 'monthly' ? 1 : 1 / 12
+  return Math.round((amount * veces) / Math.max(1, interval))
+}
+
 export function debtProgress(reference = today()): DebtProgress[] {
   const rows = getDb()
     .prepare(`${VIEW_SELECT} WHERE c.is_debt = 1 ORDER BY s.settled_at IS NOT NULL, s.next_date, s.id`)
@@ -351,8 +378,19 @@ export function debtProgress(reference = today()): DebtProgress[] {
       leftCount = 0
     }
 
-    const left = leftCount == null ? null : leftCount * debt.amount
-    const total = left == null ? null : summary.total + left
+    /*
+     * Lo pagado suma lo que la aplicación ha visto y lo que le has dicho que ya
+     * llevabas: una deuda de hace tres años con apuntes desde abril saldría por
+     * los suelos.
+     *
+     * El total lo mandas tú si lo has puesto, porque casi nunca sale de
+     * multiplicar la cuota por las veces: la última suele ser más corta. Si no,
+     * se calcula, y entonces lo que queda son las cuotas que faltan.
+     */
+    const paid = summary.total + debt.debtPaidBefore
+    const porCuotas = leftCount == null ? null : leftCount * debt.amount
+    const total = debt.debtTotal ?? (porCuotas == null ? null : paid + porCuotas)
+    const left = total == null ? porCuotas : Math.max(0, total - paid)
     const daysLeft = debt.endDate
       ? Math.round(
           (Date.parse(`${debt.endDate}T00:00:00`) - Date.parse(`${reference}T00:00:00`)) / 86400000
@@ -369,15 +407,17 @@ export function debtProgress(reference = today()): DebtProgress[] {
       currency: debt.accountCurrency,
       installment: debt.amount,
       paidCount: summary.count,
-      paid: summary.total,
+      paid,
+      paidBySoftware: summary.total,
       leftCount,
       left,
       total,
-      percent: total && total > 0 ? Math.min(100, (summary.total / total) * 100) : null,
+      percent: total && total > 0 ? Math.min(100, (paid / total) * 100) : null,
       firstDate: summary.firstDate,
       nextDate: debt.nextDate,
       endDate: debt.endDate,
       daysLeft,
+      monthlyCost: leftCount === 0 ? 0 : monthlyCost(debt.amount, debt.freq, debt.interval),
       settled: debt.settledAt != null,
       settledAt: debt.settledAt
     }

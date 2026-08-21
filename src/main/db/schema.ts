@@ -437,5 +437,20 @@ export const MIGRATIONS: string[] = [
   // euros al mes para el viaje es una decisión que se toma una vez.
   `
   ALTER TABLE scheduled ADD COLUMN goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
+  `,
+
+  // v17 — lo que la aplicación no llegó a ver de una deuda.
+  //
+  // Lo pagado se deduce de los movimientos, y eso solo alcanza hasta donde
+  // llegan tus registros: una deuda que se paga desde hace tres años y un CSV
+  // que empieza en abril dan un porcentaje ridículo. Con `debt_paid_before` se
+  // dice lo que ya iba pagado antes de que existiera el primer apunte.
+  //
+  // Y `debt_total` es el total de verdad, para cuando no sale de multiplicar la
+  // cuota por las veces: la última suele ser más corta, y hay deudas con
+  // intereses o con una entrada.
+  `
+  ALTER TABLE scheduled ADD COLUMN debt_paid_before INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE scheduled ADD COLUMN debt_total INTEGER;
   `
 ]

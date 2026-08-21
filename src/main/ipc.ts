@@ -149,6 +149,9 @@ export function registerIpc(
   handle('scheduled:postDue', () => scheduled.postDue())
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))
   handle('scheduled:debts', () => scheduled.debtProgress())
+  handle('scheduled:adjustDebt', (id: number, paidBefore: number, total: number | null) =>
+    scheduled.adjustDebt(id, paidBefore, total)
+  )
 
   // — Informes —
   handle('reports:categories', (from: string, to: string, kind: CategoryKind) =>

@@ -3,6 +3,19 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.26.0
+
+- **Cada deuda se puede ajustar.** Lo pagado se deduce de tus movimientos, y eso
+  solo alcanza hasta donde llegan tus registros: una deuda que pagas desde hace
+  años con apuntes desde abril salía por los suelos. Con el lápiz de su ficha se
+  dice lo que ya llevabas pagado antes.
+- **Y el total, cuando no cuadra.** Casi nunca sale de multiplicar la cuota por las
+  veces: la última suele ser más corta, o hay intereses o una entrada. Puesto a
+  mano, manda él, y lo que falta y el porcentaje salen de ahí.
+- **«Pagas al mes», al mismo tamaño que «Te queda por pagar».** Es la cifra que
+  aprieta cada mes y la que se compara con lo que entra. Cuenta bien las deudas
+  que no son mensuales: una semanal se lleva a su equivalente al mes.
+
 ## Novedades de la 1.25.0
 
 - **Pestaña Deudas.** Solo para mirar: lo que te queda por pagar de todo, y por

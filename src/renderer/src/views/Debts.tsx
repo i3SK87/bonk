@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
-import { Avatar, EmptyState, Loading, ProgressBar } from '../components/ui'
+import { Avatar, EmptyState, Loading, ProgressBar, Modal, Field, AmountInput } from '../components/ui'
+import { Icon } from '../components/Icon'
 import { formatMoney } from '@shared/money'
 import { formatDate } from '@shared/dates'
 import type { DebtProgress } from '@shared/types'
@@ -30,6 +31,7 @@ export function DebtsView(): ReactNode {
   const { settings, revision, fail } = useStore()
   const [debts, setDebts] = useState<DebtProgress[]>([])
   const [loading, setLoading] = useState(true)
+  const [adjusting, setAdjusting] = useState<DebtProgress | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -46,7 +48,7 @@ export function DebtsView(): ReactNode {
   // Lo que queda por pagar de todo lo que debes, que es la cifra que se busca al
   // entrar. Las que no tienen fecha de fin no suman: no se sabe cuánto queda.
   const pendiente = abiertas.reduce((sum, debt) => sum + (debt.left ?? 0), 0)
-  const alMes = abiertas.reduce((sum, debt) => sum + (debt.leftCount ? debt.installment : 0), 0)
+  const alMes = abiertas.reduce((sum, debt) => sum + debt.monthlyCost, 0)
   const sinFecha = abiertas.filter((debt) => debt.left == null).length
 
   return (
@@ -67,10 +69,17 @@ export function DebtsView(): ReactNode {
                 {formatMoney(pendiente, settings.baseCurrency)}
               </div>
             </div>
+            {/* Al mismo tamaño que lo que queda: es la cifra que aprieta cada mes,
+                y la que se compara con lo que entra. */}
+            <div className="networth">
+              <div className="label">Pagas al mes</div>
+              <div className={`value amount ${alMes > 0 ? 'negative' : 'neutral'}`}>
+                {formatMoney(alMes, settings.baseCurrency)}
+              </div>
+            </div>
             <div className="col" style={{ gap: 2 }}>
               <span className="small muted">
-                {abiertas.length === 1 ? '1 deuda abierta' : `${abiertas.length} deudas abiertas`} ·{' '}
-                {formatMoney(alMes, settings.baseCurrency)} en cuotas cada vez
+                {abiertas.length === 1 ? '1 deuda abierta' : `${abiertas.length} deudas abiertas`}
               </span>
               {sinFecha > 0 && (
                 <span className="small subtle">
@@ -94,7 +103,12 @@ export function DebtsView(): ReactNode {
         ) : (
           <div className="card-body col" style={{ gap: 20 }}>
             {abiertas.map((debt) => (
-              <DebtCard key={debt.scheduledId} debt={debt} currency={settings.baseCurrency} />
+              <DebtCard
+                key={debt.scheduledId}
+                debt={debt}
+                currency={settings.baseCurrency}
+                onAdjust={() => setAdjusting(debt)}
+              />
             ))}
           </div>
         )}
@@ -129,11 +143,23 @@ export function DebtsView(): ReactNode {
           </div>
         </div>
       )}
+
+      {adjusting && (
+        <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
+      )}
     </>
   )
 }
 
-function DebtCard({ debt, currency }: { debt: DebtProgress; currency: string }): ReactNode {
+function DebtCard({
+  debt,
+  currency,
+  onAdjust
+}: {
+  debt: DebtProgress
+  currency: string
+  onAdjust: () => void
+}): ReactNode {
   const color = debt.categoryColor ?? '#FF453A'
 
   return (
@@ -168,6 +194,9 @@ function DebtCard({ debt, currency }: { debt: DebtProgress; currency: string }):
             {debt.left != null ? `Faltan ${formatMoney(debt.left, currency)}` : 'Sin total conocido'}
           </div>
         </div>
+        <button className="btn ghost icon" onClick={onAdjust} aria-label="Ajustar la deuda">
+          <Icon name="edit" size={16} />
+        </button>
       </div>
 
       {/* Sin fecha de fin no hay barra: no se puede medir contra un total que no
@@ -189,5 +218,62 @@ function DebtCard({ debt, currency }: { debt: DebtProgress; currency: string }):
         {debt.firstDate ? ` · desde ${formatDate(debt.firstDate)}` : ''}
       </div>
     </div>
+  )
+}
+
+/**
+ * Lo que la aplicación no puede saber de una deuda.
+ *
+ * Lo pagado se deduce de los movimientos, y eso solo alcanza hasta donde llegan
+ * tus registros. Aquí se cuenta el resto: lo que ya llevabas pagado antes y, si
+ * lo sabes, el total de verdad —que casi nunca es la cuota por las veces, porque
+ * la última suele ser más corta—.
+ */
+function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => void }): ReactNode {
+  const { run, refresh } = useStore()
+  const [paidBefore, setPaidBefore] = useState(debt.paid - debt.paidBySoftware)
+  const [total, setTotal] = useState(debt.total ?? 0)
+
+  return (
+    <Modal
+      title={`Ajustar ${debt.title}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="btn primary"
+            onClick={async () => {
+              const saved = await run(
+                () => api.scheduled.adjustDebt(debt.scheduledId, paidBefore, total > 0 ? total : null),
+                'Deuda ajustada'
+              )
+              if (saved !== undefined) {
+                refresh()
+                onClose()
+              }
+            }}
+          >
+            Guardar
+          </button>
+        </>
+      }
+    >
+      <Field
+        label="Ya pagado antes de tus registros"
+        hint={`De esta deuda, BONK ve ${formatMoney(debt.paidBySoftware, debt.currency)} en tus movimientos. Si llevabas pagando desde antes, pon aquí lo que iba pagado hasta entonces.`}
+      >
+        <AmountInput value={paidBefore} currency={debt.currency} onChange={setPaidBefore} />
+      </Field>
+
+      <Field
+        label="Total de la deuda"
+        hint="Lo que cuesta entera. Déjalo en cero y se calcula con las cuotas que quedan, que es lo mismo salvo que la última sea más corta."
+      >
+        <AmountInput value={total} currency={debt.currency} onChange={setTotal} />
+      </Field>
+    </Modal>
   )
 }
