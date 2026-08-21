@@ -212,6 +212,24 @@ export function clearGoalReached(id: number): void {
   getDb().prepare('UPDATE goals SET reached_notified = 0 WHERE id = ?').run(id)
 }
 
+/**
+ * Lo que se ha apartado para cada hito a propósito.
+ *
+ * Son los traspasos que entran en la hucha diciendo para qué son. En uno entre
+ * divisas cuenta lo que llega y no lo que sale, que es lo que de verdad queda.
+ */
+function earmarkedByGoal(): Map<number, number> {
+  const rows = getDb()
+    .prepare(
+      `SELECT goal_id AS id, SUM(COALESCE(amount_to, amount)) AS total
+         FROM transactions
+        WHERE goal_id IS NOT NULL AND type = 'transfer'
+        GROUP BY goal_id`
+    )
+    .all() as unknown as Array<{ id: number; total: number }>
+  return new Map(rows.map((row) => [row.id, Number(row.total ?? 0)]))
+}
+
 export function goalProgress(reference = today()): GoalProgress[] {
   const goals = listGoals()
   if (goals.length === 0) return []
@@ -219,16 +237,46 @@ export function goalProgress(reference = today()): GoalProgress[] {
   const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
   const remaining = new Map<number, number>()
   const paces = new Map<number, number>()
+  const earmarked = earmarkedByGoal()
+  const savedByGoal = new Map<number, number>()
+
+  /*
+   * El reparto va en dos pasadas y no en una, y la razón es el orden: los hitos
+   * se sirven por fecha, así que en una sola pasada el más cercano podría
+   * llevarse el dinero que alguien había apartado para otro más lejano.
+   *
+   * Primero cada uno cobra lo suyo —lo que se aparto a propósito, que es una
+   * decisión tomada y nadie se la puede quitar— y solo después se reparte lo que
+   * queda entre los que siguen cortos.
+   */
+  for (const goal of goals) {
+    const balance = Math.max(0, accounts.get(goal.accountId)?.balance ?? 0)
+    if (!remaining.has(goal.accountId)) remaining.set(goal.accountId, balance)
+    if (!paces.has(goal.accountId)) paces.set(goal.accountId, monthlyPace(goal.accountId, reference))
+
+    // El sellado a mano cuenta como cumplido y no toca la hucha.
+    if (goal.achievedAt) {
+      savedByGoal.set(goal.id, goal.targetAmount)
+      continue
+    }
+    const pot = remaining.get(goal.accountId)!
+    const suyo = Math.min(earmarked.get(goal.id) ?? 0, goal.targetAmount, pot)
+    savedByGoal.set(goal.id, suyo)
+    remaining.set(goal.accountId, pot - suyo)
+  }
+
+  for (const goal of goals) {
+    if (goal.achievedAt) continue
+    const pot = remaining.get(goal.accountId)!
+    const tiene = savedByGoal.get(goal.id)!
+    const extra = Math.min(pot, goal.targetAmount - tiene)
+    savedByGoal.set(goal.id, tiene + extra)
+    remaining.set(goal.accountId, pot - extra)
+  }
 
   return goals.map((goal) => {
     const account = accounts.get(goal.accountId)
-    const balance = account?.balance ?? 0
-    if (!remaining.has(goal.accountId)) remaining.set(goal.accountId, Math.max(0, balance))
-    if (!paces.has(goal.accountId)) paces.set(goal.accountId, monthlyPace(goal.accountId, reference))
-
-    const pot = remaining.get(goal.accountId)!
-    const saved = goal.achievedAt ? goal.targetAmount : Math.min(pot, goal.targetAmount)
-    if (!goal.achievedAt) remaining.set(goal.accountId, pot - saved)
+    const saved = savedByGoal.get(goal.id)!
 
     const missing = Math.max(0, goal.targetAmount - saved)
     const percent = goal.targetAmount > 0 ? Math.min(100, (saved / goal.targetAmount) * 100) : 0

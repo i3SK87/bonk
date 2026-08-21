@@ -5,7 +5,7 @@ import { useStore, usePreferredAccountId } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
 import { today, formatDate } from '@shared/dates'
 import { formatMoney } from '@shared/money'
-import type { Attachment, TransactionView, TxType } from '@shared/types'
+import type { Attachment, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -27,6 +27,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? preferredAccountId
   )
   const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
+  const [goalId, setGoalId] = useState<number | null>(existing?.goalId ?? null)
+  const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(
     existing?.categoryId ?? refundFor?.categoryId ?? null
   )
@@ -108,6 +110,31 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
   }, [type, accountId, toAccountId])
 
+  /**
+   * La cuenta a la que va el dinero, cuando es una hucha con hitos por cumplir.
+   *
+   * Solo entonces tiene sentido preguntar para qué es: apartar dinero en la
+   * cuenta corriente no es ahorrar, y una hucha sin hitos no tiene a quién
+   * dárselo.
+   */
+  const destino = accounts.find((item) => item.id === toAccountId)
+  const abiertos = goals.filter(
+    (goal) => !goal.achievedAt && goal.accountId === toAccountId && goal.missing > 0
+  )
+  const hucha = type === 'transfer' && destino?.type === 'savings' && abiertos.length > 0
+
+  useEffect(() => {
+    api.goals.progress().then(setGoals).catch(() => undefined)
+  }, [])
+
+  // Cambiar de destino deja huérfano el hito elegido: era de la otra hucha.
+  useEffect(() => {
+    setGoalId((current) =>
+      current && abiertos.some((goal) => goal.id === current) ? current : null
+    )
+    // Con la lista de hitos basta: cambia cuando cambia el destino.
+  }, [toAccountId, goals])
+
   useEffect(() => {
     if (!existing) return
     api.attachments.list(existing.id).then(setAttachments).catch(fail('las facturas'))
@@ -163,6 +190,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           time: time || null,
           accountId,
           toAccountId: type === 'transfer' ? toAccountId : null,
+          goalId: hucha ? goalId : null,
           categoryId: type === 'transfer' ? null : categoryId,
           amount,
           note: note || null,
@@ -318,6 +346,29 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
             </Field>
           )}
         </div>
+
+        {/* Apartar dinero en la hucha es una decisión, no un reparto: aquí se dice
+            para qué es. Lo que entre sin decir nada se sigue repartiendo solo, por
+            orden de fecha entre los hitos que andan cortos. */}
+        {hucha && (
+          <Field
+            label="¿Para qué hito?"
+            hint="Este dinero queda reservado para él. Sin elegir ninguno, se reparte entre los que tengas por orden de fecha."
+          >
+            <select
+              className="select"
+              value={goalId ?? ''}
+              onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Sin asignar · se reparte solo</option>
+              {abiertos.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.name} · le faltan {formatMoney(goal.missing, settings.baseCurrency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         {type === 'transfer' && (
           <Field label="Fecha">

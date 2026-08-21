@@ -365,5 +365,22 @@ export const MIGRATIONS: string[] = [
   UPDATE accounts
      SET low_balance_threshold = COALESCE((SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'lowBalanceThreshold'), 5000)
    WHERE id = (SELECT CAST(value AS INTEGER) FROM settings WHERE key = 'defaultAccountId');
+  `,
+
+  // v13 — dinero apartado para un hito concreto.
+  //
+  // Hasta ahora lo que había en la hucha se repartía solo, por orden de fecha:
+  // el hito más cercano se servía primero. Sirve mientras no tengas criterio
+  // propio, pero apartar dinero es una decisión, y quien la toma eres tú.
+  //
+  // Al traspasar a una cuenta de ahorro se puede decir para qué hito es. Lo que
+  // se apunta aquí manda sobre el reparto automático; lo que entre sin decir
+  // nada se sigue repartiendo por fecha.
+  //
+  // Si el hito desaparece, el movimiento se queda: el dinero sigue en la hucha,
+  // solo pierde el dueño.
+  `
+  ALTER TABLE transactions ADD COLUMN goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
+  CREATE INDEX idx_tx_goal ON transactions(goal_id);
   `
 ]

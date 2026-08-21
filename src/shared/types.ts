@@ -95,6 +95,11 @@ export interface Transaction {
   scheduledId: number | null
   /** Gasto al que devuelve dinero este reembolso, cuando se registró desde él. */
   refundForId: number | null
+  /**
+   * Hito al que va este dinero, cuando se aparta a propósito. Solo lo llevan los
+   * traspasos que entran en una cuenta de ahorro.
+   */
+  goalId: number | null
   createdAt: string
   updatedAt: string
 }
@@ -134,6 +139,7 @@ export interface TransactionInput {
   lon?: number | null
   tagIds?: number[]
   refundForId?: number | null
+  goalId?: number | null
   /** Programada que lo ha creado; queda anotado para poder rastrear su origen. */
   scheduledId?: number | null
 }

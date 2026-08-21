@@ -22,6 +22,7 @@ interface TxRow {
   lon: number | null
   scheduled_id: number | null
   refund_for_id: number | null
+  goal_id: number | null
   created_at: string
   updated_at: string
 }
@@ -56,6 +57,7 @@ function mapTransaction(row: TxRow): Transaction {
     lon: row.lon,
     scheduledId: row.scheduled_id,
     refundForId: row.refund_for_id,
+    goalId: row.goal_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }
@@ -347,6 +349,10 @@ export function saveTransaction(input: TransactionInput): TransactionView {
     // Solo un reembolso puede colgar de otro movimiento.
     const refundForId = input.type === 'refund' ? (input.refundForId ?? null) : null
 
+    // El dinero solo tiene dueño cuando se aparta a propósito: un traspaso que
+    // entra en una hucha. En cualquier otro movimiento el hito no pinta nada.
+    const goalId = isTransfer && toAccountId != null ? (input.goalId ?? null) : null
+
     // El reembolso hereda la categoría del gasto que devuelve: descuenta de ese
     // gasto, así que no puede contar en una categoría distinta de la suya.
     if (refundForId) {
@@ -388,7 +394,7 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         `UPDATE transactions
             SET type = ?, date = ?, time = ?, account_id = ?, to_account_id = ?, category_id = ?,
                 amount = ?, amount_to = ?, payee = ?, note = ?, place = ?, lat = ?, lon = ?,
-                refund_for_id = ?, updated_at = ?
+                refund_for_id = ?, goal_id = ?, updated_at = ?
           WHERE id = ?`
       ).run(
         input.type,
@@ -405,6 +411,7 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         bind(input.lat),
         bind(input.lon),
         bind(refundForId),
+        bind(goalId),
         now,
         id
       )
@@ -413,8 +420,8 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         .prepare(
           `INSERT INTO transactions
              (type, date, time, account_id, to_account_id, category_id, amount, amount_to,
-              payee, note, place, lat, lon, refund_for_id, scheduled_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              payee, note, place, lat, lon, refund_for_id, goal_id, scheduled_id, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           input.type,
@@ -431,6 +438,7 @@ export function saveTransaction(input: TransactionInput): TransactionView {
           bind(input.lat),
           bind(input.lon),
           bind(refundForId),
+          bind(goalId),
           bind(input.scheduledId),
           now,
           now

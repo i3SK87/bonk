@@ -792,6 +792,100 @@ try {
       transactions.listTransactions({ limit: 500 }).every((row) => row.date >= span.from && row.date <= span.to)
   )
 
+  section('Dinero apartado para un hito')
+  // El reparto automático sirve mientras no tengas criterio propio. En cuanto lo
+  // tienes, manda lo que hayas apartado: la prueba de fuego es que el hito de
+  // fecha más cercana —el que cobra primero— no pueda llevarse lo del otro.
+  const alcancia2 = accounts.saveAccount({
+    name: 'Alcancía doble',
+    type: 'savings',
+    currency: 'EUR',
+    initialBalance: 0,
+    icon: 'piggy',
+    color: '#34C759',
+    excludeFromTotal: false
+  })
+  const pronto = goals.saveGoal({
+    name: 'Lo de pronto',
+    accountId: alcancia2.id,
+    targetAmount: 1000,
+    targetDate: addDays(day, 30),
+    icon: 'piggy',
+    color: '#34C759'
+  })
+  const tarde = goals.saveGoal({
+    name: 'Lo de más tarde',
+    accountId: alcancia2.id,
+    targetAmount: 1000,
+    targetDate: addDays(day, 300),
+    icon: 'piggy',
+    color: '#34C759'
+  })
+
+  // Mil euros que entran sin decir nada: se los lleva el más cercano.
+  const suelto = transactions.saveTransaction({
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 1000
+  })
+  const reparto = (id: number): number => goals.goalProgress().find((g) => g.id === id)!.saved
+  equal('sin decir nada, lo coge el hito más cercano', reparto(pronto.id), 1000)
+  equal('y al lejano no le llega nada', reparto(tarde.id), 0)
+
+  // Los mismos mil, pero apartados para el lejano.
+  transactions.saveTransaction({
+    id: suelto.id,
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 1000,
+    goalId: tarde.id
+  })
+  equal('lo apartado no se lo lleva otro', reparto(tarde.id), 1000)
+  equal('aunque el otro cobre primero', reparto(pronto.id), 0)
+
+  // Y lo que entra después sin dueño sigue repartiéndose por fecha.
+  const extra = transactions.saveTransaction({
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 500
+  })
+  equal('lo que entra suelto va al más cercano', reparto(pronto.id), 500)
+  equal('sin tocar lo ya apartado', reparto(tarde.id), 1000)
+
+  // Apartar más de lo que el hito necesita no le da de más ni se pierde: lo que
+  // sobra vuelve al montón común.
+  transactions.saveTransaction({
+    id: extra.id,
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 500,
+    goalId: tarde.id
+  })
+  equal('un hito no recibe más de su meta', reparto(tarde.id), 1000)
+  equal('y lo que sobra vuelve al montón', reparto(pronto.id), 500)
+
+  // Un gasto normal no lleva hito por mucho que se lo pidan.
+  const gastoConHito = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    amount: 100,
+    goalId: tarde.id
+  })
+  equal('un gasto no puede apartarse para un hito', transactions.getTransaction(gastoConHito.id)!.goalId, null)
+  transactions.deleteTransactions([gastoConHito.id, extra.id, suelto.id])
+  goals.deleteGoal(pronto.id)
+  goals.deleteGoal(tarde.id)
+  accounts.deleteAccount(alcancia2.id)
+
   section('Hitos alcanzados')
   // Llegar a la meta se celebra una sola vez. El repaso de fondo pasa cada media
   // hora, así que sin marca la enhorabuena se repetiría mientras el dinero

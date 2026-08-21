@@ -3,6 +3,17 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.17.0
+
+- **Al traspasar dinero a una hucha puedes decir para qué hito es.** Aparece un
+  campo nuevo, «¿Para qué hito?», con lo que le falta a cada uno. Ese dinero queda
+  reservado: aunque otro hito venza antes, no se lo lleva.
+- **Lo que entra sin asignar se sigue repartiendo solo**, por orden de fecha entre
+  los hitos que andan cortos, igual que hasta ahora. El reparto automático sirve
+  mientras no tengas criterio propio; en cuanto lo tienes, manda el tuyo.
+- Apartar más de lo que un hito necesita no se pierde: lo que sobra vuelve al
+  montón común y se reparte con el resto.
+
 ## Novedades de la 1.16.3
 
 - **La hucha dice a qué se destina.** «Comprometido en hitos» pasa a ser
