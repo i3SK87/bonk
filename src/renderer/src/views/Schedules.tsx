@@ -147,7 +147,7 @@ export function SchedulesView(): ReactNode {
           <Loading />
         ) : vigentes.length === 0 ? (
           <EmptyState
-            icon="repeat"
+            icon="calendar"
             title="Nada programado"
             message="Programa el alquiler, la nómina o las suscripciones y se registrarán solas."
             action={

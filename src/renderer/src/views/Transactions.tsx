@@ -256,16 +256,37 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
 
-  // La búsqueda no cuenta: tiene su propia aspa dentro del campo y se quita
-  // desde ahí, así que «Limpiar» no debe llevársela por delante.
-  // En el panel no hay nada que separe los ingresos de los gastos, así que el
-  // orden por tipo que trae la lista aquí se lee como desorden: alfabético y ya.
-  const sortedCategories = useMemo(
-    () => [...categories].sort((a, b) => byName.compare(a.name, b.name)),
-    [categories]
-  )
+  /**
+   * Las pastillas del filtro de categorías: una por nombre, no una por categoría.
+   *
+   * Un mismo nombre puede existir dos veces, una de gasto y otra de ingreso
+   * —«Ajuste de saldo» es el caso típico—, y en el panel salían dos pastillas
+   * idénticas sin nada que las distinguiera. Se juntan en una que selecciona las
+   * dos categorías, y de cuál se trata lo decide el filtro de Tipo, que está justo
+   * encima.
+   *
+   * Y en orden alfabético: aquí no hay nada que separe los ingresos de los gastos,
+   * así que el orden por tipo que trae la lista se leería como desorden.
+   */
+  const categoryChips = useMemo(() => {
+    const groups = new Map<string, { key: string; name: string; ids: number[] }>()
+    for (const category of categories) {
+      const key = category.name.toLocaleLowerCase('es')
+      const group = groups.get(key)
+      if (group) group.ids.push(category.id)
+      else groups.set(key, { key, name: category.name, ids: [category.id] })
+    }
+    return [...groups.values()].sort((a, b) => byName.compare(a.name, b.name))
+  }, [categories])
 
-  const activeFilters = types.length + accountIds.length + categoryIds.length + (uncategorized ? 1 : 0)
+  // La búsqueda no cuenta: tiene su propia aspa dentro del campo y se quita desde
+  // ahí, así que «Limpiar» no debe llevársela por delante. Y se cuentan pastillas,
+  // no identificadores: una que valga por dos categorías del mismo nombre es un
+  // filtro, no dos.
+  const activeCategories = categoryChips.filter((chip) =>
+    chip.ids.some((id) => categoryIds.includes(id))
+  ).length
+  const activeFilters = types.length + accountIds.length + activeCategories + (uncategorized ? 1 : 0)
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
@@ -427,7 +448,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   : 'Ver las programadas que quedan por llegar y su efecto en los totales'
               }
             >
-              <Icon name="repeat" size={15} />
+              {/* Calendario y no las flechas del ciclo: lo que añade a la lista
+                  es lo que está por venir, y no todo lo que viene se repite. */}
+              <Icon name="calendar" size={15} />
               Programados
             </button>
 
@@ -506,15 +529,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 Categorías
               </div>
               <div className="chip-row">
-                {sortedCategories.map((category) => (
-                  <button
-                    key={category.id}
-                    className={`btn small${categoryIds.includes(category.id) ? ' primary' : ''}`}
-                    onClick={() => toggle(categoryIds, category.id, setCategoryIds)}
-                  >
-                    {category.name}
-                  </button>
-                ))}
+                {categoryChips.map((chip) => {
+                  const active = chip.ids.some((id) => categoryIds.includes(id))
+                  return (
+                    <button
+                      key={chip.key}
+                      className={`btn small${active ? ' primary' : ''}`}
+                      onClick={() =>
+                        setCategoryIds(
+                          active
+                            ? categoryIds.filter((id) => !chip.ids.includes(id))
+                            : [...categoryIds, ...chip.ids]
+                        )
+                      }
+                    >
+                      {chip.name}
+                    </button>
+                  )
+                })}
                 {/* El que no está en la lista de Categorías porque no es una: los
                     movimientos que se quedaron sin ella —los que llegaron de una
                     importación, los de una categoría borrada— solo se veían de uno

@@ -29,7 +29,7 @@ type ViewId =
 // configura una vez.
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
-  { id: 'schedules', label: 'Programados', icon: 'repeat' },
+  { id: 'schedules', label: 'Programados', icon: 'calendar' },
   { id: 'goals', label: 'Ahorro', icon: 'target' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
