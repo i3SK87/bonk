@@ -970,24 +970,31 @@ p { margin: 0; }
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
-/* Un gasto y sus devoluciones llevan la misma marca en el canto izquierdo. Al
-   pasar por encima de cualquiera de ellos, la familia entera se enciende: es la
-   forma de ver que ese ingreso no es un ingreso suelto, sino lo que te devuelven
-   de ese gasto. Va en el box-shadow para no pelearse con el borde de selección. */
+/* Un gasto y sus devoluciones se encienden juntos al pasar por encima de
+   cualquiera de ellos: es la forma de ver que ese ingreso no es un ingreso
+   suelto, sino lo que te devuelven de ese gasto.
+
+   El tinte basta para decirlo. Antes había además una banda en el canto
+   izquierdo, siempre encendida, que competía con el codo que ya une a los dos
+   y ensuciaba el lateral de la lista con una raya de más. */
 .tx-row.linked {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
-  transition: box-shadow 0.12s ease, background 0.12s ease;
+  transition: background 0.12s ease;
 }
 
 .tx-row.linked.linked-active {
-  box-shadow: inset 3px 0 0 var(--accent);
   background: var(--accent-soft);
 }
 
 /* Una devolución colgada de su gasto: entra hacia dentro y se une a él con un
    codo, como una rama. La línea la dibujan dos pseudoelementos porque el tramo
    que sube hasta el gasto y el que sigue hacia la siguiente hermana son
-   independientes: la última de la lista no continúa. */
+   independientes: la última de la lista no continúa.
+
+   El tramo vertical cae justo por el centro del icono del gasto, que es de
+   donde cuelga la rama. En Movimientos ese centro está a 29px del canto (10 de
+   relleno y 19 de medio avatar) y la fila anidada entra 34, así que la línea va
+   a -6: los 2px del trazo quedan entre 28 y 30. Descuadrada, la rama parecía
+   colgar del aire. */
 .tx-row.nested {
   position: relative;
   margin-left: 34px;
@@ -997,7 +1004,7 @@ p { margin: 0; }
 .list-row.nested::before {
   content: '';
   position: absolute;
-  left: -18px;
+  left: -6px;
   top: -2px;
   height: 50%;
   width: 12px;
@@ -1012,7 +1019,7 @@ p { margin: 0; }
 .list-row.nested-continues::after {
   content: '';
   position: absolute;
-  left: -18px;
+  left: -6px;
   top: 50%;
   bottom: -2px;
   border-left: 2px solid var(--link-line);
@@ -1026,9 +1033,11 @@ p { margin: 0; }
   padding-left: 48px;
 }
 
+/* Allí la sangría es relleno y no margen, así que la línea se sitúa sola: el
+   icono del padre está a 33px (14 de relleno y 19 de medio avatar). */
 .list-row.nested::before,
 .list-row.nested-continues::after {
-  left: 22px;
+  left: 32px;
 }
 
 .tx-row.nested.linked-active::before,
@@ -1529,18 +1538,15 @@ p { margin: 0; }
 
 .card.flush .list-row:hover { background-color: var(--bg-sunken); }
 
-/* Y la misma marca de familia que en Movimientos: el gasto programado que tiene
-   devolución lleva su canto izquierdo, y al pasar por encima de cualquiera de
-   los dos se encienden juntos. */
+/* Y lo mismo en Programados: al pasar por encima de cualquiera de los dos se
+   encienden juntos, sin banda en el canto. */
 .list-row.linked {
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
-  transition: box-shadow 0.12s ease, background-color 0.12s ease, opacity 0.12s ease;
+  transition: background-color 0.12s ease, opacity 0.12s ease;
 }
 
 /* El selector va tan cargado porque tiene que ganarle al resalte del ratón:
    con la familia encendida manda el tinte del acento, no el gris de siempre. */
 .card.flush .list-row.linked.linked-active {
-  box-shadow: inset 3px 0 0 var(--accent);
   background-color: var(--accent-soft);
 }
 
@@ -1548,6 +1554,23 @@ p { margin: 0; }
 .list-row.nested.linked-active::after {
   border-color: var(--accent);
 }
+
+/* El aviso de que la cuenta del día a día se está quedando corta. Va pegado a la
+   cifra del patrimonio a propósito: es justo lo que esa cifra no cuenta. */
+.low-balance {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--negative) 25%, transparent);
+  background: color-mix(in srgb, var(--negative) 10%, transparent);
+  color: var(--negative);
+  font-size: 13px;
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
+}
+
+.low-balance svg { flex: none; }
 
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }

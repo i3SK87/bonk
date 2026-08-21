@@ -11,7 +11,13 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { applyAutoLaunch } from './autostart'
-import { sendTestNotification, setCategoryIcons, announceSettlements, announceGoals } from './reminders'
+import {
+  sendTestNotification,
+  setCategoryIcons,
+  announceSettlements,
+  announceGoals,
+  checkLowBalance
+} from './reminders'
 import type { TransactionFilter, CategoryKind, Settings } from '@shared/types'
 
 /**
@@ -44,6 +50,9 @@ export function registerIpc(
     if (settled.length > 0) getWindow()?.webContents.send('debt:settled', settled)
     const reached = announceGoals(notifications.icon, notifications.onClick)
     if (reached.length > 0) getWindow()?.webContents.send('goal:reached', reached)
+    // No es una celebración, pero se entera en el mismo momento y por el mismo
+    // camino: acabas de mover dinero y la cuenta del día a día se ha quedado corta.
+    checkLowBalance(notifications.icon, notifications.onClick)
   }
 
   // — Ajustes —
@@ -80,8 +89,18 @@ export function registerIpc(
     celebrate()
     return saved
   })
-  handle('tx:delete', (id: number) => transactions.deleteTransaction(id))
-  handle('tx:deleteMany', (ids: number[]) => transactions.deleteTransactions(ids))
+  // Borrar también cuenta: el dinero que sostenía un hito puede irse por aquí
+  // igual que por un traspaso, y entonces la enhorabuena tiene que volver a
+  // poder ganarse.
+  handle('tx:delete', (id: number) => {
+    transactions.deleteTransaction(id)
+    celebrate()
+  })
+  handle('tx:deleteMany', (ids: number[]) => {
+    const count = transactions.deleteTransactions(ids)
+    celebrate()
+    return count
+  })
   handle('tx:bulkCategory', (ids: number[], categoryId: number | null) =>
     transactions.bulkSetCategory(ids, categoryId)
   )

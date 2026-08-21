@@ -18,11 +18,20 @@ export function getSettings(): Settings {
     startWithWindows: map.get('startWithWindows') === '1',
     closeToTray: map.get('closeToTray') === '1',
     remindersEnabled: map.get('remindersEnabled') === '1',
+    lowBalanceThreshold: Number(map.get('lowBalanceThreshold') ?? 5000),
     lockEnabled: map.get('lockEnabled') === '1',
     lockPin: map.get('lockPin') || null,
     lockDelaySeconds: Number(map.get('lockDelaySeconds') || 0),
     lastBackupAt: map.get('lastBackupAt') || null
   }
+}
+
+/** Lee una clave suelta, de las que no salen en la pantalla de ajustes. */
+export function getSetting(key: string): string | null {
+  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as unknown as
+    | { value: string }
+    | undefined
+  return row?.value ?? null
 }
 
 export function setSetting(key: string, value: string | number | boolean | null): void {

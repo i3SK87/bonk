@@ -313,18 +313,45 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   const showingProjected = projected.length > 0
   const nothingToShow = rows.length === 0 && projected.length === 0
+
+  /**
+   * La cifra grande sigue a las cuentas que estén elegidas.
+   *
+   * Sumadas todas, el patrimonio dice la verdad pero engaña: con mil euros
+   * apartados en la hucha el total no se mueve, y la cuenta del día a día puede
+   * estar en números rojos sin que la cifra lo cuente. Pulsando una cuenta se ve
+   * lo suyo; pulsando las dos, las dos.
+   *
+   * Elegida a mano entra aunque esté apartada del total: si la pides, la quieres.
+   */
+  const shownAccounts = accountIds.length
+    ? accounts.filter((account) => accountIds.includes(account.id))
+    : accounts.filter((account) => !account.excludeFromTotal)
   const netWorth =
-    accounts
-      .filter((account) => !account.excludeFromTotal)
-      .reduce((sum, account) => sum + account.balanceInBase, 0) +
+    shownAccounts.reduce((sum, account) => sum + account.balanceInBase, 0) +
     (showingProjected ? projected.reduce((sum, item) => sum + item.amountInBase, 0) : 0)
+  const netWorthLabel = accountIds.length
+    ? shownAccounts.length === 1
+      ? `Saldo · ${shownAccounts[0].name}`
+      : `Saldo · ${shownAccounts.length} cuentas`
+    : showingProjected
+      ? 'Patrimonio previsto'
+      : 'Patrimonio'
+
+  /** La cuenta del día a día cuando se está quedando sin fondo. */
+  const runningLow = (() => {
+    const limit = settings.lowBalanceThreshold
+    if (limit <= 0 || settings.defaultAccountId == null) return null
+    const account = accounts.find((item) => item.id === settings.defaultAccountId)
+    return account && account.balance < limit ? account : null
+  })()
 
   return (
     <>
       <div className="card">
         <div className="card-body networth-strip">
           <div className="networth">
-            <div className="label">{showingProjected ? 'Patrimonio previsto' : 'Patrimonio'}</div>
+            <div className="label">{netWorthLabel}</div>
             <div className={`value amount ${netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : 'neutral'}`}>
               {formatMoney(netWorth, settings.baseCurrency)}
             </div>
@@ -363,6 +390,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             Gestionar cuentas
           </button>
         </div>
+
+        {/* El aviso, donde se mira el dinero. La notificación de Windows llega una
+            vez; esto se queda a la vista mientras dure la cuesta abajo. */}
+        {runningLow && (
+          <div className="low-balance">
+            <Icon name="alert" size={16} />
+            <span>
+              <b>{runningLow.name}</b> se está quedando sin fondo:{' '}
+              {formatMoney(runningLow.balance, runningLow.currency)} de los{' '}
+              {formatMoney(settings.lowBalanceThreshold, runningLow.currency)} que te marcaste.
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="card">

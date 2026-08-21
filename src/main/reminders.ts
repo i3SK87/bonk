@@ -12,7 +12,8 @@ import {
   debtSummary
 } from './repos/scheduled'
 import { pendingGoals, markGoalReached } from './repos/goals'
-import { getSettings } from './repos/settings'
+import { listAccountsWithBalance } from './repos/accounts'
+import { getSettings, getSetting, setSetting } from './repos/settings'
 import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
 
 /**
@@ -207,6 +208,43 @@ export function announceGoals(icon: string, onClick: () => void): GoalReached[] 
   return done
 }
 
+/**
+ * Avisa cuando la cuenta principal se queda corta.
+ *
+ * Es lo que no se ve mirando el patrimonio: con mil euros apartados en la
+ * hucha, el total sigue diciendo que vas bien mientras la cuenta del día a día
+ * se queda en números rojos.
+ *
+ * El aviso se da una vez y se vuelve a armar solo cuando el saldo remonta, para
+ * no repetirlo cada media hora mientras dure la cuesta abajo.
+ */
+export function checkLowBalance(icon: string, onClick: () => void): boolean {
+  const settings = getSettings()
+  const limit = settings.lowBalanceThreshold
+  if (limit <= 0 || settings.defaultAccountId == null) return false
+
+  const account = listAccountsWithBalance(true).find((row) => row.id === settings.defaultAccountId)
+  if (!account) return false
+
+  const low = account.balance < limit
+  const warned = getSetting('lowBalanceWarned') === '1'
+
+  if (!low) {
+    if (warned) setSetting('lowBalanceWarned', false)
+    return false
+  }
+  if (warned) return false
+
+  setSetting('lowBalanceWarned', true)
+  if (Notification.isSupported()) {
+    notify(imageFor(icon, null), onClick, {
+      title: `${account.name} se está quedando sin fondo`,
+      body: `Quedan ${formatMoney(account.balance, account.currency)}, por debajo de ${formatMoney(limit, account.currency)}.`
+    })
+  }
+  return true
+}
+
 /** «agosto de 2025», para contar desde cuándo se pagaba. */
 function monthOf(date: string | null): string {
   if (!date) return 'el principio'
@@ -275,6 +313,13 @@ export function startBackgroundWork(
       if (reached.length > 0) onGoalReached(reached)
     } catch (error) {
       console.error('No se pudo celebrar el hito:', error)
+    }
+    try {
+      // Y por lo mismo puede vaciarse: un recibo que entra solo deja la cuenta
+      // principal en las últimas sin que nadie haya tocado nada.
+      checkLowBalance(icon, onClick)
+    } catch (error) {
+      console.error('No se pudo comprobar el saldo:', error)
     }
     try {
       checkReminders(icon, onClick)

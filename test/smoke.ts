@@ -854,6 +854,21 @@ try {
   goals.markGoalReached(meta.id)
   transactions.deleteTransactions([fuga.id])
 
+  // Y borrar los movimientos que lo sostenían hace lo mismo que sacar el dinero:
+  // deja de estar ahí, se mire por donde se mire.
+  transactions.deleteTransactions(
+    transactions.listTransactions({ limit: 500, accountIds: [alcancia.id] }).map((row) => row.id)
+  )
+  check('borrar los movimientos desarma la enhorabuena', !alcanzado())
+  transactions.saveTransaction({
+    type: 'income',
+    date: day,
+    accountId: alcancia.id,
+    amount: 1000
+  })
+  check('y al reponerlos vuelve a saltar', alcanzado())
+  goals.markGoalReached(meta.id)
+
   // El que se da por conseguido a mano no necesita fuegos artificiales: ya se ha
   // celebrado en ese mismo gesto.
   const aMano = goals.saveGoal({

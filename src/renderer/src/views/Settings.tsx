@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
-import { Modal, Field, Checkbox, Confirm, Segmented } from '../components/ui'
+import { Modal, Field, Checkbox, Confirm, Segmented, AmountInput } from '../components/ui'
 import type { Palette, ThemeMode } from '@shared/types'
 
 /**
@@ -75,6 +75,21 @@ export function SettingsView(): ReactNode {
             label="Avisarme el día antes de cada movimiento programado"
             hint="Notificación de Windows con el importe y la cuenta. Como las programaciones tienen fecha pero no hora, el aviso llega en cuanto BONK ve que algo vence mañana: hace falta que esté abierta o en la bandeja. Cada programación se puede callar por separado desde su ficha."
           />
+
+          <div className="divider" />
+
+          <Field
+            label="Avisarme si la cuenta principal baja de"
+            hint="Notificación de Windows y un aviso en Movimientos, mientras dure. Se vuelve a armar solo cuando el saldo remonta. En cero no avisa nunca."
+          >
+            <div style={{ maxWidth: 220 }}>
+              <AmountInput
+                value={settings.lowBalanceThreshold}
+                currency={settings.baseCurrency}
+                onChange={(value) => updateSettings({ lowBalanceThreshold: value })}
+              />
+            </div>
+          </Field>
 
           <div className="row">
             <div className="small muted" style={{ maxWidth: 460 }}>

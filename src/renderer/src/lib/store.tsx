@@ -53,6 +53,7 @@ const FALLBACK_SETTINGS: Settings = {
   startWithWindows: false,
   closeToTray: false,
   remindersEnabled: false,
+  lowBalanceThreshold: 5000,
   lockEnabled: false,
   lockPin: null,
   lockDelaySeconds: 0,

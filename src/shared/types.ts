@@ -279,6 +279,11 @@ export interface Settings {
   closeToTray: boolean
   /** Avisa por notificación de Windows el día antes de cada programación. */
   remindersEnabled: boolean
+  /**
+   * Avisa cuando la cuenta principal baja de aquí, en unidades mínimas. En cero
+   * no avisa nunca. El aviso se vuelve a armar en cuanto el saldo remonta.
+   */
+  lowBalanceThreshold: number
   lockEnabled: boolean
   lockPin: string | null
   lockDelaySeconds: number
