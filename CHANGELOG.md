@@ -3,6 +3,23 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.4
+
+- **La coma y el punto valen igual al escribir un importe.** «12,50» y «12.50»
+  ya se leían igual, pero los millares no: «1.234» se quedaba en 1,23 € —mil
+  veces menos— mientras que «1,234» sí entraba como 1.234. Y al teclear
+  «1.234,56» el campo se comía la coma. Ahora dan lo mismo la tecla del
+  teclado numérico y la del alfanumérico.
+- **«Registrar ahora» fecha el movimiento hoy.** Adelantar una cuota lo
+  escribía con la fecha que aún no había llegado, así que el pago se quedaba
+  esperando en el futuro de la lista mientras el saldo ya lo había
+  descontado. Y como la programación avanzaba desde esa misma fecha, al
+  llegar el día se registraba otra vez. El dinero sale hoy, que es lo que
+  significa «ahora», y la cuota que se da por cumplida sigue siendo la del día
+  que tocaba: el mes siguiente vence donde siempre.
+- **El desplegable de reembolsos programados enseña la nota**, que ya salió en
+  la 1.13.3.
+
 ## Novedades de la 1.13.3
 
 - **El desplegable de reembolsos programados enseña la nota.** Al enlazar una
