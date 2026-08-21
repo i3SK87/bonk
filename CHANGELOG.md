@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.14.1
+
+- **La enhorabuena de un hito se vuelve a ganar.** Si sacas el dinero de la
+  hucha, el hito se deshace; cuando vuelvas a llegar, vuelve el confeti y vuelve
+  el aviso. Antes se celebraba una vez y ya está, y eso trataba como iguales
+  «llegar» y «haber llegado alguna vez». Volver a juntarlo cuesta lo mismo.
+- **«Juntado» pasa a llamarse «ahorrado»** en la pantalla de enhorabuena.
+
 ## Novedades de la 1.14.0
 
 - **Llegar a un hito de ahorro se celebra.** La misma pantalla con confeti y el
