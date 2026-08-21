@@ -138,6 +138,12 @@ export interface TransactionFilter {
   to?: string
   accountIds?: number[]
   categoryIds?: number[]
+  /**
+   * Los que no tienen categoría, que no son ninguna en concreto y por eso no
+   * caben en la lista de arriba. Los traspasos quedan fuera: esos no es que
+   * les falte la categoría, es que no la llevan.
+   */
+  uncategorized?: boolean
   tagIds?: number[]
   types?: TxType[]
   search?: string

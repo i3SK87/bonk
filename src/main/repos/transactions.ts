@@ -139,9 +139,17 @@ function buildWhere(filter: TransactionFilter): { sql: string; params: Array<str
     clauses.push(`(t.account_id IN (${marks}) OR t.to_account_id IN (${marks}))`)
     params.push(...filter.accountIds, ...filter.accountIds)
   }
-  if (filter.categoryIds?.length) {
-    clauses.push(`t.category_id IN (${filter.categoryIds.map(() => '?').join(',')})`)
-    params.push(...filter.categoryIds)
+  if (filter.categoryIds?.length || filter.uncategorized) {
+    // Van en un solo paréntesis unidas por OR: elegir «Comida» y «Sin
+    // categoría» a la vez pide las dos cosas, no la intersección, que sería
+    // siempre vacía.
+    const parts: string[] = []
+    if (filter.categoryIds?.length) {
+      parts.push(`t.category_id IN (${filter.categoryIds.map(() => '?').join(',')})`)
+      params.push(...filter.categoryIds)
+    }
+    if (filter.uncategorized) parts.push("(t.category_id IS NULL AND t.type <> 'transfer')")
+    clauses.push(`(${parts.join(' OR ')})`)
   }
   if (filter.tagIds?.length) {
     const marks = filter.tagIds.map(() => '?').join(',')

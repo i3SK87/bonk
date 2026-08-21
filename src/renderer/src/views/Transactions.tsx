@@ -87,6 +87,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [types, setTypes] = useState<TxType[]>([])
   const [accountIds, setAccountIds] = useState<number[]>([])
   const [categoryIds, setCategoryIds] = useState<number[]>([])
+  /** «Sin categoría» no es una categoría: es la falta de ella, y se filtra aparte. */
+  const [uncategorized, setUncategorized] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
   const [rows, setRows] = useState<TransactionView[]>([])
@@ -111,9 +113,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       types: types.length ? types : undefined,
       accountIds: accountIds.length ? accountIds : undefined,
       categoryIds: categoryIds.length ? categoryIds : undefined,
+      uncategorized: uncategorized || undefined,
       limit
     }
-  }, [range, customFrom, customTo, settledSearch, types, accountIds, categoryIds, limit])
+  }, [range, customFrom, customTo, settledSearch, types, accountIds, categoryIds, uncategorized, limit])
 
   useEffect(() => {
     let cancelled = false
@@ -140,6 +143,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const canProject =
     settings.showScheduledInList &&
     categoryIds.length === 0 &&
+    !uncategorized &&
     accountIds.length === 0 &&
     (!filter.to || filter.to >= today())
 
@@ -244,13 +248,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   // La búsqueda no cuenta: tiene su propia aspa dentro del campo y se quita
   // desde ahí, así que «Limpiar» no debe llevársela por delante.
-  const activeFilters = types.length + accountIds.length + categoryIds.length
+  const activeFilters = types.length + accountIds.length + categoryIds.length + (uncategorized ? 1 : 0)
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
     setTypes([])
     setAccountIds([])
     setCategoryIds([])
+    setUncategorized(false)
   }
 
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
@@ -493,6 +498,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                     {category.name}
                   </button>
                 ))}
+                {/* El que no está en la lista de Categorías porque no es una: los
+                    movimientos que se quedaron sin ella —los que llegaron de una
+                    importación, los de una categoría borrada— solo se veían de uno
+                    en uno al pasar la lista. Los traspasos no cuentan: esos no
+                    llevan categoría por definición. */}
+                <button
+                  className={`btn small${uncategorized ? ' primary' : ''}`}
+                  onClick={() => setUncategorized((value) => !value)}
+                  title="Los movimientos que se quedaron sin categoría"
+                >
+                  Sin categoría
+                </button>
               </div>
             </div>
 

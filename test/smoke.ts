@@ -835,6 +835,33 @@ try {
     'borrar la categoría deja los movimientos sin categoría',
     transactions.getTransaction(victim.id)?.categoryId === null
   )
+
+  // Y desde ahí se pueden encontrar: «Sin categoría» no sale en la lista de
+  // categorías porque no es una, así que sin este filtro solo aparecían de uno en
+  // uno al pasar la lista entera.
+  const huerfanos = transactions.listTransactions({ uncategorized: true })
+  check(
+    'el filtro «sin categoría» los encuentra',
+    huerfanos.length > 0 && huerfanos.every((row) => row.categoryId == null),
+    `devolvió ${huerfanos.length}`
+  )
+  check(
+    'y no cuela los traspasos, que nunca la llevan',
+    huerfanos.every((row) => row.type !== 'transfer')
+  )
+  // Pedir una categoría y además los huérfanos trae las dos cosas, no la
+  // intersección, que sería siempre vacía.
+  const conCategoria = transactions.listTransactions({ limit: 500 }).find((row) => row.categoryId != null)!
+  const mezcla = transactions.listTransactions({
+    categoryIds: [conCategoria.categoryId!],
+    uncategorized: true
+  })
+  check(
+    'junto a una categoría, suma en vez de restar',
+    mezcla.length > huerfanos.length &&
+      mezcla.some((row) => row.categoryId === conCategoria.categoryId) &&
+      mezcla.some((row) => row.categoryId == null)
+  )
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })
