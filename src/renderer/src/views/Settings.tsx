@@ -199,7 +199,7 @@ export function SettingsView(): ReactNode {
             <div>
               <strong className="small">Vaciar movimientos</strong>
               <div className="small muted">
-                Borra todos los movimientos y conserva cuentas, categorías e hitos de ahorro.
+                Borra todos los movimientos y conserva cuentas, categorías y planes de ahorro.
               </div>
             </div>
             <div className="spacer" />

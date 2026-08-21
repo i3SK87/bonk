@@ -3,6 +3,22 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.19.0
+
+- **«Ahorro» pasa a llamarse «Plan Ahorro»**, y lo que eran hitos ahora son
+  planes, en toda la aplicación.
+- **El reparto se hace con un deslizador en cada plan.** El panel con campos,
+  atajos y barra era demasiada máquina para lo que es: ahora cada plan lleva su
+  mando debajo de su barra de progreso y se guarda al soltar. No hace falta
+  guardar nada aparte.
+- **No se puede repartir de más**: el tope de cada deslizador es lo que ese plan ya
+  tiene más lo que quede libre, así que arrastrando nunca le quitas a otro sin
+  querer.
+- **La hucha se ve haya planes o no.** Sin ninguno, lo que hay es ahorro libre y esa
+  cifra se enseña igual.
+- **El reparto se hace solo desde Plan Ahorro.** El selector que salía al traspasar
+  dinero a una hucha desaparece: un sitio para esto, y no dos.
+
 ## Novedades de la 1.18.0
 
 - **Reparte la hucha entre tus hitos desde Ahorro.** Un botón nuevo, «Repartir la

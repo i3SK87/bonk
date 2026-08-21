@@ -213,7 +213,7 @@ export function Celebration({
 }
 
 /**
- * El hito de ahorro que acaba de llegar a su meta.
+ * El plan de ahorro que acaba de llegar a su meta.
  *
  * Se celebra por lo mismo que una deuda saldada: es el final de algo que ha
  * costado meses. Cambia la cuenta que se echa —lo ahorrado y desde cuándo, en vez

@@ -1660,19 +1660,19 @@ p { margin: 0; }
   font-weight: 600;
 }
 
-/* Como queda repartida la hucha. Es el resultado de lo que se escribe arriba, no
-   un mando: lo que no llena ningun hito se ve como hueco. */
-.reparto-barra {
+/* El mando con el que se le reserva dinero a un plan. Va debajo de su barra de
+   progreso, que es donde se ve el efecto. */
+.reserva {
   display: flex;
-  gap: 2px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-sunken);
-  overflow: hidden;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
 }
 
-.reparto-barra span {
-  transition: width 0.15s ease;
+.reserva input[type='range'] {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
 }
 
 .list-row.clickable { cursor: pointer; }

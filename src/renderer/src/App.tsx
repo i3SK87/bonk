@@ -30,7 +30,7 @@ type ViewId =
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
   { id: 'schedules', label: 'Programados', icon: 'calendar' },
-  { id: 'goals', label: 'Ahorro', icon: 'target' },
+  { id: 'goals', label: 'Plan Ahorro', icon: 'target' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
@@ -41,7 +41,7 @@ const TITLES: Record<ViewId, string> = {
   transactions: 'Movimientos',
   accounts: 'Cuentas',
   categories: 'Categorías',
-  goals: 'Ahorro',
+  goals: 'Plan Ahorro',
   schedules: 'Movimientos programados',
   reports: 'Informes',
   settings: 'Ajustes'
@@ -79,7 +79,7 @@ export function App(): ReactNode {
         refresh()
       }
     })
-    // Y un hito de ahorro que llega a su meta, igual.
+    // Y un plan de ahorro que llega a su meta, igual.
     const offReached = window.bonk.events.on('goal:reached', (detail) => {
       if (Array.isArray(detail) && detail.length > 0) {
         setReached((current) => [...current, ...(detail as GoalReached[])])

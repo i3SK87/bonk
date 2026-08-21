@@ -34,7 +34,7 @@ const GOAL_ICONS = [
   'tools'
 ]
 
-/** Cómo se lee cada estado en la ficha del hito. */
+/** Cómo se lee cada estado en la ficha del plan. */
 const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = {
   achieved: { label: 'Cumplido', tone: 'var(--fg-muted)' },
   complete: { label: 'Ya lo tienes', tone: 'var(--positive)' },
@@ -45,19 +45,18 @@ const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = 
 }
 
 export function GoalsView(): ReactNode {
-  const { settings, accounts, revision, run, refresh, fail } = useStore()
+  const { settings, accounts, revision, run, fail } = useStore()
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
-  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     api.goals
       .progress()
       .then(setGoals)
-      .catch(fail('los hitos de ahorro'))
+      .catch(fail('los planes de ahorro'))
       .finally(() => setLoading(false))
   }, [revision])
 
@@ -73,39 +72,67 @@ export function GoalsView(): ReactNode {
   /**
    * De quién es ese dinero apartado.
    *
-   * Con un solo hito tirando de la hucha se dice su nombre, que es lo que se
+   * Con un solo plan tirando de la hucha se dice su nombre, que es lo que se
    * quiere saber. Con varios se cuentan: la lista entera de nombres no cabe en
    * una línea y, puestos a resumir, el número dice más.
    */
+  // Lo que ya está reservado a mano, que es lo que limita cuánto se puede subir
+  // otro plan. No vale mirar lo repartido: ahí entra también lo que se asigna solo
+  // por fecha, y eso sí se le puede quitar.
+  const reservado = open.reduce((sum, goal) => sum + goal.reserved, 0)
+  const porRepartir = Math.max(0, potTotal - reservado)
   const financiados = open.filter((goal) => goal.saved > 0)
   const paraQuien =
     financiados.length === 1
       ? financiados[0].name
       : financiados.length === 0
-        ? 'tus hitos'
-        : `${financiados.length} hitos`
+        ? 'tus planes'
+        : `${financiados.length} planes`
 
   return (
     <>
       <div className="card">
         <div className="card-header">
-          <h2>Hitos de ahorro</h2>
+          <h2>Planes de ahorro</h2>
           <span className="small muted">
-            Lo que hay en la hucha se reparte entre los hitos por orden de fecha.
+            Lo que hay en la hucha se reparte entre los planes por orden de fecha.
           </span>
           <div className="spacer" />
           <button className="btn primary small" onClick={() => setCreating(true)}>
             <Icon name="plus" size={15} strokeWidth={2.2} />
-            Nuevo hito
+            Nuevo plan
           </button>
         </div>
+
+        {/* La hucha se enseña haya planes o no: sin ninguno, lo que hay es ahorro
+            libre, y esa cifra vale por sí sola. */}
+        {!loading && (
+          <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="networth" style={{ borderRight: 'none' }}>
+              <div className="label">En la hucha</div>
+              <div className={`value amount ${potTotal > 0 ? 'positive' : 'neutral'}`}>
+                {formatMoney(potTotal, settings.baseCurrency)}
+              </div>
+            </div>
+            <div className="col" style={{ gap: 2 }}>
+              {committed > 0 && (
+                <span className="small muted">
+                  Presupuesto para {paraQuien}: {formatMoney(committed, settings.baseCurrency)}
+                </span>
+              )}
+              <span className="small subtle">
+                Ahorro libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
+              </span>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <Loading />
         ) : open.length === 0 && done.length === 0 ? (
           <EmptyState
             icon="target"
-            title="Sin hitos"
+            title="Sin planes"
             message="Ponle nombre y fecha a lo que quieres juntar —1.000 € para marzo— y verás cuánto llevas y cuánto tendrías que apartar cada mes."
             action={
               <button className="btn primary" onClick={() => setCreating(true)}>
@@ -115,48 +142,18 @@ export function GoalsView(): ReactNode {
           />
         ) : (
           <>
-            <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
-              <div className="networth" style={{ borderRight: 'none' }}>
-                <div className="label">En la hucha</div>
-                <div className={`value amount ${potTotal > 0 ? 'positive' : 'neutral'}`}>
-                  {formatMoney(potTotal, settings.baseCurrency)}
-                </div>
-              </div>
-              <div className="col" style={{ gap: 2 }}>
-                <span className="small muted">
-                  Presupuesto para {paraQuien}: {formatMoney(committed, settings.baseCurrency)}
-                </span>
-                <span className="small subtle">
-                  Ahorro libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
-                </span>
-              </div>
-              <div className="spacer" />
-              {open.length > 0 && (
-                <button className="btn small" onClick={() => setSharing((value) => !value)}>
-                  <Icon name="target" size={15} />
-                  {sharing ? 'Cerrar el reparto' : 'Repartir la hucha'}
-                </button>
-              )}
-            </div>
-
-            {sharing && open.length > 0 && (
-              <ReparteHucha
-                key={revision}
-                goals={open}
-                pot={potTotal}
-                currency={settings.baseCurrency}
-                onSaved={() => { setSharing(false); refresh() }}
-              />
-            )}
-
             <div className="card-body col" style={{ gap: 20 }}>
               {open.map((goal) => (
                 <GoalCard
                   key={goal.id}
                   goal={goal}
                   currency={settings.baseCurrency}
+                  techo={goal.reserved + porRepartir}
                   onEdit={() => setEditing(goal)}
-                  onAchieve={() => run(() => api.goals.setAchieved(goal.id, true), 'Hito cumplido')}
+                  onAchieve={() => run(() => api.goals.setAchieved(goal.id, true), 'Plan cumplido')}
+                  onReserve={(amount) =>
+                    run(() => api.goals.reserve([{ id: goal.id, amount }]))
+                  }
                 />
               ))}
             </div>
@@ -184,7 +181,7 @@ export function GoalsView(): ReactNode {
                 <button
                   className="btn small"
                   title="Volver a ponerlo en marcha"
-                  onClick={() => run(() => api.goals.setAchieved(goal.id, false), 'Hito reabierto')}
+                  onClick={() => run(() => api.goals.setAchieved(goal.id, false), 'Plan reabierto')}
                 >
                   <Icon name="refresh" size={15} />
                 </button>
@@ -205,149 +202,35 @@ export function GoalsView(): ReactNode {
             setCreating(false)
             setEditing(null)
           }}
-          onSave={(input) => run(() => api.goals.save(input), editing ? 'Hito actualizado' : 'Hito creado')}
-          onDelete={editing ? () => run(() => api.goals.remove(editing.id), 'Hito eliminado') : undefined}
+          onSave={(input) => run(() => api.goals.save(input), editing ? 'Plan actualizado' : 'Plan creado')}
+          onDelete={editing ? () => run(() => api.goals.remove(editing.id), 'Plan eliminado') : undefined}
         />
       )}
     </>
   )
 }
 
-/**
- * El reparto de la hucha, a mano.
- *
- * Campos de importe y no un deslizador: con dinero pesa la precisión —quieres
- * 250,00 €, no «un 24 % más o menos»— y en cuanto hay varios hitos los
- * deslizadores tienen que robarse cantidad entre ellos, que es el gesto que nadie
- * entiende a la primera. La barra de abajo es el resultado, no el mando.
- */
-function ReparteHucha({
-  goals,
-  pot,
-  currency,
-  onSaved
-}: {
-  goals: GoalProgress[]
-  pot: number
-  currency: string
-  onSaved: () => void
-}): ReactNode {
-  const [values, setValues] = useState<Record<number, number>>(() =>
-    Object.fromEntries(goals.map((goal) => [goal.id, Math.min(goal.reserved, goal.targetAmount)]))
-  )
-  const { run } = useStore()
-
-  const total = goals.reduce((sum, goal) => sum + (values[goal.id] ?? 0), 0)
-  const free = pot - total
-  const sobra = free < 0
-
-  const set = (id: number, amount: number): void =>
-    setValues((current) => ({ ...current, [id]: Math.max(0, amount) }))
-
-  /** Lo que cabe para un hito: ni más de lo que le falta ni más de lo que hay. */
-  const cabe = (goal: GoalProgress): number =>
-    Math.min(goal.targetAmount, (values[goal.id] ?? 0) + Math.max(0, free))
-
-  return (
-    <div className="card-body col" style={{ gap: 14, borderBottom: '1px solid var(--border)' }}>
-      {goals.map((goal) => (
-        <div key={goal.id} className="row" style={{ gap: 12 }}>
-          <Avatar icon={goal.icon} color={goal.color} size="small" />
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontWeight: 570 }} className="truncate">
-              {goal.name}
-            </div>
-            <div className="small subtle">
-              Su meta son {formatMoney(goal.targetAmount, currency)}
-            </div>
-          </div>
-          <div style={{ width: 170 }}>
-            <AmountInput
-              value={values[goal.id] ?? 0}
-              currency={currency}
-              onChange={(amount) => set(goal.id, amount)}
-              compact
-            />
-          </div>
-          <button
-            className="btn small ghost"
-            disabled={cabe(goal) === (values[goal.id] ?? 0)}
-            onClick={() => set(goal.id, cabe(goal))}
-            title="Darle todo lo que quepa"
-          >
-            Al tope
-          </button>
-        </div>
-      ))}
-
-      {/* La barra dice de un vistazo cómo queda la hucha. */}
-      <div className="reparto-barra">
-        {goals.map((goal) => {
-          const parte = pot > 0 ? ((values[goal.id] ?? 0) / pot) * 100 : 0
-          return parte > 0 ? (
-            <span
-              key={goal.id}
-              style={{ width: `${Math.min(100, parte)}%`, background: goal.color }}
-              title={goal.name}
-            />
-          ) : null
-        })}
-      </div>
-
-      <div className="row" style={{ gap: 10 }}>
-        <span className={`small ${sobra ? 'negative' : 'muted'}`}>
-          {sobra
-            ? `Te pasas ${formatMoney(-free, currency)} de lo que hay en la hucha`
-            : `Ahorro libre: ${formatMoney(free, currency)}`}
-        </span>
-        <div className="spacer" />
-        <button
-          className="btn small"
-          onClick={() =>
-            setValues(
-              Object.fromEntries(
-                goals.map((goal) => [goal.id, Math.min(goal.targetAmount, Math.floor(pot / goals.length))])
-              )
-            )
-          }
-        >
-          A partes iguales
-        </button>
-        <button
-          className="btn small"
-          onClick={() => setValues(Object.fromEntries(goals.map((goal) => [goal.id, 0])))}
-        >
-          Vaciar
-        </button>
-        <button
-          className="btn primary small"
-          disabled={sobra}
-          onClick={async () => {
-            const saved = await run(
-              () => api.goals.reserve(goals.map((goal) => ({ id: goal.id, amount: values[goal.id] ?? 0 }))),
-              'Hucha repartida'
-            )
-            if (saved !== undefined) onSaved()
-          }}
-        >
-          Guardar el reparto
-        </button>
-      </div>
-    </div>
-  )
-}
-
 function GoalCard({
   goal,
   currency,
+  techo,
   onEdit,
-  onAchieve
+  onAchieve,
+  onReserve
 }: {
   goal: GoalProgress
   currency: string
+  /** Lo máximo que se le puede reservar: lo suyo más lo que quede libre. */
+  techo: number
   onEdit: () => void
   onAchieve: () => void
+  onReserve?: (amount: number) => void
 }): ReactNode {
+  const [reserva, setReserva] = useState(goal.reserved)
+
+  // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
+  useEffect(() => setReserva(goal.reserved), [goal.reserved])
+
   const status = STATUS[goal.status]
   const color =
     goal.status === 'complete'
@@ -395,12 +278,33 @@ function GoalCard({
             <Icon name="check" size={15} />
           </button>
         )}
-        <button className="btn ghost icon" onClick={onEdit} aria-label="Editar hito">
+        <button className="btn ghost icon" onClick={onEdit} aria-label="Editar plan">
           <Icon name="edit" size={16} />
         </button>
       </div>
 
       <ProgressBar percent={goal.percent} color={color} />
+
+      {/* Lo que se le reserva de la hucha. El tope no es su meta sino lo que hay
+          libre más lo que ya tiene, así que arrastrando no se puede repartir de
+          más ni quitarle a otro plan sin querer. Se guarda al soltar. */}
+      {onReserve && (
+        <div className="reserva">
+          <input
+            type="range"
+            min={0}
+            max={Math.max(techo, 1)}
+            step={100}
+            value={Math.min(reserva, Math.max(techo, 1))}
+            style={{ accentColor: color }}
+            onChange={(event) => setReserva(Number(event.target.value))}
+            onMouseUp={() => onReserve(reserva)}
+            onKeyUp={() => onReserve(reserva)}
+            aria-label={`Reservado para ${goal.name}`}
+          />
+          <span className="small muted nowrap">Reservado {formatMoney(reserva, currency)}</span>
+        </div>
+      )}
 
       <div className="small subtle" style={{ marginTop: 5 }}>
         {goal.missing === 0
@@ -455,7 +359,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
       targetDate: targetDate || null,
       icon,
       color,
-      // El hito ya se explica con su título: una nota aparte era un campo más
+      // El plan ya se explica con su título: una nota aparte era un campo más
       // que rellenar para decir lo mismo. La columna se queda por si alguien
       // tenía algo escrito, y lo escrito se sigue enseñando en la lista.
       note: goal?.note ?? null,
@@ -467,7 +371,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
   return (
     <>
       <Modal
-        title={goal ? 'Editar hito' : 'Nuevo hito de ahorro'}
+        title={goal ? 'Editar plan' : 'Nuevo plan de ahorro'}
         onClose={onClose}
         footer={
           <>
@@ -535,8 +439,8 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
 
       {confirmDelete && (
         <Confirm
-          title="Eliminar hito"
-          message="El hito desaparece. El dinero de la hucha no se toca."
+          title="Eliminar plan"
+          message="El plan desaparece. El dinero de la hucha no se toca."
           confirmLabel="Eliminar"
           destructive
           onCancel={() => setConfirmDelete(false)}
