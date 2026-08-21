@@ -179,18 +179,14 @@ export function GoalsView(): ReactNode {
               ))}
 
               {/* Sin planes no se enseña un cartel de vacío: la hucha de arriba ya
-                  dice lo que hay, y aquí basta con invitar a repartirlo. */}
+                  dice lo que hay, y aquí basta con invitar a repartirlo. El botón de
+                  crear ya está arriba: dos botones para lo mismo, a un palmo, se leen
+                  como si hicieran cosas distintas. */}
               {open.length === 0 && done.length === 0 && (
-                <div className="row" style={{ gap: 12 }}>
-                  <span className="small muted">
-                    Crea un plan para reservarle parte de este dinero: le pones nombre,
-                    cantidad y fecha, y verás cuánto tendrías que apartar cada mes.
-                  </span>
-                  <div className="spacer" />
-                  <button className="btn small primary" onClick={() => setCreating(true)}>
-                    Crear el primero
-                  </button>
-                </div>
+                <span className="small muted">
+                  Crea un plan para reservarle parte de este dinero: le pones nombre,
+                  cantidad y fecha, y verás cuánto tendrías que apartar cada mes.
+                </span>
               )}
             </div>
           </>
@@ -375,7 +371,14 @@ interface GoalModalProps {
 function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalModalProps): ReactNode {
   const { accounts, settings } = useStore()
   const [name, setName] = useState(goal?.name ?? '')
-  const [accountId, setAccountId] = useState(goal?.accountId ?? defaultAccountId)
+  /*
+   * Dónde se ahorra no se pregunta: es la hucha que hay elegida detrás.
+   *
+   * La pestaña mira una hucha cada vez y solo enseña sus planes, así que el que
+   * se crea es suyo y el que se edita ya lo era. Preguntarlo era ofrecer una
+   * respuesta que solo podía ser una.
+   */
+  const accountId = goal?.accountId ?? defaultAccountId
   const [targetAmount, setTargetAmount] = useState(goal?.targetAmount ?? 0)
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '')
   const [icon, setIcon] = useState(goal?.icon ?? 'piggy')
@@ -448,30 +451,14 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
           <AmountInput value={targetAmount} currency={currency} onChange={setTargetAmount} />
         </Field>
 
-        <div className="grid cols-2">
-          <Field label="Para cuándo" hint="Opcional: sin fecha no se calcula ritmo.">
-            <input
-              className="input"
-              type="date"
-              value={targetDate}
-              onChange={(event) => setTargetDate(event.target.value)}
-            />
-          </Field>
-
-          <Field label="Dónde se ahorra">
-            <select
-              className="select"
-              value={accountId}
-              onChange={(event) => setAccountId(Number(event.target.value))}
-            >
-              {accounts.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        <Field label="Para cuándo" hint="Opcional: sin fecha no se calcula ritmo.">
+          <input
+            className="input"
+            type="date"
+            value={targetDate}
+            onChange={(event) => setTargetDate(event.target.value)}
+          />
+        </Field>
 
         <Field label="Icono">
           <IconPicker value={icon} options={GOAL_ICONS} onChange={setIcon} />
