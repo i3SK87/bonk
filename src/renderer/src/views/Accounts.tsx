@@ -83,7 +83,7 @@ export function AccountsView(): ReactNode {
                   </div>
                   <div className="small muted">
                     {ACCOUNT_TYPES.find((item) => item.value === account.type)?.label ?? account.type}
-                    {account.excludeFromTotal && ' · fuera del total'}
+                    {account.excludeFromTotal && ' · Fuera del total'}
                     {account.note ? ` · ${account.note}` : ''}
                   </div>
                 </div>

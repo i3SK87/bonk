@@ -310,8 +310,8 @@ function GoalCard({
             {goal.targetDate ? `Para el ${formatDate(goal.targetDate)}` : 'Sin fecha límite'}
             {goal.daysLeft != null &&
               (goal.daysLeft >= 0
-                ? ` · quedan ${goal.daysLeft} ${goal.daysLeft === 1 ? 'día' : 'días'}`
-                : ` · hace ${Math.abs(goal.daysLeft)} días`)}
+                ? ` · Quedan ${goal.daysLeft} ${goal.daysLeft === 1 ? 'día' : 'días'}`
+                : ` · Hace ${Math.abs(goal.daysLeft)} días`)}
             {goal.note ? ` · ${goal.note}` : ''}
           </div>
         </div>

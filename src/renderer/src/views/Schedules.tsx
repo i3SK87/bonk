@@ -210,8 +210,8 @@ export function SchedulesView(): ReactNode {
                     {describeFrequency(row.freq, row.interval)}
                     {row.type === 'refund' ? '' : ` · ${row.accountName}`}
                     {row.type === 'transfer' && row.toAccountName ? ` → ${row.toAccountName}` : ''}
-                    {row.endDate ? ` · hasta ${formatDate(row.endDate)}` : ''}
-                    {!row.autoPost && ' · registro manual'}
+                    {row.endDate ? ` · Hasta el ${formatDate(row.endDate)}` : ''}
+                    {!row.autoPost && ' · Registro manual'}
                   </div>
                 </div>
   
@@ -292,7 +292,7 @@ export function SchedulesView(): ReactNode {
                       Reembolso
                     </span>
                   )}
-                  {describeFrequency(row.freq, row.interval)} · {row.accountName} · terminó el{' '}
+                  {describeFrequency(row.freq, row.interval)} · {row.accountName} · Terminó el{' '}
                   {formatDate(row.endDate!)}
                 </div>
               </div>
@@ -566,10 +566,10 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
               value={goalId ?? ''}
               onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : null)}
             >
-              <option value="">Ahorro libre · sin asignar</option>
+              <option value="">Ahorro libre · Sin asignar</option>
               {planes.map((goal) => (
                 <option key={goal.id} value={goal.id}>
-                  {goal.name} · le faltan {formatMoney(goal.missing, settings.baseCurrency)}
+                  {goal.name} · Le faltan {formatMoney(goal.missing, settings.baseCurrency)}
                 </option>
               ))}
             </select>
