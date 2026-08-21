@@ -95,7 +95,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
   const [settledSearch, setSettledSearch] = useState('')
   const [types, setTypes] = useState<TxType[]>([])
-  const [accountIds, setAccountIds] = useState<number[]>([])
+  /**
+   * La cuenta principal viene elegida: es la que se mira al abrir, y con ella
+   * la cifra grande dice lo que hay ahí y no el total repartido entre huchas.
+   * Se quita pulsándola, y entonces vuelve el patrimonio de todas.
+   */
+  const [accountIds, setAccountIds] = useState<number[]>(
+    settings.defaultAccountId ? [settings.defaultAccountId] : []
+  )
   const [categoryIds, setCategoryIds] = useState<number[]>([])
   /** «Sin categoría» no es una categoría: es la falta de ella, y se filtra aparte. */
   const [uncategorized, setUncategorized] = useState(false)
@@ -154,7 +161,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     settings.showScheduledInList &&
     categoryIds.length === 0 &&
     !uncategorized &&
-    accountIds.length === 0 &&
     (!filter.to || filter.to >= today())
 
   useEffect(() => {
@@ -174,7 +180,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         setProjected(
           list.filter(
             (item) =>
-              (types.length === 0 || types.includes(item.type)) && matchesSearch(item, settledSearch)
+              (types.length === 0 || types.includes(item.type)) &&
+              // La cuenta se filtra aquí y no en la consulta: un traspaso también
+              // cuenta para la cuenta que lo recibe.
+              (accountIds.length === 0 ||
+                accountIds.includes(item.accountId) ||
+                (item.toAccountId != null && accountIds.includes(item.toAccountId))) &&
+              matchesSearch(item, settledSearch)
           )
         )
       })
@@ -182,7 +194,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     return () => {
       cancelled = true
     }
-  }, [canProject, filter.from, filter.to, types, settledSearch, revision])
+  }, [canProject, filter.from, filter.to, types, accountIds, settledSearch, revision])
 
   // Agrupación por día, con el saldo del día para leer de un vistazo cómo fue la
   // jornada. Las proyecciones se cuelgan del mismo día pero no suman en el total.
@@ -394,12 +406,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         {/* El aviso, donde se mira el dinero. La notificación de Windows llega una
             vez; esto se queda a la vista mientras dure la cuesta abajo. */}
         {runningLow && (
-          <div className="low-balance">
+          <div className={`low-balance${runningLow.balance <= 0 ? ' overdrawn' : ''}`}>
             <Icon name="alert" size={16} />
             <span>
-              <b>{runningLow.name}</b> se está quedando sin fondo:{' '}
-              {formatMoney(runningLow.balance, runningLow.currency)} de los{' '}
-              {formatMoney(settings.lowBalanceThreshold, runningLow.currency)} que te marcaste.
+              <b>{runningLow.name}</b>{' '}
+              {runningLow.balance <= 0 ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}
             </span>
           </div>
         )}

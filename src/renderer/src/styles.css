@@ -1005,9 +1005,12 @@ p { margin: 0; }
   content: '';
   position: absolute;
   left: -6px;
-  top: -2px;
-  height: 50%;
-  width: 12px;
+  /* El mismo aire por los dos cabos: seis puntos desde el icono del que cuelga
+     y otros seis hasta el icono al que llega. El alto compensa lo que sube el
+     arranque, para que el codo siga muriendo a la altura del icono de abajo. */
+  top: -5px;
+  height: calc(50% + 3px);
+  width: 9px;
   border-left: 2px solid var(--link-line);
   border-bottom: 2px solid var(--link-line);
   border-bottom-left-radius: 7px;
@@ -1020,7 +1023,7 @@ p { margin: 0; }
   content: '';
   position: absolute;
   left: -6px;
-  top: 50%;
+  top: calc(50% - 2px);
   bottom: -2px;
   border-left: 2px solid var(--link-line);
   pointer-events: none;
@@ -1571,6 +1574,15 @@ p { margin: 0; }
 }
 
 .low-balance svg { flex: none; }
+
+/* Sin fondo no es lo mismo que quedándose sin fondo: en números rojos el aviso
+   sube el tono, que la diferencia entre ir justo y estar en descubierto es la
+   que importa. */
+.low-balance.overdrawn {
+  background: color-mix(in srgb, var(--negative) 22%, transparent);
+  border-top-color: color-mix(in srgb, var(--negative) 55%, transparent);
+  font-weight: 600;
+}
 
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }

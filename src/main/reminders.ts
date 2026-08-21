@@ -237,9 +237,10 @@ export function checkLowBalance(icon: string, onClick: () => void): boolean {
 
   setSetting('lowBalanceWarned', true)
   if (Notification.isSupported()) {
+    const empty = account.balance <= 0
     notify(imageFor(icon, null), onClick, {
-      title: `${account.name} se está quedando sin fondo`,
-      body: `Quedan ${formatMoney(account.balance, account.currency)}, por debajo de ${formatMoney(limit, account.currency)}.`
+      title: `${account.name} ${empty ? 'se ha quedado sin fondos' : 'se está quedando sin fondos'}`,
+      body: formatMoney(account.balance, account.currency)
     })
   }
   return true
