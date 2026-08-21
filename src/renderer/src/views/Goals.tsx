@@ -279,10 +279,14 @@ function GoalCard({
   // Hasta dónde llega la hucha, en tanto por ciento del plan. Lo que venga
   // después del tope no es que esté vacío: es que no hay con qué llenarlo.
   const parte = (valor: number): string =>
-    `${Math.max(0, Math.min(100, (valor / goal.targetAmount) * 100))}%`
+    `${Math.max(0, Math.min(100, (valor / Math.max(1, goal.targetAmount)) * 100))}%`
 
-  // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
-  useEffect(() => setReserva(goal.reserved), [goal.reserved])
+  // Al recargar los datos manda lo guardado, no lo que quedó en el mando. Salvo
+  // mientras se teclea: cualquier guardado en otra parte de la aplicación refresca
+  // el almacén, y eso borraba de un plumazo lo que estabas escribiendo.
+  useEffect(() => {
+    if (!escribiendo) setReserva(goal.reserved)
+  }, [goal.reserved, escribiendo])
 
   const color =
     goal.status === 'complete'

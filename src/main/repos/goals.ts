@@ -254,9 +254,17 @@ export function clearGoalReached(id: number): void {
  */
 export function setGoalReserves(entries: Array<{ id: number; amount: number }>): void {
   const db = getDb()
+  // Nadie reserva más de lo que el plan pide. La ventana ya lo recorta, pero el
+  // límite es del dato, no de quien lo enseña: guardado a lo bruto, el número
+  // almacenado decía una cosa y la pantalla otra.
+  const metas = new Map(listGoals().map((goal) => [goal.id, goal.targetAmount]))
   return atomic(() => {
     const stmt = db.prepare('UPDATE goals SET reserved = ? WHERE id = ?')
-    for (const entry of entries) stmt.run(Math.max(0, Math.round(entry.amount)), entry.id)
+    for (const entry of entries) {
+      const tope = metas.get(entry.id)
+      if (tope == null) continue
+      stmt.run(Math.min(tope, Math.max(0, Math.round(entry.amount))), entry.id)
+    }
   })
 }
 

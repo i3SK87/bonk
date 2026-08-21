@@ -54,7 +54,6 @@ export function seedDefaults(db: DatabaseSync): void {
   const insertSetting = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)')
   const defaults: Record<string, string> = {
     baseCurrency: 'EUR',
-    defaultAccountId: '',
     showScheduledInList: '0',
     theme: 'system',
     palette: 'grafito',

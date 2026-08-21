@@ -1007,6 +1007,16 @@ try {
     { id: tarde.id, amount: 1000 }
   ])
   equal('repartir a mano manda sobre la fecha', reparto(tarde.id), 1000)
+
+  // Reservar no crea dinero ni infla el plan: por encima de la meta se recorta al
+  // guardar, no solo al enseñarlo.
+  goals.setGoalReserves([{ id: tarde.id, amount: tarde.targetAmount + 50000 }])
+  equal(
+    'la reserva no pasa de la meta',
+    goals.listGoals().find((item) => item.id === tarde.id)!.reserved,
+    tarde.targetAmount
+  )
+  goals.setGoalReserves([{ id: tarde.id, amount: 1000 }])
   equal('y al cercano le queda lo suyo', reparto(pronto.id), 500)
 
   // Borrar el traspaso que sostenía una reserva se la lleva con él.
