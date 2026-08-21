@@ -245,7 +245,7 @@ export function SchedulesView(): ReactNode {
                     title="Finalizar: la deuda queda saldada y no se generan más cuotas"
                     onClick={() => setFinishing(row)}
                   >
-                    <Icon name="archive" size={16} />
+                    <Icon name="finish" size={16} />
                   </button>
                 ) : (
                   <button

@@ -378,6 +378,18 @@ const PATHS: Record<string, JSX.Element> = {
       <rect x="3" y="4" width="18" height="4.5" rx="1.5" />
       <path d="M5 8.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5M10 12.5h4" />
     </>
+  ),
+  // La bandera a cuadros de la meta. Saldar una deuda antes de tiempo es cruzar
+  // la línea, no archivar un papel; los cuadros van rellenos porque a 16 px un
+  // damero de líneas se convierte en una mancha.
+  finish: (
+    <>
+      <path d="M5.4 3.5v17" />
+      <rect x="5.4" y="4.6" width="14" height="9" rx="1" />
+      <rect x="5.4" y="4.6" width="4.66" height="4.5" fill="currentColor" stroke="none" />
+      <rect x="14.74" y="4.6" width="4.66" height="4.5" fill="currentColor" stroke="none" />
+      <rect x="10.07" y="9.1" width="4.66" height="4.5" fill="currentColor" stroke="none" />
+    </>
   )
 }
 
