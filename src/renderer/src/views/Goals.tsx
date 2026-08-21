@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon, PALETTE } from '../components/Icon'
 import {
@@ -260,10 +260,33 @@ function GoalCard({
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
 
-  // El tope se redondea al salto de arriba: con saltos de 50, un plan de 225 se
-  // quedaría en 200 para siempre, porque el último escalón que cabe es ese. Al
-  // soltar se recorta a lo que de verdad cabe.
-  const tope = Math.max(PASO, Math.ceil(techo / PASO) * PASO)
+  /*
+   * Mientras se arrastra manda el mando y no lo guardado.
+   *
+   * Es la única forma de saber cuánto estás poniendo: la cifra de la ficha ya
+   * lo dice, así que se hace que siga al dedo en vez de añadir otro número al
+   * lado del mando.
+   */
+  const ajustable = onReserve != null
+  const puesto = ajustable ? Math.min(reserva, goal.targetAmount) : goal.saved
+
+  /*
+   * La cifra también se escribe.
+   *
+   * Arrastrar va bien para tantear, pero cuando ya sabes que son 400 € es
+   * absurdo buscarlos a pulso: se pulsa el número y se teclea. Es el mismo
+   * número que mueve el mando, así que no hay dos sitios donde mirar.
+   */
+  const [escribiendo, setEscribiendo] = useState(false)
+  // Lo tecleado, en una referencia: al perder el foco, el estado que se leería
+  // aquí todavía es el de antes de la última tecla.
+  const tecleado = useRef(goal.reserved)
+  const falta = Math.max(0, goal.targetAmount - puesto)
+
+  // Hasta dónde llega la hucha, en tanto por ciento del plan. Lo que venga
+  // después del tope no es que esté vacío: es que no hay con qué llenarlo.
+  const parte = (valor: number): string =>
+    `${Math.max(0, Math.min(100, (valor / goal.targetAmount) * 100))}%`
 
   // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
   useEffect(() => setReserva(goal.reserved), [goal.reserved])
@@ -300,17 +323,62 @@ function GoalCard({
         </div>
         <div className="spacer" />
         <div style={{ textAlign: 'right' }}>
-          <div className="amount" style={{ fontSize: 16 }}>
-            {formatMoney(goal.saved, currency)}{' '}
-            <span className="muted" style={{ fontWeight: 500 }}>
-              de {formatMoney(goal.targetAmount, currency)}
-            </span>
-          </div>
+          {escribiendo ? (
+            <div
+              style={{ width: 132, marginLeft: 'auto' }}
+              onBlur={() => {
+                setEscribiendo(false)
+                onReserve?.(Math.min(tecleado.current, techo))
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') (event.target as HTMLInputElement).blur()
+                if (event.key === 'Escape') {
+                  tecleado.current = goal.reserved
+                  setReserva(goal.reserved)
+                  setEscribiendo(false)
+                }
+              }}
+            >
+              <AmountInput
+                value={reserva}
+                currency={currency}
+                compact
+                autoFocus
+                onChange={(valor) => {
+                  // Más de lo que hay en la hucha no se puede apartar, se teclee
+                  // o se arrastre.
+                  const cabe = Math.min(valor, techo)
+                  tecleado.current = cabe
+                  setReserva(cabe)
+                }}
+              />
+            </div>
+          ) : (
+            <div className="amount" style={{ fontSize: 16 }}>
+              {ajustable ? (
+                <button
+                  className="cifra-editable"
+                  onClick={() => {
+                    tecleado.current = puesto
+                    setEscribiendo(true)
+                  }}
+                  title="Escribir la cantidad"
+                >
+                  {formatMoney(puesto, currency)}
+                </button>
+              ) : (
+                formatMoney(puesto, currency)
+              )}{' '}
+              <span className="muted" style={{ fontWeight: 500 }}>
+                de {formatMoney(goal.targetAmount, currency)}
+              </span>
+            </div>
+          )}
           <div className="small muted">
-            {goal.missing > 0 ? `Faltan ${formatMoney(goal.missing, currency)}` : 'Completo'}
+            {falta > 0 ? `Faltan ${formatMoney(falta, currency)}` : 'Completo'}
           </div>
         </div>
-        {goal.missing === 0 && (
+        {falta === 0 && (
           <button className="btn small" onClick={onAchieve} title="Darlo por cumplido y archivarlo">
             <Icon name="check" size={15} />
           </button>
@@ -321,20 +389,29 @@ function GoalCard({
       </div>
 
       {/* Un solo mando: lo que se le reserva de la hucha es a la vez lo que lleva
-          ahorrado, así que la barra de progreso y el deslizador son lo mismo. El
-          tope no es su meta sino lo que hay libre más lo que ya tiene, de forma que
-          arrastrando no se puede repartir de más ni quitarle a otro plan. Se guarda
-          al soltar. */}
+          ahorrado, así que la barra de progreso y el deslizador son lo mismo.
+
+          El carril es el plan entero, de cero a la meta. Antes era lo que cabía
+          reservar en ese momento, y un plan de 1600 € con 1000 € libres enseñaba
+          el mando a tope diciendo «1000 de 1600»: parecía terminado sin estarlo.
+          Ahora llegar al final significa llegar, y el dedo se para solo donde se
+          acaba la hucha. Se guarda al soltar. */}
       {onReserve ? (
         <div className="reserva">
           <input
             type="range"
             min={0}
-            max={tope}
+            max={goal.targetAmount}
             step={PASO}
-            value={Math.min(reserva, tope)}
-            style={{ accentColor: color }}
-            onChange={(event) => setReserva(Number(event.target.value))}
+            value={puesto}
+            style={
+              {
+                '--tono': color,
+                '--relleno': parte(puesto),
+                '--alcance': parte(techo)
+              } as CSSProperties
+            }
+            onChange={(event) => setReserva(Math.min(Number(event.target.value), techo))}
             onMouseUp={() => onReserve(Math.min(reserva, techo))}
             onKeyUp={() => onReserve(Math.min(reserva, techo))}
             aria-label={`Ahorrado para ${goal.name}`}
@@ -344,8 +421,16 @@ function GoalCard({
         <ProgressBar percent={goal.percent} color={color} />
       )}
 
+      {/* Cuando el mando se para antes de la meta, el motivo se dice: si no,
+          parece que el deslizador está roto. */}
+      {ajustable && techo < goal.targetAmount && (
+        <div className="small subtle" style={{ marginTop: 5 }}>
+          Con lo que hay en la hucha puedes llegar a {formatMoney(techo, currency)}.
+        </div>
+      )}
+
       <div className="small subtle" style={{ marginTop: 5 }}>
-        {goal.missing === 0
+        {falta === 0
           ? 'Ya tienes ahorrado lo que querías.'
           : goal.perMonth != null
             ? `Tendrías que apartar ${formatMoney(goal.perMonth, currency)} al mes. ` +

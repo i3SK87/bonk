@@ -1729,11 +1729,61 @@ p { margin: 0; }
   margin-top: 10px;
 }
 
+/* La cantidad apartada se puede teclear. No lleva pinta de campo: es la misma
+   cifra de siempre, y solo al pasar por encima enseña que se puede tocar. */
+.cifra-editable {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+  border-bottom: 1px dashed transparent;
+}
+
+.cifra-editable:hover,
+.cifra-editable:focus-visible {
+  border-bottom-color: var(--border-strong);
+}
+
+/*
+ * El carril se pinta a mano en tres tramos: lo apartado, lo que aun puedes
+ * apartar y -al final, apagado- lo que no cabe porque no hay tanto en la hucha.
+ *
+ * Con accent-color solo se distinguian dos, y el tramo sin dinero se confundia
+ * con el vacio: parecia que quedaba sitio cuando lo que faltaba era el dinero.
+ */
 .reserva input[type='range'] {
   flex: 1;
   min-width: 0;
-  height: 6px;
+  height: 16px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.reserva input[type='range']::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    to right,
+    var(--tono) 0 var(--relleno),
+    var(--bg-sunken) var(--relleno) var(--alcance),
+    color-mix(in srgb, var(--fg-subtle) 16%, transparent) var(--alcance) 100%
+  );
+}
+
+.reserva input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  margin-top: -4.5px;
+  border-radius: 50%;
+  background: var(--tono);
+  border: 2px solid var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
 }
 
 
