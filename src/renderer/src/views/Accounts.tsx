@@ -106,7 +106,7 @@ export function AccountsView(): ReactNode {
 
         <div className="card-body row" style={{ borderTop: '1px solid var(--border)' }}>
           <div>
-            <div className="small muted">Patrimonio total</div>
+            <div className="label">Patrimonio total</div>
             <div className="amount" style={{ fontSize: 22, fontWeight: 700 }}>
               {formatMoney(total, settings.baseCurrency)}
             </div>

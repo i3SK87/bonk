@@ -426,10 +426,14 @@ p { margin: 0; }
 /* Abajo del todo hay sitio de sobra y la cifra es de las que se miran de reojo:
    se le da el tamaño que merece y el color del signo, que es lo primero que se
    quiere saber. */
+/* El mismo rotulillo que preside cada cifra de la aplicación: once píxeles,
+   seminegrita y versales. Aquí iba a doce y sin peso, y cantaba al lado de
+   «SALDO · CAIXABANK» o «TE QUEDA POR PAGAR». */
 .sidebar-networth {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 650;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--sidebar-fg);
   opacity: 0.8;
 }
@@ -879,7 +883,7 @@ p { margin: 0; }
 /* El rotulillo que encabeza un bloque: en la tira del patrimonio y en la fila de
    huchas de Planes Ahorro, que dice lo mismo y tiene que verse igual. */
 .networth-strip .label,
-.card-body > .label {
+.card-body .label {
   font-size: 11px;
   font-weight: 650;
   text-transform: uppercase;
