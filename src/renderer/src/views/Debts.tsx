@@ -59,6 +59,9 @@ export function DebtsView(): ReactNode {
   // entrar. Las que no tienen fecha de fin no suman: no se sabe cuánto queda.
   const pendiente = abiertas.reduce((sum, debt) => sum + (debt.left ?? 0), 0)
   const alMes = abiertas.reduce((sum, debt) => sum + debt.monthlyCost, 0)
+  // Lo llevado pagado va al lado de lo que falta y en verde: es la mitad buena
+  // de la misma cuenta, y de las tres cifras es la única que sube.
+  const pagado = abiertas.reduce((sum, debt) => sum + debt.paid, 0)
   const sinFecha = abiertas.filter((debt) => debt.left == null).length
 
   return (
@@ -66,9 +69,6 @@ export function DebtsView(): ReactNode {
       <div className="card flush">
         <div className="card-header">
           <h2>Deudas</h2>
-          <span className="small muted">
-            Las cuotas se registran solas desde Programados; aquí solo se miran.
-          </span>
         </div>
 
         {!loading && abiertas.length > 0 && (
@@ -87,18 +87,19 @@ export function DebtsView(): ReactNode {
                 {formatMoney(alMes, settings.baseCurrency)}
               </div>
             </div>
-            <div className="col" style={{ gap: 2, justifyContent: 'center' }}>
-              <span className="small muted">
-                {abiertas.length === 1 ? '1 deuda abierta' : `${abiertas.length} deudas abiertas`}
-              </span>
-              {sinFecha > 0 && (
-                <span className="small subtle">
-                  {sinFecha === 1
-                    ? 'Una no tiene fecha de fin, así que no cuenta en el total.'
-                    : `${sinFecha} no tienen fecha de fin, así que no cuentan en el total.`}
-                </span>
-              )}
+            <div className="networth">
+              <div className="label">Llevas pagado</div>
+              <div className={`value amount ${pagado > 0 ? 'positive' : 'neutral'}`}>
+                {formatMoney(pagado, settings.baseCurrency)}
+              </div>
             </div>
+            {sinFecha > 0 && (
+              <span className="small subtle" style={{ alignSelf: 'center' }}>
+                {sinFecha === 1
+                  ? 'Una no tiene fecha de fin, así que no cuenta en el total.'
+                  : `${sinFecha} no tienen fecha de fin, así que no cuentan en el total.`}
+              </span>
+            )}
           </div>
         )}
 

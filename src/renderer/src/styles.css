@@ -803,6 +803,12 @@ p { margin: 0; }
   border-right: 1px solid var(--border);
 }
 
+/* El último no separa de nada: en Deudas la tira acaba en un bloque, y la raya
+   se quedaba colgando al final. */
+.networth:last-child {
+  border-right: none;
+}
+
 /* Los dos bloques son columnas para que sus rótulos arranquen a la misma altura. */
 .networth,
 .accounts-block {
