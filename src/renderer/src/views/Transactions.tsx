@@ -52,6 +52,18 @@ function nestRefunds(list: TransactionView[]): Array<{ row: TransactionView; nes
   )
 }
 
+/**
+ * La misma búsqueda que hace la consulta, pero sobre lo que aún no existe.
+ * Mira donde mira aquella: quién cobra, la nota, la categoría y la cuenta.
+ */
+function matchesSearch(row: ProjectedTransaction, needle: string): boolean {
+  const text = needle.trim().toLowerCase()
+  if (!text) return true
+  return [row.name, row.payee, row.note, row.categoryName, row.accountName, row.toAccountName].some(
+    (field) => field?.toLowerCase().includes(text)
+  )
+}
+
 /** Lo mismo con las previsiones: la devolución programada cuelga de su gasto. */
 function nestProjected(
   list: ProjectedTransaction[]
@@ -121,12 +133,12 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   /**
    * Las programadas solo se proyectan hacia delante y cuando no hay filtros que
-   * no sepamos aplicarles: filtrar por etiqueta o buscar texto en algo que aún
-   * no existe daría una lista incoherente.
+   * no sepamos aplicarles: filtrar por etiqueta en algo que aún no existe daría
+   * una lista incoherente. La búsqueda sí se les aplica aquí mismo, que si se
+   * está mirando lo que viene, se busca también en ello.
    */
   const canProject =
     settings.showScheduledInList &&
-    !settledSearch.trim() &&
     categoryIds.length === 0 &&
     accountIds.length === 0 &&
     (!filter.to || filter.to >= today())
@@ -145,13 +157,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       .project(from, to)
       .then((list) => {
         if (cancelled) return
-        setProjected(types.length ? list.filter((item) => types.includes(item.type)) : list)
+        setProjected(
+          list.filter(
+            (item) =>
+              (types.length === 0 || types.includes(item.type)) && matchesSearch(item, settledSearch)
+          )
+        )
       })
       .catch(fail('las programadas previstas'))
     return () => {
       cancelled = true
     }
-  }, [canProject, filter.from, filter.to, types, revision])
+  }, [canProject, filter.from, filter.to, types, settledSearch, revision])
 
   // Agrupación por día, con el saldo del día para leer de un vistazo cómo fue la
   // jornada. Las proyecciones se cuelgan del mismo día pero no suman en el total.
@@ -225,15 +242,15 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
 
-  const activeFilters =
-    types.length + accountIds.length + categoryIds.length + (search.trim() ? 1 : 0)
+  // La búsqueda no cuenta: tiene su propia aspa dentro del campo y se quita
+  // desde ahí, así que «Limpiar» no debe llevársela por delante.
+  const activeFilters = types.length + accountIds.length + categoryIds.length
 
-  /** Deja la lista como recién entrada: sin filtros y sin búsqueda. */
+  /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
     setTypes([])
     setAccountIds([])
     setCategoryIds([])
-    setSearch('')
   }
 
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
@@ -330,11 +347,22 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             <div style={{ position: 'relative' }}>
               <input
                 className="input"
-                style={{ paddingLeft: 30, width: 210 }}
+                style={{ paddingLeft: 30, paddingRight: search ? 30 : 12, width: 210 }}
                 placeholder="Buscar…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
+                onKeyDown={(event) => event.key === 'Escape' && setSearch('')}
               />
+              {search && (
+                <button
+                  className="input-clear"
+                  onClick={() => setSearch('')}
+                  title="Borrar la búsqueda"
+                  aria-label="Borrar la búsqueda"
+                >
+                  <Icon name="close" size={14} strokeWidth={2.2} />
+                </button>
+              )}
               <span
                 style={{
                   position: 'absolute',
@@ -350,6 +378,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               </span>
             </div>
             <button
+              className={`btn small${showFilters || activeFilters ? ' primary' : ''}`}
+              onClick={() => setShowFilters((value) => !value)}
+            >
+              <Icon name="filter" size={15} />
+              Filtros{activeFilters ? ` (${activeFilters})` : ''}
+            </button>
+
+            {/* Fuera del panel: limpiar no debería obligar a abrirlo y cerrarlo. */}
+            {activeFilters > 0 && (
+              <button className="btn small ghost" onClick={clearFilters} title="Quitar todos los filtros">
+                <Icon name="close" size={14} strokeWidth={2.2} />
+                Limpiar
+              </button>
+            )}
+
+            {/* Después de los filtros: no filtra nada, añade a la lista lo que
+                todavía no ha pasado. */}
+            <button
               className={`btn small${settings.showScheduledInList ? ' primary' : ''}`}
               onClick={() => updateSettings({ showScheduledInList: !settings.showScheduledInList })}
               title={
@@ -361,25 +407,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               <Icon name="repeat" size={15} />
               Programados
             </button>
-            <button
-              className={`btn small${showFilters || activeFilters ? ' primary' : ''}`}
-              onClick={() => setShowFilters((value) => !value)}
-            >
-              <Icon name="filter" size={15} />
-              Filtros{activeFilters ? ` (${activeFilters})` : ''}
-            </button>
-
-            {/* Fuera del panel: limpiar no debería obligar a abrirlo y cerrarlo. */}
-            {activeFilters > 0 && (
-              <button
-                className="btn small ghost"
-                onClick={clearFilters}
-                title="Quitar la búsqueda y todos los filtros"
-              >
-                <Icon name="close" size={14} strokeWidth={2.2} />
-                Limpiar
-              </button>
-            )}
 
             {/* La última de la fila y separada: no filtra la lista, es una
                 herramienta aparte que se abre desde aquí. */}

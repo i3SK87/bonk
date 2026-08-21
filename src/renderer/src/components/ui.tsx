@@ -352,14 +352,16 @@ export function AmountInput({ value, currency, onChange, autoFocus, invalid }: A
         onBlur={() => {
           focusedRef.current = false
           setFocused(false)
-          const parsed = parseAmount(text, currency)
+          const parsed = parseAmount(text, currency, { grouping: false })
           onChange(parsed == null ? 0 : Math.abs(parsed))
         }}
         onChange={(event) => {
           // Los importes son siempre positivos: el signo lo pone el tipo de movimiento.
-          const cleaned = keepNumericChars(event.target.value, { decimals: true, grouping: true })
+          const cleaned = keepNumericChars(event.target.value, { decimals: true })
           setText(cleaned)
-          const parsed = parseAmount(cleaned, currency)
+          // Un solo separador y decimal: aquí no se agrupan millares, así que
+          // "1,23334" y "1.23334" son el mismo importe.
+          const parsed = parseAmount(cleaned, currency, { grouping: false })
           if (parsed != null) onChange(Math.abs(parsed))
         }}
       />

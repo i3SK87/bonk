@@ -109,15 +109,22 @@ try {
   // Y en una divisa de tres decimales esas tres cifras sí son decimales.
   equal('"1,234" en dinares son 1,234', parseAmount('1,234', 'KWD'), 1234)
 
-  // Lo que el campo de importe deja escribir, que es donde se perdía la coma
-  // de "1.234,56" y el importe se quedaba en 1,23 €.
+  // En el campo de importe la regla es otra: un solo separador y siempre
+  // decimal. Los millares son cosa de lo que llega de fuera —el CSV de un
+  // banco—, no de lo que se escribe a mano.
+  const escrito = (text: string): string => keepNumericChars(text, { decimals: true })
   const tecleado = (text: string): number | null =>
-    parseAmount(keepNumericChars(text, { decimals: true, grouping: true }), 'EUR')
-  equal('tecleando "1.234,56" entran 1.234,56 €', tecleado('1.234,56'), 123456)
-  equal('tecleando "1,234.56" también', tecleado('1,234.56'), 123456)
-  equal('tecleando "12.50" entran 12,50 €', tecleado('12.50'), 1250)
+    parseAmount(escrito(text), 'EUR', { grouping: false })
+  equal('el campo solo admite un separador', escrito('1.233,34'), '1.23334')
+  equal('venga en el orden que venga', escrito('1,233.34'), '1,23334')
+  equal('y ese separador es el decimal', tecleado('1,23334'), 123)
+  equal('con punto, lo mismo', tecleado('1.23334'), 123)
   equal('tecleando "12,50" entran 12,50 €', tecleado('12,50'), 1250)
+  equal('tecleando "12.50" entran 12,50 €', tecleado('12.50'), 1250)
   equal('un separador suelto no rompe nada', tecleado('12,'), 1200)
+  // El mismo texto, dos lecturas, y las dos son la que toca donde se usa.
+  equal('escribiendo "1.234" es un euro con veintitrés', tecleado('1.234'), 123)
+  equal('importándolo, mil doscientos treinta y cuatro', parseAmount('1.234', 'EUR'), 123400)
   equal('el yen no tiene decimales', toMinor(1500, 'JPY'), 1500)
   // Intl separa el símbolo con espacio duro; se normaliza para poder comparar.
   const plain = (value: string): string => value.replace(/ /g, ' ')

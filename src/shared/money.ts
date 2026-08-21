@@ -76,9 +76,15 @@ export function currencySymbol(code: string): string {
  * Interpreta lo que el usuario teclea. La coma y el punto valen por igual como
  * separador decimal —"12,50" y "12.50" son lo mismo— y también como separador
  * de millares: "1.234,56", "1,234.56", "1.234" y "1,234" se leen todos bien.
+ * Con `grouping: false` no hay millares que valgan y el separador es siempre
+ * el decimal, que es como se escribe a mano en el campo de importe.
  * Devuelve null si no hay ningún número reconocible.
  */
-export function parseAmount(input: string, code: string): number | null {
+export function parseAmount(
+  input: string,
+  code: string,
+  opts: { grouping?: boolean } = {}
+): number | null {
   if (input == null) return null
   let text = String(input).trim().replace(/\s/g, '').replace(/[€$£¥]/g, '')
   if (!text) return null
@@ -87,7 +93,14 @@ export function parseAmount(input: string, code: string): number | null {
   const commas = text.split(',').length - 1
   const dots = text.split('.').length - 1
 
-  if (commas > 0 && dots > 0) {
+  if (opts.grouping === false) {
+    // Sin agrupación el separador es siempre decimal, sea coma o punto. Es lo
+    // que se teclea en el campo de importe, donde además solo cabe uno: quien
+    // escribe "1,23334" quiere un euro y pico, no mil doscientos.
+    text = text.replace(/,/g, '.')
+    const first = text.indexOf('.')
+    if (first > -1) text = text.slice(0, first + 1) + text.slice(first + 1).replace(/\./g, '')
+  } else if (commas > 0 && dots > 0) {
     // Con los dos puestos no hay duda: el decimal es el que va más a la
     // derecha y el otro agrupa millares.
     text =

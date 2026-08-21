@@ -651,6 +651,32 @@ p { margin: 0; }
   padding: 12px 14px;
 }
 
+/* El aspa que vacía un campo, dentro de él y pegada al canto derecho. Solo
+   sale cuando hay algo que borrar, así que no compite con el texto. */
+.input-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.input-clear:hover {
+  background-color: var(--bg-sunken);
+  color: var(--fg);
+}
+
 .input.invalid,
 .select.invalid {
   border-color: var(--negative);
