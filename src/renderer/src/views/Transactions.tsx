@@ -269,6 +269,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }
 
   const showingProjected = projected.length > 0
+  const nothingToShow = rows.length === 0 && projected.length === 0
   const netWorth =
     accounts
       .filter((account) => !account.excludeFromTotal)
@@ -550,9 +551,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
       <div className="card">
         <div className="card-body tight">
-          {loading && rows.length === 0 ? (
+          {/* Vacía es vacía del todo: si no hay movimientos registrados pero sí
+              programadas por llegar, hay algo que enseñar. Mirando solo los
+              reales, buscar «padre» con las previsiones encendidas daba «No hay
+              movimientos» mientras el total de arriba ya contaba sus 200 €. */}
+          {loading && nothingToShow ? (
             <Loading />
-          ) : rows.length === 0 ? (
+          ) : nothingToShow ? (
             <EmptyState
               icon="list"
               title="No hay movimientos"
