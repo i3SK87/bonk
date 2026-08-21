@@ -3,7 +3,14 @@ import { today, nextOccurrence } from '@shared/dates'
 import { saveTransaction } from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
-import type { Scheduled, ScheduledView, ProjectedTransaction, TxType, Frequency } from '@shared/types'
+import type {
+  Scheduled,
+  ScheduledView,
+  ProjectedTransaction,
+  DebtProgress,
+  TxType,
+  Frequency
+} from '@shared/types'
 
 interface ScheduledRow {
   id: number
@@ -25,6 +32,7 @@ interface ScheduledRow {
   last_posted: string | null
   created_at: string
   refund_for_scheduled_id: number | null
+  goal_id: number | null
   remind: number
   reminded_for: string | null
   settled_at: string | null
@@ -61,6 +69,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     lastPosted: row.last_posted,
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
+    goalId: row.goal_id,
     remind: row.remind === 1,
     remindedFor: row.reminded_for,
     settledAt: row.settled_at
@@ -122,6 +131,8 @@ export interface ScheduledInput {
   autoPost: boolean
   active?: boolean
   refundForScheduledId?: number | null
+  /** Plan de ahorro al que va, cuando es un traspaso que entra en una hucha. */
+  goalId?: number | null
   remind?: boolean
 }
 
@@ -139,6 +150,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
   const toAccountId = isTransfer ? (input.toAccountId ?? null) : null
   const categoryId = isTransfer ? null : (input.categoryId ?? null)
   // Solo una devolución puede colgar de otra programada; y nunca de sí misma.
+  // Solo un traspaso que entra en una hucha puede ir a un plan.
+  const goalId = input.type === 'transfer' && toAccountId != null ? (input.goalId ?? null) : null
   const refundForScheduledId =
     input.type === 'refund' && input.refundForScheduledId !== input.id
       ? (input.refundForScheduledId ?? null)
@@ -149,7 +162,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       `UPDATE scheduled
           SET name = ?, type = ?, account_id = ?, to_account_id = ?, category_id = ?, amount = ?,
               amount_to = ?, payee = ?, note = ?, freq = ?, interval = ?, next_date = ?, end_date = ?,
-              auto_post = ?, active = ?, refund_for_scheduled_id = ?, remind = ?
+              auto_post = ?, active = ?, refund_for_scheduled_id = ?, goal_id = ?, remind = ?
         WHERE id = ?`
     ).run(
       bind(input.name?.trim() || null),
@@ -168,6 +181,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.autoPost ? 1 : 0,
       input.active === false ? 0 : 1,
       bind(refundForScheduledId),
+      bind(goalId),
       input.remind === false ? 0 : 1,
       input.id
     )
@@ -178,8 +192,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
     .prepare(
       `INSERT INTO scheduled
          (name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
-          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, remind)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, goal_id, remind)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       bind(input.name?.trim() || null),
@@ -199,6 +213,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.active === false ? 0 : 1,
       nowISO(),
       bind(refundForScheduledId),
+      bind(goalId),
       input.remind === false ? 0 : 1
     )
   return getScheduled(Number(result.lastInsertRowid))!
@@ -258,16 +273,35 @@ export interface DebtSummary {
 
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
 export function debtSummary(id: number): DebtSummary {
+  const scheduled = getScheduled(id)
+
+  /*
+   * Lo pagado no puede medirse solo por los movimientos que ha dejado la
+   * programación: una deuda casi siempre viene de antes de apuntarla aquí, y esos
+   * pagos no llevan su marca. La cuota del PC de marzo es tan cuota como la que
+   * generó la aplicación en agosto.
+   *
+   * Así que también cuentan los gastos de su misma categoría y su misma nota, que
+   * es como se distinguen entre sí las deudas de una categoría compartida —Deuda:
+   * Kindle, PC, 4Geeks—. Sin nota no hay con qué distinguirlas y se cuenta solo lo
+   * suyo, que es mejor quedarse corto que sumar lo de otro.
+   */
+  const note = scheduled?.note ?? null
   const row = getDb()
     .prepare(
       `SELECT COUNT(*) AS n, COALESCE(SUM(t.amount), 0) AS total,
               MIN(t.date) AS first_date, MAX(t.date) AS last_date
          FROM transactions t
-        WHERE t.scheduled_id = ?`
+        WHERE t.scheduled_id = ?
+           OR (? IS NOT NULL AND t.type = 'expense' AND t.category_id = ? AND t.note = ?)`
     )
-    .get(id) as unknown as { n: number; total: number; first_date: string | null; last_date: string | null }
+    .get(id, note, scheduled?.categoryId ?? null, note) as unknown as {
+    n: number
+    total: number
+    first_date: string | null
+    last_date: string | null
+  }
 
-  const scheduled = getScheduled(id)
   return {
     count: row.n,
     total: row.total,
@@ -282,6 +316,74 @@ export function debtSummary(id: number): DebtSummary {
  * las de categorías marcadas como deuda a plazos: que se acabe una suscripción
  * no es una buena noticia, es que hay que renovarla.
  */
+/**
+ * Cómo van tus deudas a plazos.
+ *
+ * Solo las de categorías marcadas como deuda: una suscripción también es un
+ * recibo que se repite, pero no se está pagando nada que se acabe.
+ *
+ * Lo pagado sale de los movimientos que la programación ha ido dejando, así que
+ * cuenta lo que de verdad ha salido de la cuenta. Lo que queda se calcula desde
+ * la próxima cuota hasta la fecha de fin: sin fecha no hay plan que medir, y
+ * entonces se dice lo pagado y nada más.
+ */
+export function debtProgress(reference = today()): DebtProgress[] {
+  const rows = getDb()
+    .prepare(`${VIEW_SELECT} WHERE c.is_debt = 1 ORDER BY s.settled_at IS NOT NULL, s.next_date, s.id`)
+    .all() as unknown as ScheduledViewRow[]
+
+  return rows.map((row) => {
+    const debt = toView(row)
+    const summary = debtSummary(debt.id)
+
+    // Las que quedan: se cuentan las repeticiones desde la próxima hasta el fin.
+    let leftCount: number | null = null
+    if (!debt.settledAt && debt.endDate) {
+      leftCount = 0
+      let date = debt.nextDate
+      let guard = 0
+      while (date <= debt.endDate && guard < 600) {
+        leftCount++
+        date = nextOccurrence(date, debt.freq, debt.interval)
+        guard++
+      }
+    } else if (debt.settledAt) {
+      leftCount = 0
+    }
+
+    const left = leftCount == null ? null : leftCount * debt.amount
+    const total = left == null ? null : summary.total + left
+    const daysLeft = debt.endDate
+      ? Math.round(
+          (Date.parse(`${debt.endDate}T00:00:00`) - Date.parse(`${reference}T00:00:00`)) / 86400000
+        )
+      : null
+
+    return {
+      scheduledId: debt.id,
+      title: debt.name || debt.note || debt.categoryName || 'Deuda',
+      categoryName: debt.categoryName,
+      categoryIcon: debt.categoryIcon,
+      categoryColor: debt.categoryColor,
+      accountName: debt.accountName,
+      currency: debt.accountCurrency,
+      installment: debt.amount,
+      paidCount: summary.count,
+      paid: summary.total,
+      leftCount,
+      left,
+      total,
+      percent: total && total > 0 ? Math.min(100, (summary.total / total) * 100) : null,
+      firstDate: summary.firstDate,
+      nextDate: debt.nextDate,
+      endDate: debt.endDate,
+      daysLeft,
+      settled: debt.settledAt != null,
+      settledAt: debt.settledAt
+    }
+  })
+}
+
 export function pendingSettlements(): ScheduledView[] {
   const rows = getDb()
     .prepare(
@@ -338,6 +440,8 @@ function post(row: Scheduled, date: string, consumed = date): void {
     payee: row.payee,
     note: row.note,
     scheduledId: row.id,
+    // El plan viaja con el movimiento: al registrarse, la reserva sube sola.
+    goalId: row.goalId,
     refundForId:
       row.type === 'refund' && row.refundForScheduledId
         ? postedByScheduled(row.refundForScheduledId, date)

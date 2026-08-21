@@ -173,7 +173,38 @@ function monthlyPace(accountId: number, reference: string): number {
  * vuelve a merecer su enhorabuena: la marca dice «ya celebrado mientras siga
  * ahí», no «celebrado para siempre».
  */
+/**
+ * Recorta las reservas a lo que de verdad hay en cada hucha.
+ *
+ * Reservar no crea dinero: si se saca de la hucha, lo apartado deja de existir y
+ * el mando tiene que volver a bajar solo. Sin esto, vaciar la hucha dejaba los
+ * planes enseñando un dinero que ya no estaba, y al volver a meterlo se
+ * repartía otra vez sin que nadie lo hubiera decidido.
+ *
+ * Se recorta por orden de fecha: el plan más cercano conserva lo suyo.
+ */
+export function reconcileReserves(): void {
+  const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
+  const remaining = new Map<number, number>()
+
+  atomic(() => {
+    const stmt = getDb().prepare('UPDATE goals SET reserved = ? WHERE id = ?')
+    for (const goal of listGoals()) {
+      if (goal.achievedAt) continue
+      if (!remaining.has(goal.accountId)) {
+        remaining.set(goal.accountId, Math.max(0, accounts.get(goal.accountId)?.balance ?? 0))
+      }
+      const pot = remaining.get(goal.accountId)!
+      const cabe = Math.min(goal.reserved, pot)
+      if (cabe !== goal.reserved) stmt.run(cabe, goal.id)
+      remaining.set(goal.accountId, pot - Math.min(cabe, goal.targetAmount))
+    }
+  })
+}
+
 export function pendingGoals(reference = today()): GoalReached[] {
+  // Antes de mirar quién ha llegado, que lo apartado sea dinero que existe.
+  reconcileReserves()
   const marked = new Set(
     (
       getDb().prepare('SELECT id FROM goals WHERE reached_notified = 1').all() as unknown as Array<{

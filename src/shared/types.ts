@@ -227,6 +227,8 @@ export interface Scheduled {
   createdAt: string
   /** Programada del gasto que esta devolución reembolsa, si cuelga de otra. */
   refundForScheduledId: number | null
+  /** Plan de ahorro al que va este traspaso, cuando entra en una hucha. */
+  goalId: number | null
   /** Avisa el día antes. Se puede silenciar una sin callar las demás. */
   remind: boolean
   /** Fecha de la ocurrencia ya avisada; evita repetir el aviso en cada arranque. */
@@ -317,6 +319,41 @@ export interface Settlement {
 }
 
 /** Un hito de ahorro que acaba de llegar a su meta. */
+/**
+ * Cómo va una deuda a plazos: lo pagado, lo que queda y cuándo se acaba.
+ *
+ * Sale de la programación que genera las cuotas, no de un apunte aparte: la
+ * deuda existe porque hay un recibo que se repite hasta una fecha.
+ */
+export interface DebtProgress {
+  scheduledId: number
+  title: string
+  categoryName: string | null
+  categoryIcon: string | null
+  categoryColor: string | null
+  accountName: string
+  currency: string
+  /** Lo que se paga cada vez. */
+  installment: number
+  /** Cuántas cuotas se han pagado ya y cuánto suman. */
+  paidCount: number
+  paid: number
+  /** Cuántas quedan y cuánto suman, cuando hay fecha de fin. */
+  leftCount: number | null
+  left: number | null
+  /** El total del plan: lo pagado más lo que queda. */
+  total: number | null
+  percent: number | null
+  firstDate: string | null
+  nextDate: string
+  endDate: string | null
+  /** Días hasta la última cuota; negativo si ya pasó. */
+  daysLeft: number | null
+  /** Terminada: ya no genera cuotas. */
+  settled: boolean
+  settledAt: string | null
+}
+
 export interface GoalReached {
   id: number
   title: string

@@ -5,7 +5,7 @@ import { useStore, usePreferredAccountId } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
 import { today, formatDate } from '@shared/dates'
 import { formatMoney } from '@shared/money'
-import type { Attachment, TransactionView, TxType } from '@shared/types'
+import type { Attachment, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -27,6 +27,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? preferredAccountId
   )
   const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
+  const [goalId, setGoalId] = useState<number | null>(existing?.goalId ?? null)
+  const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(
     existing?.categoryId ?? refundFor?.categoryId ?? null
   )
@@ -108,6 +110,28 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
   }, [type, accountId, toAccountId])
 
+  /**
+   * A dónde va el dinero, cuando es una hucha con planes por llenar.
+   *
+   * Solo entonces tiene sentido preguntar para qué es: meter dinero en la cuenta
+   * corriente no es ahorrar, y una hucha sin planes no tiene a quién dárselo.
+   */
+  const destino = accounts.find((item) => item.id === toAccountId)
+  const planes = goals.filter(
+    (goal) => !goal.achievedAt && goal.accountId === toAccountId && goal.missing > 0
+  )
+  const hucha = type === 'transfer' && destino?.type === 'savings' && planes.length > 0
+
+  useEffect(() => {
+    api.goals.progress().then(setGoals).catch(() => undefined)
+  }, [])
+
+  // Cambiar de destino deja huérfano el plan elegido: era de la otra hucha.
+  useEffect(() => {
+    setGoalId((current) => (current && planes.some((goal) => goal.id === current) ? current : null))
+    // Con la lista de planes basta: cambia cuando cambia el destino.
+  }, [toAccountId, goals])
+
 
   useEffect(() => {
     if (!existing) return
@@ -164,6 +188,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           time: time || null,
           accountId,
           toAccountId: type === 'transfer' ? toAccountId : null,
+          goalId: hucha ? goalId : null,
           categoryId: type === 'transfer' ? null : categoryId,
           amount,
           note: note || null,
@@ -319,6 +344,26 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
             </Field>
           )}
         </div>
+
+        {/* Meter dinero en la hucha y decidir para qué es suelen ser el mismo
+            gesto. Sin elegir plan se queda como ahorro libre, que es lo que pasa
+            si no se dice nada: el reparto no se hace solo. */}
+        {hucha && (
+          <Field label="¿A qué plan?">
+            <select
+              className="select"
+              value={goalId ?? ''}
+              onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Ahorro libre · sin asignar</option>
+              {planes.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.name} · le faltan {formatMoney(goal.missing, settings.baseCurrency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         {type === 'transfer' && (
           <Field label="Fecha">

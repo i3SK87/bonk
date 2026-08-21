@@ -16,7 +16,7 @@ import {
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { formatDate, relativeDays, today } from '@shared/dates'
-import type { Frequency, ScheduledView, TxType } from '@shared/types'
+import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -352,6 +352,8 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
   const [amount, setAmount] = useState(schedule?.amount ?? 0)
   const [accountId, setAccountId] = useState(schedule?.accountId ?? preferredAccountId)
   const [toAccountId, setToAccountId] = useState<number | null>(schedule?.toAccountId ?? null)
+  const [goalId, setGoalId] = useState<number | null>(schedule?.goalId ?? null)
+  const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(schedule?.categoryId ?? null)
   const [freq, setFreq] = useState<Frequency>(schedule?.freq ?? 'monthly')
   const [interval, setInterval] = useState(schedule?.interval ?? 1)
@@ -368,6 +370,25 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  /**
+   * Apartar lo mismo cada mes para el mismo plan es una decisión que se toma una
+   * vez: aquí se dice, y cada vez que la programada entra el dinero va a su sitio.
+   */
+  const destino = accounts.find((item) => item.id === toAccountId)
+  const planes = goals.filter(
+    (goal) => !goal.achievedAt && goal.accountId === toAccountId && goal.missing > 0
+  )
+  const hucha = type === 'transfer' && destino?.type === 'savings' && planes.length > 0
+
+  useEffect(() => {
+    api.goals.progress().then(setGoals).catch(() => undefined)
+  }, [])
+
+  useEffect(() => {
+    setGoalId((current) => (current && planes.some((goal) => goal.id === current) ? current : null))
+    // Basta con la lista: cambia cuando cambia el destino.
+  }, [toAccountId, goals])
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
@@ -395,7 +416,8 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
       autoPost,
       remind,
       active: schedule?.active ?? true,
-      refundForScheduledId: type === 'refund' ? refundForScheduledId : null
+      refundForScheduledId: type === 'refund' ? refundForScheduledId : null,
+      goalId: hucha ? goalId : null
     })
     if (saved) onClose()
   }
@@ -506,6 +528,25 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
             </Field>
           )}
         </div>
+
+        {/* Como en un traspaso suelto: sin elegir plan, el dinero entra como ahorro
+            libre; con uno elegido, cada vez que la programada pase sube su reserva. */}
+        {hucha && (
+          <Field label="¿A qué plan?">
+            <select
+              className="select"
+              value={goalId ?? ''}
+              onChange={(e) => setGoalId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Ahorro libre · sin asignar</option>
+              {planes.map((goal) => (
+                <option key={goal.id} value={goal.id}>
+                  {goal.name} · le faltan {formatMoney(goal.missing, settings.baseCurrency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         <Field label="Repetición">
           <div className="row tight">

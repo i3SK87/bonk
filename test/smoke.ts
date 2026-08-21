@@ -548,8 +548,18 @@ try {
   check('y queda sellada como terminada', saldada.settledAt != null, String(saldada.settledAt))
 
   const resumen = scheduled.debtSummary(plazos.id)
-  equal('el resumen cuenta las cuotas pagadas', resumen.count, 2)
-  equal('y suma lo que ha costado', resumen.total, 3998)
+  // Tres y no dos: además de las dos cuotas que ha generado el plan, cuenta el
+  // pago de «Kindle» de más arriba, anterior a la programación. Es lo que se
+  // busca: una deuda casi siempre viene de antes de apuntarla aquí, y esos pagos
+  // son tan suyos como los que genera la aplicación.
+  equal('el resumen cuenta también lo pagado antes de programarla', resumen.count, 3)
+  equal('y suma lo que ha costado', resumen.total, 6998)
+  // La devolución de «Kindle» no cuenta: devolver no es pagar.
+  check(
+    'una devolución de la misma nota no cuenta como pago',
+    resumen.total === 6998,
+    `sumó ${resumen.total}`
+  )
   equal('sabe desde cuándo se pagaba', resumen.firstDate, addMonths(day, -1))
 
   // Pausar no es terminar: apaga, pero no sella.
@@ -983,7 +993,11 @@ try {
     accountId: alcancia.id,
     amount: 400
   })
-  check('volver a llegar vuelve a celebrarse', alcanzado())
+  // El dinero vuelve, pero la reserva no resucita sola: al sacarlo se recortó, y
+  // repartirlo otra vez es una decisión que toma quien lo reparte.
+  check('reponer el dinero no lo devuelve al plan', !alcanzado())
+  goals.setGoalReserves([{ id: meta.id, amount: 1000 }])
+  check('volver a repartirlo vuelve a celebrarse', alcanzado())
   goals.markGoalReached(meta.id)
   transactions.deleteTransactions([fuga.id])
 
@@ -999,7 +1013,8 @@ try {
     accountId: alcancia.id,
     amount: 1000
   })
-  check('y al reponerlos vuelve a saltar', alcanzado())
+  goals.setGoalReserves([{ id: meta.id, amount: 1000 }])
+  check('y al reponerlos y repartirlos vuelve a saltar', alcanzado())
   goals.markGoalReached(meta.id)
 
   // El que se da por conseguido a mano no necesita fuegos artificiales: ya se ha

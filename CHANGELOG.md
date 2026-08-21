@@ -3,6 +3,23 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.25.0
+
+- **Pestaña Deudas.** Solo para mirar: lo que te queda por pagar de todo, y por
+  cada deuda el porcentaje con su barra, lo pagado sobre el total, las cuotas
+  hechas y las que faltan, cuándo se acaba y desde cuándo la pagas. Las saldadas,
+  en su propia lista.
+- **Lo pagado cuenta también lo de antes de programarla.** Una deuda casi siempre
+  viene de atrás, y esos recibos no llevan la marca de la programación: ahora
+  cuentan los gastos de su misma categoría y su misma nota. Una devolución no
+  cuenta como pago.
+- **Si vacías la hucha, los mandos vuelven a cero.** Reservar no crea dinero: lo
+  apartado se recorta a lo que hay. Al reponerlo entra como ahorro libre y lo
+  repartes tú, que es lo que decidiste al repartirlo la primera vez.
+- **Vuelve el «¿A qué plan?» al traspasar a una hucha**, ahora con «Ahorro libre»
+  como opción. Y también en las programadas: apartar sesenta euros al mes para el
+  viaje se decide una vez.
+
 ## Novedades de la 1.24.0
 
 - **Una cuenta principal por tipo, y la marca vive en la cuenta.** Había una

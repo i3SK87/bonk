@@ -9,6 +9,7 @@ import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
 import { GoalsView } from './views/Goals'
 import { SchedulesView } from './views/Schedules'
+import { DebtsView } from './views/Debts'
 import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
@@ -21,6 +22,7 @@ type ViewId =
   | 'categories'
   | 'goals'
   | 'schedules'
+  | 'debts'
   | 'reports'
   | 'settings'
 
@@ -31,6 +33,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
   { id: 'schedules', label: 'Programados', icon: 'calendar' },
   { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
+  { id: 'debts', label: 'Deudas', icon: 'debt' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
@@ -42,6 +45,7 @@ const TITLES: Record<ViewId, string> = {
   accounts: 'Cuentas',
   categories: 'Categorías',
   goals: 'Planes Ahorro',
+  debts: 'Deudas',
   schedules: 'Movimientos programados',
   reports: 'Informes',
   settings: 'Ajustes'
@@ -163,6 +167,7 @@ export function App(): ReactNode {
             {view === 'accounts' && <AccountsView />}
             {view === 'categories' && <CategoriesView />}
             {view === 'goals' && <GoalsView />}
+            {view === 'debts' && <DebtsView />}
             {view === 'schedules' && <SchedulesView />}
             {view === 'reports' && <ReportsView />}
             {view === 'settings' && <SettingsView />}

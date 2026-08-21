@@ -428,5 +428,14 @@ export const MIGRATIONS: string[] = [
      AND id NOT IN (
            SELECT MIN(id) FROM accounts WHERE is_primary = 1 GROUP BY type
          );
+  `,
+
+  // v16 — la programada sabe a qué plan va.
+  //
+  // Un traspaso suelto a la hucha ya podía decir para qué plan era; el que se
+  // repite cada mes, no, y es justo el que más sentido tiene: apartar sesenta
+  // euros al mes para el viaje es una decisión que se toma una vez.
+  `
+  ALTER TABLE scheduled ADD COLUMN goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
   `
 ]
