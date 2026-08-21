@@ -62,6 +62,11 @@ export interface Category {
   keepsInvoices: boolean
   /** Deuda a plazos: sus programaciones se finalizan en vez de pausarse. */
   isDebt: boolean
+  /**
+   * Lo que vuelve solo —suscripciones, recibos, el alquiler—: al apuntar un
+   * movimiento suyo se propone dejar montada la repetición.
+   */
+  recurring: boolean
 }
 
 export interface Tag {

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { ScheduleModal } from './Schedules'
 import { useStore } from '../lib/store'
 import {
   Avatar,
@@ -11,6 +12,7 @@ import {
   NumberInput
 } from '../components/ui'
 import { Icon } from '../components/Icon'
+import { AccionCabecera } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { findLender } from '@shared/lenders'
 import { formatDate } from '@shared/dates'
@@ -39,10 +41,17 @@ function espera(days: number): string {
 }
 
 export function DebtsView(): ReactNode {
-  const { settings, revision, fail } = useStore()
+  const { settings, categories, revision, fail, run } = useStore()
   const [debts, setDebts] = useState<DebtProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [adjusting, setAdjusting] = useState<DebtProgress | null>(null)
+  const [creando, setCreando] = useState(false)
+
+  // Una deuda es una programación con categoría de deuda, así que el botón abre
+  // esa misma ficha con la categoría ya elegida. Sin ninguna categoría marcada
+  // como deuda no hay nada que crear, y el cartel de vacío ya lo explica.
+  const categoriaDeuda = categories.find((item) => item.isDebt && !item.archived)
+
 
   useEffect(() => {
     setLoading(true)
@@ -67,6 +76,15 @@ export function DebtsView(): ReactNode {
 
   return (
     <>
+      {categoriaDeuda && (
+        <AccionCabecera>
+          <button className="btn primary" onClick={() => setCreando(true)}>
+            <Icon name="plus" size={16} strokeWidth={2.2} />
+            Nueva deuda
+          </button>
+        </AccionCabecera>
+      )}
+
       <div className="card flush">
         {!loading && abiertas.length > 0 && (
           <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
@@ -154,6 +172,16 @@ export function DebtsView(): ReactNode {
 
       {adjusting && (
         <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
+      )}
+
+      {creando && categoriaDeuda && (
+        <ScheduleModal
+          schedule={null}
+          siblings={[]}
+          defaultCategoryId={categoriaDeuda.id}
+          onClose={() => setCreando(false)}
+          onSave={(input) => run(() => api.scheduled.save(input), 'Deuda creada')}
+        />
       )}
     </>
   )

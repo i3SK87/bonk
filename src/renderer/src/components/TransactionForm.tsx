@@ -95,9 +95,12 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     setCategoryId(candidates.find((item) => item.id === id)?.categoryId ?? null)
   }
 
-  // Una deuda a plazos sin programación no sale en Deudas, así que ahí la
-  // repetición se ofrece con el interruptor ya puesto.
-  const esDeuda = categories.some((item) => item.id === categoryId && item.isDebt)
+  // Una deuda a plazos sin programación no sale en Deudas, y una suscripción
+  // apuntada a mano se olvida al mes siguiente: en las dos, la repetición se
+  // ofrece con el interruptor ya puesto.
+  const categoria = categories.find((item) => item.id === categoryId)
+  const esDeuda = categoria?.isDebt === true
+  const seRepiteSola = esDeuda || categoria?.recurring === true
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
@@ -131,8 +134,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
   // Al elegir una categoría de deuda se propone repetir; al salir de ella, se
   // recoge la propuesta si no se ha tocado nada.
   useEffect(() => {
-    if (!existing) setRepite(esDeuda)
-  }, [esDeuda, existing])
+    if (!existing) setRepite(seRepiteSola)
+  }, [seRepiteSola, existing])
 
   useEffect(() => {
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)

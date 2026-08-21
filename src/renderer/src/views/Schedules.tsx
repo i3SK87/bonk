@@ -322,16 +322,32 @@ export function SchedulesView(): ReactNode {
   )
 }
 
-interface ScheduleModalProps {
+/**
+ * La ficha de una programación.
+ *
+ * Se exporta porque Deudas la abre también: una deuda nueva no es más que una
+ * programación con una categoría de deuda, y montar allí un segundo formulario
+ * con los mismos campos sería tener dos sitios donde arreglar el mismo fallo.
+ */
+export interface ScheduleModalProps {
   schedule: ScheduledView | null
   /** El resto de programadas, para poder colgar una devolución de su gasto. */
   siblings: ScheduledView[]
+  /** Con qué categoría se abre una nueva, cuando quien la abre ya lo sabe. */
+  defaultCategoryId?: number | null
   onClose: () => void
   onSave: (input: unknown) => Promise<unknown>
   onDelete?: () => Promise<unknown>
 }
 
-function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: ScheduleModalProps): ReactNode {
+export function ScheduleModal({
+  schedule,
+  siblings,
+  defaultCategoryId,
+  onClose,
+  onSave,
+  onDelete
+}: ScheduleModalProps): ReactNode {
   const { accounts, categories, settings } = useStore()
   const preferredAccountId = usePreferredAccountId()
   const [type, setType] = useState<TxType>(schedule?.type ?? 'expense')
@@ -340,7 +356,9 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
   const [toAccountId, setToAccountId] = useState<number | null>(schedule?.toAccountId ?? null)
   const [goalId, setGoalId] = useState<number | null>(schedule?.goalId ?? null)
   const [goals, setGoals] = useState<GoalProgress[]>([])
-  const [categoryId, setCategoryId] = useState<number | null>(schedule?.categoryId ?? null)
+  const [categoryId, setCategoryId] = useState<number | null>(
+    schedule?.categoryId ?? defaultCategoryId ?? null
+  )
   const [lender, setLender] = useState(schedule?.lender ?? '')
   const [freq, setFreq] = useState<Frequency>(schedule?.freq ?? 'monthly')
   const [interval, setInterval] = useState(schedule?.interval ?? 1)

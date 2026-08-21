@@ -511,5 +511,21 @@ export const MIGRATIONS: string[] = [
   // tapa igual: diciéndolo.
   `
   ALTER TABLE scheduled ADD COLUMN debt_start_date TEXT;
+  `,
+
+  // v22 — categorías de lo que vuelve solo.
+  //
+  // Una suscripción no es un gasto suelto: es el primero de una serie, igual
+  // que una cuota. Marcada la categoría, el formulario de un movimiento nuevo
+  // propone montar la repetición sin que haya que acordarse.
+  //
+  // Va como marca de la categoría y no por su nombre, como `is_debt`: así
+  // renombrarla no rompe nada. A las que vienen de fábrica y son de suyo
+  // periódicas se les pone la marca de salida.
+  `
+  ALTER TABLE categories ADD COLUMN recurring INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE categories SET recurring = 1
+   WHERE name IN ('Suscripciones', 'Facturas', 'Alquiler', 'Seguros', 'Nómina');
   `
 ]

@@ -27,6 +27,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
   const [isDebt, setIsDebt] = useState(category?.isDebt ?? false)
+  const [recurring, setRecurring] = useState(category?.recurring ?? false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -48,7 +49,8 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       archived,
       breakdownByNote,
       keepsInvoices,
-      isDebt
+      isDebt,
+      recurring
     })
     if (saved) onClose()
   }
@@ -113,6 +115,13 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           onChange={setIsDebt}
           label="Es una deuda a plazos"
           hint="Sus programaciones se finalizan en vez de pausarse: si saldas la deuda antes de tiempo, esas cuotas ya no van a existir."
+        />
+
+        <Checkbox
+          checked={recurring}
+          onChange={setRecurring}
+          label="Vuelve sola cada cierto tiempo"
+          hint="Suscripciones, recibos, el alquiler: al apuntar un movimiento suyo se propone dejar montada la repetición."
         />
 
         <Checkbox
