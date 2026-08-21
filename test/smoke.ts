@@ -7,7 +7,7 @@
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { openDatabase, closeDatabase } from '../src/main/db'
+import { openDatabase, closeDatabase, getDb } from '../src/main/db'
 import * as accounts from '../src/main/repos/accounts'
 import * as categories from '../src/main/repos/categories'
 import * as transactions from '../src/main/repos/transactions'
@@ -828,7 +828,31 @@ try {
   equal('con su título', celebrado.title, 'Un teclado')
   equal('y lo juntado es la meta', celebrado.total, 1000)
   goals.markGoalReached(meta.id)
-  check('y no se repite después', !alcanzado())
+  check('y no se repite mientras el dinero siga ahí', !alcanzado())
+
+  // Sacar el dinero deshace el hito, y volver a juntarlo vuelve a costar lo
+  // mismo: la marca dice «ya celebrado mientras siga ahí», no «para siempre».
+  const fuga = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: alcancia.id,
+    amount: 400
+  })
+  check('sacar el dinero desarma la enhorabuena', !alcanzado())
+  equal(
+    'y la marca queda quitada de verdad',
+    (getDb().prepare('SELECT reached_notified AS n FROM goals WHERE id = ?').get(meta.id) as { n: number }).n,
+    0
+  )
+  transactions.saveTransaction({
+    type: 'income',
+    date: day,
+    accountId: alcancia.id,
+    amount: 400
+  })
+  check('volver a llegar vuelve a celebrarse', alcanzado())
+  goals.markGoalReached(meta.id)
+  transactions.deleteTransactions([fuga.id])
 
   // El que se da por conseguido a mano no necesita fuegos artificiales: ya se ha
   // celebrado en ese mismo gesto.

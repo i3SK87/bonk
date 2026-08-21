@@ -216,7 +216,7 @@ export function Celebration({
  * El hito de ahorro que acaba de llegar a su meta.
  *
  * Se celebra por lo mismo que una deuda saldada: es el final de algo que ha
- * costado meses. Cambia la cuenta que se echa —lo juntado y desde cuándo, en vez
+ * costado meses. Cambia la cuenta que se echa —lo ahorrado y desde cuándo, en vez
  * de las cuotas pagadas— y, si había fecha, si se ha llegado antes de tiempo,
  * que es la mitad de la gracia.
  */
@@ -240,11 +240,11 @@ export function GoalCelebration({
       title={`¡${goal.title} conseguido!`}
       lede={
         days != null && days > 0
-          ? `Ya está juntado, y con ${days} ${days === 1 ? 'día' : 'días'} de adelanto. El dinero te espera en ${goal.accountName}.`
-          : `Ya está juntado. El dinero te espera en ${goal.accountName}.`
+          ? `Ya está ahorrado, y con ${days} ${days === 1 ? 'día' : 'días'} de adelanto. El dinero te espera en ${goal.accountName}.`
+          : `Ya está ahorrado. El dinero te espera en ${goal.accountName}.`
       }
       stats={[
-        { value: formatMoney(goal.total, goal.currency), label: 'juntado' },
+        { value: formatMoney(goal.total, goal.currency), label: 'ahorrado' },
         { value: duration, label: `desde ${monthOf(goal.since)}` },
         {
           value: days == null ? '—' : days > 0 ? `${days} d` : days === 0 ? 'hoy' : `+${Math.abs(days)} d`,

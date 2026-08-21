@@ -117,6 +117,10 @@ export function setGoalAchieved(id: number, achieved: boolean, reference = today
   getDb()
     .prepare('UPDATE goals SET achieved_at = ? WHERE id = ?')
     .run(bind(achieved ? reference : null), id)
+  // Darlo por conseguido a mano cuenta como celebrarlo: si no, quitarle el sello
+  // estando ya cubierto soltaría el confeti de golpe. Al quitarlo no se toca la
+  // marca: si de verdad se ha quedado corto, «pendingGoals» la desarma sola.
+  if (achieved) markGoalReached(id)
   return getGoal(id)!
 }
 
@@ -161,6 +165,11 @@ function monthlyPace(accountId: number, reference: string): number {
  *
  * Solo los que llegan por su propio pie: el que se sella a mano ya se da por
  * conseguido en ese gesto y no necesita fuegos artificiales.
+ *
+ * De paso desarma los que se han quedado por debajo. Sacar el dinero de la
+ * hucha deshace el hito, y volver a juntarlo vuelve a costar lo mismo, así que
+ * vuelve a merecer su enhorabuena: la marca dice «ya celebrado mientras siga
+ * ahí», no «celebrado para siempre».
  */
 export function pendingGoals(reference = today()): GoalReached[] {
   const marked = new Set(
@@ -171,7 +180,16 @@ export function pendingGoals(reference = today()): GoalReached[] {
     ).map((row) => row.id)
   )
   const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
-  return goalProgress(reference)
+  const progress = goalProgress(reference)
+
+  for (const goal of progress) {
+    if (marked.has(goal.id) && goal.status !== 'complete' && goal.status !== 'achieved') {
+      clearGoalReached(goal.id)
+      marked.delete(goal.id)
+    }
+  }
+
+  return progress
     .filter((goal) => goal.status === 'complete' && !marked.has(goal.id))
     .map((goal) => ({
       id: goal.id,
@@ -184,9 +202,14 @@ export function pendingGoals(reference = today()): GoalReached[] {
     }))
 }
 
-/** Una sola enhorabuena por hito, aunque el saldo suba y baje después. */
+/** Celebrado: no se repite mientras el dinero siga en su sitio. */
 export function markGoalReached(id: number): void {
   getDb().prepare('UPDATE goals SET reached_notified = 1 WHERE id = ?').run(id)
+}
+
+/** Y vuelta a empezar cuando el hito se deshace. */
+export function clearGoalReached(id: number): void {
+  getDb().prepare('UPDATE goals SET reached_notified = 0 WHERE id = ?').run(id)
 }
 
 export function goalProgress(reference = today()): GoalProgress[] {
