@@ -450,6 +450,16 @@ export function debtProgress(reference = today()): DebtProgress[] {
       accountName: debt.accountName,
       currency: debt.accountCurrency,
       installment: debt.amount,
+      cadence:
+        debt.interval !== 1
+          ? 'cuota'
+          : debt.freq === 'daily'
+            ? 'día'
+            : debt.freq === 'weekly'
+              ? 'semana'
+              : debt.freq === 'monthly'
+                ? 'mes'
+                : 'año',
       paidCount,
       paid,
       paidBySoftware: summary.total,

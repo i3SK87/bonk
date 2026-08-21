@@ -364,6 +364,11 @@ export interface DebtProgress {
   currency: string
   /** Lo que se paga cada vez. */
   installment: number
+  /**
+   * Cada cuánto se paga, para poder decir «29,75 €/mes». Cuando la repetición no
+   * cae en una palabra —cada dos meses—, vale «cuota», que nunca miente.
+   */
+  cadence: string
   /** Cuántas cuotas se han pagado ya y cuánto suman, con lo de antes incluido. */
   paidCount: number
   paid: number

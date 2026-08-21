@@ -200,7 +200,7 @@ function DebtCard({
                 dónde sale y entre qué fechas va. El «cada vez» sobraba —en una deuda
                 a plazos no hay otra cosa que pueda ser— y los años, en dos cifras:
                 nadie lee una deuda del siglo pasado. */}
-            {formatMoney(debt.installment, currency)}/cuota · {debt.accountName}
+            {formatMoney(debt.installment, currency)}/{debt.cadence} · {debt.accountName}
             {debt.endDate
               ? ` · ${debt.firstDate ? `${sinSiglo(debt.firstDate)} → ` : 'hasta '}${sinSiglo(debt.endDate)}`
               : debt.firstDate
