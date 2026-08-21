@@ -90,7 +90,6 @@ export function GoalsView(): ReactNode {
     <>
       <div className="card">
         <div className="card-header">
-          <h2>Planes de ahorro</h2>
           <span className="small muted">
             Lo que no repartas entre tus planes se queda como ahorro libre.
           </span>

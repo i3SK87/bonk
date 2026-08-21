@@ -67,10 +67,6 @@ export function DebtsView(): ReactNode {
   return (
     <>
       <div className="card flush">
-        <div className="card-header">
-          <h2>Deudas</h2>
-        </div>
-
         {!loading && abiertas.length > 0 && (
           <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="networth">

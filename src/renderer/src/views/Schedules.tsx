@@ -137,7 +137,6 @@ export function SchedulesView(): ReactNode {
 
       <div className="card flush">
         <div className="card-header">
-          <h2>Programados</h2>
           <span className="small muted">Recibos, nóminas y cuotas que se repiten.</span>
           <div className="spacer" />
           <button className="btn primary small" onClick={() => setCreating(true)}>

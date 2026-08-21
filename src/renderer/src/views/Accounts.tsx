@@ -49,7 +49,7 @@ export function AccountsView(): ReactNode {
           aire ya separan, y la retícula pesaba más que los datos. */}
       <div className="card flush">
         <div className="card-header">
-          <h2>Tus cuentas</h2>
+          <div className="spacer" />
           <button className="btn primary small" onClick={() => setCreating(true)}>
             <Icon name="plus" size={15} strokeWidth={2.2} />
             Nueva cuenta
