@@ -3,6 +3,19 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.15.1
+
+- **La cuenta principal viene elegida al abrir.** Es la que se mira, así que la
+  cifra grande dice de entrada lo que hay ahí y no el total repartido entre
+  huchas. Se quita pulsándola, y entonces vuelve el patrimonio de todas. Las
+  programadas previstas siguen saliendo con una cuenta elegida: antes se
+  apagaban, ahora se filtran por ella.
+- **El aviso de saldo va al grano**: «CaixaBank se está quedando sin fondos», o
+  «se ha quedado sin fondos» cuando ya está en números rojos, que ese sube el
+  tono para que se note. Estar 400 € por debajo del límite no es «quedándose».
+- **La guía que une un gasto con su devolución respira igual por los dos cabos.**
+  Arrancaba pegada al icono de arriba y moría rozando el de abajo.
+
 ## Novedades de la 1.15.0
 
 - **La cifra grande sigue a la cuenta que elijas.** Con mil euros apartados en la
