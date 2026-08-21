@@ -1,5 +1,5 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
-import { convert } from '@shared/money'
+import { convert, parseAmount } from '@shared/money'
 import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
@@ -165,13 +165,29 @@ function buildWhere(filter: TransactionFilter): { sql: string; params: Array<str
     params.push(filter.maxAmount)
   }
   if (filter.search?.trim()) {
-    const needle = `%${filter.search.trim()}%`
-    clauses.push(
-      `(t.payee LIKE ? OR t.note LIKE ? OR t.place LIKE ? OR c.name LIKE ? OR a.name LIKE ?
-        OR t.id IN (SELECT tt.transaction_id FROM transaction_tags tt
-                      JOIN tags g ON g.id = tt.tag_id WHERE g.name LIKE ?))`
-    )
+    const text = filter.search.trim()
+    const needle = `%${text}%`
+    const parts = [
+      't.payee LIKE ?',
+      't.note LIKE ?',
+      't.place LIKE ?',
+      'c.name LIKE ?',
+      'a.name LIKE ?',
+      `t.id IN (SELECT tt.transaction_id FROM transaction_tags tt
+                 JOIN tags g ON g.id = tt.tag_id WHERE g.name LIKE ?)`
+    ]
     params.push(needle, needle, needle, needle, needle, needle)
+
+    // Buscar «9,17» encuentra lo que costó 9,17 €. Se lee con los decimales de
+    // la divisa base, que es como se escriben los importes en la lista, y sin
+    // millares: se busca una cifra concreta, no un texto. El signo sobra, que
+    // los importes se guardan siempre en positivo.
+    const typed = parseAmount(text, getSettings().baseCurrency, { grouping: false })
+    if (typed != null && typed !== 0) {
+      parts.push('t.amount = ?', 't.amount_to = ?')
+      params.push(Math.abs(typed), Math.abs(typed))
+    }
+    clauses.push(`(${parts.join(' OR ')})`)
   }
 
   return { sql: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '', params }

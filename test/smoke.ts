@@ -845,6 +845,36 @@ try {
     huerfanos.length > 0 && huerfanos.every((row) => row.categoryId == null),
     `devolvió ${huerfanos.length}`
   )
+
+  // El buscador también entiende cifras: buscar «9,17» saca lo que costó eso, que
+  // muchas veces es lo único que se recuerda de un gasto.
+  const conImporte = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: transactions.listTransactions({ limit: 1 })[0].accountId,
+    amount: 917,
+    note: 'Sin nada que buscar por texto'
+  })
+  const porImporte = transactions.listTransactions({ search: '9,17' })
+  check(
+    'busca por el importe escrito con coma',
+    porImporte.some((row) => row.id === conImporte.id),
+    `devolvió ${porImporte.length}`
+  )
+  check(
+    'y con punto, que es el mismo importe',
+    transactions.listTransactions({ search: '9.17' }).some((row) => row.id === conImporte.id)
+  )
+  check(
+    'un importe que no existe no devuelve nada',
+    transactions.listTransactions({ search: '9,18' }).every((row) => row.id !== conImporte.id)
+  )
+  // Y sigue buscando texto, que es lo que hacía antes.
+  check(
+    'el texto sigue encontrándose',
+    transactions.listTransactions({ search: 'nada que buscar' }).some((row) => row.id === conImporte.id)
+  )
+  transactions.deleteTransactions([conImporte.id])
   check(
     'y no cuela los traspasos, que nunca la llevan',
     huerfanos.every((row) => row.type !== 'transfer')

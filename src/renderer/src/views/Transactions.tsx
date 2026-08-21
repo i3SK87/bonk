@@ -5,7 +5,8 @@ import { Icon } from '../components/Icon'
 import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { CalculatorButton } from '../components/Calculator'
-import { formatMoney } from '@shared/money'
+import { formatMoney, parseAmount } from '@shared/money'
+import { byName } from '@shared/text'
 import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading } from '@shared/dates'
 import type { ProjectedTransaction, TransactionFilter, TransactionView, TxType } from '@shared/types'
 
@@ -59,9 +60,18 @@ function nestRefunds(list: TransactionView[]): Array<{ row: TransactionView; nes
 function matchesSearch(row: ProjectedTransaction, needle: string): boolean {
   const text = needle.trim().toLowerCase()
   if (!text) return true
-  return [row.name, row.payee, row.note, row.categoryName, row.accountName, row.toAccountName].some(
-    (field) => field?.toLowerCase().includes(text)
-  )
+  const found = [
+    row.name,
+    row.payee,
+    row.note,
+    row.categoryName,
+    row.accountName,
+    row.toAccountName
+  ].some((field) => field?.toLowerCase().includes(text))
+  if (found) return true
+  // Y por el importe, igual que la consulta.
+  const typed = parseAmount(text, row.accountCurrency, { grouping: false })
+  return typed != null && Math.abs(typed) === row.amount
 }
 
 /** Lo mismo con las previsiones: la devolución programada cuelga de su gasto. */
@@ -248,6 +258,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   // La búsqueda no cuenta: tiene su propia aspa dentro del campo y se quita
   // desde ahí, así que «Limpiar» no debe llevársela por delante.
+  // En el panel no hay nada que separe los ingresos de los gastos, así que el
+  // orden por tipo que trae la lista aquí se lee como desorden: alfabético y ya.
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => byName.compare(a.name, b.name)),
+    [categories]
+  )
+
   const activeFilters = types.length + accountIds.length + categoryIds.length + (uncategorized ? 1 : 0)
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
@@ -489,7 +506,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 Categorías
               </div>
               <div className="chip-row">
-                {categories.map((category) => (
+                {sortedCategories.map((category) => (
                   <button
                     key={category.id}
                     className={`btn small${categoryIds.includes(category.id) ? ' primary' : ''}`}

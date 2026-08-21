@@ -1,5 +1,6 @@
 import { getDb } from '../db'
 import type { Category, CategoryKind } from '@shared/types'
+import { byName } from '@shared/text'
 
 interface CategoryRow {
   id: number
@@ -31,8 +32,6 @@ function mapCategory(row: CategoryRow): Category {
   }
 }
 
-/** Ordena como se lee en español: la ñ y los acentos en su sitio, sin distinguir mayúsculas. */
-const byName = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
 
 export function listCategories(includeArchived = false): Category[] {
   const where = includeArchived ? '' : 'WHERE archived = 0'
