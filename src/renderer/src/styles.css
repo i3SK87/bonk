@@ -1171,6 +1171,17 @@ p { margin: 0; }
 
 /* ---------- Píldoras y etiquetas ---------- */
 
+/* El logotipo de quién cobra una deuda, dentro de su etiqueta: cuadrado y del
+   alto del texto, que es lo que lo hace leerse como una marca y no como una
+   imagen metida a la fuerza. */
+.pill img {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  object-fit: contain;
+  flex: none;
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

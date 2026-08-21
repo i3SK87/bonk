@@ -467,5 +467,14 @@ export const MIGRATIONS: string[] = [
   ALTER TABLE scheduled ADD COLUMN debt_paid_count INTEGER;
   ALTER TABLE scheduled ADD COLUMN debt_last_amount INTEGER;
   ALTER TABLE scheduled DROP COLUMN debt_paid_before;
+  `,
+
+  // v19 — quién cobra la deuda.
+  //
+  // Se guarda el identificador de la financiera y no su nombre: los nombres se
+  // escriben de diez maneras («seQura», «SeQura», «Sequra») y luego no agrupan.
+  // La lista de cuáles hay vive en el código, en shared/lenders.
+  `
+  ALTER TABLE scheduled ADD COLUMN lender TEXT;
   `
 ]

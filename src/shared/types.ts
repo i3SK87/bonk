@@ -237,6 +237,8 @@ export interface Scheduled {
   debtPaidCount: number | null
   /** La última cuota, cuando es más corta que las demás. */
   debtLastAmount: number | null
+  /** Quién cobra la deuda, de la lista de shared/lenders. */
+  lender: string | null
   /**
    * El total de verdad de la deuda, cuando no sale de multiplicar la cuota por
    * las veces: la última suele ser más corta.
@@ -374,6 +376,8 @@ export interface DebtProgress {
   fixedTotal: number | null
   /** La última cuota, si se ha dicho que es más corta. */
   lastInstallment: number | null
+  /** Quién la cobra, de la lista de shared/lenders. */
+  lender: string | null
   percent: number | null
   firstDate: string | null
   nextDate: string

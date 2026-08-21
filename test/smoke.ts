@@ -18,6 +18,7 @@ import * as settings from '../src/main/repos/settings'
 import * as tags from '../src/main/repos/tags'
 import * as csv from '../src/main/repos/csv'
 import type { DebtProgress } from '../src/shared/types'
+import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
@@ -633,6 +634,27 @@ try {
   scheduled.adjustDebt(corta.id, { lastAmount: 0 })
   equal('a cero, vuelve a ser una cuota como las demás', verCorta().left, 30000)
   check('y deja de haber última corta', verCorta().lastInstallment === null)
+  // Quién cobra: viaja con la programación y se ve en la deuda.
+  scheduled.saveScheduled({
+    id: corta.id,
+    type: 'expense',
+    accountId: bank.id,
+    categoryId: deuda ? deuda.id : food.id,
+    amount: 10000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: day,
+    endDate: addMonths(day, 2),
+    autoPost: false,
+    lender: 'sequra'
+  })
+  equal('quién cobra la deuda se guarda', verCorta().lender, 'sequra')
+  equal('y se sabe de quién se habla', findLender(verCorta().lender)!.name, 'SeQura')
+  check(
+    'los logotipos van dentro del programa, sin pedir nada a Internet',
+    LENDERS.every((item) => item.logo.startsWith('data:'))
+  )
+
   scheduled.deleteScheduled(corta.id)
 
   // Pausar no es terminar: apaga, pero no sella.

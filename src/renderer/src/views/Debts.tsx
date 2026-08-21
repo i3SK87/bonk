@@ -12,6 +12,7 @@ import {
 } from '../components/ui'
 import { Icon } from '../components/Icon'
 import { formatMoney } from '@shared/money'
+import { findLender } from '@shared/lenders'
 import { formatDate } from '@shared/dates'
 import type { DebtProgress } from '@shared/types'
 
@@ -170,6 +171,7 @@ function DebtCard({
   onAdjust: () => void
 }): ReactNode {
   const color = debt.categoryColor ?? '#FF453A'
+  const quienCobra = findLender(debt.lender)
 
   return (
     <div>
@@ -182,6 +184,12 @@ function DebtCard({
             </span>
             {debt.categoryName && debt.categoryName !== debt.title && (
               <span className="pill">{debt.categoryName}</span>
+            )}
+            {quienCobra && (
+              <span className="pill">
+                <img src={quienCobra.logo} alt="" />
+                {quienCobra.name}
+              </span>
             )}
           </div>
           <div className="small muted truncate">

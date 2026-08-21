@@ -15,6 +15,7 @@ import {
   Loading
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
+import { LENDERS } from '@shared/lenders'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
 
@@ -355,6 +356,7 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
   const [goalId, setGoalId] = useState<number | null>(schedule?.goalId ?? null)
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(schedule?.categoryId ?? null)
+  const [lender, setLender] = useState(schedule?.lender ?? '')
   const [freq, setFreq] = useState<Frequency>(schedule?.freq ?? 'monthly')
   const [interval, setInterval] = useState(schedule?.interval ?? 1)
   const [nextDate, setNextDate] = useState(schedule?.nextDate ?? today())
@@ -392,6 +394,9 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
+  // Quién cobra solo tiene sentido en una deuda: en la compra del súper no hay
+  // financiera que valga, y el campo sobraría en el noventa por ciento del uso.
+  const esDeuda = categories.some((item) => item.id === categoryId && item.isDebt)
   const visibleCategories = categories.filter(
     (category) => category.kind === (type === 'income' ? 'income' : 'expense')
   )
@@ -417,7 +422,8 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
       remind,
       active: schedule?.active ?? true,
       refundForScheduledId: type === 'refund' ? refundForScheduledId : null,
-      goalId: hucha ? goalId : null
+      goalId: hucha ? goalId : null,
+      lender: esDeuda ? lender || null : null
     })
     if (saved) onClose()
   }
@@ -528,6 +534,22 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
             </Field>
           )}
         </div>
+
+        {/* Quién cobra se ve luego como etiqueta en Deudas, que es donde se busca:
+            «el PC» son dos años de cuotas, y lo que se recuerda es que las cobra
+            Aplázame. Opcional, que no todas las deudas son de una financiera. */}
+        {esDeuda && (
+          <Field label="Quién la cobra" hint="Opcional.">
+            <select className="select" value={lender} onChange={(e) => setLender(e.target.value)}>
+              <option value="">Sin especificar</option>
+              {LENDERS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
 
         {/* Como en un traspaso suelto: sin elegir plan, el dinero entra como ahorro
             libre; con uno elegido, cada vez que la programada pase sube su reserva. */}

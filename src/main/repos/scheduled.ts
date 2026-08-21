@@ -36,6 +36,7 @@ interface ScheduledRow {
   goal_id: number | null
   debt_paid_count: number | null
   debt_last_amount: number | null
+  lender: string | null
   debt_total: number | null
   remind: number
   reminded_for: string | null
@@ -76,6 +77,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     goalId: row.goal_id,
     debtPaidCount: row.debt_paid_count,
     debtLastAmount: row.debt_last_amount,
+    lender: row.lender,
     debtTotal: row.debt_total,
     remind: row.remind === 1,
     remindedFor: row.reminded_for,
@@ -140,6 +142,8 @@ export interface ScheduledInput {
   refundForScheduledId?: number | null
   /** Plan de ahorro al que va, cuando es un traspaso que entra en una hucha. */
   goalId?: number | null
+  /** Quién cobra, cuando es una deuda. */
+  lender?: string | null
   remind?: boolean
 }
 
@@ -169,7 +173,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       `UPDATE scheduled
           SET name = ?, type = ?, account_id = ?, to_account_id = ?, category_id = ?, amount = ?,
               amount_to = ?, payee = ?, note = ?, freq = ?, interval = ?, next_date = ?, end_date = ?,
-              auto_post = ?, active = ?, refund_for_scheduled_id = ?, goal_id = ?, remind = ?
+              auto_post = ?, active = ?, refund_for_scheduled_id = ?, goal_id = ?, remind = ?,
+              lender = ?
         WHERE id = ?`
     ).run(
       bind(input.name?.trim() || null),
@@ -190,6 +195,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(refundForScheduledId),
       bind(goalId),
       input.remind === false ? 0 : 1,
+      bind(input.lender?.trim() || null),
       input.id
     )
     return getScheduled(input.id)!
@@ -199,8 +205,9 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
     .prepare(
       `INSERT INTO scheduled
          (name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
-          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, goal_id, remind)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, goal_id, remind,
+          lender)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       bind(input.name?.trim() || null),
@@ -221,7 +228,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       nowISO(),
       bind(refundForScheduledId),
       bind(goalId),
-      input.remind === false ? 0 : 1
+      input.remind === false ? 0 : 1,
+      bind(input.lender?.trim() || null)
     )
   return getScheduled(Number(result.lastInsertRowid))!
 }
@@ -431,6 +439,7 @@ export function debtProgress(reference = today()): DebtProgress[] {
       total,
       fixedTotal: debt.debtTotal,
       lastInstallment: debt.debtLastAmount,
+      lender: debt.lender,
       percent: total && total > 0 ? Math.min(100, (paid / total) * 100) : null,
       firstDate: summary.firstDate,
       nextDate: debt.nextDate,
