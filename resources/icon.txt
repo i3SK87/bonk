@@ -1,8 +1,0 @@
-icon.ico — 16 kB
-  16px · 456 bytes
-  24px · 703 bytes
-  32px · 921 bytes
-  48px · 1322 bytes
-  64px · 1777 bytes
-  128px · 3427 bytes
-  256px · 7599 bytes
