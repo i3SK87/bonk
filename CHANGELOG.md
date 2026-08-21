@@ -3,6 +3,17 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.16.2
+
+- **Las etiquetas se leen al pasar el ratón.** Iban del mismo gris que el resalte,
+  así que fondo contra fondo desaparecían. Ahora se les da la vuelta y suben de
+  tono. Las de color propio —tus etiquetas— se quedan como estaban, que ya se
+  distinguen solas.
+- **El patrimonio de la barra lateral, más grande y con el color de su signo:**
+  verde si va bien, rojo si no. Ahí abajo sobraba sitio y es de las cifras que se
+  miran de reojo.
+- **Cuentas ya no lleva rayas entre filas**, como el resto de la aplicación.
+
 ## Novedades de la 1.16.1
 
 - **El resalte de un gasto y su devolución es ahora una sola mancha.** Seguían

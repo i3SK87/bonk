@@ -38,7 +38,9 @@ export function AccountsView(): ReactNode {
 
   return (
     <>
-      <div className="card">
+      {/* Sin rayas entre filas, como el resto de la aplicación: el avatar y el
+          aire ya separan, y la retícula pesaba más que los datos. */}
+      <div className="card flush">
         <div className="card-header">
           <h2>Tus cuentas</h2>
           <button className="btn primary small" onClick={() => setCreating(true)}>
@@ -109,7 +111,7 @@ export function AccountsView(): ReactNode {
       </div>
 
       {showArchived && (
-        <div className="card">
+        <div className="card flush">
           <div className="card-header">
             <h3>Archivadas</h3>
           </div>

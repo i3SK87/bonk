@@ -383,22 +383,30 @@ p { margin: 0; }
   border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+/* Abajo del todo hay sitio de sobra y la cifra es de las que se miran de reojo:
+   se le da el tamaño que merece y el color del signo, que es lo primero que se
+   quiere saber. */
 .sidebar-networth {
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--sidebar-fg);
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 .sidebar-networth strong {
   display: block;
-  font-size: 19px;
+  font-size: 27px;
+  font-weight: 700;
   color: #fff;
-  letter-spacing: -0.02em;
-  margin-top: 2px;
+  letter-spacing: -0.03em;
+  margin-top: 4px;
   text-transform: none;
+  font-variant-numeric: tabular-nums;
 }
+
+.sidebar-networth strong.positive { color: var(--positive); }
+.sidebar-networth strong.negative { color: var(--negative); }
 
 .main {
   overflow-y: auto;
@@ -933,6 +941,12 @@ p { margin: 0; }
   border: 1px solid var(--border);
 }
 
+/* El total del día, por lo mismo: la cabecera no se resalta, pero la fila de
+   debajo sí, y ahí el mismo gris se comía la cifra. */
+.tx-row:hover ~ .day-heading .day-total {
+  background: var(--bg-elevated);
+}
+
 .tx-row {
   display: flex;
   align-items: center;
@@ -1165,6 +1179,29 @@ p { margin: 0; }
   background: var(--bg-sunken);
   color: var(--fg-muted);
   white-space: nowrap;
+}
+
+/* La etiqueta se pinta sobre el mismo gris hundido que usa el resalte, así que
+   al pasar por encima desaparecía: fondo contra fondo. Bajo el ratón se le da la
+   vuelta —el gris pasa al color de la tarjeta— y vuelve a leerse. */
+.tx-row:hover .pill,
+.tx-row.linked-active .pill,
+.list-row:hover .pill,
+.card.flush .list-row.linked-active .pill,
+.list-row.clickable:hover .pill {
+  background: var(--border-strong);
+  color: var(--fg);
+}
+
+/* Las de color propio —etiquetas del usuario, facturas pendientes— ya se
+   distinguen solas: se quedan como están. */
+.tx-row:hover .pill.tag,
+.tx-row.linked-active .pill.tag,
+.list-row:hover .pill.tag,
+.card.flush .list-row.linked-active .pill.tag,
+.list-row.clickable:hover .pill.tag {
+  background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
+  color: var(--tag-color, var(--fg-muted));
 }
 
 .pill.tag {

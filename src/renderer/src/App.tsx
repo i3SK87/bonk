@@ -134,7 +134,9 @@ export function App(): ReactNode {
           <div className="sidebar-footer">
             <div className="sidebar-networth">
               Patrimonio
-              <strong>{formatMoney(netWorth, settings.baseCurrency)}</strong>
+              <strong className={netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : ''}>
+                {formatMoney(netWorth, settings.baseCurrency)}
+              </strong>
             </div>
           </div>
         )}
