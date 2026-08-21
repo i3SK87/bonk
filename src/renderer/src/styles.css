@@ -2191,3 +2191,122 @@ button.list-row:focus-visible {
 .list-row.paused .amount {
   color: var(--fg-muted);
 }
+
+/* ---------- Campo de fecha ---------- */
+
+/* El calendario de Chromium es una ventana suya, con sus grises: no se puede
+   vestir. Este es de la casa —mismos fondos, mismos radios, misma tipografía— y
+   se cuelga del campo, que sigue siendo un input normal donde se teclea. */
+.fecha {
+  position: relative;
+}
+
+.fecha .input {
+  width: 100%;
+  padding-right: 36px;
+}
+
+.fecha-boton {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+
+.fecha-boton:hover {
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+.calendario {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 268px;
+  padding: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-lg);
+}
+
+.calendario-mes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* El mes, en versales como los demás rótulos que presiden algo. */
+.calendario-mes strong {
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.calendario-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.calendario-dia-semana {
+  padding-bottom: 4px;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: center;
+  color: var(--fg-subtle);
+}
+
+.calendario-dia {
+  padding: 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.calendario-dia:hover {
+  background: var(--bg-sunken);
+}
+
+/* Los días de los meses vecinos se ven, para saber en qué semana cae el 1, pero
+   no compiten con los del mes que se está mirando. */
+.calendario-dia.otro-mes {
+  color: var(--fg-subtle);
+  opacity: 0.55;
+}
+
+.calendario-dia.hoy {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.calendario-dia.elegido {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 650;
+}
+
+.calendario-pie {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}

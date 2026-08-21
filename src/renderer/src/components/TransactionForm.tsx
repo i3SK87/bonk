@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, Checkbox, NumberInput } from './ui'
 import { Icon } from './Icon'
+import { DateInput } from './DateInput'
 import { useStore, usePreferredAccountId } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
 import { today, formatDate, nextOccurrence } from '@shared/dates'
@@ -397,7 +398,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
             </Field>
           ) : (
             <Field label="Fecha">
-              <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <DateInput value={date} onChange={setDate} />
             </Field>
           )}
         </div>
@@ -424,7 +425,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
 
         {type === 'transfer' && (
           <Field label="Fecha">
-            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DateInput value={date} onChange={setDate} />
           </Field>
         )}
 
@@ -546,12 +547,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
                   label="Termina el"
                   hint={esDeuda ? 'La fecha de la última cuota.' : 'Opcional.'}
                 >
-                  <input
-                    className="input"
-                    type="date"
-                    value={endDate}
-                    onChange={(event) => setEndDate(event.target.value)}
-                  />
+                  <DateInput value={endDate} onChange={setEndDate} clearable />
                 </Field>
               </div>
             )}

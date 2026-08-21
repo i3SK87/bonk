@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { nestByParent } from '../lib/nesting'
 import { Icon } from '../components/Icon'
+import { DateInput } from '../components/DateInput'
 import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { CalculatorButton } from '../components/Calculator'
@@ -530,21 +531,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
         {range === 'custom' && (
           <div className="card-body row" style={{ paddingBottom: 0 }}>
-            <input
-              className="input"
-              type="date"
-              style={{ width: 170 }}
-              value={customFrom}
-              onChange={(event) => setCustomFrom(event.target.value)}
-            />
+            <div style={{ width: 170 }}>
+              <DateInput value={customFrom} onChange={setCustomFrom} />
+            </div>
             <span className="muted">hasta</span>
-            <input
-              className="input"
-              type="date"
-              style={{ width: 170 }}
-              value={customTo}
-              onChange={(event) => setCustomTo(event.target.value)}
-            />
+            <div style={{ width: 170 }}>
+              <DateInput value={customTo} onChange={setCustomTo} />
+            </div>
           </div>
         )}
 

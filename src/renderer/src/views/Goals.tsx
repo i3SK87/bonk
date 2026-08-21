@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon, PALETTE } from '../components/Icon'
+import { DateInput } from '../components/DateInput'
 import {
   Modal,
   Field,
@@ -514,12 +515,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
         </Field>
 
         <Field label="Para cuándo" hint="Opcional: sin fecha no se calcula ritmo.">
-          <input
-            className="input"
-            type="date"
-            value={targetDate}
-            onChange={(event) => setTargetDate(event.target.value)}
-          />
+          <DateInput value={targetDate} onChange={setTargetDate} clearable />
         </Field>
 
         <Field label="Icono">
