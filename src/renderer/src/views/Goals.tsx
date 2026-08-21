@@ -39,15 +39,8 @@ const GOAL_ICONS = [
  */
 const PASO = 2500
 
-/** Cómo se lee cada estado en la ficha del plan. */
-const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = {
-  achieved: { label: 'Cumplido', tone: 'var(--fg-muted)' },
-  complete: { label: 'Ya lo tienes', tone: 'var(--positive)' },
-  onTrack: { label: 'Al ritmo que llevas, llegas', tone: 'var(--positive)' },
-  behind: { label: 'A este ritmo no llegas', tone: 'var(--warning)' },
-  late: { label: 'Se pasó la fecha', tone: 'var(--negative)' },
-  open: { label: 'Sin fecha', tone: 'var(--fg-muted)' }
-}
+// El estado ya no se rotula: lo dicen las cifras, la barra y la línea del pie.
+// Una etiqueta que repite en palabras lo que se ve al lado es ruido.
 
 export function GoalsView(): ReactNode {
   const { settings, accounts, revision, run, fail } = useStore()
@@ -291,7 +284,6 @@ function GoalCard({
   // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
   useEffect(() => setReserva(goal.reserved), [goal.reserved])
 
-  const status = STATUS[goal.status]
   const color =
     goal.status === 'complete'
       ? 'var(--positive)'
@@ -308,9 +300,6 @@ function GoalCard({
         <div style={{ minWidth: 0 }}>
           <div className="row tight">
             <strong>{goal.name}</strong>
-            <span className="pill" style={{ color: status.tone }}>
-              {status.label}
-            </span>
           </div>
           <div className="small muted truncate">
             {goal.targetDate ? `Para el ${formatDate(goal.targetDate)}` : 'Sin fecha límite'}
@@ -364,6 +353,7 @@ function GoalCard({
                   }}
                   title="Escribir la cantidad"
                 >
+                  <Icon name="edit" size={13} />
                   {formatMoney(puesto, currency)}
                 </button>
               ) : (

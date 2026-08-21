@@ -1729,14 +1729,18 @@ p { margin: 0; }
   margin-top: 10px;
 }
 
-/* La cantidad apartada se puede teclear, y tiene que verse sin tener que pasar
-   por encima: lleva su caja de campo desde el principio. Discreta -el borde
-   justo, sin fondo- para no competir con la cifra, que es lo que se lee. */
+/* La cantidad apartada se puede teclear, y tiene que cantarlo: con solo un
+   borde fino se perdía entre las cifras de la ficha. Fondo hundido, borde
+   marcado y un lápiz delante; lo de al lado —la meta— se queda en texto pelado
+   para que se note la diferencia entre lo que se toca y lo que no. */
 .cifra-editable {
-  background: none;
-  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
   border-radius: 9px;
-  padding: 1px 8px;
+  padding: 2px 9px;
   font: inherit;
   color: inherit;
   cursor: text;
@@ -1745,10 +1749,18 @@ p { margin: 0; }
     border-color 0.12s ease;
 }
 
+.cifra-editable svg {
+  color: var(--fg-subtle);
+}
+
 .cifra-editable:hover,
 .cifra-editable:focus-visible {
-  background: var(--bg-sunken);
-  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+  border-color: var(--accent);
+}
+
+.cifra-editable:hover svg {
+  color: var(--accent);
 }
 
 /*
