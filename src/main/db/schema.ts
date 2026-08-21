@@ -452,5 +452,20 @@ export const MIGRATIONS: string[] = [
   `
   ALTER TABLE scheduled ADD COLUMN debt_paid_before INTEGER NOT NULL DEFAULT 0;
   ALTER TABLE scheduled ADD COLUMN debt_total INTEGER;
+  `,
+
+  // v18 — una deuda se cuenta por cuotas, no por euros.
+  //
+  // «Llevo treinta y seis pagadas» se sabe; «llevo 1.071 €» hay que echarlo.
+  // `debt_paid_count` dice cuántas van en total, contando las de antes de que
+  // hubiera un solo apunte, y de ahí sale el dinero. Sustituye a
+  // `debt_paid_before`, que pedía la misma respuesta en la unidad incómoda.
+  //
+  // `debt_last_amount` es la última cuota cuando es más corta, que es casi
+  // siempre: es lo que hacía que los totales no cuadraran por unos céntimos.
+  `
+  ALTER TABLE scheduled ADD COLUMN debt_paid_count INTEGER;
+  ALTER TABLE scheduled ADD COLUMN debt_last_amount INTEGER;
+  ALTER TABLE scheduled DROP COLUMN debt_paid_before;
   `
 ]

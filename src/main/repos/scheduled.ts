@@ -7,6 +7,7 @@ import type {
   Scheduled,
   ScheduledView,
   ProjectedTransaction,
+  DebtAdjust,
   DebtProgress,
   TxType,
   Frequency
@@ -33,7 +34,8 @@ interface ScheduledRow {
   created_at: string
   refund_for_scheduled_id: number | null
   goal_id: number | null
-  debt_paid_before: number
+  debt_paid_count: number | null
+  debt_last_amount: number | null
   debt_total: number | null
   remind: number
   reminded_for: string | null
@@ -72,7 +74,8 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
     goalId: row.goal_id,
-    debtPaidBefore: row.debt_paid_before,
+    debtPaidCount: row.debt_paid_count,
+    debtLastAmount: row.debt_last_amount,
     debtTotal: row.debt_total,
     remind: row.remind === 1,
     remindedFor: row.reminded_for,
@@ -276,33 +279,21 @@ export interface DebtSummary {
 }
 
 /**
- * Los tres números de una deuda: la cuota, lo que ya llevabas pagado antes del
- * primer apunte y el total de verdad.
+ * Lo que de una deuda no se puede deducir de los movimientos: cuántas cuotas
+ * llevas, cuánto es la última y cuánto suma entera.
  *
- * La cuota se guarda en la programación, que es de donde salen los recibos: al
- * cambiarla aquí cambian también los que estén por venir, que es lo que se
- * quiere —si te suben la cuota, sube para adelante—. Una cuota de cero no se
- * guarda: la programación la rechazaría igual.
+ * El cero vale por «no lo sé» en los tres: se guarda como null y la cuenta
+ * vuelve a salir de lo que se vea. La cuota de cada mes no está aquí porque
+ * vive en la programación, que es de donde salen los recibos, y se cambia ahí.
  */
-export function adjustDebt(
-  id: number,
-  paidBefore: number,
-  total: number | null,
-  installment?: number
-): void {
-  const db = getDb()
-  atomic(() => {
-    db.prepare(
-      'UPDATE scheduled SET debt_paid_before = ?, debt_total = ? WHERE id = ?'
-    ).run(
-      Math.max(0, Math.round(paidBefore)),
-      total == null ? null : Math.max(0, Math.round(total)),
-      id
+export function adjustDebt(id: number, patch: DebtAdjust): void {
+  const limpio = (value: number | null | undefined): number | null =>
+    value == null || value <= 0 ? null : Math.round(value)
+  getDb()
+    .prepare(
+      'UPDATE scheduled SET debt_paid_count = ?, debt_last_amount = ?, debt_total = ? WHERE id = ?'
     )
-    if (installment != null && installment > 0) {
-      db.prepare('UPDATE scheduled SET amount = ? WHERE id = ?').run(Math.round(installment), id)
-    }
-  })
+    .run(limpio(patch.paidCount), limpio(patch.lastAmount), limpio(patch.total), id)
 }
 
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
@@ -399,16 +390,21 @@ export function debtProgress(reference = today()): DebtProgress[] {
     }
 
     /*
-     * Lo pagado suma lo que la aplicación ha visto y lo que le has dicho que ya
-     * llevabas: una deuda de hace tres años con apuntes desde abril saldría por
-     * los suelos.
+     * Lo pagado cuenta las cuotas que la aplicación ve y las que le hayas dicho
+     * que van de antes: una deuda de hace tres años con apuntes desde abril
+     * saldría por los suelos. Las de más se valoran a cuota entera, que es lo
+     * que fueron.
      *
-     * El total lo mandas tú si lo has puesto, porque casi nunca sale de
-     * multiplicar la cuota por las veces: la última suele ser más corta. Si no,
-     * se calcula, y entonces lo que queda son las cuotas que faltan.
+     * De lo que queda, la última es la corta, y por eso los totales cuadran sin
+     * tener que escribirlos. Aun así el total lo mandas tú si lo has puesto: hay
+     * deudas con intereses o con una entrada que no salen de ninguna cuenta.
      */
-    const paid = summary.total + debt.debtPaidBefore
-    const porCuotas = leftCount == null ? null : leftCount * debt.amount
+    const paidCount = debt.debtPaidCount ?? summary.count
+    const deMas = Math.max(0, paidCount - summary.count)
+    const paid = summary.total + deMas * debt.amount
+    const ultima = debt.debtLastAmount ?? debt.amount
+    const porCuotas =
+      leftCount == null ? null : leftCount === 0 ? 0 : (leftCount - 1) * debt.amount + ultima
     const total = debt.debtTotal ?? (porCuotas == null ? null : paid + porCuotas)
     const left = total == null ? porCuotas : Math.max(0, total - paid)
     const daysLeft = debt.endDate
@@ -426,12 +422,15 @@ export function debtProgress(reference = today()): DebtProgress[] {
       accountName: debt.accountName,
       currency: debt.accountCurrency,
       installment: debt.amount,
-      paidCount: summary.count,
+      paidCount,
       paid,
       paidBySoftware: summary.total,
+      countBySoftware: summary.count,
       leftCount,
       left,
       total,
+      fixedTotal: debt.debtTotal,
+      lastInstallment: debt.debtLastAmount,
       percent: total && total > 0 ? Math.min(100, (paid / total) * 100) : null,
       firstDate: summary.firstDate,
       nextDate: debt.nextDate,

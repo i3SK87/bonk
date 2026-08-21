@@ -573,18 +573,27 @@ try {
   equal('la deuda saldada no espera más cuotas', cerrada.leftCount, 0)
   equal('y su coste mensual pasa a cero', cerrada.monthlyCost, 0)
 
-  // Lo que la aplicación no vio: se paga desde antes del primer apunte.
-  scheduled.adjustDebt(plazos.id, 10000, null)
+  // Lo que la aplicación no vio: cuotas pagadas antes del primer apunte, que se
+  // dicen contándolas, no en euros.
+  scheduled.adjustDebt(plazos.id, { paidCount: cerrada.paidCount + 2 })
   const conHistoria = verDeuda()
-  equal('lo pagado antes cuenta como pagado', conHistoria.paid, cerrada.paid + 10000)
+  equal('las cuotas de antes cuentan como pagadas', conHistoria.paidCount, cerrada.paidCount + 2)
   equal(
-    'y lo que la aplicación ve se sigue diciendo aparte',
-    conHistoria.paidBySoftware,
-    cerrada.paid
+    'y suman su dinero, a cuota entera',
+    conHistoria.paid,
+    cerrada.paid + 2 * conHistoria.installment
   )
+  equal(
+    'lo que la aplicación ve se sigue diciendo aparte',
+    conHistoria.countBySoftware,
+    cerrada.paidCount
+  )
+  equal('y su dinero también', conHistoria.paidBySoftware, cerrada.paid)
+  scheduled.adjustDebt(plazos.id, { paidCount: 0 })
+  equal('a cero, vuelven a contarse las que se ven', verDeuda().paidCount, cerrada.paidCount)
 
-  // El total lo manda quien lo sabe: la última cuota casi nunca es entera.
-  scheduled.adjustDebt(plazos.id, 10000, 30000)
+  // El total lo manda quien lo sabe: hay deudas con intereses o con entrada.
+  scheduled.adjustDebt(plazos.id, { paidCount: 5, total: 30000 })
   const conTotal = verDeuda()
   equal('el total puesto a mano manda', conTotal.total, 30000)
   equal('y lo que falta sale de él', conTotal.left, 30000 - conTotal.paid)
@@ -594,22 +603,37 @@ try {
   )
 
   // Pagar de más no deja un pendiente negativo.
-  scheduled.adjustDebt(plazos.id, 100000, 30000)
+  scheduled.adjustDebt(plazos.id, { paidCount: 40, total: 30000 })
   equal('pagar de más no deja pendiente negativo', verDeuda().left, 0)
-  // La cuota, cuando te la suben: cambia en la programación, que es de donde
-  // salen los recibos que quedan por venir.
-  const antes = scheduled.getScheduled(plazos.id)!.amount
-  scheduled.adjustDebt(plazos.id, 10000, 30000, 4500)
-  equal('la cuota se puede corregir', scheduled.getScheduled(plazos.id)!.amount, 4500)
-  scheduled.adjustDebt(plazos.id, 10000, 30000, 0)
-  equal(
-    'una cuota de cero se ignora, no borra la que había',
-    scheduled.getScheduled(plazos.id)!.amount,
-    4500
-  )
-  scheduled.adjustDebt(plazos.id, 10000, 30000, antes)
+  scheduled.adjustDebt(plazos.id, {})
 
-  scheduled.adjustDebt(plazos.id, 0, null)
+  // La última cuota, que casi nunca es entera: es lo que hace cuadrar el total
+  // sin tener que escribirlo.
+  const corta = scheduled.saveScheduled({
+    type: 'expense',
+    name: null,
+    note: 'Sofá',
+    accountId: bank.id,
+    categoryId: deuda ? deuda.id : food.id,
+    amount: 10000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: day,
+    endDate: addMonths(day, 2),
+    autoPost: false
+  })
+  const verCorta = (): DebtProgress =>
+    scheduled.debtProgress(day).find((row) => row.scheduledId === corta.id)!
+  equal('quedan las tres cuotas', verCorta().leftCount, 3)
+  equal('y suman tres enteras', verCorta().left, 30000)
+  scheduled.adjustDebt(corta.id, { lastAmount: 5000 })
+  equal('con la última corta, lo que falta es menos', verCorta().left, 25000)
+  equal('y el total cuadra sin escribirlo', verCorta().total, 25000)
+  equal('la última cuota se recuerda', verCorta().lastInstallment, 5000)
+  scheduled.adjustDebt(corta.id, { lastAmount: 0 })
+  equal('a cero, vuelve a ser una cuota como las demás', verCorta().left, 30000)
+  check('y deja de haber última corta', verCorta().lastInstallment === null)
+  scheduled.deleteScheduled(corta.id)
 
   // Pausar no es terminar: apaga, pero no sella.
   const pausable = scheduled.saveScheduled({

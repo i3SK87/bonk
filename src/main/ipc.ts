@@ -18,7 +18,7 @@ import {
   announceGoals,
   checkLowBalance
 } from './reminders'
-import type { TransactionFilter, CategoryKind, Settings } from '@shared/types'
+import type { TransactionFilter, CategoryKind, Settings, DebtAdjust } from '@shared/types'
 
 /**
  * Envuelve cada manejador para que un error del proceso principal llegue a la
@@ -149,10 +149,8 @@ export function registerIpc(
   handle('scheduled:postDue', () => scheduled.postDue())
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))
   handle('scheduled:debts', () => scheduled.debtProgress())
-  handle(
-    'scheduled:adjustDebt',
-    (id: number, paidBefore: number, total: number | null, installment?: number) =>
-      scheduled.adjustDebt(id, paidBefore, total, installment)
+  handle('scheduled:adjustDebt', (id: number, patch: DebtAdjust) =>
+    scheduled.adjustDebt(id, patch)
   )
 
   // — Informes —

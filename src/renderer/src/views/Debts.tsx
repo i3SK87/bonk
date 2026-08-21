@@ -1,6 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
-import { Avatar, EmptyState, Loading, ProgressBar, Modal, Field, AmountInput } from '../components/ui'
+import {
+  Avatar,
+  EmptyState,
+  Loading,
+  ProgressBar,
+  Modal,
+  Field,
+  AmountInput,
+  NumberInput
+} from '../components/ui'
 import { Icon } from '../components/Icon'
 import { formatMoney } from '@shared/money'
 import { formatDate } from '@shared/dates'
@@ -222,19 +231,22 @@ function DebtCard({
 }
 
 /**
- * Lo que la aplicación no puede saber de una deuda.
+ * Lo que de una deuda no se puede deducir de los movimientos.
  *
- * La cuota vive en la programación y se corrige aquí porque es aquí donde se
- * mira la deuda. Lo pagado, en cambio, se deduce de los movimientos, y eso solo
- * alcanza hasta donde llegan tus registros: falta lo que ya llevabas pagado antes
- * y, si lo sabes, el total de verdad —que casi nunca es la cuota por las veces,
- * porque la última suele ser más corta—.
+ * Lo pagado se cuenta de lo que hay apuntado, y eso solo alcanza hasta donde
+ * llegan tus registros: una deuda que se paga desde hace años y un CSV que
+ * empieza en abril dan un porcentaje ridículo. Se pregunta en cuotas porque es
+ * como se sabe —«llevo treinta y seis»—, y no en euros, que hay que echarlos.
+ *
+ * La última cuota es aparte porque casi nunca es entera, y es justo lo que hacía
+ * que los totales no cuadraran. La cuota de cada mes no está aquí: vive en la
+ * programación, que es de donde salen los recibos, y se cambia ahí.
  */
 function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => void }): ReactNode {
   const { run, refresh } = useStore()
-  const [installment, setInstallment] = useState(debt.installment)
-  const [paidBefore, setPaidBefore] = useState(debt.paid - debt.paidBySoftware)
-  const [total, setTotal] = useState(debt.total ?? 0)
+  const [paidCount, setPaidCount] = useState(debt.paidCount)
+  const [lastAmount, setLastAmount] = useState(debt.lastInstallment ?? 0)
+  const [total, setTotal] = useState(debt.fixedTotal ?? 0)
 
   return (
     <Modal
@@ -249,13 +261,7 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
             className="btn primary"
             onClick={async () => {
               const saved = await run(
-                () =>
-                  api.scheduled.adjustDebt(
-                    debt.scheduledId,
-                    paidBefore,
-                    total > 0 ? total : null,
-                    installment
-                  ),
+                () => api.scheduled.adjustDebt(debt.scheduledId, { paidCount, lastAmount, total }),
                 'Deuda ajustada'
               )
               if (saved !== undefined) {
@@ -270,22 +276,22 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
       }
     >
       <Field
-        label="Cuota"
-        hint="Lo que se paga cada vez. Cambiarla cambia también los recibos que están por venir, que es lo que toca si te la han subido."
+        label="Cuotas pagadas"
+        hint={`BONK ve ${debt.countBySoftware} en tus movimientos. Si llevabas pagando desde antes, pon aquí cuántas van en total.`}
       >
-        <AmountInput value={installment} currency={debt.currency} onChange={setInstallment} />
+        <NumberInput value={paidCount} onChange={setPaidCount} min={0} max={999} style={{ width: 110 }} />
       </Field>
 
       <Field
-        label="Ya pagado antes de tus registros"
-        hint={`De esta deuda, BONK ve ${formatMoney(debt.paidBySoftware, debt.currency)} en tus movimientos. Si llevabas pagando desde antes, pon aquí lo que iba pagado hasta entonces.`}
+        label="Última cuota"
+        hint={`La última casi nunca es entera. Déjala en cero si es como las demás, ${formatMoney(debt.installment, debt.currency)}.`}
       >
-        <AmountInput value={paidBefore} currency={debt.currency} onChange={setPaidBefore} />
+        <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} />
       </Field>
 
       <Field
         label="Total de la deuda"
-        hint="Lo que cuesta entera. Déjalo en cero y se calcula con las cuotas que quedan, que es lo mismo salvo que la última sea más corta."
+        hint="Lo que cuesta entera. En cero se calcula con las cuotas que quedan y la última; ponlo solo si lleva intereses o una entrada."
       >
         <AmountInput value={total} currency={debt.currency} onChange={setTotal} />
       </Field>

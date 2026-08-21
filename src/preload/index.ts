@@ -10,6 +10,7 @@ import type {
   CategoryTotal,
   MonthlyPoint,
   ProjectedTransaction,
+  DebtAdjust,
   DebtProgress,
   ScheduledView,
   Settings,
@@ -85,8 +86,8 @@ const api = {
     postNow: (id: number) => call<void>('scheduled:postNow', id),
     postDue: () => call<number>('scheduled:postDue'),
     debts: () => call<DebtProgress[]>('scheduled:debts'),
-    adjustDebt: (id: number, paidBefore: number, total: number | null, installment?: number) =>
-      call<void>('scheduled:adjustDebt', id, paidBefore, total, installment),
+    adjustDebt: (id: number, patch: DebtAdjust) =>
+      call<void>('scheduled:adjustDebt', id, patch),
     project: (from: string, to: string) => call<ProjectedTransaction[]>('scheduled:project', from, to)
   },
   reports: {

@@ -230,10 +230,13 @@ export interface Scheduled {
   /** Plan de ahorro al que va este traspaso, cuando entra en una hucha. */
   goalId: number | null
   /**
-   * Lo que ya llevabas pagado de esta deuda antes del primer apunte. Sin esto,
-   * una deuda vieja con registros nuevos sale casi a cero.
+   * Cuántas cuotas llevas pagadas en total, contando las de antes del primer
+   * apunte. Sin esto, una deuda vieja con registros nuevos sale casi a cero.
+   * A null, se cuentan las que se vean en los movimientos.
    */
-  debtPaidBefore: number
+  debtPaidCount: number | null
+  /** La última cuota, cuando es más corta que las demás. */
+  debtLastAmount: number | null
   /**
    * El total de verdad de la deuda, cuando no sale de multiplicar la cuota por
    * las veces: la última suele ser más corta.
@@ -335,6 +338,16 @@ export interface Settlement {
  * Sale de la programación que genera las cuotas, no de un apunte aparte: la
  * deuda existe porque hay un recibo que se repite hasta una fecha.
  */
+/** Lo que de una deuda no se puede deducir de los movimientos. */
+export interface DebtAdjust {
+  /** Cuotas pagadas en total; cero o null para contar solo las que se vean. */
+  paidCount?: number | null
+  /** La última cuota, si es más corta; cero o null si es igual que las demás. */
+  lastAmount?: number | null
+  /** El total de la deuda; cero o null para calcularlo con las cuotas. */
+  total?: number | null
+}
+
 export interface DebtProgress {
   scheduledId: number
   title: string
@@ -350,11 +363,17 @@ export interface DebtProgress {
   paid: number
   /** Solo lo que la aplicación ve en tus movimientos, sin lo que le hayas dicho. */
   paidBySoftware: number
+  /** Y cuántas cuotas ve, para poder decir de dónde sale la cuenta. */
+  countBySoftware: number
   /** Cuántas quedan y cuánto suman, cuando hay fecha de fin. */
   leftCount: number | null
   left: number | null
   /** El total del plan: lo pagado más lo que queda. */
   total: number | null
+  /** El total puesto a mano, si lo hay: null cuando sale de la cuenta. */
+  fixedTotal: number | null
+  /** La última cuota, si se ha dicho que es más corta. */
+  lastInstallment: number | null
   percent: number | null
   firstDate: string | null
   nextDate: string
