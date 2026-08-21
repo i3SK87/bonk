@@ -162,6 +162,11 @@ export function DebtsView(): ReactNode {
   )
 }
 
+/** dd/mm/aa: en una línea de contexto, el siglo es relleno. */
+function sinSiglo(iso: string): string {
+  return formatDate(iso).replace(/\/\d{2}(\d{2})$/, '/$1')
+}
+
 function DebtCard({
   debt,
   currency,
@@ -191,13 +196,15 @@ function DebtCard({
             )}
           </div>
           <div className="small muted truncate">
-            {/* Las dos fechas juntas se leen como lo que son, un periodo, y de paso
-                bajan una pieza de la línea de abajo. */}
-            {formatMoney(debt.installment, currency)} cada vez · {debt.accountName}
+            {/* La línea de contexto, en tres piezas cortas: cuánto es una cuota, de
+                dónde sale y entre qué fechas va. El «cada vez» sobraba —en una deuda
+                a plazos no hay otra cosa que pueda ser— y los años, en dos cifras:
+                nadie lee una deuda del siglo pasado. */}
+            {formatMoney(debt.installment, currency)}/cuota · {debt.accountName}
             {debt.endDate
-              ? ` · ${debt.firstDate ? `de ${formatDate(debt.firstDate)} a ` : 'hasta '}${formatDate(debt.endDate)}`
+              ? ` · ${debt.firstDate ? `${sinSiglo(debt.firstDate)} → ` : 'hasta '}${sinSiglo(debt.endDate)}`
               : debt.firstDate
-                ? ` · desde ${formatDate(debt.firstDate)}`
+                ? ` · desde ${sinSiglo(debt.firstDate)}`
                 : ' · sin fecha de fin'}
           </div>
         </div>
