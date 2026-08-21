@@ -3,6 +3,18 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.9
+
+- **La cuenta principal sale la primera en todas partes.** En la cabecera de
+  Movimientos, en la pestaña Cuentas, en los desplegables de los formularios y en
+  las pastillas de los filtros. Es la que se mira a diario, así que verla la
+  segunda cansa. El resto de cuentas conserva su orden, y basta con marcar otra
+  como principal en Cuentas para que cambie el orden en todos esos sitios a la
+  vez.
+- **Informes tiene periodo «Todo».** Va del primer movimiento al último, no a un
+  año inventado ni a unas fechas absurdas, así que la media diaria sigue
+  significando algo.
+
 ## Novedades de la 1.13.8
 
 - **El buscador entiende cifras.** Escribir «9,17» saca los movimientos que
