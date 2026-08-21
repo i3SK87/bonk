@@ -1,45 +1,58 @@
 <!--
-  La marca de BONK: una máscara de portero de hockey sobre negro.
+  La marca de BONK: la máscara del atraco al furgón, sobre negro.
 
-  El programa se llama casi «bank» y la máscara es la del atraco al furgón de
-  Heat, así que el chiste se cuenta solo. Pero un icono se ve a 16 px en la
-  bandeja del sistema: manda la silueta. Por eso el hueco de los ojos es enorme,
-  la boca es una sola ranura y los respiraderos son cuatro puntos gordos —a
-  tamaño pequeño desaparecen, y lo que queda sigue leyéndose como una cara.
+  Dibujada mirando el fotograma, y por eso es como es. La primera versión tenía
+  ojos redondos y una bocaza, y salía una calavera de Halloween: la de la
+  película tiene *rendijas*, no ojos, y la cara sembrada de agujeritos de
+  ventilación. Eso es lo que la hace leerse como un aparato y no como una cara.
 
-  El blanco no es blanco puro sino hueso, que es el color de las de la película
-  y evita el brillo de cartel sobre el fondo negro.
+  Pero un icono vive a 16 px en la bandeja del sistema, donde todo eso se
+  disuelve. Por eso el reparto es: la silueta y las dos rendijas aguantan
+  siempre, y los agujeros y el caballete de la nariz solo aparecen de 32 px
+  para arriba, como textura.
+
+  El blanco es hueso, no blanco puro: es el de las máscaras y no deslumbra
+  sobre el fondo negro.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <rect width="512" height="512" rx="112" fill="#0B0B0D" />
 
-  <g transform="translate(256 262)">
-    <!-- El casco: domo ancho arriba, pómulos marcados y barbilla estrecha. -->
+  <g transform="translate(256 258)">
+    <!-- El casco. Va en coordenadas absolutas y no en trazos relativos: a mano,
+         los relativos acumulaban error y la mitad izquierda salía más estrecha
+         que la derecha, con la rendija del ojo comiéndose el borde. -->
     <path
       fill="#EDE7DC"
       d="M0-186
-         c62 0 108 26 128 74
-         c14 34 18 76 14 118
-         c-5 54-26 100-58 132
-         c-24 24-52 36-84 36
-         s-60-12-84-36
-         c-32-32-53-78-58-132
-         c-4-42 0-84 14-118
-         c20-48 66-74 128-74Z" />
+         C64-186 108-160 120-106
+         C130-60 128-6 116 46
+         C105 94 78 138 38 156
+         C26 161-26 161-38 156
+         C-78 138-105 94-116 46
+         C-128-6-130-60-120-106
+         C-108-160-64-186 0-186Z" />
 
-    <!-- Los ojos, del tamaño que de verdad tienen esas máscaras. -->
-    <ellipse cx="-76" cy="-24" rx="46" ry="34" fill="#0B0B0D" />
-    <ellipse cx="76" cy="-24" rx="46" ry="34" fill="#0B0B0D" />
+    <!-- Las rendijas de los ojos: lo único que tiene que sobrevivir a 16 px. -->
+    <path fill="#0B0B0D" d="M-76-40h54c7 0 12 5 12 12v10c0 7-5 12-12 12h-54c-7 0-12-5-12-12v-10c0-7 5-12 12-12Z" />
+    <path fill="#0B0B0D" d="M22-40h54c7 0 12 5 12 12v10c0 7-5 12-12 12H22c-7 0-12-5-12-12v-10c0-7 5-12 12-12Z" />
 
-    <!-- La ranura de la boca, de una pieza para que aguante a 16 px. -->
-    <rect x="-66" y="72" width="132" height="26" rx="13" fill="#0B0B0D" />
+    <!-- El caballete de la nariz y los dos agujeros de respirar. -->
+    <path fill="none" stroke="#0B0B0D" stroke-width="7" stroke-linecap="round" d="M0-10v58" />
+    <circle cx="-19" cy="66" r="8" fill="#0B0B0D" />
+    <circle cx="19" cy="66" r="8" fill="#0B0B0D" />
 
-    <!-- Respiraderos de la frente. -->
-    <circle cx="-34" cy="-108" r="13" fill="#0B0B0D" />
-    <circle cx="34" cy="-108" r="13" fill="#0B0B0D" />
-
-    <!-- Y los de los pómulos, que son los que dan la cara de máscara. -->
-    <circle cx="-96" cy="46" r="12" fill="#0B0B0D" />
-    <circle cx="96" cy="46" r="12" fill="#0B0B0D" />
+    <!-- Los respiraderos: un arco en la frente y un par en cada pómulo. Más
+         de estos y la cara se vuelve un balón de golf. -->
+    <g fill="#0B0B0D">
+      <circle cx="-58" cy="-118" r="6" />
+      <circle cx="-29" cy="-132" r="6" />
+      <circle cx="0" cy="-137" r="6" />
+      <circle cx="29" cy="-132" r="6" />
+      <circle cx="58" cy="-118" r="6" />
+      <circle cx="-78" cy="26" r="6" />
+      <circle cx="78" cy="26" r="6" />
+      <circle cx="-68" cy="66" r="6" />
+      <circle cx="68" cy="66" r="6" />
+    </g>
   </g>
 </svg>
