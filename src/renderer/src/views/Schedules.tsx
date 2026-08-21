@@ -411,7 +411,9 @@ export interface ScheduleModalProps {
    * Solo gasto: se abre desde Deudas, y una deuda no puede ser un ingreso ni un
    * traspaso. Con un solo tipo posible, el selector no pinta nada.
    */
-  soloGasto?: boolean;
+  soloGasto?: boolean
+  /** Cómo se titula. Desde Deudas esto no es «una programación», es una deuda. */
+  titulo?: string;
   onClose: () => void;
   onSave: (input: unknown) => Promise<unknown>;
   onDelete?: () => Promise<unknown>;
@@ -422,6 +424,7 @@ export function ScheduleModal({
   siblings,
   defaultCategoryId,
   soloGasto,
+  titulo,
   onClose,
   onSave,
   onDelete,
@@ -526,7 +529,7 @@ export function ScheduleModal({
   return (
     <>
       <Modal
-        title={schedule ? "Editar programación" : "Nueva programación"}
+        title={titulo ?? (schedule ? "Editar programación" : "Nueva programación")}
         onClose={onClose}
         footer={
           <>
