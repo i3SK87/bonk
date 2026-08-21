@@ -3,6 +3,15 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.6
+
+- **Una lista con solo programadas ya no sale como vacía.** Con las previsiones
+  encendidas, buscar algo que ninguna movimiento registrado tuviera —una
+  categoría que solo aparece en lo que está por venir— daba «No hay
+  movimientos», y sin embargo el total de arriba ya contaba esas previsiones.
+  El cartel de lista vacía se decidía mirando solo lo ya registrado. Ahora la
+  lista está vacía cuando no hay ni una cosa ni la otra.
+
 ## Novedades de la 1.13.5
 
 - **Un solo separador en el importe, y siempre decimal.** Da igual la coma que
