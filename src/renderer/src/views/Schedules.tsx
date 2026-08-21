@@ -522,6 +522,19 @@ export function ScheduleModal({
           </Field>
         )}
 
+        {/* Como en un movimiento: el título primero y con el foco puesto. */}
+        <Field
+          label="Título"
+          hint="Es lo que se lee en la lista y lo que llevará cada movimiento que genere."
+        >
+          <input
+            className="input"
+            autoFocus
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            placeholder="Netflix, alquiler, la cuota del PC…"
+          />
+        </Field>
         <Field label="Importe" error={error}>
           <AmountInput value={amount} currency={currency} onChange={setAmount} />
         </Field>
@@ -644,18 +657,6 @@ export function ScheduleModal({
             <DateInput value={endDate} onChange={setEndDate} clearable />
           </Field>
         </div>
-
-        <Field
-          label="Notas"
-          hint="Es lo que se lee en la lista y lo que llevará cada movimiento que genere."
-        >
-          <textarea
-            className="textarea"
-            value={note}
-            placeholder="Alquiler, Netflix, nómina…"
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Field>
 
         <Checkbox
           checked={autoPost}

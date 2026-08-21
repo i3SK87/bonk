@@ -362,9 +362,29 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </p>
         )}
 
+        {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
+            título encabeza y se lleva el foco. De una línea, que es un título y no
+            un cuaderno. */}
+        <Field label="Título">
+          <input
+            className="input"
+            autoFocus
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={
+              type === 'refund' ? 'Quién te devuelve, de qué…' : 'Comercio, detalle, lo que quieras recordar…'
+            }
+          />
+        </Field>
+
         <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
           <Field label="Importe">
-            <AmountInput value={amount} currency={currency} onChange={setAmount} autoFocus invalid={amount <= 0 && error != null} />
+            <AmountInput
+              value={amount}
+              currency={currency}
+              onChange={setAmount}
+              invalid={amount <= 0 && error != null}
+            />
           </Field>
         </div>
 
@@ -504,23 +524,20 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         )}
 
         {!existing && type !== 'transfer' && (
-          <Field
-            label="¿Se repite?"
-            hint={
-              esDeuda
-                ? 'Una deuda a plazos vive de su repetición: sin ella no aparece en Deudas ni se sabe cuánto queda.'
-                : 'Para lo que vuelve cada mes —suscripciones, recibos, cuotas—. Este movimiento se queda como está y la próxima vez se registra sola.'
-            }
-          >
+          <>
             <Checkbox
               checked={repite}
               onChange={setRepite}
-              label={repite ? 'Sí, y esta es la primera vez' : 'No, es un movimiento suelto'}
+              label="Se repite cada cierto tiempo"
+              hint={
+                esDeuda
+                  ? 'Una deuda vive de su repetición: sin ella no sale en Deudas ni se sabe cuánto queda.'
+                  : 'Suscripciones, recibos, cuotas: la próxima vez se registra sola.'
+              }
             />
-
             {repite && (
               <div className="grid cols-2" style={{ marginTop: 10 }}>
-                <Field label="Cada cuánto">
+                <Field label="Repetición">
                   <div className="row tight">
                     <NumberInput
                       value={interval}
@@ -545,25 +562,15 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
 
                 <Field
                   label="Termina el"
-                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Opcional.'}
+                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Déjalo vacío si no tiene fin.'}
                 >
                   <DateInput value={endDate} onChange={setEndDate} clearable />
                 </Field>
               </div>
             )}
-          </Field>
+          </>
         )}
 
-        <Field label="Notas">
-          <textarea
-            className="textarea"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={
-              type === 'refund' ? 'Quién te devuelve, de qué…' : 'Comercio, detalle, lo que quieras recordar…'
-            }
-          />
-        </Field>
 
         {existing?.type === 'expense' && (
           <Field label="Reembolsos">
