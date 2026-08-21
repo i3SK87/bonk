@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.3
+
+- **El desplegable de reembolsos programados enseña la nota.** Al enlazar una
+  devolución con el gasto que reembolsa, cada opción decía solo la categoría y
+  el importe: tres recibos de «Deuda» eran tres líneas iguales. Ahora se leen
+  como «Deuda · Kindle» y «Deuda · PC». Si el gasto no tiene nota, la opción se
+  queda como estaba, sin un separador colgando.
+
 ## Novedades de la 1.13.2
 
 - **Las pestañas van en otro orden**: Movimientos, Programados, Ahorro,
