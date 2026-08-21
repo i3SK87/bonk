@@ -1,0 +1,51 @@
+# Compila el instalador de Windows y lo cuelga de la release.
+#
+# En el portátil ya no se puede: Smart App Control bloquea la ejecución del
+# ejecutable intermedio que la compilación necesita para generar el
+# desinstalador, y esa protección no admite exclusiones. Aquí no está, así que
+# el instalador se hace donde sí se deja.
+name: Instalador de Windows
+
+on:
+  # Al publicar una release, sus archivos se generan solos.
+  release:
+    types: [published]
+  # Y a mano, para rellenar una release que se quedó sin ellos.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Etiqueta de la release (por ejemplo v1.32.0)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # Lo mismo que se pasa en local antes de publicar: si la capa de datos
+      # falla, más vale no repartir un instalador.
+      - run: npm test
+
+      - run: npm run dist
+
+      - name: Colgar los archivos de la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          $archivos = Get-ChildItem release/BONK-*-Setup.exe, release/BONK-*-portable.zip
+          $archivos | ForEach-Object { Write-Host "$($_.Name) — $([math]::Round($_.Length/1MB)) MB" }
+          gh release upload $env:TAG $archivos.FullName --clobber
