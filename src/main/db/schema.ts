@@ -401,5 +401,32 @@ export const MIGRATIONS: string[] = [
              FROM transactions t
             WHERE t.goal_id = goals.id AND t.type = 'transfer'
          ), 0);
+  `,
+
+  // v15 — una cuenta principal por tipo.
+  //
+  // Había una cuenta principal para toda la aplicación y, encima, un ajuste
+  // aparte para la hucha. Dos marcas sueltas para lo mismo, y la segunda nació
+  // porque la primera no valía: la principal es la del día a día y una hucha es
+  // justo lo contrario.
+  //
+  // Las cuentas ya se agrupan por tipo, así que la marca vive en la cuenta y hay
+  // una principal por tipo: la del banco es la de los movimientos, la de ahorro
+  // es la que abre Planes Ahorro. Se hereda lo que hubiera en los ajustes.
+  `
+  ALTER TABLE accounts ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE accounts
+     SET is_primary = 1
+   WHERE id IN (SELECT CAST(value AS INTEGER) FROM settings WHERE key IN ('defaultAccountId', 'defaultPotId'))
+     AND archived = 0;
+
+  -- Una por tipo: si dos comparten tipo, se queda la de menor orden.
+  UPDATE accounts
+     SET is_primary = 0
+   WHERE is_primary = 1
+     AND id NOT IN (
+           SELECT MIN(id) FROM accounts WHERE is_primary = 1 GROUP BY type
+         );
   `
 ]

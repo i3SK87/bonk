@@ -1020,40 +1020,43 @@ try {
   goals.deleteGoal(meta.id)
   accounts.deleteAccount(alcancia.id)
 
-  section('Cuenta principal')
-  equal('al principio no hay cuenta principal', settings.getSettings().defaultAccountId, null)
-  settings.updateSettings({ defaultAccountId: bank.id })
-  equal('se guarda la cuenta elegida', settings.getSettings().defaultAccountId, bank.id)
-  settings.updateSettings({ defaultAccountId: cash.id })
-  equal('elegir otra sustituye a la anterior', settings.getSettings().defaultAccountId, cash.id)
+  section('Cuenta principal por tipo')
+  // La marca vive en la cuenta y hay una por tipo: la del banco es la que viene
+  // marcada al registrar un movimiento y la de ahorro la que abre Planes Ahorro.
+  check('al principio ninguna es principal', accounts.listAccounts().every((a) => !a.isPrimary))
+  accounts.setPrimaryAccount(bank.id, true)
+  equal('la del banco queda marcada', accounts.primaryAccount('bank')!.id, bank.id)
+  accounts.setPrimaryAccount(cash.id, true)
+  equal(
+    'marcar otra de otro tipo no le quita la suya',
+    accounts.primaryAccount('bank')!.id,
+    bank.id
+  )
+  equal('y cada tipo tiene la suya', accounts.primaryAccount('cash')!.id, cash.id)
 
-  // Y sale la primera en todas partes, que el orden de las cuentas se decide en
-  // un solo sitio: la pestaña Cuentas, los desplegables y los filtros beben de
-  // esta lista. Es la que se mira a diario, así que verla la segunda cansa.
-  equal(
-    'la principal encabeza la lista',
-    accounts.listAccounts()[0].id,
-    cash.id
-  )
-  settings.updateSettings({ defaultAccountId: bank.id })
-  equal(
-    'y cambia de sitio al cambiar de principal',
-    accounts.listAccounts()[0].id,
-    bank.id
-  )
-  equal(
-    'el saldo llega en el mismo orden',
-    accounts.listAccountsWithBalance()[0].id,
-    bank.id
-  )
-  settings.updateSettings({ defaultAccountId: cash.id })
+  // Dos del mismo tipo no pueden serlo a la vez.
+  const otroBanco = accounts.saveAccount({
+    name: 'Segundo banco', type: 'bank', currency: 'EUR', initialBalance: 0,
+    icon: 'bank', color: '#0A84FF', excludeFromTotal: false
+  })
+  accounts.setPrimaryAccount(otroBanco.id, true)
+  equal('poner una quita la que hubiera de su tipo', accounts.primaryAccount('bank')!.id, otroBanco.id)
+  accounts.deleteAccount(otroBanco.id)
+  accounts.setPrimaryAccount(bank.id, true)
+
+  // Y salen las primeras en todas partes: el orden se decide en un solo sitio y
+  // lo heredan la pestaña Cuentas, los desplegables y los filtros. El banco va
+  // antes que el efectivo, que es de donde se apunta el día a día.
+  equal('las principales encabezan la lista', accounts.listAccounts()[0].id, bank.id)
+  equal('la preferida es la del banco', accounts.preferredAccount()!.id, bank.id)
+  equal('el saldo llega en el mismo orden', accounts.listAccountsWithBalance()[0].id, bank.id)
 
   accounts.saveAccount({
     id: cash.id, name: cash.name, type: cash.type, currency: cash.currency,
     initialBalance: cash.initialBalance, icon: cash.icon, color: cash.color,
     excludeFromTotal: false, archived: true
   })
-  equal('archivarla la deja de principal', settings.getSettings().defaultAccountId, null)
+  check('archivarla la deja de principal', !accounts.getAccount(cash.id)!.isPrimary)
 
   // Se desarchiva para no alterar el resto de comprobaciones.
   accounts.saveAccount({
@@ -1068,9 +1071,9 @@ try {
   const doomed = transactions.saveTransaction({ type: 'expense', date: day, accountId: dollars.id, amount: 500 })
   check('el movimiento se guarda', transactions.getTransaction(doomed.id) != null)
 
-  settings.updateSettings({ defaultAccountId: dollars.id })
+  accounts.setPrimaryAccount(dollars.id, true)
   accounts.deleteAccount(dollars.id)
-  equal('borrarla la deja de principal', settings.getSettings().defaultAccountId, null)
+  check('borrarla se lleva su marca', accounts.primaryAccount('bank')?.id !== dollars.id)
   equal('borrar la cuenta se lleva sus propios movimientos', transactions.countTransactions({}), before)
   equal(
     'el saldo de la cuenta superviviente no cambia al borrar la otra',

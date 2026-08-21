@@ -7,12 +7,8 @@ export function getSettings(): Settings {
     value: string
   }>
   const map = new Map(rows.map((r) => [r.key, r.value]))
-  const defaultAccount = Number(map.get('defaultAccountId') || 0)
-  const defaultPot = Number(map.get('defaultPotId') || 0)
   return {
     baseCurrency: map.get('baseCurrency') || 'EUR',
-    defaultAccountId: defaultAccount > 0 ? defaultAccount : null,
-    defaultPotId: defaultPot > 0 ? defaultPot : null,
     showScheduledInList: map.get('showScheduledInList') === '1',
     theme: (map.get('theme') as ThemeMode) || 'system',
     palette: (map.get('palette') as Palette) || 'grafito',

@@ -3,6 +3,19 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.24.0
+
+- **Una cuenta principal por tipo, y la marca vive en la cuenta.** Había una
+  principal para toda la aplicación y, encima, un ajuste aparte para la hucha: dos
+  marcas sueltas para lo mismo. Ahora cada tipo tiene la suya —la del banco es la
+  que viene marcada al registrar un movimiento, la de ahorro la que abre Planes
+  Ahorro— y se pone desde la ficha de la cuenta.
+- **Cuentas se agrupa por tipo**, con su epígrafe, y la principal de cada grupo se
+  ve en su sitio. Solo salen los tipos que tengas.
+- **El ahorro libre lleva la cara de la hucha que estés mirando**, con su icono y su
+  color.
+- El rótulo «Cuentas» de Planes Ahorro ya se ve como el de Movimientos.
+
 ## Novedades de la 1.23.0
 
 - **Hucha principal.** En la ficha de una cuenta de ahorro hay una casilla nueva,

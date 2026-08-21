@@ -36,6 +36,13 @@ export function AccountsView(): ReactNode {
     .reduce((sum, account) => sum + account.balanceInBase, 0)
   const excluded = accounts.filter((account) => account.excludeFromTotal)
 
+  // Solo los tipos que tengas: una lista con seis epígrafes y dos cuentas no
+  // ordena nada, solo hace scroll.
+  const porTipo = ACCOUNT_TYPES.map((tipo) => ({
+    tipo,
+    cuentas: accounts.filter((account) => account.type === tipo.value)
+  })).filter((grupo) => grupo.cuentas.length > 0)
+
   return (
     <>
       {/* Sin rayas entre filas, como el resto de la aplicación: el avatar y el
@@ -57,13 +64,18 @@ export function AccountsView(): ReactNode {
           />
         ) : (
           <div>
-            {accounts.map((account) => (
+            {/* Agrupadas por tipo: es como se piensan —lo del banco, lo ahorrado,
+                lo que se debe— y así la principal de cada uno se ve en su sitio. */}
+            {porTipo.map(({ tipo, cuentas }) => (
+              <div key={tipo.value}>
+                <div className="grupo-cuentas">{tipo.label}</div>
+                {cuentas.map((account) => (
               <button key={account.id} type="button" className="list-row clickable" onClick={() => setEditing(account)}>
                 <Avatar icon={account.icon} color={account.color} size="large" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="row tight" style={{ fontWeight: 600 }}>
                     {account.name}
-                    {settings.defaultAccountId === account.id && (
+                    {account.isPrimary && (
                       <span className="pill" title="Sale marcada por defecto en los formularios">
                         <Icon name="check" size={11} strokeWidth={2.6} />
                         Principal
@@ -86,6 +98,8 @@ export function AccountsView(): ReactNode {
                 </div>
                 <Icon name="chevronRight" size={16} className="muted" />
               </button>
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -154,7 +168,7 @@ interface AccountModalProps {
 }
 
 function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps): ReactNode {
-  const { settings, updateSettings } = useStore()
+  const { settings, run } = useStore()
   const [name, setName] = useState(account?.name ?? '')
   const [type, setType] = useState<AccountType>(account?.type ?? 'bank')
   // Sin selector: una cuenta nueva nace en la divisa de la aplicación.
@@ -177,8 +191,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
   const [allowNegative, setAllowNegative] = useState(
     account ? account.allowNegative : type !== 'cash' && type !== 'savings'
   )
-  const [isDefault, setIsDefault] = useState(account ? settings.defaultAccountId === account.id : false)
-  const [isDefaultPot, setIsDefaultPot] = useState(account ? settings.defaultPotId === account.id : false)
+  const [isPrimary, setIsPrimary] = useState(account?.isPrimary ?? false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -209,20 +222,9 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
     })
     if (!saved) return
 
-    // La cuenta principal es única: marcarla aquí desmarca la anterior.
-    if (isDefault && !archived && settings.defaultAccountId !== saved.id) {
-      await updateSettings({ defaultAccountId: saved.id })
-    } else if (!isDefault && settings.defaultAccountId === saved.id) {
-      await updateSettings({ defaultAccountId: null })
-    }
-
-    // Y la hucha principal, por su lado: una cuenta puede ser las dos cosas, o
-    // ninguna, pero se marcan por separado porque sirven para cosas distintas.
-    const esHucha = type === 'savings' && !archived
-    if (esHucha && isDefaultPot && settings.defaultPotId !== saved.id) {
-      await updateSettings({ defaultPotId: saved.id })
-    } else if ((!isDefaultPot || !esHucha) && settings.defaultPotId === saved.id) {
-      await updateSettings({ defaultPotId: null })
+    // La principal es una por tipo: marcarla aquí desmarca la que hubiera.
+    if (isPrimary !== (account?.isPrimary ?? false) || (isPrimary && !archived)) {
+      await run(() => api.accounts.setPrimary(saved.id, isPrimary && !archived))
     }
     onClose()
   }
@@ -333,36 +335,17 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           </div>
         </Field>
 
-        {/* Solo en las de ahorro: en una cuenta corriente no hay planes que abrir. */}
-        {type === 'savings' && (
-          <Checkbox
-            checked={isDefaultPot && !archived}
-            onChange={setIsDefaultPot}
-            label="Usar como hucha principal"
-            hint={
-              archived
-                ? 'Una cuenta archivada no puede ser la hucha principal.'
-                : 'Es la que se abre al entrar en Planes Ahorro. Solo puede haber una.'
-            }
-          />
-        )}
-
+        {/* Una principal por tipo: la del banco es la que viene marcada al
+            registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
         <Checkbox
-          checked={isDefault && !archived}
-          onChange={setIsDefault}
-          label="Usar como cuenta principal"
+          checked={isPrimary && !archived}
+          onChange={setIsPrimary}
+          label={`Usar como ${(ACCOUNT_TYPES.find((item) => item.value === type)?.label ?? 'cuenta').toLowerCase()} principal`}
           hint={
             archived
               ? 'Una cuenta archivada no puede ser la principal.'
-              : 'Vendrá elegida por defecto al crear movimientos y programaciones. Solo puede haber una.'
+              : 'La principal de cada tipo es la que la aplicación da por supuesta: la del banco al registrar un movimiento, la de ahorro al abrir Planes Ahorro. Solo puede haber una por tipo.'
           }
-        />
-
-        <Checkbox
-          checked={!allowNegative}
-          onChange={(value) => setAllowNegative(!value)}
-          label="No dejar que el saldo baje de cero"
-          hint="De una hucha o de la cartera no se puede sacar más de lo que hay. Quítalo en tarjetas de crédito y deudas, que viven en negativo."
         />
 
         <Checkbox

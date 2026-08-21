@@ -1,7 +1,7 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { convert, formatMoney } from '@shared/money'
 import { formatDate } from '@shared/dates'
-import { getSettings, rateMap, setSetting } from './settings'
+import { getSettings, rateMap } from './settings'
 import type { Account, AccountWithBalance, AccountType } from '@shared/types'
 
 interface AccountRow {
@@ -15,6 +15,7 @@ interface AccountRow {
   exclude_from_total: number
   allow_negative: number
   archived: number
+  is_primary: number
   sort_order: number
   note: string | null
   low_balance_threshold: number
@@ -33,6 +34,7 @@ function mapAccount(row: AccountRow): Account {
     excludeFromTotal: row.exclude_from_total === 1,
     allowNegative: row.allow_negative === 1,
     archived: row.archived === 1,
+    isPrimary: row.is_primary === 1,
     sortOrder: row.sort_order,
     note: row.note,
     lowBalanceThreshold: row.low_balance_threshold,
@@ -41,24 +43,70 @@ function mapAccount(row: AccountRow): Account {
 }
 
 /**
- * Todas las cuentas, con la principal por delante.
+ * En qué orden se piensan los tipos de cuenta.
+ *
+ * Manda para elegir la cuenta que viene marcada al registrar un movimiento: se
+ * apunta desde la del banco, no desde la hucha ni desde el préstamo del coche.
+ */
+const TYPE_ORDER: AccountType[] = ['bank', 'cash', 'card', 'investment', 'savings', 'debt']
+
+/**
+ * Todas las cuentas, con las principales por delante.
  *
  * El orden sale de aquí una sola vez y lo hereda todo lo demás —la pestaña
- * Cuentas, los desplegables de los formularios, las pastillas de los filtros—,
- * así que la principal encabeza la lista en todas partes. Es la que se mira a
- * diario: verla la segunda cansa. El resto conserva su propio orden.
+ * Cuentas, los desplegables de los formularios, las pastillas de los filtros—.
+ * Delante van las principales de cada tipo, por orden de tipo, y detrás el resto
+ * con el suyo.
  */
 export function listAccounts(includeArchived = false): Account[] {
   const where = includeArchived ? '' : 'WHERE archived = 0'
-  const preferred = getSettings().defaultAccountId ?? 0
-  return (
-    getDb()
-      .prepare(
-        `SELECT * FROM accounts ${where}
-          ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, sort_order, id`
-      )
-      .all(preferred) as unknown as AccountRow[]
-  ).map(mapAccount)
+  const rows = getDb().prepare(`SELECT * FROM accounts ${where}`).all() as unknown as AccountRow[]
+  const rank = (row: AccountRow): number => {
+    const tipo = TYPE_ORDER.indexOf(row.type as AccountType)
+    return (row.is_primary === 1 ? 0 : 100) + (tipo < 0 ? TYPE_ORDER.length : tipo)
+  }
+  return rows
+    .sort((a, b) => rank(a) - rank(b) || a.sort_order - b.sort_order || a.id - b.id)
+    .map(mapAccount)
+}
+
+/**
+ * La principal de un tipo, si la hay.
+ *
+ * Es lo que sustituye a los dos ajustes que había antes —una cuenta principal
+ * suelta y una hucha principal aparte—: la marca vive en la cuenta y cada tipo
+ * tiene la suya.
+ */
+export function primaryAccount(type: AccountType): Account | null {
+  const row = getDb()
+    .prepare('SELECT * FROM accounts WHERE type = ? AND is_primary = 1 AND archived = 0')
+    .get(type) as unknown as AccountRow | undefined
+  return row ? mapAccount(row) : null
+}
+
+/** La que viene marcada al registrar un movimiento. */
+export function preferredAccount(): Account | null {
+  for (const type of TYPE_ORDER) {
+    const found = primaryAccount(type)
+    if (found) return found
+  }
+  return listAccounts()[0] ?? null
+}
+
+/**
+ * Marca esta cuenta como la principal de su tipo, o le quita la marca. Solo una
+ * por tipo: poner una quita la que hubiera.
+ */
+export function setPrimaryAccount(id: number, primary: boolean): void {
+  const db = getDb()
+  const row = db.prepare('SELECT type FROM accounts WHERE id = ?').get(id) as unknown as
+    | { type: string }
+    | undefined
+  if (!row) return
+  atomic(() => {
+    if (primary) db.prepare('UPDATE accounts SET is_primary = 0 WHERE type = ?').run(row.type)
+    db.prepare('UPDATE accounts SET is_primary = ? WHERE id = ?').run(primary ? 1 : 0, id)
+  })
 }
 
 export function getAccount(id: number): Account | null {
@@ -163,11 +211,8 @@ function saveAccountInner(input: AccountInput): Account {
       input.id
     )
     // Una cuenta archivada desaparece de los desplegables, así que tampoco puede
-    // seguir siendo la principal.
-    if (input.archived && getSettings().defaultAccountId === input.id) {
-      setSetting('defaultAccountId', '')
-    }
-    if (input.archived && getSettings().defaultPotId === input.id) setSetting('defaultPotId', '')
+    // seguir siendo la principal de su tipo.
+    if (input.archived) db.prepare('UPDATE accounts SET is_primary = 0 WHERE id = ?').run(input.id)
     // Bajar el saldo de partida también puede meter la cuenta en números rojos.
     assertNoOverdraft([input.id])
     return getAccount(input.id)!
@@ -231,8 +276,7 @@ export function deleteAccount(id: number): void {
     db.prepare('DELETE FROM accounts WHERE id = ?').run(id)
 
     // Si era la cuenta principal, el ajuste se queda sin apuntar a nada.
-    if (getSettings().defaultAccountId === id) setSetting('defaultAccountId', '')
-    if (getSettings().defaultPotId === id) setSetting('defaultPotId', '')
+
   })
 }
 

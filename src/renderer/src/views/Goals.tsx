@@ -55,7 +55,10 @@ export function GoalsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
-  const [potId, setPotId] = useState<number | null>(settings.defaultPotId)
+  // La hucha principal es la marcada de su tipo; si no hay ninguna, la primera.
+  const [potId, setPotId] = useState<number | null>(
+    accounts.find((account) => account.type === 'savings' && account.isPrimary)?.id ?? null
+  )
 
   useEffect(() => {
     setLoading(true)
@@ -142,7 +145,8 @@ export function GoalsView(): ReactNode {
                   Sin mando y sin barra —sube y baja solo, y contra nada se mide—:
                   lo que importa aquí es cuánto hay, así que la cifra manda. */}
               <div className="row" style={{ gap: 14 }}>
-                <Avatar icon={hucha?.icon ?? 'piggy'} color="var(--fg-subtle)" />
+                {/* La cara de la hucha que se esta mirando: es su dinero. */}
+                <Avatar icon={hucha?.icon ?? 'piggy'} color={hucha?.color ?? 'var(--fg-subtle)'} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 570 }}>Ahorro libre</div>
                   <div className="small muted">

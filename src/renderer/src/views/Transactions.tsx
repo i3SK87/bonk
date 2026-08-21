@@ -100,9 +100,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * la cifra grande dice lo que hay ahí y no el total repartido entre huchas.
    * Se quita pulsándola, y entonces vuelve el patrimonio de todas.
    */
-  const [accountIds, setAccountIds] = useState<number[]>(
-    settings.defaultAccountId ? [settings.defaultAccountId] : []
-  )
+  const [accountIds, setAccountIds] = useState<number[]>(accounts[0] ? [accounts[0].id] : [])
   const [categoryIds, setCategoryIds] = useState<number[]>([])
   /** «Sin categoría» no es una categoría: es la falta de ella, y se filtra aparte. */
   const [uncategorized, setUncategorized] = useState(false)

@@ -45,8 +45,6 @@ const StoreContext = createContext<StoreValue | null>(null)
 
 const FALLBACK_SETTINGS: Settings = {
   baseCurrency: 'EUR',
-  defaultAccountId: null,
-  defaultPotId: null,
   showScheduledInList: false,
   theme: 'system',
   palette: 'grafito',
@@ -222,8 +220,13 @@ export function useStore(): StoreValue {
  * Cuenta que viene marcada al abrir un formulario: la principal si sigue activa,
  * y si no la primera de la lista.
  */
+/**
+ * La cuenta que viene marcada al registrar algo.
+ *
+ * La lista llega ya ordenada con las principales de cada tipo delante y por
+ * orden de tipo —el banco antes que la hucha—, así que la primera es la buena.
+ */
 export function usePreferredAccountId(): number {
-  const { accounts, settings } = useStore()
-  const preferred = accounts.find((account) => account.id === settings.defaultAccountId)
-  return preferred?.id ?? accounts[0]?.id ?? 0
+  const { accounts } = useStore()
+  return accounts[0]?.id ?? 0
 }

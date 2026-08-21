@@ -69,6 +69,9 @@ export function registerIpc(
   handle('accounts:list', (includeArchived: boolean) => accounts.listAccounts(includeArchived))
   handle('accounts:withBalance', (includeArchived: boolean) => accounts.listAccountsWithBalance(includeArchived))
   handle('accounts:save', (input) => accounts.saveAccount(input))
+  handle('accounts:setPrimary', (id: number, primary: boolean) =>
+    accounts.setPrimaryAccount(id, primary)
+  )
   handle('accounts:delete', (id: number) => accounts.deleteAccount(id))
   handle('accounts:count', (id: number) => accounts.countAccountTransactions(id))
   handle('accounts:reorder', (ids: number[]) => accounts.reorderAccounts(ids))

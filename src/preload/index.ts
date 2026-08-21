@@ -41,6 +41,8 @@ const api = {
     list: (includeArchived = false) => call<Account[]>('accounts:list', includeArchived),
     withBalance: (includeArchived = false) => call<AccountWithBalance[]>('accounts:withBalance', includeArchived),
     save: (input: unknown) => call<Account>('accounts:save', input),
+    setPrimary: (id: number, primary: boolean) =>
+      call<void>('accounts:setPrimary', id, primary),
     remove: (id: number) => call<void>('accounts:delete', id),
     countTransactions: (id: number) => call<number>('accounts:count', id),
     reorder: (ids: number[]) => call<void>('accounts:reorder', ids)
