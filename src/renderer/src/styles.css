@@ -1007,16 +1007,20 @@ p { margin: 0; }
    relleno y 19 de medio avatar) y la fila anidada entra 34, así que la línea va
    a -6: los 2px del trazo quedan entre 28 y 30. Descuadrada, la rama parecía
    colgar del aire. */
+/* La sangría se hace con relleno y no con margen. Con margen, la fila anidada
+   era una caja más estrecha y desplazada: al encenderse la familia se veían dos
+   manchas redondeadas pegadas en vez de una sola. Compartiendo caja, el resalte
+   de las dos filas es un único bloque. */
 .tx-row.nested {
   position: relative;
-  margin-left: 34px;
+  padding-left: 44px;
 }
 
 .tx-row.nested::before,
 .list-row.nested::before {
   content: '';
   position: absolute;
-  left: -6px;
+  left: 28px;
   /* El mismo aire por los dos cabos: seis puntos desde el icono del que cuelga
      y otros seis hasta el icono al que llega. El alto compensa lo que sube el
      arranque, para que el codo siga muriendo a la altura del icono de abajo. */
@@ -1034,7 +1038,7 @@ p { margin: 0; }
 .list-row.nested-continues::after {
   content: '';
   position: absolute;
-  left: -6px;
+  left: 28px;
   top: calc(50% - 2px);
   bottom: -2px;
   border-left: 2px solid var(--link-line);
@@ -1051,12 +1055,6 @@ p { margin: 0; }
   padding-left: 44px;
 }
 
-/* Allí la sangría es relleno y no margen, así que la línea se sitúa sola: con el
-   mismo relleno que en Movimientos, el icono del padre cae a 29px. */
-.card.flush .list-row.nested::before,
-.card.flush .list-row.nested-continues::after {
-  left: 28px;
-}
 
 /* La rama sí se enciende: es la que dice de quién cuelga. */
 .tx-row.nested.linked-active::before,
@@ -1064,24 +1062,20 @@ p { margin: 0; }
   border-color: var(--accent);
 }
 
-/* Encendida la familia, las dos filas forman una sola mancha: se cuadran las
-   esquinas por donde se tocan y el canto derecho queda de una pieza. El
-   izquierdo conserva su escalón, que es lo que enseña de quién cuelga. */
+/* Encendida la familia, las dos filas son un solo bloque: se cuadran las
+   esquinas por donde se tocan y solo redondean la de arriba del todo y la de
+   abajo del todo. */
 .tx-row.linked-active:not(.nested),
-.tx-row.nested.nested-continues.linked-active {
-  border-bottom-right-radius: 0;
-}
-
-.tx-row.nested.linked-active {
-  border-top-right-radius: 0;
-}
-
+.tx-row.nested.nested-continues.linked-active,
 .card.flush .list-row.linked-active:not(.nested),
 .card.flush .list-row.nested.nested-continues.linked-active {
+  border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 
+.tx-row.nested.linked-active,
 .card.flush .list-row.nested.linked-active {
+  border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 

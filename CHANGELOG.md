@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.16.1
+
+- **El resalte de un gasto y su devolución es ahora una sola mancha.** Seguían
+  viéndose dos bloques redondeados pegados: la fila de la devolución entraba con
+  margen, así que era una caja más estrecha y desplazada. Ahora la sangría la hace
+  el relleno, las dos filas comparten caja y el resalte es un único bloque,
+  redondeado solo por arriba y por abajo.
+
 ## Novedades de la 1.16.0
 
 - **El aviso de saldo se pone por cuenta**, en su ficha, y ya no es un ajuste
