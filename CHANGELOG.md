@@ -3,6 +3,22 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.14.0
+
+- **Llegar a un hito de ahorro se celebra.** La misma pantalla con confeti y el
+  mismo aviso de Windows que cuando se salda una deuda, porque es lo mismo: el
+  final de algo que ha costado meses. Sale en cuanto el dinero entra en la
+  hucha, no media hora después, y también si la meta se alcanza sola —con una
+  programada que aparta dinero cada mes— mientras la aplicación está en la
+  bandeja. Una sola vez por hito.
+- **Los hitos ya no piden nota.** El título los explica de sobra y era un campo
+  más que rellenar para decir lo mismo. Lo que ya tuvieras escrito se sigue
+  viendo en la lista.
+- **«Qué quieres juntar» pasa a llamarse «Título».**
+- **Y una deuda finalizada a mano ya enseña su enhorabuena.** Mandaba el aviso
+  de Windows pero la pantalla no llegaba nunca, porque la marca de «ya
+  celebrada» se ponía antes de que nadie la enseñara.
+
 ## Novedades de la 1.13.10
 
 - **Una sola pastilla por nombre de categoría en los filtros.** Un mismo nombre
