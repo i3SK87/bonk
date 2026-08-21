@@ -3,6 +3,26 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.15.0
+
+- **La cifra grande sigue a la cuenta que elijas.** Con mil euros apartados en la
+  hucha, el patrimonio no se mueve y parece que sigues teniéndolos en la cuenta
+  del día a día. Ahora, pulsando una cuenta de la fila, la cifra pasa a ser la de
+  esa cuenta; pulsando las dos, la de las dos. Sin pulsar nada, el patrimonio de
+  siempre.
+- **Aviso cuando la cuenta principal se queda sin fondo.** Notificación de
+  Windows y un aviso en Movimientos, mientras dure. El límite se pone en Ajustes
+  y viene de fábrica en 50 €; en cero no avisa nunca. Se vuelve a armar solo
+  cuando el saldo remonta.
+- **Borrar un movimiento también desarma la enhorabuena de un hito.** Antes solo
+  contaba sacar el dinero con un traspaso, y da igual por dónde se vaya.
+- **La guía que une un gasto con su devolución ya cae por el centro del icono**,
+  en Movimientos y en Programados. Estaba doce píxeles a la izquierda y la rama
+  parecía colgar del aire.
+- **Fuera la banda azul del canto izquierdo** de un gasto que tiene devolución.
+  El tinte al pasar por encima ya dice que son familia; la banda competía con el
+  codo que los une y ensuciaba el lateral de la lista.
+
 ## Novedades de la 1.14.1
 
 - **La enhorabuena de un hito se vuelve a ganar.** Si sacas el dinero de la
