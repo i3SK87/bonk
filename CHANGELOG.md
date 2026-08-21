@@ -3,6 +3,26 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.16.0
+
+- **El aviso de saldo se pone por cuenta**, en su ficha, y ya no es un ajuste
+  suelto para la principal. Cada cuenta tiene su suelo: en la del día a día
+  cincuenta euros son poco y en una hucha no significan nada. En cero no avisa. Al
+  actualizar, el límite que tenías puesto pasa a tu cuenta principal.
+- **El aviso va en ámbar mientras quede saldo** y en rojo cuando ya estás en
+  números rojos, que es la diferencia que importa. Y el campo del importe ya no
+  usa el tamaño de titular: ahí no se viene a escribir un movimiento.
+- **Los avisos de Windows llevan su propia cara**: la cuenta que se queda sin
+  fondo lleva su icono y su color, y el hito conseguido el suyo. Antes caían al
+  icono de BONK.
+- **El total del día cuenta desde la cuenta que estés mirando.** Un traspaso de
+  1.000 € a la hucha marcaba 0,00 € porque el patrimonio no se mueve; con esa
+  cuenta elegida ahora resta −1.000 €, que es lo que le pasa a ella.
+- **Un gasto y su devolución se resaltan juntos y con el mismo gris**, y las dos
+  filas forman una sola mancha en vez de dos. En Movimientos y en Programados.
+- **Programados tiene ya el mismo espaciado que Movimientos.** Sus filas iban
+  pegadas al canto de la tarjeta y el resalte se leía como otra cosa.
+
 ## Novedades de la 1.15.1
 
 - **La cuenta principal viene elegida al abrir.** Es la que se mira, así que la
