@@ -145,6 +145,19 @@ function noteTotals(
 }
 
 /** Ingresos y gastos mes a mes, ya convertidos a la divisa base. */
+/**
+ * De cuándo es el primer movimiento y de cuándo el último. Es lo que necesita
+ * el periodo «Todo», que no puede inventarse un rango: sin esto habría que
+ * elegir entre un año arbitrario o unas fechas absurdas que dejarían la media
+ * diaria sin sentido.
+ */
+export function transactionsSpan(): { from: string; to: string } | null {
+  const row = getDb()
+    .prepare('SELECT MIN(date) AS first, MAX(date) AS last FROM transactions')
+    .get() as unknown as { first: string | null; last: string | null }
+  return row?.first && row?.last ? { from: row.first, to: row.last } : null
+}
+
 export function monthlySeries(months = 12, reference = today()): MonthlyPoint[] {
   const rates = rateMap()
   const base = getSettings().baseCurrency

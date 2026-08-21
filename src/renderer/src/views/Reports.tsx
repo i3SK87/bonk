@@ -17,17 +17,19 @@ import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
 
-type PeriodId = 'month' | 'prev' | 'quarter' | 'year' | 'prevYear'
+type PeriodId = 'month' | 'prev' | 'quarter' | 'year' | 'prevYear' | 'all'
 
 const PERIODS: Array<{ id: PeriodId; label: string }> = [
   { id: 'month', label: 'Este mes' },
   { id: 'prev', label: 'Mes pasado' },
   { id: 'quarter', label: '3 meses' },
   { id: 'year', label: 'Este año' },
-  { id: 'prevYear', label: 'Año pasado' }
+  { id: 'prevYear', label: 'Año pasado' },
+  { id: 'all', label: 'Todo' }
 ]
 
-function rangeFor(id: PeriodId): { from: string; to: string } {
+/** «Todo» no cabe aquí: su rango no se calcula, se pregunta a los datos. */
+function rangeFor(id: Exclude<PeriodId, 'all'>): { from: string; to: string } {
   const now = today()
   switch (id) {
     case 'month':
@@ -65,6 +67,11 @@ export function ReportsView(): ReactNode {
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
+
+  useEffect(() => {
+    api.reports.span().then(setSpan).catch(fail('el histórico'))
+  }, [revision])
 
   const toggle = (categoryId: number): void => {
     setExpanded((current) => {
@@ -74,7 +81,12 @@ export function ReportsView(): ReactNode {
     })
   }
 
-  const range = useMemo(() => rangeFor(period), [period])
+  // El rango de «Todo» va del primer movimiento al último. Mientras no ha
+  // llegado se enseña el día de hoy, que es un rango vacío y no una fecha rara.
+  const range = useMemo(
+    () => (period === 'all' ? (span ?? { from: today(), to: today() }) : rangeFor(period)),
+    [period, span]
+  )
   const currency = settings.baseCurrency
 
   useEffect(() => {

@@ -38,11 +38,25 @@ function mapAccount(row: AccountRow): Account {
   }
 }
 
+/**
+ * Todas las cuentas, con la principal por delante.
+ *
+ * El orden sale de aquí una sola vez y lo hereda todo lo demás —la pestaña
+ * Cuentas, los desplegables de los formularios, las pastillas de los filtros—,
+ * así que la principal encabeza la lista en todas partes. Es la que se mira a
+ * diario: verla la segunda cansa. El resto conserva su propio orden.
+ */
 export function listAccounts(includeArchived = false): Account[] {
   const where = includeArchived ? '' : 'WHERE archived = 0'
-  return (getDb().prepare(`SELECT * FROM accounts ${where} ORDER BY sort_order, id`).all() as unknown as AccountRow[]).map(
-    mapAccount
-  )
+  const preferred = getSettings().defaultAccountId ?? 0
+  return (
+    getDb()
+      .prepare(
+        `SELECT * FROM accounts ${where}
+          ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, sort_order, id`
+      )
+      .all(preferred) as unknown as AccountRow[]
+  ).map(mapAccount)
 }
 
 export function getAccount(id: number): Account | null {

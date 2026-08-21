@@ -85,7 +85,8 @@ const api = {
   reports: {
     categories: (from: string, to: string, kind: CategoryKind = 'expense') =>
       call<CategoryTotal[]>('reports:categories', from, to, kind),
-    monthly: (months = 12) => call<MonthlyPoint[]>('reports:monthly', months)
+    monthly: (months = 12) => call<MonthlyPoint[]>('reports:monthly', months),
+    span: () => call<{ from: string; to: string } | null>('reports:span')
   },
   attachments: {
     list: (transactionId: number) => call<Attachment[]>('attachments:list', transactionId),

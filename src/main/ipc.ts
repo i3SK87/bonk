@@ -99,6 +99,7 @@ export function registerIpc(
     reports.categoryTotals(from, to, kind)
   )
   handle('reports:monthly', (months: number) => reports.monthlySeries(months))
+  handle('reports:span', () => reports.transactionsSpan())
 
   // — Adjuntos —
   handle('attachments:list', (transactionId: number) => attachments.listAttachments(transactionId))

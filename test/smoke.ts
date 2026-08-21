@@ -784,12 +784,41 @@ try {
 
   accounts.deleteAccount(hucha.id)
 
+  const span = reports.transactionsSpan()!
+  check('el histórico sabe cuándo empieza y cuándo acaba', span != null)
+  check(
+    'y va de la primera fecha a la última',
+    span.from <= span.to &&
+      transactions.listTransactions({ limit: 500 }).every((row) => row.date >= span.from && row.date <= span.to)
+  )
+
   section('Cuenta principal')
   equal('al principio no hay cuenta principal', settings.getSettings().defaultAccountId, null)
   settings.updateSettings({ defaultAccountId: bank.id })
   equal('se guarda la cuenta elegida', settings.getSettings().defaultAccountId, bank.id)
   settings.updateSettings({ defaultAccountId: cash.id })
   equal('elegir otra sustituye a la anterior', settings.getSettings().defaultAccountId, cash.id)
+
+  // Y sale la primera en todas partes, que el orden de las cuentas se decide en
+  // un solo sitio: la pestaña Cuentas, los desplegables y los filtros beben de
+  // esta lista. Es la que se mira a diario, así que verla la segunda cansa.
+  equal(
+    'la principal encabeza la lista',
+    accounts.listAccounts()[0].id,
+    cash.id
+  )
+  settings.updateSettings({ defaultAccountId: bank.id })
+  equal(
+    'y cambia de sitio al cambiar de principal',
+    accounts.listAccounts()[0].id,
+    bank.id
+  )
+  equal(
+    'el saldo llega en el mismo orden',
+    accounts.listAccountsWithBalance()[0].id,
+    bank.id
+  )
+  settings.updateSettings({ defaultAccountId: cash.id })
 
   accounts.saveAccount({
     id: cash.id, name: cash.name, type: cash.type, currency: cash.currency,
