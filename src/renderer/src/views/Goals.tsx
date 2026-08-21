@@ -55,7 +55,7 @@ export function GoalsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
-  const [potId, setPotId] = useState<number | null>(null)
+  const [potId, setPotId] = useState<number | null>(settings.defaultPotId)
 
   useEffect(() => {
     setLoading(true)
@@ -108,7 +108,10 @@ export function GoalsView(): ReactNode {
         {/* Las huchas disponibles, como las cuentas en Movimientos. Con una sola
             también se enseña: dice cuánto hay ahí sin tener que ir a Cuentas. */}
         {huchas.length > 0 && (
-          <div className="card-body" style={{ paddingBottom: 0 }}>
+          <div className="card-body" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="label" style={{ marginBottom: 8 }}>
+              Cuentas
+            </div>
             <div className="account-chips">
               {huchas.map((account) => (
                 <button
@@ -139,7 +142,7 @@ export function GoalsView(): ReactNode {
                   Sin mando y sin barra —sube y baja solo, y contra nada se mide—:
                   lo que importa aquí es cuánto hay, así que la cifra manda. */}
               <div className="row" style={{ gap: 14 }}>
-                <Avatar icon="piggy" color="var(--fg-subtle)" />
+                <Avatar icon={hucha?.icon ?? 'piggy'} color="var(--fg-subtle)" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 570 }}>Ahorro libre</div>
                   <div className="small muted">

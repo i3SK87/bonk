@@ -46,6 +46,7 @@ const StoreContext = createContext<StoreValue | null>(null)
 const FALLBACK_SETTINGS: Settings = {
   baseCurrency: 'EUR',
   defaultAccountId: null,
+  defaultPotId: null,
   showScheduledInList: false,
   theme: 'system',
   palette: 'grafito',

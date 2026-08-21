@@ -178,6 +178,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
     account ? account.allowNegative : type !== 'cash' && type !== 'savings'
   )
   const [isDefault, setIsDefault] = useState(account ? settings.defaultAccountId === account.id : false)
+  const [isDefaultPot, setIsDefaultPot] = useState(account ? settings.defaultPotId === account.id : false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -213,6 +214,15 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
       await updateSettings({ defaultAccountId: saved.id })
     } else if (!isDefault && settings.defaultAccountId === saved.id) {
       await updateSettings({ defaultAccountId: null })
+    }
+
+    // Y la hucha principal, por su lado: una cuenta puede ser las dos cosas, o
+    // ninguna, pero se marcan por separado porque sirven para cosas distintas.
+    const esHucha = type === 'savings' && !archived
+    if (esHucha && isDefaultPot && settings.defaultPotId !== saved.id) {
+      await updateSettings({ defaultPotId: saved.id })
+    } else if ((!isDefaultPot || !esHucha) && settings.defaultPotId === saved.id) {
+      await updateSettings({ defaultPotId: null })
     }
     onClose()
   }
@@ -322,6 +332,20 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} compact />
           </div>
         </Field>
+
+        {/* Solo en las de ahorro: en una cuenta corriente no hay planes que abrir. */}
+        {type === 'savings' && (
+          <Checkbox
+            checked={isDefaultPot && !archived}
+            onChange={setIsDefaultPot}
+            label="Usar como hucha principal"
+            hint={
+              archived
+                ? 'Una cuenta archivada no puede ser la hucha principal.'
+                : 'Es la que se abre al entrar en Planes Ahorro. Solo puede haber una.'
+            }
+          />
+        )}
 
         <Checkbox
           checked={isDefault && !archived}

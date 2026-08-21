@@ -284,6 +284,11 @@ export interface Settings {
   baseCurrency: string
   /** Cuenta que viene marcada por defecto en los desplegables. */
   defaultAccountId: number | null
+  /**
+   * Hucha que se abre al entrar en Planes Ahorro. Es cosa aparte de la cuenta
+   * principal: esa es la del día a día y aquí se busca justo la contraria.
+   */
+  defaultPotId: number | null
   /** Enseña las repeticiones futuras de las programadas dentro de la lista de movimientos. */
   showScheduledInList: boolean
   theme: ThemeMode

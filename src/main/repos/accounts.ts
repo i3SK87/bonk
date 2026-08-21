@@ -167,6 +167,7 @@ function saveAccountInner(input: AccountInput): Account {
     if (input.archived && getSettings().defaultAccountId === input.id) {
       setSetting('defaultAccountId', '')
     }
+    if (input.archived && getSettings().defaultPotId === input.id) setSetting('defaultPotId', '')
     // Bajar el saldo de partida también puede meter la cuenta en números rojos.
     assertNoOverdraft([input.id])
     return getAccount(input.id)!
@@ -231,6 +232,7 @@ export function deleteAccount(id: number): void {
 
     // Si era la cuenta principal, el ajuste se queda sin apuntar a nada.
     if (getSettings().defaultAccountId === id) setSetting('defaultAccountId', '')
+    if (getSettings().defaultPotId === id) setSetting('defaultPotId', '')
   })
 }
 

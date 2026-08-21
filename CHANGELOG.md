@@ -3,6 +3,16 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.23.0
+
+- **Hucha principal.** En la ficha de una cuenta de ahorro hay una casilla nueva,
+  «Usar como hucha principal»: es la que se abre al entrar en Planes Ahorro. Va
+  aparte de la cuenta principal, que es la del día a día y sirve para lo contrario.
+- **El ahorro libre lleva el icono de la hucha que estés mirando**, en gris para que
+  siga distinguiéndose de un plan.
+- **Las huchas se separan del resto con su título y su línea**, como las cuentas en
+  Movimientos.
+
 ## Novedades de la 1.22.0
 
 - **Planes Ahorro enseña tus huchas arriba**, como Movimientos con las cuentas,
