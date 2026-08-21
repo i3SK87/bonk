@@ -537,6 +537,50 @@ try {
   equal('ni genera movimientos nuevos', scheduled.postDue(addMonths(day, 3)), 0)
   check('registra la última ejecución', refreshed.lastPosted != null)
 
+  section('Una deuda desde su primer gasto')
+  // Lo que hace el formulario de un movimiento cuando se marca «se repite»:
+  // guarda el gasto y monta la programación con los mismos datos, con la
+  // próxima una vuelta más allá. Sin esa programación, la deuda no existe para
+  // la pestaña de Deudas por mucho que el gasto esté apuntado.
+  const categoriaDeuda = categories.listCategories().find((item) => item.name === 'Deuda')!
+  const primerPago = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: categoriaDeuda.id,
+    amount: 5000,
+    note: 'Sofá cama'
+  })
+  equal('el primer pago se apunta', transactions.getTransaction(primerPago.id)!.amount, 5000)
+  check(
+    'pero por sí solo no es una deuda',
+    !scheduled.debtProgress(day).some((row) => row.title === 'Sofá cama')
+  )
+
+  const suRepeticion = scheduled.saveScheduled({
+    type: 'expense',
+    accountId: bank.id,
+    categoryId: categoriaDeuda.id,
+    amount: 5000,
+    note: 'Sofá cama',
+    freq: 'monthly',
+    interval: 1,
+    nextDate: nextOccurrence(day, 'monthly', 1),
+    endDate: addMonths(day, 5),
+    autoPost: true
+  })
+  const laDeuda = scheduled.debtProgress(day).find((row) => row.title === 'Sofá cama')!
+  check('con su repetición, ya sale en Deudas', laDeuda != null)
+  equal('y cuenta el pago de hoy', laDeuda.paidCount, 1)
+  equal('con las cinco que quedan', laDeuda.leftCount, 5)
+  equal(
+    'la próxima no es hoy, que hoy ya se ha pagado',
+    scheduled.getScheduled(suRepeticion.id)!.nextDate,
+    nextOccurrence(day, 'monthly', 1)
+  )
+  scheduled.deleteScheduled(suRepeticion.id)
+  transactions.deleteTransactions([primerPago.id])
+
   section('Planes que se agotan')
   // Dos cuotas y se acabó: la fecha de fin cae justo en la segunda.
   const deuda = categories.listCategories().find((category) => category.name === 'Deuda')

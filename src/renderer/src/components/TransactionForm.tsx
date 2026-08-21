@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Modal, Field, AmountInput, Avatar, Segmented, Confirm } from './ui'
+import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, Checkbox, NumberInput } from './ui'
 import { Icon } from './Icon'
 import { useStore, usePreferredAccountId } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
-import { today, formatDate } from '@shared/dates'
+import { today, formatDate, nextOccurrence } from '@shared/dates'
 import { formatMoney } from '@shared/money'
-import type { Attachment, GoalProgress, TransactionView, TxType } from '@shared/types'
+import { FRECUENCIAS } from '../lib/frecuencias'
+import type { Attachment, Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -38,6 +39,23 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
   // La hora no se pide, pero la que traiga el movimiento se conserva.
   const time = existing?.time ?? ''
   const [note, setNote] = useState(existing?.note ?? '')
+
+  /*
+   * Dejar montada la repetición desde aquí.
+   *
+   * Una cuota o una suscripción no son un gasto suelto: son el primero de una
+   * serie. Sin esto había que apuntar el gasto y luego, aparte, crear la
+   * programación a mano con los mismos datos —y hasta entonces una deuda no
+   * aparecía en su pestaña, porque Deudas mira las programaciones, no los
+   * movimientos—.
+   *
+   * Solo al crear: sobre un movimiento que ya existe, marcarlo volvería a
+   * montar una programación que probablemente ya está montada.
+   */
+  const [repite, setRepite] = useState(false)
+  const [freq, setFreq] = useState<Frequency>('monthly')
+  const [interval, setInterval] = useState(1)
+  const [endDate, setEndDate] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */
   const [pending, setPending] = useState<Array<{ path: string; name: string }>>([])
@@ -77,6 +95,10 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     setCategoryId(candidates.find((item) => item.id === id)?.categoryId ?? null)
   }
 
+  // Una deuda a plazos sin programación no sale en Deudas, así que ahí la
+  // repetición se ofrece con el interruptor ya puesto.
+  const esDeuda = categories.some((item) => item.id === categoryId && item.isDebt)
+
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
   // Las facturas solo salen donde tienen sentido: lo decide la categoría.
@@ -105,6 +127,12 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
       setCategoryId(null)
     }
   }, [type, categoryId, visibleCategories])
+
+  // Al elegir una categoría de deuda se propone repetir; al salir de ella, se
+  // recoge la propuesta si no se ha tocado nada.
+  useEffect(() => {
+    if (!existing) setRepite(esDeuda)
+  }, [esDeuda, existing])
 
   useEffect(() => {
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
@@ -199,6 +227,32 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     setSaving(false)
 
     if (!saved) return
+
+    /*
+     * Y su programación, si se ha pedido.
+     *
+     * La próxima cae una vuelta después de este movimiento, que ya está pagado.
+     * Se registra sola, como las demás; si no se quiere, se apaga desde su ficha.
+     */
+    if (repite && !existing && type !== 'transfer') {
+      await run(
+        () =>
+          api.scheduled.save({
+            type,
+            accountId,
+            categoryId,
+            amount,
+            note: note || null,
+            freq,
+            interval,
+            nextDate: nextOccurrence(date, freq, interval),
+            endDate: endDate || null,
+            autoPost: true,
+            remind: true
+          }),
+        'Repetición programada'
+      )
+    }
 
     if (pending.length > 0) {
       const added = await run(() => api.attachments.attach(saved.id, pending.map((item) => item.path)))
@@ -442,6 +496,62 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
                 </option>
               ))}
             </select>
+          </Field>
+        )}
+
+        {!existing && type !== 'transfer' && (
+          <Field
+            label="¿Se repite?"
+            hint={
+              esDeuda
+                ? 'Una deuda a plazos vive de su repetición: sin ella no aparece en Deudas ni se sabe cuánto queda.'
+                : 'Para lo que vuelve cada mes —suscripciones, recibos, cuotas—. Este movimiento se queda como está y la próxima vez se registra sola.'
+            }
+          >
+            <Checkbox
+              checked={repite}
+              onChange={setRepite}
+              label={repite ? 'Sí, y esta es la primera vez' : 'No, es un movimiento suelto'}
+            />
+
+            {repite && (
+              <div className="grid cols-2" style={{ marginTop: 10 }}>
+                <Field label="Cada cuánto">
+                  <div className="row tight">
+                    <NumberInput
+                      value={interval}
+                      onChange={setInterval}
+                      min={1}
+                      max={99}
+                      style={{ width: 74 }}
+                    />
+                    <select
+                      className="select"
+                      value={freq}
+                      onChange={(event) => setFreq(event.target.value as Frequency)}
+                    >
+                      {FRECUENCIAS.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {interval === 1 ? item.singular : item.plural}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </Field>
+
+                <Field
+                  label="Termina el"
+                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Opcional.'}
+                >
+                  <input
+                    className="input"
+                    type="date"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                  />
+                </Field>
+              </div>
+            )}
           </Field>
         )}
 

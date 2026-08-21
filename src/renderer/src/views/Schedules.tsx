@@ -17,17 +17,12 @@ import {
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { LENDERS } from '@shared/lenders'
+import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
 
 const api = window.bonk
 
-const FREQUENCIES: Array<{ value: Frequency; singular: string; plural: string }> = [
-  { value: 'daily', singular: 'día', plural: 'días' },
-  { value: 'weekly', singular: 'semana', plural: 'semanas' },
-  { value: 'monthly', singular: 'mes', plural: 'meses' },
-  { value: 'yearly', singular: 'año', plural: 'años' }
-]
 
 /**
  * Cómo se llama una programación en la lista. Las nuevas solo tienen nota; las
@@ -55,22 +50,6 @@ function refundOptionLabel(row: ScheduledView): string {
     .join(' · ')
 }
 
-function describeFrequency(freq: Frequency, interval: number): string {
-  const entry = FREQUENCIES.find((item) => item.value === freq)
-  if (!entry) return ''
-  // De uno en uno se dice con el adjetivo, que es como se habla: «mensual», no
-  // «cada mes». Con salto va el «cada», que ahí sí se está contando.
-  if (interval === 1) {
-    return freq === 'daily'
-      ? 'Diario'
-      : freq === 'weekly'
-        ? 'Semanal'
-        : freq === 'monthly'
-          ? 'Mensual'
-          : 'Anual'
-  }
-  return `Cada ${interval} ${entry.plural}`
-}
 
 export function SchedulesView(): ReactNode {
   const { categories, revision, run, toast, fail } = useStore()
@@ -586,7 +565,7 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
               value={freq}
               onChange={(event) => setFreq(event.target.value as Frequency)}
             >
-              {FREQUENCIES.map((item) => (
+              {FRECUENCIAS.map((item) => (
                 <option key={item.value} value={item.value}>
                   {interval === 1 ? item.singular : item.plural}
                 </option>
