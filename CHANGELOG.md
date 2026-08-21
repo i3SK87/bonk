@@ -3,6 +3,13 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.21.0
+
+- **La enhorabuena sale al llenar el plan con el mando.** Llevarlo hasta el final
+  es el gesto que lo cumple, así que ahí saltan el confeti y el aviso de Windows.
+  Y al revés: bajarlo vuelve a armarla para la próxima vez.
+- **La pestaña se llama «Planes Ahorro».**
+
 ## Novedades de la 1.20.2
 
 - **El mando de cada plan vuelve a ocupar el ancho de la ficha.** Se había quedado

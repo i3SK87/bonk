@@ -30,7 +30,7 @@ type ViewId =
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
   { id: 'schedules', label: 'Programados', icon: 'calendar' },
-  { id: 'goals', label: 'Plan Ahorro', icon: 'target' },
+  { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
@@ -41,7 +41,7 @@ const TITLES: Record<ViewId, string> = {
   transactions: 'Movimientos',
   accounts: 'Cuentas',
   categories: 'Categorías',
-  goals: 'Plan Ahorro',
+  goals: 'Planes Ahorro',
   schedules: 'Movimientos programados',
   reports: 'Informes',
   settings: 'Ajustes'

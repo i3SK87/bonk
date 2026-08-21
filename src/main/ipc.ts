@@ -125,6 +125,9 @@ export function registerIpc(
   // distinguir el guardado bueno del que se quedó por el camino.
   handle('goals:reserve', (entries: Array<{ id: number; amount: number }>) => {
     goals.setGoalReserves(entries)
+    // Llevar el mando hasta el final es el gesto que cumple un plan, así que es
+    // aquí donde toca la enhorabuena. Y al revés: bajarlo la vuelve a armar.
+    celebrate()
     return entries.length
   })
 
