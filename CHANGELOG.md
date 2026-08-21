@@ -3,6 +3,17 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.7
+
+- **«Sin categoría» ya se puede filtrar.** Es la última pastilla de la fila de
+  Categorías, en el panel de Filtros. No es una categoría de verdad —no está en
+  la pestaña Categorías, no se puede renombrar ni borrar—, es el hueco que dejan
+  los movimientos que llegaron de una importación o los de una categoría que se
+  borró. Hasta ahora solo se veían de uno en uno pasando la lista; con el filtro
+  salen todos juntos y se les puede poner categoría de una tacada seleccionando
+  varios. Los traspasos no aparecen: esos no es que les falte la categoría, es
+  que no la llevan.
+
 ## Novedades de la 1.13.6
 
 - **Una lista con solo programadas ya no sale como vacía.** Con las previsiones
