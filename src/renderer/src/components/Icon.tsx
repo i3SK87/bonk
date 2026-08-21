@@ -260,6 +260,15 @@ const PATHS: Record<string, JSX.Element> = {
   // — Acciones —
   plus: <path d="M12 5v14M5 12h14" />,
   minus: <path d="M5 12h14" />,
+  // Las dos barras y el triángulo de cualquier reproductor: pausar y reanudar
+  // una programación es exactamente eso, y no hace falta explicarlo.
+  pause: (
+    <>
+      <path d="M9.5 5v14" />
+      <path d="M14.5 5v14" />
+    </>
+  ),
+  play: <path d="M7 4.8v14.4l12-7.2z" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   check: <path d="M4.5 12.5l5 5 10-11" />,
   search: (

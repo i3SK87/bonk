@@ -191,8 +191,14 @@ function DebtCard({
             )}
           </div>
           <div className="small muted truncate">
+            {/* Las dos fechas juntas se leen como lo que son, un periodo, y de paso
+                bajan una pieza de la línea de abajo. */}
             {formatMoney(debt.installment, currency)} cada vez · {debt.accountName}
-            {debt.endDate ? ` · hasta ${formatDate(debt.endDate)}` : ' · sin fecha de fin'}
+            {debt.endDate
+              ? ` · ${debt.firstDate ? `de ${formatDate(debt.firstDate)} a ` : 'hasta '}${formatDate(debt.endDate)}`
+              : debt.firstDate
+                ? ` · desde ${formatDate(debt.firstDate)}`
+                : ' · sin fecha de fin'}
           </div>
         </div>
         <div className="spacer" />
@@ -223,14 +229,15 @@ function DebtCard({
       )}
 
       <div className="small subtle" style={{ marginTop: 5 }}>
-        {debt.paidCount === 0
-          ? 'Todavía no ha entrado ninguna cuota.'
-          : `${debt.paidCount} ${debt.paidCount === 1 ? 'cuota pagada' : 'cuotas pagadas'}`}
-        {debt.leftCount != null && debt.leftCount > 0
-          ? ` · quedan ${debt.leftCount} ${debt.leftCount === 1 ? 'cuota' : 'cuotas'}`
-          : ''}
-        {debt.daysLeft != null ? ` · ${espera(debt.daysLeft)}` : ''}
-        {debt.firstDate ? ` · desde ${formatDate(debt.firstDate)}` : ''}
+        {/* «2 cuotas pagadas · quedan 24 cuotas» son dos formas de contar lo mismo
+            y ocupan media línea: 2/26 lo dice de un vistazo, como cualquier
+            contador. Cuando no se sabe cuántas quedan, no hay quebrado que valga. */}
+        {debt.leftCount != null
+          ? `${debt.paidCount}/${debt.paidCount + debt.leftCount} cuotas`
+          : debt.paidCount === 0
+            ? 'Todavía no ha entrado ninguna cuota'
+            : `${debt.paidCount} ${debt.paidCount === 1 ? 'cuota pagada' : 'cuotas pagadas'}`}
+        {debt.daysLeft != null && debt.leftCount !== 0 ? ` · ${espera(debt.daysLeft)}` : ''}
       </div>
     </div>
   )

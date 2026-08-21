@@ -455,7 +455,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           <div className="spacer" />
 
           <div className="row tight">
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', marginRight: 12 }}>
               <input
                 className="input"
                 style={{ paddingLeft: 30, paddingRight: search ? 30 : 12, width: 210 }}

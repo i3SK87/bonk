@@ -57,14 +57,16 @@ function refundOptionLabel(row: ScheduledView): string {
 function describeFrequency(freq: Frequency, interval: number): string {
   const entry = FREQUENCIES.find((item) => item.value === freq)
   if (!entry) return ''
+  // De uno en uno se dice con el adjetivo, que es como se habla: «mensual», no
+  // «cada mes». Con salto va el «cada», que ahí sí se está contando.
   if (interval === 1) {
     return freq === 'daily'
-      ? 'Cada día'
+      ? 'Diario'
       : freq === 'weekly'
-        ? 'Cada semana'
+        ? 'Semanal'
         : freq === 'monthly'
-          ? 'Cada mes'
-          : 'Cada año'
+          ? 'Mensual'
+          : 'Anual'
   }
   return `Cada ${interval} ${entry.plural}`
 }
@@ -202,7 +204,10 @@ export function SchedulesView(): ReactNode {
                         Reembolso
                       </span>
                     )}
-                    {describeFrequency(row.freq, row.interval)} · {row.accountName}
+                    {/* Un reembolso cuelga de su gasto, que dice la cuenta justo
+                        encima: repetirla ahí es llenar la línea de lo mismo. */}
+                    {describeFrequency(row.freq, row.interval)}
+                    {row.type === 'refund' ? '' : ` · ${row.accountName}`}
                     {row.type === 'transfer' && row.toAccountName ? ` → ${row.toAccountName}` : ''}
                     {row.endDate ? ` · hasta ${formatDate(row.endDate)}` : ''}
                     {!row.autoPost && ' · registro manual'}
@@ -248,7 +253,7 @@ export function SchedulesView(): ReactNode {
                     title={row.active ? 'Pausar' : 'Reanudar'}
                     onClick={() => run(() => api.scheduled.setActive(row.id, !row.active))}
                   >
-                    <Icon name={row.active ? 'minus' : 'repeat'} size={16} />
+                    <Icon name={row.active ? 'pause' : 'play'} size={16} />
                   </button>
                 )}
                 <button className="btn ghost icon" onClick={() => setEditing(row)} aria-label="Editar">

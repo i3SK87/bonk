@@ -1598,6 +1598,15 @@ p { margin: 0; }
 }
 
 .row.wrap { flex-wrap: wrap; }
+/* El texto de ejemplo de un campo vacío, en el gris de lo secundario. Con el
+   del navegador se veía más apagado que el resto de textos tenues de la
+   aplicación, y en las paletas claras casi no se leía. */
+input::placeholder,
+textarea::placeholder {
+  color: var(--fg-subtle);
+  opacity: 1;
+}
+
 .row.tight { gap: 6px; }
 .spacer { margin-left: auto; }
 
