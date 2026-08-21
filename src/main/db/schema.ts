@@ -476,5 +476,30 @@ export const MIGRATIONS: string[] = [
   // La lista de cuáles hay vive en el código, en shared/lenders.
   `
   ALTER TABLE scheduled ADD COLUMN lender TEXT;
+  `,
+
+  // v20 — de las cuotas que llevas a las que la aplicación no ve.
+  //
+  // Guardar el total era guardar una foto: se dijo «llevo tres» cuando la
+  // aplicación veía dos, y al entrar la cuarta seguía diciendo tres, porque el
+  // número puesto a mano tapaba la cuenta en lugar de sumarse a ella.
+  //
+  // Lo que no cambia con el tiempo es cuántas se pagaron sin que quedara
+  // rastro: eso es lo que se guarda, y el total vuelve a salir de sumarlas a
+  // las que se ven. Se pregunta igual —cuántas van—, pero se anota la resta.
+  `
+  ALTER TABLE scheduled ADD COLUMN debt_extra_count INTEGER;
+
+  UPDATE scheduled
+     SET debt_extra_count = MAX(0, debt_paid_count - (
+           SELECT COUNT(*) FROM transactions t
+            WHERE t.scheduled_id = scheduled.id
+               OR (scheduled.note IS NOT NULL
+                   AND t.type = 'expense'
+                   AND t.category_id = scheduled.category_id
+                   AND t.note = scheduled.note)))
+   WHERE debt_paid_count IS NOT NULL;
+
+  ALTER TABLE scheduled DROP COLUMN debt_paid_count;
   `
 ]

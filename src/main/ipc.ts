@@ -145,8 +145,19 @@ export function registerIpc(
     scheduled.finishScheduled(id)
     celebrate()
   })
-  handle('scheduled:postNow', (id: number) => scheduled.postNow(id))
-  handle('scheduled:postDue', () => scheduled.postDue())
+  // Registrar a mano tampoco espera al repaso: si esa era la última cuota, la
+  // deuda queda saldada en ese mismo clic y hay que decirlo ahí, no media hora
+  // después. Es justo el momento en que se está mirando.
+  handle('scheduled:postNow', (id: number) => {
+    const posted = scheduled.postNow(id)
+    celebrate()
+    return posted
+  })
+  handle('scheduled:postDue', () => {
+    const posted = scheduled.postDue()
+    celebrate()
+    return posted
+  })
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))
   handle('scheduled:debts', () => scheduled.debtProgress())
   handle('scheduled:adjustDebt', (id: number, patch: DebtAdjust) =>

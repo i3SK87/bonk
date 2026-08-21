@@ -34,7 +34,7 @@ interface ScheduledRow {
   created_at: string
   refund_for_scheduled_id: number | null
   goal_id: number | null
-  debt_paid_count: number | null
+  debt_extra_count: number | null
   debt_last_amount: number | null
   lender: string | null
   debt_total: number | null
@@ -75,7 +75,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
     goalId: row.goal_id,
-    debtPaidCount: row.debt_paid_count,
+    debtExtraCount: row.debt_extra_count,
     debtLastAmount: row.debt_last_amount,
     lender: row.lender,
     debtTotal: row.debt_total,
@@ -290,6 +290,11 @@ export interface DebtSummary {
  * Lo que de una deuda no se puede deducir de los movimientos: cuántas cuotas
  * llevas, cuánto es la última y cuánto suma entera.
  *
+ * De las cuotas se pregunta el total, que es lo que se sabe, pero se guarda la
+ * resta: las que la aplicación no ve. Guardando el total, la cuota siguiente no
+ * movía el número —tapaba la cuenta en vez de sumarse a ella—; guardando la
+ * resta, el total se rehace solo cada vez que entra una.
+ *
  * El cero vale por «no lo sé» en los tres: se guarda como null y la cuenta
  * vuelve a salir de lo que se vea. La cuota de cada mes no está aquí porque
  * vive en la programación, que es de donde salen los recibos, y se cambia ahí.
@@ -297,11 +302,13 @@ export interface DebtSummary {
 export function adjustDebt(id: number, patch: DebtAdjust): void {
   const limpio = (value: number | null | undefined): number | null =>
     value == null || value <= 0 ? null : Math.round(value)
+  const total = limpio(patch.paidCount)
+  const extra = total == null ? null : Math.max(0, total - debtSummary(id).count) || null
   getDb()
     .prepare(
-      'UPDATE scheduled SET debt_paid_count = ?, debt_last_amount = ?, debt_total = ? WHERE id = ?'
+      'UPDATE scheduled SET debt_extra_count = ?, debt_last_amount = ?, debt_total = ? WHERE id = ?'
     )
-    .run(limpio(patch.paidCount), limpio(patch.lastAmount), limpio(patch.total), id)
+    .run(extra, limpio(patch.lastAmount), limpio(patch.total), id)
 }
 
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
@@ -398,17 +405,20 @@ export function debtProgress(reference = today()): DebtProgress[] {
     }
 
     /*
-     * Lo pagado cuenta las cuotas que la aplicación ve y las que le hayas dicho
-     * que van de antes: una deuda de hace tres años con apuntes desde abril
-     * saldría por los suelos. Las de más se valoran a cuota entera, que es lo
-     * que fueron.
+     * Lo pagado suma las cuotas que la aplicación ve y las que le hayas dicho que
+     * se pagaron sin dejar rastro: una deuda de hace tres años con apuntes desde
+     * abril saldría por los suelos. Las de antes se valoran a cuota entera, que
+     * es lo que fueron.
+     *
+     * Al ser una suma y no un tope, la cuota que entra hoy sube el número: antes
+     * se guardaba el total y la deuda se quedaba clavada donde la dejaste.
      *
      * De lo que queda, la última es la corta, y por eso los totales cuadran sin
      * tener que escribirlos. Aun así el total lo mandas tú si lo has puesto: hay
      * deudas con intereses o con una entrada que no salen de ninguna cuenta.
      */
-    const paidCount = debt.debtPaidCount ?? summary.count
-    const deMas = Math.max(0, paidCount - summary.count)
+    const deMas = debt.debtExtraCount ?? 0
+    const paidCount = summary.count + deMas
     const paid = summary.total + deMas * debt.amount
     const ultima = debt.debtLastAmount ?? debt.amount
     const porCuotas =

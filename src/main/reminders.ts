@@ -174,10 +174,21 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
     const summary = debtSummary(row.id)
     const name = title(row)
 
+    /*
+     * Las cuotas que se pagaron sin dejar rastro también se pagaron.
+     *
+     * La enhorabuena cuenta lo mismo que la pestaña de Deudas: sin sumarlas, una
+     * deuda que venía de antes se despedía diciendo que habías pagado la mitad
+     * de lo que pagaste.
+     */
+    const deMas = row.debtExtraCount ?? 0
+    const count = summary.count + deMas
+    const total = summary.total + deMas * row.amount
+
     if (Notification.isSupported()) {
       notify(categoryImage(icon, row.categoryId), onClick, {
         title: `¡${name} pagado!`,
-        body: `${summary.count} cuotas y ya está. ${formatMoney(summary.total, summary.currency)} desde ${monthOf(summary.firstDate)}.`
+        body: `${count} cuotas y ya está. ${formatMoney(total, summary.currency)} desde ${monthOf(summary.firstDate)}.`
       })
     }
 
@@ -185,8 +196,8 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
     done.push({
       id: row.id,
       title: name,
-      count: summary.count,
-      total: summary.total,
+      count,
+      total,
       currency: summary.currency,
       firstDate: summary.firstDate,
       lastDate: summary.lastDate

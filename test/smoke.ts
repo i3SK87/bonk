@@ -655,6 +655,19 @@ try {
     LENDERS.every((item) => item.logo.startsWith('data:'))
   )
 
+  // Las cuotas puestas a mano se suman a las que se ven, no las tapan: dicho
+  // «llevo dos», la que entra hoy tiene que hacer tres. Guardando el total en vez
+  // de la resta, la deuda se quedaba clavada donde la dejaste.
+  scheduled.adjustDebt(corta.id, { paidCount: 2 })
+  equal('las cuotas de antes se cuentan', verCorta().paidCount, 2)
+  scheduled.postNow(corta.id)
+  equal('y la cuota que entra hoy suma una más', verCorta().paidCount, 3)
+  equal('con su dinero detrás', verCorta().paid, 30000)
+  equal('sin recontar lo que ya se veía', verCorta().countBySoftware, 1)
+  const generada = transactions.listTransactions({ limit: 500 }).filter((t) => t.scheduledId === corta.id)
+  transactions.deleteTransactions(generada.map((t) => t.id))
+  scheduled.adjustDebt(corta.id, {})
+
   scheduled.deleteScheduled(corta.id)
 
   // Pausar no es terminar: apaga, pero no sella.

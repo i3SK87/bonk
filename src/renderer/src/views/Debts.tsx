@@ -274,13 +274,7 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
               // siempre. Refrescar tampoco hace falta, que `run` ya lo hace.
               const ajustada = await run(
                 () =>
-                  api.scheduled.adjustDebt(debt.scheduledId, {
-                    // Guardar sin tocarlas no debe congelar el número: si es el
-                    // que ve la aplicación, se deja que lo siga contando ella.
-                    paidCount: paidCount === debt.countBySoftware ? null : paidCount,
-                    lastAmount,
-                    total
-                  }),
+                  api.scheduled.adjustDebt(debt.scheduledId, { paidCount, lastAmount, total }),
                 'Deuda ajustada'
               )
               if (ajustada !== null) onClose()

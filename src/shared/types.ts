@@ -230,11 +230,11 @@ export interface Scheduled {
   /** Plan de ahorro al que va este traspaso, cuando entra en una hucha. */
   goalId: number | null
   /**
-   * Cuántas cuotas llevas pagadas en total, contando las de antes del primer
-   * apunte. Sin esto, una deuda vieja con registros nuevos sale casi a cero.
-   * A null, se cuentan las que se vean en los movimientos.
+   * Cuántas cuotas se pagaron sin dejar rastro en los movimientos, antes de que
+   * hubiera un solo apunte. Se suman a las que se ven; sin esto, una deuda vieja
+   * con registros nuevos sale casi a cero.
    */
-  debtPaidCount: number | null
+  debtExtraCount: number | null
   /** La última cuota, cuando es más corta que las demás. */
   debtLastAmount: number | null
   /** Quién cobra la deuda, de la lista de shared/lenders. */
