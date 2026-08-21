@@ -243,7 +243,7 @@ function DebtCard({
  * programación, que es de donde salen los recibos, y se cambia ahí.
  */
 function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => void }): ReactNode {
-  const { run, refresh } = useStore()
+  const { run } = useStore()
   const [paidCount, setPaidCount] = useState(debt.paidCount)
   const [lastAmount, setLastAmount] = useState(debt.lastInstallment ?? 0)
   const [total, setTotal] = useState(debt.fixedTotal ?? 0)
@@ -260,14 +260,21 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
           <button
             className="btn primary"
             onClick={async () => {
-              const saved = await run(
-                () => api.scheduled.adjustDebt(debt.scheduledId, { paidCount, lastAmount, total }),
+              // Ajustar no devuelve nada, y `run` solo avisa de que ha ido mal
+              // volviendo null: comparar con undefined dejaba el diálogo abierto
+              // siempre. Refrescar tampoco hace falta, que `run` ya lo hace.
+              const ajustada = await run(
+                () =>
+                  api.scheduled.adjustDebt(debt.scheduledId, {
+                    // Guardar sin tocarlas no debe congelar el número: si es el
+                    // que ve la aplicación, se deja que lo siga contando ella.
+                    paidCount: paidCount === debt.countBySoftware ? null : paidCount,
+                    lastAmount,
+                    total
+                  }),
                 'Deuda ajustada'
               )
-              if (saved !== undefined) {
-                refresh()
-                onClose()
-              }
+              if (ajustada !== null) onClose()
             }}
           >
             Guardar
