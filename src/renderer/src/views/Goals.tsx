@@ -75,7 +75,11 @@ export function GoalsView(): ReactNode {
     .reduce((sum, account) => sum + account.balance, 0)
   // Lo reservado a mano es lo único que sale de la hucha; el resto es ahorro
   // libre, y es lo que limita cuánto puede subir otro plan.
-  const reservado = open.reduce((sum, goal) => sum + goal.reserved, 0)
+  //
+  // Se cuenta hasta su meta y no más: un plan de 225 € con 1.000 € reservados
+  // -porque se le bajó la meta después- solo retiene 225. Contando la reserva a
+  // secas, los otros 775 desaparecían de la pantalla: ni en el plan ni libres.
+  const reservado = open.reduce((sum, goal) => sum + Math.min(goal.reserved, goal.targetAmount), 0)
   const porRepartir = Math.max(0, potTotal - reservado)
   return (
     <>
@@ -98,31 +102,25 @@ export function GoalsView(): ReactNode {
           <>
             <div className="card-body col" style={{ gap: 20 }}>
               {/* El ahorro libre es un plan más: el dinero que no está en ninguno.
-                  No lleva mando porque no se reparte a mano —sube y baja solo, según
-                  lo que entre en la hucha y lo que se lleven los demás—. */}
-              <div>
-                <div className="row">
-                  <Avatar icon="piggy" color="var(--fg-subtle)" />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div className="row tight">
-                      <span style={{ fontWeight: 570 }}>Ahorro libre</span>
-                    </div>
-                    <div className="small muted">Lo que no está en ningún plan</div>
-                  </div>
-                  <div className="spacer" />
-                  <div style={{ textAlign: 'right' }}>
-                    <div className="amount" style={{ fontSize: 16 }}>
-                      {formatMoney(porRepartir, settings.baseCurrency)}
-                    </div>
-                    <div className="small muted">
-                      de {formatMoney(potTotal, settings.baseCurrency)} en la hucha
-                    </div>
+                  Sin mando y sin barra —sube y baja solo, y contra nada se mide—:
+                  lo que importa aquí es cuánto hay, así que la cifra manda. */}
+              <div className="row" style={{ gap: 14 }}>
+                <Avatar icon="piggy" color="var(--fg-subtle)" />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 570 }}>Ahorro libre</div>
+                  <div className="small muted">
+                    {reservado > 0
+                      ? `Lo que no está en ningún plan, de ${formatMoney(potTotal, settings.baseCurrency)} en la hucha`
+                      : 'Todo lo que hay en la hucha, sin repartir'}
                   </div>
                 </div>
-                <ProgressBar
-                  percent={potTotal > 0 ? (porRepartir / potTotal) * 100 : 0}
-                  color="var(--fg-subtle)"
-                />
+                <div className="spacer" />
+                <div
+                  className={`value amount ${porRepartir > 0 ? 'positive' : 'neutral'}`}
+                  style={{ fontSize: 30 }}
+                >
+                  {formatMoney(porRepartir, settings.baseCurrency)}
+                </div>
               </div>
 
               {open.map((goal) => (
@@ -130,7 +128,7 @@ export function GoalsView(): ReactNode {
                   key={goal.id}
                   goal={goal}
                   currency={settings.baseCurrency}
-                  techo={goal.reserved + porRepartir}
+                  techo={Math.min(goal.targetAmount, goal.reserved + porRepartir)}
                   onEdit={() => setEditing(goal)}
                   onAchieve={() => run(() => api.goals.setAchieved(goal.id, true), 'Plan cumplido')}
                   onReserve={(amount) =>
@@ -225,6 +223,11 @@ function GoalCard({
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
 
+  // El tope se redondea al salto de arriba: con saltos de 50, un plan de 225 se
+  // quedaría en 200 para siempre, porque el último escalón que cabe es ese. Al
+  // soltar se recorta a lo que de verdad cabe.
+  const tope = Math.max(PASO, Math.ceil(techo / PASO) * PASO)
+
   // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
   useEffect(() => setReserva(goal.reserved), [goal.reserved])
 
@@ -290,13 +293,13 @@ function GoalCard({
           className="reserva"
           type="range"
           min={0}
-          max={Math.max(techo, PASO)}
+          max={tope}
           step={PASO}
-          value={Math.min(reserva, Math.max(techo, PASO))}
+          value={Math.min(reserva, tope)}
           style={{ accentColor: color }}
           onChange={(event) => setReserva(Number(event.target.value))}
-          onMouseUp={() => onReserve(reserva)}
-          onKeyUp={() => onReserve(reserva)}
+          onMouseUp={() => onReserve(Math.min(reserva, techo))}
+          onKeyUp={() => onReserve(Math.min(reserva, techo))}
           aria-label={`Ahorrado para ${goal.name}`}
         />
       ) : (
@@ -388,8 +391,11 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
         }
       >
         <Field label="Título" error={error}>
+          {/* El foco entra por el nombre: es lo primero que se piensa de un plan, y
+              la cantidad se decide después. */}
           <input
             className="input"
+            autoFocus
             value={name}
             placeholder="Un PC, el viaje a Japón, el colchón de imprevistos…"
             onChange={(event) => setName(event.target.value)}
@@ -397,7 +403,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
         </Field>
 
         <Field label="Cuánto">
-          <AmountInput value={targetAmount} currency={currency} onChange={setTargetAmount} autoFocus />
+          <AmountInput value={targetAmount} currency={currency} onChange={setTargetAmount} />
         </Field>
 
         <div className="grid cols-2">

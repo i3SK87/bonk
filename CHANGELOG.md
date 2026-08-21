@@ -3,6 +3,20 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.20.1
+
+- **El ahorro libre se lee de un vistazo.** Fuera la barra —no se mide contra
+  nada— y la cifra pasa al tamaño que merece, que es lo único que interesa saber
+  ahí.
+- **Al crear un plan, el cursor entra por el título** y no por la cantidad. Es lo
+  primero que se piensa de un plan; el importe se decide después.
+- **El dinero reservado de más ya no desaparece.** Un plan al que le sobraba
+  reserva —porque le bajaste la meta después— retenía la diferencia sin enseñarla
+  en ninguna parte. Ahora cada plan cuenta hasta su meta y el resto vuelve a verse
+  como ahorro libre.
+- **Y un plan con una meta que no cae en un salto de 50 € ya se puede completar.**
+  Uno de 225 € se quedaba clavado en 200, que era el último escalón que cabía.
+
 ## Novedades de la 1.20.0
 
 - **El ahorro libre es un plan más.** Encabeza la lista, con su barra y su cifra,
