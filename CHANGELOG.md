@@ -3,6 +3,20 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.10
+
+- **Una sola pastilla por nombre de categoría en los filtros.** Un mismo nombre
+  puede existir dos veces, una de gasto y otra de ingreso —«Ajuste de saldo» es
+  el caso típico—, y salían dos pastillas idénticas sin nada que las
+  distinguiera. Ahora es una que selecciona las dos, y de cuál se trata lo dice
+  el filtro de Tipo, que está justo encima: con «Ingresos» marcado queda el
+  ingreso, con «Gastos» el gasto, y sin marcar nada salen los dos.
+- **Programados estrena icono de calendario.** Las flechas del ciclo daban a
+  entender que todo lo programado se repite sin fin, y no tiene por qué. Lo que
+  esa pestaña enseña es lo que está por venir. Las marcas de cada fila que sí
+  hablan de repetición —el sello «Programado» de una previsión, el botón de
+  reanudar una pausada— siguen con las flechas.
+
 ## Novedades de la 1.13.9
 
 - **La cuenta principal sale la primera en todas partes.** En la cabecera de
