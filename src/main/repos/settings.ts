@@ -23,14 +23,6 @@ export function getSettings(): Settings {
   }
 }
 
-/** Lee una clave suelta, de las que no salen en la pantalla de ajustes. */
-export function getSetting(key: string): string | null {
-  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as unknown as
-    | { value: string }
-    | undefined
-  return row?.value ?? null
-}
-
 export function setSetting(key: string, value: string | number | boolean | null): void {
   const stored = typeof value === 'boolean' ? (value ? '1' : '0') : value === null ? '' : String(value)
   getDb()
@@ -69,8 +61,4 @@ export function setRate(code: string, rate: number): void {
        ON CONFLICT(code) DO UPDATE SET rate = excluded.rate, updated_at = excluded.updated_at`
     )
     .run(code.toUpperCase(), bind(rate) as number, nowISO())
-}
-
-export function deleteRate(code: string): void {
-  getDb().prepare('DELETE FROM rates WHERE code = ?').run(code.toUpperCase())
 }

@@ -5,19 +5,6 @@ export function listTags(): Tag[] {
   return getDb().prepare('SELECT id, name, color FROM tags ORDER BY name COLLATE NOCASE').all() as unknown as Tag[]
 }
 
-/** Uso de cada etiqueta, para poder ordenarlas por frecuencia y avisar antes de borrar. */
-export function tagUsage(): Array<Tag & { count: number }> {
-  return getDb()
-    .prepare(
-      `SELECT t.id, t.name, t.color, COUNT(tt.transaction_id) AS count
-         FROM tags t
-    LEFT JOIN transaction_tags tt ON tt.tag_id = t.id
-     GROUP BY t.id
-     ORDER BY count DESC, t.name COLLATE NOCASE`
-    )
-    .all() as unknown as Array<Tag & { count: number }>
-}
-
 export function saveTag(input: { id?: number; name: string; color: string }): Tag {
   const db = getDb()
   const name = input.name.trim()
@@ -35,10 +22,6 @@ export function saveTag(input: { id?: number; name: string; color: string }): Ta
 
   const result = db.prepare('INSERT INTO tags (name, color) VALUES (?, ?)').run(name, input.color)
   return db.prepare('SELECT id, name, color FROM tags WHERE id = ?').get(Number(result.lastInsertRowid)) as unknown as Tag
-}
-
-export function deleteTag(id: number): void {
-  getDb().prepare('DELETE FROM tags WHERE id = ?').run(id)
 }
 
 /** Devuelve los identificadores de una lista de nombres, creando los que no existan. */

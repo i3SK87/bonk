@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { getDb, transaction as atomic } from '../db'
-import { parseAmount, formatMoney, toMajor } from '@shared/money'
+import { parseAmount, toMajor } from '@shared/money'
 import { listTransactions } from './transactions'
 import { listAccounts, saveAccount } from './accounts'
 import { listCategories, saveCategory } from './categories'
@@ -416,31 +416,6 @@ export function importCsv(sourcePath: string, options: ImportOptions = {}): Impo
   })
 
   return result
-}
-
-/** Resumen legible del último informe, para mostrarlo en un aviso. */
-export function describeImport(result: ImportResult): string {
-  const parts = [`${result.imported} movimientos importados`]
-  if (result.skipped) parts.push(`${result.skipped} descartados`)
-  if (result.createdAccounts.length) parts.push(`${result.createdAccounts.length} cuentas nuevas`)
-  if (result.createdCategories.length) parts.push(`${result.createdCategories.length} categorías nuevas`)
-  return parts.join(', ')
-}
-
-/** Exporta un resumen por categorías, pensado para llevárselo a una hoja de cálculo. */
-export function exportCategoryReport(targetPath: string, rows: Array<{ name: string; total: number; count: number; percent: number }>, currency: string): void {
-  const lines = ['Categoría;Total;Movimientos;Porcentaje']
-  for (const row of rows) {
-    lines.push(
-      [
-        escapeCsv(row.name),
-        formatMoney(row.total, currency, { noSymbol: true }),
-        String(row.count),
-        `${row.percent.toFixed(1)}%`
-      ].join(';')
-    )
-  }
-  writeFileSync(targetPath, '﻿' + lines.join('\r\n'), 'utf8')
 }
 
 /** Vacía todos los movimientos manteniendo cuentas y categorías. */

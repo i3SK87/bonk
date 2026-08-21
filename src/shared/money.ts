@@ -147,19 +147,3 @@ export function convert(
   const inBase = toMajor(minor, origin) / rateFrom
   return toMinor(inBase * rateTo, target)
 }
-
-/** Divisas que se ofrecen primero en los desplegables. */
-export const COMMON_CURRENCIES = [
-  'EUR', 'USD', 'GBP', 'CHF', 'JPY', 'CNY', 'CAD', 'AUD', 'NZD', 'SEK', 'NOK', 'DKK',
-  'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'TRY', 'RUB', 'UAH', 'MXN', 'BRL', 'ARS', 'CLP',
-  'COP', 'PEN', 'UYU', 'MAD', 'ZAR', 'INR', 'KRW', 'SGD', 'HKD', 'THB', 'IDR', 'MYR',
-  'PHP', 'VND', 'ILS', 'AED', 'SAR', 'EGP', 'ISK', 'HRK', 'RSD'
-]
-
-export function currencyName(code: string): string {
-  try {
-    return new Intl.DisplayNames(['es-ES'], { type: 'currency' }).of(code) ?? code
-  } catch {
-    return code
-  }
-}

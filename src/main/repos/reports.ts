@@ -1,6 +1,6 @@
 import { getDb } from '../db'
 import { convert } from '@shared/money'
-import { today, startOfMonth, endOfMonth, addMonths, formatShortMonth } from '@shared/dates'
+import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { getSettings, rateMap } from './settings'
 import type {
   CategoryTotal,
@@ -194,11 +194,6 @@ export function monthlySeries(months = 12, reference = today()): MonthlyPoint[] 
 
   for (const point of points.values()) point.net = point.income - point.expense
   return [...points.values()]
-}
-
-/** Los mismos totales que `monthlySeries` pero etiquetados para el eje del gráfico. */
-export function monthlySeriesLabelled(months = 12): Array<MonthlyPoint & { label: string }> {
-  return monthlySeries(months).map((point) => ({ ...point, label: formatShortMonth(point.month) }))
 }
 
 /**

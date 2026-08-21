@@ -136,17 +136,12 @@ export function nextOccurrence(
 }
 
 const dateFmt = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
-const longFmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
 const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 const monthFmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' })
 const shortMonthFmt = new Intl.DateTimeFormat('es-ES', { month: 'short' })
 
 export function formatDate(iso: string): string {
   return dateFmt.format(parseISO(iso))
-}
-
-export function formatLongDate(iso: string): string {
-  return longFmt.format(parseISO(iso))
 }
 
 export function formatMonth(iso: string): string {
