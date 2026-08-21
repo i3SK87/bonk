@@ -142,7 +142,7 @@ export function App(): ReactNode {
         {view !== 'transactions' && (
           <div className="sidebar-footer">
             <div className="sidebar-networth">
-              Patrimonio
+              Patrimonio total
               <strong className={netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : ''}>
                 {formatMoney(netWorth, settings.baseCurrency)}
               </strong>
