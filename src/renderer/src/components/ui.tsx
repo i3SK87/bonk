@@ -236,6 +236,27 @@ export function Checkbox({ checked, onChange, label, hint }: CheckboxProps): Rea
   )
 }
 
+/* ---------- La acción de la cabecera ---------- */
+
+/**
+ * Manda un botón a la esquina de la cabecera, junto al título de la pantalla.
+ *
+ * «Nuevo movimiento» siempre vivió ahí y las demás pantallas lo tenían dentro
+ * de su tarjeta: la misma acción en dos sitios distintos según dónde estuvieras.
+ * Con esto cada pantalla conserva su botón y su formulario —no hay que subir
+ * estado a ninguna parte— y solo comparte el lugar donde se dibuja.
+ */
+export function AccionCabecera({ children }: { children: ReactNode }): ReactNode {
+  const [hueco, setHueco] = useState<HTMLElement | null>(null)
+
+  // Al montar: la cabecera ya está en el árbol, pero no antes del primer pintado.
+  useEffect(() => {
+    setHueco(document.getElementById('acciones-cabecera'))
+  }, [])
+
+  return hueco ? createPortal(children, hueco) : null
+}
+
 /* ---------- Entrada de números ---------- */
 
 interface NumberInputProps {

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
-import { Avatar, Segmented } from '../components/ui'
+import { Avatar, Segmented, AccionCabecera } from '../components/ui'
 import { CategoryModal } from '../components/CategoryForm'
 import type { Category, CategoryKind } from '@shared/types'
 
@@ -27,11 +27,12 @@ export function CategoriesView(): ReactNode {
               { value: 'income', label: 'Ingresos', tone: 'income' }
             ]}
           />
-          <div className="spacer" />
-          <button className="btn primary small" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={15} strokeWidth={2.2} />
-            Nueva categoría
-          </button>
+          <AccionCabecera>
+            <button className="btn primary" onClick={() => setCreating(true)}>
+              <Icon name="plus" size={16} strokeWidth={2.2} />
+              Nueva categoría
+            </button>
+          </AccionCabecera>
         </div>
 
         <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 8 }}>

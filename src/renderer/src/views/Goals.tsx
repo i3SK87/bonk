@@ -10,7 +10,8 @@ import {
   Avatar,
   IconPicker,
   ColorPicker,
-  Loading
+  Loading,
+  AccionCabecera
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { formatDate, today } from '@shared/dates'
@@ -93,11 +94,12 @@ export function GoalsView(): ReactNode {
           <span className="small muted">
             Lo que no repartas entre tus planes se queda como ahorro libre.
           </span>
-          <div className="spacer" />
-          <button className="btn primary small" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={15} strokeWidth={2.2} />
-            Nuevo plan
-          </button>
+          <AccionCabecera>
+            <button className="btn primary" onClick={() => setCreating(true)}>
+              <Icon name="plus" size={16} strokeWidth={2.2} />
+              Nuevo plan
+            </button>
+          </AccionCabecera>
         </div>
 
         {/* Las huchas disponibles, como las cuentas en Movimientos. Con una sola

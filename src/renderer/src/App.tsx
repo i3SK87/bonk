@@ -162,6 +162,11 @@ export function App(): ReactNode {
               Nuevo movimiento
             </button>
           )}
+
+          {/* Y aquí aterrizan las de las demás pantallas. Cada una sigue siendo
+              dueña de su botón y de su formulario; lo único que se comparte es el
+              sitio, que es esta esquina. */}
+          <div id="acciones-cabecera" className="row tight" />
         </header>
 
         {!ready ? (

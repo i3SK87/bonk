@@ -12,7 +12,8 @@ import {
   EmptyState,
   Avatar,
   Segmented,
-  Loading
+  Loading,
+  AccionCabecera
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { LENDERS } from '@shared/lenders'
@@ -138,11 +139,12 @@ export function SchedulesView(): ReactNode {
       <div className="card flush">
         <div className="card-header">
           <span className="small muted">Recibos, nóminas y cuotas que se repiten.</span>
-          <div className="spacer" />
-          <button className="btn primary small" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={15} strokeWidth={2.2} />
-            Nueva programación
-          </button>
+          <AccionCabecera>
+            <button className="btn primary" onClick={() => setCreating(true)}>
+              <Icon name="plus" size={16} strokeWidth={2.2} />
+              Nueva programación
+            </button>
+          </AccionCabecera>
         </div>
 
         {loading ? (

@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon, ACCOUNT_ICONS } from '../components/Icon'
-import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, Confirm, EmptyState } from '../components/ui'
+import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, Confirm, EmptyState, AccionCabecera } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import type { Account, AccountType, AccountWithBalance } from '@shared/types'
 
@@ -48,13 +48,12 @@ export function AccountsView(): ReactNode {
       {/* Sin rayas entre filas, como el resto de la aplicación: el avatar y el
           aire ya separan, y la retícula pesaba más que los datos. */}
       <div className="card flush">
-        <div className="card-header">
-          <div className="spacer" />
-          <button className="btn primary small" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={15} strokeWidth={2.2} />
+        <AccionCabecera>
+          <button className="btn primary" onClick={() => setCreating(true)}>
+            <Icon name="plus" size={16} strokeWidth={2.2} />
             Nueva cuenta
           </button>
-        </div>
+        </AccionCabecera>
 
         {accounts.length === 0 ? (
           <EmptyState
