@@ -323,7 +323,7 @@ try {
   equal('apagar el desglose no cambia el total', flat.total, debtRow.total)
   categories.saveCategory({ ...debt, breakdownByNote: true })
 
-  section('Hitos de ahorro')
+  section('Planes de ahorro')
   const bote = accounts.saveAccount({
     name: 'Bote', type: 'savings', currency: 'EUR', initialBalance: 30000,
     icon: 'piggy', color: '#34C759', excludeFromTotal: false
@@ -339,23 +339,31 @@ try {
   const conFecha = hitos.map((item) => item.name)
   equal('el hito con la fecha más cercana va primero', conFecha[0], 'Viaje')
 
-  const viajeP = hitos.find((item) => item.id === viaje.id)!
-  const pcP = hitos.find((item) => item.id === pc.id)!
-  // El saldo de la hucha se reparte por orden de fecha: el viaje se lleva los
-  // 300 € que hay y al PC no le llega nada todavía.
-  equal('el hito más próximo se lleva el saldo', viajeP.saved, 30000)
-  equal('y el siguiente se queda sin nada', pcP.saved, 0)
+  // Un plan recién creado no tiene nada: el dinero de la hucha es ahorro libre
+  // hasta que se reparte a mano. Antes lo suelto se repartía solo por orden de
+  // fecha, que era el dinero cambiando de sitio sin que nadie lo moviera.
+  equal('un plan nuevo no se lleva nada solo', hitos.find((i) => i.id === viaje.id)!.saved, 0)
+  equal('ni el de fecha más cercana', hitos.find((i) => i.id === pc.id)!.saved, 0)
+
+  goals.setGoalReserves([{ id: viaje.id, amount: 30000 }])
+  const repartidos = goals.goalProgress(day)
+  const viajeP = repartidos.find((item) => item.id === viaje.id)!
+  const pcP = repartidos.find((item) => item.id === pc.id)!
+  equal('lo reservado es lo que tiene', viajeP.saved, 30000)
+  equal('y el otro sigue a cero', pcP.saved, 0)
   equal('lo repartido nunca pasa del saldo', viajeP.saved + pcP.saved, 30000)
   equal('calcula lo que falta', viajeP.missing, 20000)
   check('el porcentaje va sobre su objetivo', Math.round(viajeP.percent) === 60)
   check('dice cuánto apartar al mes', viajeP.perMonth != null && viajeP.perMonth > 0)
 
-  // Al darlo por cumplido, deja de repartir: su dinero está comprometido.
+  // Al darlo por cumplido cuenta por su meta entera y suelta la hucha.
   goals.setGoalAchieved(viaje.id, true, day)
+  goals.setGoalReserves([{ id: pc.id, amount: 30000 }])
   const trasCumplir = goals.goalProgress(day)
-  equal('un hito cumplido conserva su objetivo', trasCumplir.find((i) => i.id === viaje.id)!.saved, 50000)
+  equal('un plan cumplido conserva su objetivo', trasCumplir.find((i) => i.id === viaje.id)!.saved, 50000)
   equal('y libera el saldo para el siguiente', trasCumplir.find((i) => i.id === pc.id)!.saved, 30000)
   equal('los cumplidos se van al final', trasCumplir[trasCumplir.length - 1].id, viaje.id)
+  goals.setGoalReserves([{ id: pc.id, amount: 0 }])
 
   goals.setGoalAchieved(viaje.id, false, day)
   let goalRejected = false
@@ -364,11 +372,11 @@ try {
   } catch {
     goalRejected = true
   }
-  check('rechaza un hito sin cantidad', goalRejected)
+  check('rechaza un plan sin cantidad', goalRejected)
 
   goals.deleteGoal(pc.id)
   goals.deleteGoal(viaje.id)
-  equal('borrar un hito no deja rastro', goals.listGoals().length, 0)
+  equal('borrar un plan no deja rastro', goals.listGoals().length, 0)
 
   section('Reembolsos')
   // El caso real: pagas una suscripción de 11,99 € y otras tres personas te
@@ -822,7 +830,7 @@ try {
     color: '#34C759'
   })
 
-  // Mil euros que entran sin decir nada: se los lleva el más cercano.
+  // Mil euros que entran en la hucha sin repartir: no son de ningún plan.
   const suelto = transactions.saveTransaction({
     type: 'transfer',
     date: day,
@@ -831,23 +839,15 @@ try {
     amount: 1000
   })
   const reparto = (id: number): number => goals.goalProgress().find((g) => g.id === id)!.saved
-  equal('sin decir nada, lo coge el hito más cercano', reparto(pronto.id), 1000)
-  equal('y al lejano no le llega nada', reparto(tarde.id), 0)
+  equal('el dinero suelto no se lo lleva nadie', reparto(pronto.id), 0)
+  equal('ni siquiera el de fecha más cercana', reparto(tarde.id), 0)
 
-  // Los mismos mil, pero apartados para el lejano.
-  transactions.saveTransaction({
-    id: suelto.id,
-    type: 'transfer',
-    date: day,
-    accountId: bank.id,
-    toAccountId: alcancia2.id,
-    amount: 1000,
-    goalId: tarde.id
-  })
-  equal('lo apartado no se lo lleva otro', reparto(tarde.id), 1000)
-  equal('aunque el otro cobre primero', reparto(pronto.id), 0)
+  // Los mismos mil, repartidos a mano para el lejano.
+  goals.setGoalReserves([{ id: tarde.id, amount: 1000 }])
+  equal('lo reservado es suyo', reparto(tarde.id), 1000)
+  equal('aunque el otro venza antes', reparto(pronto.id), 0)
 
-  // Y lo que entra después sin dueño sigue repartiéndose por fecha.
+  // Lo que entra después sigue sin dueño hasta que se reparta.
   const extra = transactions.saveTransaction({
     type: 'transfer',
     date: day,
@@ -855,22 +855,14 @@ try {
     toAccountId: alcancia2.id,
     amount: 500
   })
-  equal('lo que entra suelto va al más cercano', reparto(pronto.id), 500)
-  equal('sin tocar lo ya apartado', reparto(tarde.id), 1000)
+  equal('lo nuevo no se reparte solo', reparto(pronto.id), 0)
+  equal('sin tocar lo ya reservado', reparto(tarde.id), 1000)
 
-  // Apartar más de lo que el hito necesita no le da de más ni se pierde: lo que
-  // sobra vuelve al montón común.
-  transactions.saveTransaction({
-    id: extra.id,
-    type: 'transfer',
-    date: day,
-    accountId: bank.id,
-    toAccountId: alcancia2.id,
-    amount: 500,
-    goalId: tarde.id
-  })
-  equal('un hito no recibe más de su meta', reparto(tarde.id), 1000)
-  equal('y lo que sobra vuelve al montón', reparto(pronto.id), 500)
+  // Reservar más de lo que el plan necesita no le da de más: se queda en su meta
+  // y el resto sigue siendo ahorro libre.
+  goals.setGoalReserves([{ id: tarde.id, amount: 1500 }])
+  equal('un plan no recibe más de su meta', reparto(tarde.id), 1000)
+  equal('y el sobrante no se le cuela a otro', reparto(pronto.id), 0)
 
   // Un gasto normal no lleva hito por mucho que se lo pidan.
   const gastoConHito = transactions.saveTransaction({
@@ -953,7 +945,7 @@ try {
     color: '#34C759'
   })
   const alcanzado = (): boolean => goals.pendingGoals().some((row) => row.id === meta.id)
-  check('un hito sin saldo todavía no se celebra', !alcanzado())
+  check('un plan sin saldo todavía no se celebra', !alcanzado())
 
   transactions.saveTransaction({
     type: 'income',
@@ -961,7 +953,10 @@ try {
     accountId: alcancia.id,
     amount: 1000
   })
-  check('el hito alcanzado se celebra', alcanzado())
+  // El dinero dentro de la hucha no basta: hasta que no se le reparte, no es suyo.
+  check('el dinero suelto no dispara nada', !alcanzado())
+  goals.setGoalReserves([{ id: meta.id, amount: 1000 }])
+  check('el plan alcanzado se celebra', alcanzado())
   const celebrado = goals.pendingGoals().find((row) => row.id === meta.id)!
   equal('con su título', celebrado.title, 'Un teclado')
   equal('y lo juntado es la meta', celebrado.total, 1000)

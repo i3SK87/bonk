@@ -251,13 +251,15 @@ export function goalProgress(reference = today()): GoalProgress[] {
   const savedByGoal = new Map<number, number>()
 
   /*
-   * El reparto va en dos pasadas y no en una, y la razón es el orden: los hitos
-   * se sirven por fecha, así que en una sola pasada el más cercano podría
-   * llevarse el dinero que alguien había apartado para otro más lejano.
+   * Cada plan tiene lo que se le haya reservado a mano, y nada más. Lo que no
+   * esté en ninguno se queda como ahorro libre.
    *
-   * Primero cada uno cobra lo suyo —lo que se aparto a propósito, que es una
-   * decisión tomada y nadie se la puede quitar— y solo después se reparte lo que
-   * queda entre los que siguen cortos.
+   * Antes lo suelto se repartía solo entre los planes por orden de fecha. Sonaba
+   * cómodo y era justo lo contrario: el dinero cambiaba de sitio sin que nadie lo
+   * moviera. Si el ahorro libre es un plan más, no hay nada que repartir.
+   *
+   * El tope sigue siendo lo que hay: reservar no crea dinero, así que si el saldo
+   * baja, las reservas se recortan por orden de fecha hasta donde llegue.
    */
   for (const goal of goals) {
     const balance = Math.max(0, accounts.get(goal.accountId)?.balance ?? 0)
@@ -270,18 +272,9 @@ export function goalProgress(reference = today()): GoalProgress[] {
       continue
     }
     const pot = remaining.get(goal.accountId)!
-    const suyo = Math.min(goal.reserved, goal.targetAmount, pot)
-    savedByGoal.set(goal.id, suyo)
-    remaining.set(goal.accountId, pot - suyo)
-  }
-
-  for (const goal of goals) {
-    if (goal.achievedAt) continue
-    const pot = remaining.get(goal.accountId)!
-    const tiene = savedByGoal.get(goal.id)!
-    const extra = Math.min(pot, goal.targetAmount - tiene)
-    savedByGoal.set(goal.id, tiene + extra)
-    remaining.set(goal.accountId, pot - extra)
+    const saved = Math.min(goal.reserved, goal.targetAmount, pot)
+    savedByGoal.set(goal.id, saved)
+    remaining.set(goal.accountId, pot - saved)
   }
 
   return goals.map((goal) => {

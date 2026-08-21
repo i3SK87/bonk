@@ -3,6 +3,20 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.20.0
+
+- **El ahorro libre es un plan más.** Encabeza la lista, con su barra y su cifra,
+  y sin planes es lo único que hay: todo el dinero de la hucha es libre hasta que
+  lo repartas.
+- **Se acabó el reparto automático por orden de fecha.** Lo que no reserves a mano
+  se queda como ahorro libre. Repartir solo sonaba cómodo y era lo contrario: el
+  dinero cambiaba de sitio sin que nadie lo moviera.
+- **Un solo mando por plan.** La barra de progreso y el deslizador eran dos cosas
+  encima de la otra; ahora son la misma: lo que le reservas es lo que lleva.
+- **El deslizador va de cincuenta en cincuenta euros.** Al céntimo pedía puntería y
+  nadie reparte una hucha con esa precisión.
+- Y quedaban textos hablando de «juntado»: ahora dicen «ahorrado».
+
 ## Novedades de la 1.19.0
 
 - **«Ahorro» pasa a llamarse «Plan Ahorro»**, y lo que eran hitos ahora son

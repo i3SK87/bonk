@@ -6,7 +6,6 @@ import {
   Field,
   AmountInput,
   Confirm,
-  EmptyState,
   ProgressBar,
   Avatar,
   IconPicker,
@@ -33,6 +32,12 @@ const GOAL_ICONS = [
   'clothes',
   'tools'
 ]
+
+/**
+ * De cincuenta en cincuenta euros. Al céntimo el mando pedía puntería y nadie
+ * reparte una hucha con esa precisión.
+ */
+const PASO = 5000
 
 /** Cómo se lee cada estado en la ficha del plan. */
 const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = {
@@ -68,34 +73,17 @@ export function GoalsView(): ReactNode {
   const potTotal = accounts
     .filter((account) => potIds.has(account.id))
     .reduce((sum, account) => sum + account.balance, 0)
-  const committed = open.reduce((sum, goal) => sum + goal.saved, 0)
-  /**
-   * De quién es ese dinero apartado.
-   *
-   * Con un solo plan tirando de la hucha se dice su nombre, que es lo que se
-   * quiere saber. Con varios se cuentan: la lista entera de nombres no cabe en
-   * una línea y, puestos a resumir, el número dice más.
-   */
-  // Lo que ya está reservado a mano, que es lo que limita cuánto se puede subir
-  // otro plan. No vale mirar lo repartido: ahí entra también lo que se asigna solo
-  // por fecha, y eso sí se le puede quitar.
+  // Lo reservado a mano es lo único que sale de la hucha; el resto es ahorro
+  // libre, y es lo que limita cuánto puede subir otro plan.
   const reservado = open.reduce((sum, goal) => sum + goal.reserved, 0)
   const porRepartir = Math.max(0, potTotal - reservado)
-  const financiados = open.filter((goal) => goal.saved > 0)
-  const paraQuien =
-    financiados.length === 1
-      ? financiados[0].name
-      : financiados.length === 0
-        ? 'tus planes'
-        : `${financiados.length} planes`
-
   return (
     <>
       <div className="card">
         <div className="card-header">
           <h2>Planes de ahorro</h2>
           <span className="small muted">
-            Lo que hay en la hucha se reparte entre los planes por orden de fecha.
+            Lo que no repartas entre tus planes se queda como ahorro libre.
           </span>
           <div className="spacer" />
           <button className="btn primary small" onClick={() => setCreating(true)}>
@@ -104,45 +92,39 @@ export function GoalsView(): ReactNode {
           </button>
         </div>
 
-        {/* La hucha se enseña haya planes o no: sin ninguno, lo que hay es ahorro
-            libre, y esa cifra vale por sí sola. */}
-        {!loading && (
-          <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="networth" style={{ borderRight: 'none' }}>
-              <div className="label">En la hucha</div>
-              <div className={`value amount ${potTotal > 0 ? 'positive' : 'neutral'}`}>
-                {formatMoney(potTotal, settings.baseCurrency)}
-              </div>
-            </div>
-            <div className="col" style={{ gap: 2 }}>
-              {committed > 0 && (
-                <span className="small muted">
-                  Presupuesto para {paraQuien}: {formatMoney(committed, settings.baseCurrency)}
-                </span>
-              )}
-              <span className="small subtle">
-                Ahorro libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
-              </span>
-            </div>
-          </div>
-        )}
-
         {loading ? (
           <Loading />
-        ) : open.length === 0 && done.length === 0 ? (
-          <EmptyState
-            icon="target"
-            title="Sin planes"
-            message="Ponle nombre y fecha a lo que quieres juntar —1.000 € para marzo— y verás cuánto llevas y cuánto tendrías que apartar cada mes."
-            action={
-              <button className="btn primary" onClick={() => setCreating(true)}>
-                Crear el primero
-              </button>
-            }
-          />
         ) : (
           <>
             <div className="card-body col" style={{ gap: 20 }}>
+              {/* El ahorro libre es un plan más: el dinero que no está en ninguno.
+                  No lleva mando porque no se reparte a mano —sube y baja solo, según
+                  lo que entre en la hucha y lo que se lleven los demás—. */}
+              <div>
+                <div className="row">
+                  <Avatar icon="piggy" color="var(--fg-subtle)" />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div className="row tight">
+                      <span style={{ fontWeight: 570 }}>Ahorro libre</span>
+                    </div>
+                    <div className="small muted">Lo que no está en ningún plan</div>
+                  </div>
+                  <div className="spacer" />
+                  <div style={{ textAlign: 'right' }}>
+                    <div className="amount" style={{ fontSize: 16 }}>
+                      {formatMoney(porRepartir, settings.baseCurrency)}
+                    </div>
+                    <div className="small muted">
+                      de {formatMoney(potTotal, settings.baseCurrency)} en la hucha
+                    </div>
+                  </div>
+                </div>
+                <ProgressBar
+                  percent={potTotal > 0 ? (porRepartir / potTotal) * 100 : 0}
+                  color="var(--fg-subtle)"
+                />
+              </div>
+
               {open.map((goal) => (
                 <GoalCard
                   key={goal.id}
@@ -156,6 +138,21 @@ export function GoalsView(): ReactNode {
                   }
                 />
               ))}
+
+              {/* Sin planes no se enseña un cartel de vacío: la hucha de arriba ya
+                  dice lo que hay, y aquí basta con invitar a repartirlo. */}
+              {open.length === 0 && done.length === 0 && (
+                <div className="row" style={{ gap: 12 }}>
+                  <span className="small muted">
+                    Crea un plan para reservarle parte de este dinero: le pones nombre,
+                    cantidad y fecha, y verás cuánto tendrías que apartar cada mes.
+                  </span>
+                  <div className="spacer" />
+                  <button className="btn small primary" onClick={() => setCreating(true)}>
+                    Crear el primero
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -283,36 +280,36 @@ function GoalCard({
         </button>
       </div>
 
-      <ProgressBar percent={goal.percent} color={color} />
-
-      {/* Lo que se le reserva de la hucha. El tope no es su meta sino lo que hay
-          libre más lo que ya tiene, así que arrastrando no se puede repartir de
-          más ni quitarle a otro plan sin querer. Se guarda al soltar. */}
-      {onReserve && (
-        <div className="reserva">
-          <input
-            type="range"
-            min={0}
-            max={Math.max(techo, 1)}
-            step={100}
-            value={Math.min(reserva, Math.max(techo, 1))}
-            style={{ accentColor: color }}
-            onChange={(event) => setReserva(Number(event.target.value))}
-            onMouseUp={() => onReserve(reserva)}
-            onKeyUp={() => onReserve(reserva)}
-            aria-label={`Reservado para ${goal.name}`}
-          />
-          <span className="small muted nowrap">Reservado {formatMoney(reserva, currency)}</span>
-        </div>
+      {/* Un solo mando: lo que se le reserva de la hucha es a la vez lo que lleva
+          ahorrado, así que la barra de progreso y el deslizador son lo mismo. El
+          tope no es su meta sino lo que hay libre más lo que ya tiene, de forma que
+          arrastrando no se puede repartir de más ni quitarle a otro plan. Se guarda
+          al soltar. */}
+      {onReserve ? (
+        <input
+          className="reserva"
+          type="range"
+          min={0}
+          max={Math.max(techo, PASO)}
+          step={PASO}
+          value={Math.min(reserva, Math.max(techo, PASO))}
+          style={{ accentColor: color }}
+          onChange={(event) => setReserva(Number(event.target.value))}
+          onMouseUp={() => onReserve(reserva)}
+          onKeyUp={() => onReserve(reserva)}
+          aria-label={`Ahorrado para ${goal.name}`}
+        />
+      ) : (
+        <ProgressBar percent={goal.percent} color={color} />
       )}
 
       <div className="small subtle" style={{ marginTop: 5 }}>
         {goal.missing === 0
-          ? 'Ya tienes juntado lo que querías.'
+          ? 'Ya tienes ahorrado lo que querías.'
           : goal.perMonth != null
             ? `Tendrías que apartar ${formatMoney(goal.perMonth, currency)} al mes. ` +
               (goal.recentPace > 0
-                ? `En los últimos tres meses has ido juntando ${formatMoney(goal.recentPace, currency)} al mes.`
+                ? `En los últimos tres meses has ido ahorrando ${formatMoney(goal.recentPace, currency)} al mes.`
                 : 'En los últimos tres meses no ha entrado nada en esta cuenta.')
             : goal.daysLeft != null && goal.daysLeft < 0
               ? 'La fecha ya pasó; cámbiala o dalo por cerrado.'
@@ -413,7 +410,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
             />
           </Field>
 
-          <Field label="Dónde se junta">
+          <Field label="Dónde se ahorra">
             <select
               className="select"
               value={accountId}
