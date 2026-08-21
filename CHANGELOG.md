@@ -3,6 +3,17 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.8
+
+- **El buscador entiende cifras.** Escribir «9,17» saca los movimientos que
+  costaron 9,17 €, que muchas veces es lo único que se recuerda de un gasto. La
+  coma y el punto valen igual, y el símbolo del euro sobra pero no molesta. Sigue
+  buscando texto como siempre: la cifra se suma a lo que ya miraba, no lo
+  sustituye. Vale también para las programadas previstas.
+- **Las categorías del panel de Filtros van por orden alfabético.** Antes salían
+  primero los ingresos y después los gastos, cada grupo ordenado por su cuenta;
+  como ahí no hay nada que separe unos de otros, se leía como desorden.
+
 ## Novedades de la 1.13.7
 
 - **«Sin categoría» ya se puede filtrar.** Es la última pastilla de la fila de
