@@ -447,6 +447,33 @@ try {
   // que no puede duplicar nada al volver a pasar el mismo día.
   equal('repetir el repaso el mismo día no genera nada', scheduled.postDue(day), 0)
 
+  // «Registrar ahora» adelanta el pago, no adelanta el calendario: el dinero
+  // sale hoy, pero la cuota que se da por cumplida es la del día que tocaba y la
+  // siguiente sigue cayendo donde siempre. Fechándolo en su día, el movimiento
+  // se quedaba en el futuro de la lista con el saldo ya descontado.
+  const adelantada = scheduled.saveScheduled({
+    type: 'expense',
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 3399,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    autoPost: true
+  })
+  scheduled.postNow(adelantada.id)
+  const adelantado = transactions
+    .listTransactions({ limit: 200 })
+    .find((row) => row.scheduledId === adelantada.id)!
+  equal('registrar ahora fecha el movimiento hoy', adelantado.date, day)
+  equal(
+    'y consume la repetición que tocaba, sin mover el día del mes',
+    scheduled.getScheduled(adelantada.id)!.nextDate,
+    addMonths(day, 2)
+  )
+  transactions.deleteTransactions([adelantado.id])
+  scheduled.deleteScheduled(adelantada.id)
+
   // Finalizar no es pausar: la cuota se cierra con fecha y no vuelve sola.
   scheduled.finishScheduled(recurring.id, day)
   const finalizada = scheduled.getScheduled(recurring.id)!

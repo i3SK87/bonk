@@ -316,8 +316,17 @@ function postedByScheduled(scheduledId: number, date: string): number | null {
   return row ? Number(row.id) : null
 }
 
-/** Crea el movimiento de una programada y avanza su fecha a la siguiente repetición. */
-function post(row: Scheduled, date: string): void {
+/**
+ * Crea el movimiento de una programada y avanza su fecha a la siguiente
+ * repetición.
+ *
+ * Son dos fechas distintas y no siempre coinciden: `date` es la del movimiento
+ * —cuándo sale el dinero de verdad— y `consumed` es la repetición que se da por
+ * cumplida. Al registrar una cuota antes de tiempo el dinero sale hoy, pero la
+ * que se gasta es la del día que tocaba, y el mes que viene sigue venciendo el
+ * mismo día de siempre.
+ */
+function post(row: Scheduled, date: string, consumed = date): void {
   saveTransaction({
     type: row.type,
     date,
@@ -335,7 +344,7 @@ function post(row: Scheduled, date: string): void {
         : null
   })
 
-  const upcoming = nextOccurrence(date, row.freq, row.interval)
+  const upcoming = nextOccurrence(consumed, row.freq, row.interval)
   // Esta era la última: la siguiente caería más allá del fin. Se apaga y se
   // sella, que es lo que la manda a Finalizadas y dispara la enhorabuena.
   const exhausted = row.endDate != null && upcoming > row.endDate
@@ -400,7 +409,11 @@ export function postDue(reference = today()): number {
 export function postNow(id: number): void {
   const row = getDb().prepare('SELECT * FROM scheduled WHERE id = ?').get(id) as unknown as ScheduledRow | undefined
   if (!row) throw new Error('La programación ya no existe')
-  post(mapScheduled(row), mapScheduled(row).nextDate)
+  // Con la fecha de hoy y no con la suya: «registrar ahora» es que el dinero
+  // sale ahora. Fechándolo en su día, el movimiento se quedaba esperando en el
+  // futuro de la lista mientras el saldo ya lo había descontado.
+  const scheduled = mapScheduled(row)
+  post(scheduled, today(), scheduled.nextDate)
 }
 
 /**
