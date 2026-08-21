@@ -1,0 +1,45 @@
+<!--
+  La marca de BONK: una máscara de portero de hockey sobre negro.
+
+  El programa se llama casi «bank» y la máscara es la del atraco al furgón de
+  Heat, así que el chiste se cuenta solo. Pero un icono se ve a 16 px en la
+  bandeja del sistema: manda la silueta. Por eso el hueco de los ojos es enorme,
+  la boca es una sola ranura y los respiraderos son cuatro puntos gordos —a
+  tamaño pequeño desaparecen, y lo que queda sigue leyéndose como una cara.
+
+  El blanco no es blanco puro sino hueso, que es el color de las de la película
+  y evita el brillo de cartel sobre el fondo negro.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0B0B0D" />
+
+  <g transform="translate(256 262)">
+    <!-- El casco: domo ancho arriba, pómulos marcados y barbilla estrecha. -->
+    <path
+      fill="#EDE7DC"
+      d="M0-186
+         c62 0 108 26 128 74
+         c14 34 18 76 14 118
+         c-5 54-26 100-58 132
+         c-24 24-52 36-84 36
+         s-60-12-84-36
+         c-32-32-53-78-58-132
+         c-4-42 0-84 14-118
+         c20-48 66-74 128-74Z" />
+
+    <!-- Los ojos, del tamaño que de verdad tienen esas máscaras. -->
+    <ellipse cx="-76" cy="-24" rx="46" ry="34" fill="#0B0B0D" />
+    <ellipse cx="76" cy="-24" rx="46" ry="34" fill="#0B0B0D" />
+
+    <!-- La ranura de la boca, de una pieza para que aguante a 16 px. -->
+    <rect x="-66" y="72" width="132" height="26" rx="13" fill="#0B0B0D" />
+
+    <!-- Respiraderos de la frente. -->
+    <circle cx="-34" cy="-108" r="13" fill="#0B0B0D" />
+    <circle cx="34" cy="-108" r="13" fill="#0B0B0D" />
+
+    <!-- Y los de los pómulos, que son los que dan la cara de máscara. -->
+    <circle cx="-96" cy="46" r="12" fill="#0B0B0D" />
+    <circle cx="96" cy="46" r="12" fill="#0B0B0D" />
+  </g>
+</svg>

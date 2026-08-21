@@ -12,7 +12,7 @@ export type BudgetPeriod = 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
-export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela'
+export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela' | 'heat'
 
 export interface Account {
   id: number

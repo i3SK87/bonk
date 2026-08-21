@@ -125,6 +125,26 @@
   --sidebar-fg: #9db5b3;
 }
 
+/* Heat — el azul acero de la noche de Los Ángeles y el ámbar de las farolas
+   de sodio. De día la película es hormigón y cristal, y así es esta. */
+:root[data-palette="heat"] {
+  --accent: #1c6d8f;
+  --accent-strong: #185f7d;
+  --bg: #eef2f4;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e3eaee;
+  --fg: #101a1f;
+  --fg-muted: #55666f;
+  --fg-subtle: #6f8189;
+  --border: #d8e2e6;
+  --border-strong: #bccad1;
+  --sidebar-bg: #0e191e;
+  --sidebar-fg: #98aab4;
+  --warning: #c1690c;
+  --series-income: #1c6d8f;
+  --series-expense: #d4762b;
+}
+
 /* Sepia */
 :root[data-palette="sepia"] {
   --accent: #8a5416;
@@ -200,6 +220,26 @@
   --border-strong: #4b4238;
   --sidebar-bg: #141110;
   --sidebar-fg: #9b9081;
+}
+
+/* De noche es cuando la película es la película: azul de acero, negros que
+   tiran a verde y el naranja del sodio para lo que quema. */
+:root[data-theme="dark"][data-palette="heat"] {
+  --accent: #5fb0d4;
+  --accent-strong: #2b7ea6;
+  --bg: #0e1418;
+  --bg-elevated: #162026;
+  --bg-sunken: #0a1014;
+  --fg: #e8eff3;
+  --fg-muted: #93a6b1;
+  --fg-subtle: #728691;
+  --border: #223037;
+  --border-strong: #31434c;
+  --sidebar-bg: #080d10;
+  --sidebar-fg: #8598a3;
+  --warning: #ffa53d;
+  --series-income: #4aa6cf;
+  --series-expense: #e0762c;
 }
 
 :root[data-theme="dark"][data-palette="ciruela"] {
