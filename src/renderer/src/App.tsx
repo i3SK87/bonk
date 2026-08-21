@@ -33,7 +33,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
   { id: 'schedules', label: 'Programados', icon: 'calendar' },
   { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
-  { id: 'debts', label: 'Deudas', icon: 'debt' },
+  { id: 'debts', label: 'Deudas', icon: 'debt' }, // lo pisa el de la categoría de deuda
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
@@ -52,7 +52,7 @@ const TITLES: Record<ViewId, string> = {
 }
 
 export function App(): ReactNode {
-  const { ready, accounts, settings, toast, refresh } = useStore()
+  const { ready, accounts, categories, settings, toast, refresh } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
@@ -112,6 +112,8 @@ export function App(): ReactNode {
     .filter((account) => !account.excludeFromTotal)
     .reduce((sum, account) => sum + account.balanceInBase, 0)
 
+  const iconoDeuda = categories.find((category) => category.isDebt)?.icon ?? 'debt'
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -121,12 +123,15 @@ export function App(): ReactNode {
         </div>
 
         {NAV.map((item) => (
+          /* La pestaña de Deudas lleva el icono de tu categoría de deuda: es el que
+             tiene delante en cada ficha, y verlo distinto en la barra las hacía
+             parecer dos sitios diferentes. */
           <button
             key={item.id}
             className={`nav-item${view === item.id ? ' active' : ''}`}
             onClick={() => setView(item.id)}
           >
-            <Icon name={item.icon} size={17} />
+            <Icon name={item.id === 'debts' ? iconoDeuda : item.icon} size={17} />
             {item.label}
           </button>
         ))}

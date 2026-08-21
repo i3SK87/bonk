@@ -501,5 +501,15 @@ export const MIGRATIONS: string[] = [
    WHERE debt_paid_count IS NOT NULL;
 
   ALTER TABLE scheduled DROP COLUMN debt_paid_count;
+  `,
+
+  // v21 — desde cuándo se paga la deuda.
+  //
+  // La fecha del primer pago se deducía del movimiento más antiguo, y eso solo
+  // alcanza hasta donde llegan tus registros: una deuda que empezó hace tres
+  // años decía «desde abril». Es el mismo agujero que las cuotas de antes, y se
+  // tapa igual: diciéndolo.
+  `
+  ALTER TABLE scheduled ADD COLUMN debt_start_date TEXT;
   `
 ]

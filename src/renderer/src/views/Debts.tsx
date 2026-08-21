@@ -183,9 +183,6 @@ function DebtCard({
             <span style={{ fontWeight: 570 }} className="truncate">
               {debt.title}
             </span>
-            {debt.categoryName && debt.categoryName !== debt.title && (
-              <span className="pill">{debt.categoryName}</span>
-            )}
             {quienCobra && (
               <span className="pill">
                 <img src={quienCobra.logo} alt="" />
@@ -256,6 +253,7 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
   const [paidCount, setPaidCount] = useState(debt.paidCount)
   const [lastAmount, setLastAmount] = useState(debt.lastInstallment ?? 0)
   const [total, setTotal] = useState(debt.fixedTotal ?? 0)
+  const [startDate, setStartDate] = useState(debt.fixedStart ?? '')
 
   return (
     <Modal
@@ -274,7 +272,12 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
               // siempre. Refrescar tampoco hace falta, que `run` ya lo hace.
               const ajustada = await run(
                 () =>
-                  api.scheduled.adjustDebt(debt.scheduledId, { paidCount, lastAmount, total }),
+                  api.scheduled.adjustDebt(debt.scheduledId, {
+                    paidCount,
+                    lastAmount,
+                    total,
+                    startDate
+                  }),
                 'Deuda ajustada'
               )
               if (ajustada !== null) onClose()
@@ -297,6 +300,22 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         hint={`La última casi nunca es entera. Déjala en cero si es como las demás, ${formatMoney(debt.installment, debt.currency)}.`}
       >
         <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} />
+      </Field>
+
+      <Field
+        label="Primer pago"
+        hint={
+          debt.firstDate
+            ? `El más antiguo que BONK ve es del ${formatDate(debt.firstDate)}. Si empezaste antes, dilo aquí.`
+            : 'Desde cuándo la pagas. Déjalo vacío y se toma el movimiento más antiguo.'
+        }
+      >
+        <input
+          className="input"
+          type="date"
+          value={startDate}
+          onChange={(event) => setStartDate(event.target.value)}
+        />
       </Field>
 
       <Field

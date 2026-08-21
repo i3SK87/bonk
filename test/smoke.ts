@@ -634,6 +634,15 @@ try {
   scheduled.adjustDebt(corta.id, { lastAmount: 0 })
   equal('a cero, vuelve a ser una cuota como las demás', verCorta().left, 30000)
   check('y deja de haber última corta', verCorta().lastInstallment === null)
+  // Desde cuándo se paga: lo que se deduce es la fecha del apunte más antiguo, y
+  // eso no llega a las cuotas que nadie apuntó.
+  equal('sin decir nada, la fecha sale de los movimientos', verCorta().firstDate, null)
+  scheduled.adjustDebt(corta.id, { startDate: '2024-03-15' })
+  equal('la fecha puesta a mano manda', verCorta().firstDate, '2024-03-15')
+  equal('y se recuerda como puesta a mano', verCorta().fixedStart, '2024-03-15')
+  scheduled.adjustDebt(corta.id, { startDate: '' })
+  check('vacía, vuelve a deducirse', verCorta().fixedStart === null)
+
   // Quién cobra: viaja con la programación y se ve en la deuda.
   scheduled.saveScheduled({
     id: corta.id,

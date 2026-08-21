@@ -188,7 +188,7 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
     if (Notification.isSupported()) {
       notify(categoryImage(icon, row.categoryId), onClick, {
         title: `¡${name} pagado!`,
-        body: `${count} cuotas y ya está. ${formatMoney(total, summary.currency)} desde ${monthOf(summary.firstDate)}.`
+        body: `${count} cuotas y ya está. ${formatMoney(total, summary.currency)} desde ${monthOf(row.debtStartDate ?? summary.firstDate)}.`
       })
     }
 
@@ -199,7 +199,7 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
       count,
       total,
       currency: summary.currency,
-      firstDate: summary.firstDate,
+      firstDate: row.debtStartDate ?? summary.firstDate,
       lastDate: summary.lastDate
     })
   }

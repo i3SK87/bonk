@@ -36,6 +36,7 @@ interface ScheduledRow {
   goal_id: number | null
   debt_extra_count: number | null
   debt_last_amount: number | null
+  debt_start_date: string | null
   lender: string | null
   debt_total: number | null
   remind: number
@@ -77,6 +78,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     goalId: row.goal_id,
     debtExtraCount: row.debt_extra_count,
     debtLastAmount: row.debt_last_amount,
+    debtStartDate: row.debt_start_date,
     lender: row.lender,
     debtTotal: row.debt_total,
     remind: row.remind === 1,
@@ -306,9 +308,17 @@ export function adjustDebt(id: number, patch: DebtAdjust): void {
   const extra = total == null ? null : Math.max(0, total - debtSummary(id).count) || null
   getDb()
     .prepare(
-      'UPDATE scheduled SET debt_extra_count = ?, debt_last_amount = ?, debt_total = ? WHERE id = ?'
+      `UPDATE scheduled
+          SET debt_extra_count = ?, debt_last_amount = ?, debt_total = ?, debt_start_date = ?
+        WHERE id = ?`
     )
-    .run(extra, limpio(patch.lastAmount), limpio(patch.total), id)
+    .run(
+      extra,
+      limpio(patch.lastAmount),
+      limpio(patch.total),
+      bind(patch.startDate?.trim() || null),
+      id
+    )
 }
 
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
@@ -451,7 +461,10 @@ export function debtProgress(reference = today()): DebtProgress[] {
       lastInstallment: debt.debtLastAmount,
       lender: debt.lender,
       percent: total && total > 0 ? Math.min(100, (paid / total) * 100) : null,
-      firstDate: summary.firstDate,
+      // La que digas manda: el movimiento más antiguo solo llega hasta donde
+      // llegan tus registros.
+      firstDate: debt.debtStartDate ?? summary.firstDate,
+      fixedStart: debt.debtStartDate,
       nextDate: debt.nextDate,
       endDate: debt.endDate,
       daysLeft,

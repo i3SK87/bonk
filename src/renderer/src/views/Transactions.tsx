@@ -903,6 +903,8 @@ export function TransactionRow({
       ? `Devuelto ${formatMoney(row.refundedTotal, row.accountCurrency)} de ${formatMoney(row.amount, row.accountCurrency)}`
       : undefined
 
+  const muestraCuenta = !isTransfer && row.type !== 'refund'
+
   return (
     <div
       className={[
@@ -931,6 +933,9 @@ export function TransactionRow({
       onFocus={() => family !== undefined && onFamily?.(family)}
       onBlur={() => family !== undefined && onFamily?.(null)}
     >
+      {/* En un traspaso el título ya nombra las dos cuentas, y un reembolso cuelga
+          de su gasto, que la dice justo encima: repetirla era llenar la línea de
+          la misma palabra tres veces. */}
       <Avatar
         icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'tag')}
         color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
@@ -940,9 +945,8 @@ export function TransactionRow({
         <div className="tx-sub">
           {row.type === 'refund' && <span className="pill">Reembolso</span>}
           {detail && <span className="tx-note">{detail}</span>}
-          {detail && <span>·</span>}
-          {/* En un traspaso el título ya nombra las dos cuentas. */}
-          {!isTransfer && <span>{row.accountName}</span>}
+          {detail && muestraCuenta && <span>·</span>}
+          {muestraCuenta && <span>{row.accountName}</span>}
           {row.attachmentCount > 0 && <Icon name="paperclip" size={12} />}
         </div>
       </div>

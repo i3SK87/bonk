@@ -237,6 +237,8 @@ export interface Scheduled {
   debtExtraCount: number | null
   /** La última cuota, cuando es más corta que las demás. */
   debtLastAmount: number | null
+  /** Desde cuándo se paga, cuando empezó antes del primer apunte. */
+  debtStartDate: string | null
   /** Quién cobra la deuda, de la lista de shared/lenders. */
   lender: string | null
   /**
@@ -348,6 +350,8 @@ export interface DebtAdjust {
   lastAmount?: number | null
   /** El total de la deuda; cero o null para calcularlo con las cuotas. */
   total?: number | null
+  /** Desde cuándo se paga; vacío o null para tomar el movimiento más antiguo. */
+  startDate?: string | null
 }
 
 export interface DebtProgress {
@@ -376,6 +380,8 @@ export interface DebtProgress {
   fixedTotal: number | null
   /** La última cuota, si se ha dicho que es más corta. */
   lastInstallment: number | null
+  /** La fecha de inicio puesta a mano, si la hay. */
+  fixedStart: string | null
   /** Quién la cobra, de la lista de shared/lenders. */
   lender: string | null
   percent: number | null
