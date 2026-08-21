@@ -3,6 +3,18 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.22.0
+
+- **Planes Ahorro enseña tus huchas arriba**, como Movimientos con las cuentas,
+  pero solo las de ahorro. Se mira una cada vez: su ahorro libre, sus planes y su
+  reparto.
+- **Con varias huchas, cada una va por su cuenta.** Antes se sumaban todas, así que
+  un plan de una podía reservar dinero que estaba en otra. Un plan cuelga de una
+  cuenta concreta y ahora las cuentas cuadran.
+- **Y al crear un plan viene marcada la hucha que estés mirando**, no la primera de
+  la lista.
+- Fuera la cifra a la derecha del mando.
+
 ## Novedades de la 1.21.0
 
 - **La enhorabuena sale al llenar el plan con el mando.** Llevarlo hasta el final

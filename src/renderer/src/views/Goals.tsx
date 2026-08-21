@@ -55,6 +55,7 @@ export function GoalsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
+  const [potId, setPotId] = useState<number | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -65,14 +66,22 @@ export function GoalsView(): ReactNode {
       .finally(() => setLoading(false))
   }, [revision])
 
-  const open = goals.filter((goal) => !goal.achievedAt)
-  const done = goals.filter((goal) => goal.achievedAt)
   // Las huchas son las cuentas de ahorro; si no hay ninguna, vale cualquiera.
   const pots = accounts.filter((account) => account.type === 'savings')
-  const potIds = new Set((pots.length ? pots : accounts).map((account) => account.id))
-  const potTotal = accounts
-    .filter((account) => potIds.has(account.id))
-    .reduce((sum, account) => sum + account.balance, 0)
+  const huchas = pots.length ? pots : accounts
+
+  /*
+   * Se mira una hucha cada vez, y no todas sumadas.
+   *
+   * Un plan cuelga de una cuenta concreta, así que sumarlas repartía dinero que
+   * está en otra parte: con dos huchas, un plan de la primera podía reservar lo
+   * que hay en la segunda. Cada hucha tiene su ahorro libre y sus planes.
+   */
+  const hucha = huchas.find((account) => account.id === potId) ?? huchas[0] ?? null
+  const potTotal = hucha?.balance ?? 0
+  const suyos = goals.filter((goal) => goal.accountId === hucha?.id)
+  const open = suyos.filter((goal) => !goal.achievedAt)
+  const done = suyos.filter((goal) => goal.achievedAt)
   // Lo reservado a mano es lo único que sale de la hucha; el resto es ahorro
   // libre, y es lo que limita cuánto puede subir otro plan.
   //
@@ -95,6 +104,31 @@ export function GoalsView(): ReactNode {
             Nuevo plan
           </button>
         </div>
+
+        {/* Las huchas disponibles, como las cuentas en Movimientos. Con una sola
+            también se enseña: dice cuánto hay ahí sin tener que ir a Cuentas. */}
+        {huchas.length > 0 && (
+          <div className="card-body" style={{ paddingBottom: 0 }}>
+            <div className="account-chips">
+              {huchas.map((account) => (
+                <button
+                  key={account.id}
+                  className={`account-chip${account.id === hucha?.id ? ' active' : ''}`}
+                  onClick={() => setPotId(account.id)}
+                  title={`Ver los planes de ${account.name}`}
+                >
+                  <Avatar icon={account.icon} color={account.color} size="small" />
+                  <span className="chip-text">
+                    <span className="chip-name truncate">{account.name}</span>
+                    <span className="chip-balance amount">
+                      {formatMoney(account.balance, account.currency)}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <Loading />
@@ -192,7 +226,7 @@ export function GoalsView(): ReactNode {
       {(creating || editing) && (
         <GoalModal
           goal={editing}
-          defaultAccountId={(pots[0] ?? accounts[0])?.id ?? 0}
+          defaultAccountId={hucha?.id ?? 0}
           onClose={() => {
             setCreating(false)
             setEditing(null)
@@ -302,11 +336,6 @@ function GoalCard({
             onKeyUp={() => onReserve(Math.min(reserva, techo))}
             aria-label={`Ahorrado para ${goal.name}`}
           />
-          {/* La cifra va al lado y no debajo: arrastrando se mira el mando, y ahí
-              es donde hace falta leer cuánto se está metiendo. */}
-          <span className="reserva-cifra amount">
-            {formatMoney(Math.min(reserva, techo), currency)}
-          </span>
         </div>
       ) : (
         <ProgressBar percent={goal.percent} color={color} />
