@@ -179,6 +179,7 @@ export function DebtsView(): ReactNode {
           schedule={null}
           siblings={[]}
           defaultCategoryId={categoriaDeuda.id}
+          soloGasto
           onClose={() => setCreando(false)}
           onSave={(input) => run(() => api.scheduled.save(input), 'Deuda creada')}
         />

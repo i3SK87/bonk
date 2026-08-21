@@ -5,6 +5,221 @@ import type { JSX } from 'react'
  * porque la política de seguridad de la ventana bloquea cualquier recurso remoto.
  * Todos comparten lienzo de 24×24 y trazo de 1.8 para que combinen entre sí.
  */
+/*
+ * Los iconos de las categorías vienen de Lucide.
+ *
+ * Dibujarlos a mano salía caro y corto: una lista de treinta y dos donde
+ * siempre faltaba justo el que hacía falta. La clave sigue siendo la de
+ * siempre —«cart», «restaurant»— para que ninguna categoría pierda su dibujo
+ * al actualizar; lo que cambia es de dónde sale el trazo.
+ *
+ * Se importan uno a uno, y no la biblioteca entera, para que el empaquetado se
+ * lleve solo estos y no los seis mil que trae.
+ */
+import {
+  Baby,
+  Bath,
+  Bed,
+  Bike,
+  Book,
+  Briefcase,
+  Building2,
+  Bus,
+  Cake,
+  Calendar,
+  Camera,
+  Car,
+  ChartColumn,
+  Cigarette,
+  Cloud,
+  Coffee,
+  Coins,
+  Cpu,
+  CreditCard,
+  Croissant,
+  Dog,
+  Drama,
+  Droplet,
+  Dumbbell,
+  Film,
+  Flame,
+  Flower,
+  Fuel,
+  Gamepad2,
+  Gift,
+  Glasses,
+  GraduationCap,
+  Hammer,
+  HandCoins,
+  Headphones,
+  Heart,
+  HeartPulse,
+  Hospital,
+  House,
+  Key,
+  Landmark,
+  Laptop,
+  Leaf,
+  Lightbulb,
+  Luggage,
+  Map,
+  Monitor,
+  Mountain,
+  Newspaper,
+  Package,
+  Paintbrush,
+  Palette,
+  PartyPopper,
+  PawPrint,
+  PiggyBank,
+  Pill,
+  Pizza,
+  Plane,
+  Popcorn,
+  Printer,
+  Receipt,
+  Recycle,
+  Rocket,
+  Salad,
+  Scale,
+  School,
+  Scissors,
+  Shield,
+  Ship,
+  Shirt,
+  ShoppingBag,
+  ShoppingCart,
+  Smartphone,
+  Snowflake,
+  Sofa,
+  Sparkles,
+  Sprout,
+  Stethoscope,
+  Store,
+  Tag,
+  Target,
+  Ticket,
+  ToyBrick,
+  Train,
+  TreePine,
+  TrendingUp,
+  Trophy,
+  Truck,
+  Tv,
+  Umbrella,
+  Undo2,
+  University,
+  Utensils,
+  Wallet,
+  Wifi,
+  Wine,
+  Wrench,
+  Zap,
+  type LucideIcon
+} from 'lucide-react'
+
+const LUCIDE: Record<string, LucideIcon> = {
+  cart: ShoppingCart,
+  restaurant: Utensils,
+  bus: Bus,
+  fuel: Fuel,
+  home: House,
+  bolt: Zap,
+  phone: Smartphone,
+  health: HeartPulse,
+  fun: PartyPopper,
+  tv: Tv,
+  clothes: Shirt,
+  beauty: Sparkles,
+  sport: Dumbbell,
+  education: GraduationCap,
+  travel: Plane,
+  gift: Gift,
+  pet: PawPrint,
+  tax: Landmark,
+  shield: Shield,
+  salary: Wallet,
+  tools: Wrench,
+  chart: ChartColumn,
+  coins: Coins,
+  refund: Undo2,
+  invest: TrendingUp,
+  piggy: PiggyBank,
+  card: CreditCard,
+  bank: Building2,
+  wallet: Wallet,
+  target: Target,
+  calendar: Calendar,
+  tag: Tag,
+  bebe: Baby,
+  bici: Bike,
+  libro: Book,
+  tarta: Cake,
+  coche: Car,
+  tabaco: Cigarette,
+  nube: Cloud,
+  cafe: Coffee,
+  ordenador: Cpu,
+  bolleria: Croissant,
+  teatro: Drama,
+  perro: Dog,
+  cine: Film,
+  flor: Flower,
+  videojuegos: Gamepad2,
+  gafas: Glasses,
+  obras: Hammer,
+  musica: Headphones,
+  corazon: Heart,
+  hospital: Hospital,
+  portatil: Laptop,
+  planta: Leaf,
+  idea: Lightbulb,
+  maleta: Luggage,
+  prensa: Newspaper,
+  paquete: Package,
+  arte: Palette,
+  farmacia: Pill,
+  pizza: Pizza,
+  palomitas: Popcorn,
+  recibo: Receipt,
+  reciclaje: Recycle,
+  cohete: Rocket,
+  peluqueria: Scissors,
+  compras: ShoppingBag,
+  barco: Ship,
+  sofa: Sofa,
+  huerto: Sprout,
+  medico: Stethoscope,
+  tienda: Store,
+  tren: Train,
+  bosque: TreePine,
+  mudanza: Truck,
+  seguro: Umbrella,
+  universidad: University,
+  vino: Wine,
+  internet: Wifi,
+  cama: Bed,
+  bano: Bath,
+  trabajo: Briefcase,
+  foto: Camera,
+  agua: Droplet,
+  gas: Flame,
+  llave: Key,
+  mapa: Map,
+  monitor: Monitor,
+  montana: Mountain,
+  pintura: Paintbrush,
+  impresora: Printer,
+  ensalada: Salad,
+  justicia: Scale,
+  colegio: School,
+  frio: Snowflake,
+  entradas: Ticket,
+  juguetes: ToyBrick,
+  trofeo: Trophy,
+  propina: HandCoins,
+}
+
 const PATHS: Record<string, JSX.Element> = {
   // — Navegación —
   dashboard: (
@@ -23,24 +238,6 @@ const PATHS: Record<string, JSX.Element> = {
       <circle cx="3.8" cy="18" r="1.2" />
     </>
   ),
-  target: (
-    <>
-      <circle cx="12" cy="12" r="8.5" />
-      <circle cx="12" cy="12" r="4.5" />
-      <circle cx="12" cy="12" r="1" />
-    </>
-  ),
-  chart: (
-    <>
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-    </>
-  ),
-  calendar: (
-    <>
-      <rect x="3" y="5" width="18" height="16" rx="3" />
-      <path d="M3 10h18M8 3v4M16 3v4" />
-    </>
-  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3.2" />
@@ -49,185 +246,11 @@ const PATHS: Record<string, JSX.Element> = {
   ),
 
   // — Cuentas —
-  wallet: (
-    <>
-      <path d="M3 8a3 3 0 0 1 3-3h11a2 2 0 0 1 2 2v2" />
-      <rect x="3" y="7" width="18" height="13" rx="3" />
-      <circle cx="16.5" cy="13.5" r="1.3" />
-    </>
-  ),
-  bank: (
-    <>
-      <path d="M3 10h18L12 4 3 10z" />
-      <path d="M5.5 10v7M10 10v7M14 10v7M18.5 10v7M3 20h18" />
-    </>
-  ),
-  card: (
-    <>
-      <rect x="2.5" y="5" width="19" height="14" rx="3" />
-      <path d="M2.5 10h19M6 15h4" />
-    </>
-  ),
-  piggy: (
-    <>
-      <path d="M15.5 6.5A6.5 6.5 0 0 1 21 12.8V17h-2.5l-.8 2.5h-3l-.4-1.6h-2.6l-.4 1.6h-3L7.5 17H6a3 3 0 0 1-3-3v-2a2 2 0 0 1 2-2h1.2a6.5 6.5 0 0 1 5.3-3.5z" />
-      <circle cx="16" cy="11.5" r="0.9" />
-    </>
-  ),
-  invest: (
-    <>
-      <path d="M3 17l5.5-6 4 3.5L21 6" />
-      <path d="M15.5 6H21v5.5" />
-    </>
-  ),
   debt: (
     <>
       <circle cx="12" cy="12" r="8.5" />
       <path d="M9.5 9.5c0-1.2 1.1-2 2.5-2s2.5.8 2.5 2c0 2-2.5 1.8-2.5 3.5" />
       <circle cx="12" cy="16.5" r="0.9" />
-    </>
-  ),
-
-  // — Categorías —
-  cart: (
-    <>
-      <path d="M3 4h2.2l2.3 11h9.6l2.4-8H6.2" />
-      <circle cx="9" cy="19" r="1.4" />
-      <circle cx="17" cy="19" r="1.4" />
-    </>
-  ),
-  restaurant: (
-    <>
-      <path d="M6 3v8a2.5 2.5 0 0 0 5 0V3M8.5 11v10" />
-      <path d="M17.5 3c-1.7 1-2.5 3-2.5 5.5 0 1.6.7 2.5 2 2.8V21" />
-    </>
-  ),
-  bus: (
-    <>
-      <rect x="4" y="4" width="16" height="12.5" rx="3" />
-      <path d="M4 11h16M7 20v-2M17 20v-2" />
-      <circle cx="8" cy="14" r="1" />
-      <circle cx="16" cy="14" r="1" />
-    </>
-  ),
-  fuel: (
-    <>
-      <rect x="4" y="4" width="10" height="16" rx="2.5" />
-      <path d="M4 11h10M14 8h2.5a2 2 0 0 1 2 2v6a1.6 1.6 0 0 0 3.2 0v-6l-2.2-2.5" />
-    </>
-  ),
-  home: (
-    <>
-      <path d="M4 10.5L12 4l8 6.5V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" />
-      <path d="M9.5 21v-6h5v6" />
-    </>
-  ),
-  bolt: (
-    <>
-      <path d="M13.5 3L5 13.5h5.5L10 21l8.5-10.5H13z" />
-    </>
-  ),
-  phone: (
-    <>
-      <rect x="6.5" y="2.5" width="11" height="19" rx="3" />
-      <path d="M10.5 5.5h3" />
-      <circle cx="12" cy="18" r="1" />
-    </>
-  ),
-  health: (
-    <>
-      <path d="M12 20.5S3.5 15.5 3.5 9.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8.5 2.5c0 6-8.5 11-8.5 11z" />
-    </>
-  ),
-  fun: (
-    <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M8.5 14.5c1 1.2 2.2 1.8 3.5 1.8s2.5-.6 3.5-1.8" />
-      <circle cx="9.2" cy="9.8" r="0.9" />
-      <circle cx="14.8" cy="9.8" r="0.9" />
-    </>
-  ),
-  tv: (
-    <>
-      <rect x="2.5" y="4.5" width="19" height="13" rx="3" />
-      <path d="M8 21h8M12 17.5V21" />
-    </>
-  ),
-  clothes: (
-    <>
-      <path d="M8.5 3L4 6l2 3 2-1v11h8V8l2 1 2-3-4.5-3a3.5 3.5 0 0 1-7 0z" />
-    </>
-  ),
-  beauty: (
-    <>
-      <path d="M9 3h6l-1 5H10z" />
-      <rect x="8.5" y="8" width="7" height="13" rx="2.5" />
-      <path d="M8.5 13h7" />
-    </>
-  ),
-  sport: (
-    <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 3.5c-2.5 2.2-3.8 5.1-3.8 8.5s1.3 6.3 3.8 8.5M12 3.5c2.5 2.2 3.8 5.1 3.8 8.5s-1.3 6.3-3.8 8.5M3.5 12h17" />
-    </>
-  ),
-  education: (
-    <>
-      <path d="M12 4L2.5 9 12 14l9.5-5z" />
-      <path d="M6.5 11.2V16c0 1.4 2.5 2.8 5.5 2.8s5.5-1.4 5.5-2.8v-4.8M21.5 9v5.5" />
-    </>
-  ),
-  travel: (
-    <>
-      <path d="M2.5 15.5l19-6.5-1-2.5-6 1.5-5.5-4.5-2 .8 3 5-4 1-2.5-2-1.5.7z" />
-      <path d="M6 20h13" />
-    </>
-  ),
-  gift: (
-    <>
-      <rect x="3" y="8" width="18" height="4" rx="1.5" />
-      <path d="M4.5 12v7a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-7M12 8v13" />
-      <path d="M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5zM12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5z" />
-    </>
-  ),
-  pet: (
-    <>
-      <ellipse cx="12" cy="15.5" rx="4.5" ry="4" />
-      <ellipse cx="5.8" cy="10" rx="2" ry="2.6" />
-      <ellipse cx="18.2" cy="10" rx="2" ry="2.6" />
-      <ellipse cx="9.2" cy="5.8" rx="1.9" ry="2.4" />
-      <ellipse cx="14.8" cy="5.8" rx="1.9" ry="2.4" />
-    </>
-  ),
-  tax: (
-    <>
-      <path d="M6 3h12a1 1 0 0 1 1 1v17l-3.5-2-3.5 2-3.5-2L5 21V4a1 1 0 0 1 1-1z" />
-      <path d="M9 8.5h6M9 12.5h6" />
-    </>
-  ),
-  shield: (
-    <>
-      <path d="M12 3l7.5 3v6c0 4.5-3 7.8-7.5 9.5C7.5 19.8 4.5 16.5 4.5 12V6z" />
-      <path d="M9 12l2.2 2.2L15.5 10" />
-    </>
-  ),
-  tag: (
-    <>
-      <path d="M3.5 11.5V4.5a1 1 0 0 1 1-1h7l9 9-8 8z" />
-      <circle cx="8" cy="8" r="1.4" />
-    </>
-  ),
-  salary: (
-    <>
-      <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
-      <circle cx="12" cy="12" r="2.8" />
-      <path d="M6 10v4M18 10v4" />
-    </>
-  ),
-  tools: (
-    <>
-      <path d="M14.5 6.5a4 4 0 0 0 5.2 5.2l-8 8a2.6 2.6 0 0 1-3.7-3.7z" />
-      <path d="M6.5 4.5l3 3-2 2-3-3z" />
     </>
   ),
   calculator: (
@@ -241,19 +264,6 @@ const PATHS: Record<string, JSX.Element> = {
     <>
       <rect x="8.5" y="8.5" width="12" height="12" rx="2.5" />
       <path d="M15.5 5.5A2.5 2.5 0 0 0 13 3H6a2.5 2.5 0 0 0-2.5 2.5v7A2.5 2.5 0 0 0 6 15" />
-    </>
-  ),
-  coins: (
-    <>
-      <ellipse cx="12" cy="6.5" rx="7.5" ry="3" />
-      <path d="M4.5 6.5v5c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-5" />
-      <path d="M4.5 11.5v5c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-5" />
-    </>
-  ),
-  refund: (
-    <>
-      <path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1" />
-      <path d="M3 3.5V9h5.5" />
     </>
   ),
 
@@ -404,6 +414,19 @@ interface IconProps {
 }
 
 export function Icon({ name, size = 18, className, strokeWidth = 1.8, filled }: IconProps): JSX.Element {
+  const DeLucide = LUCIDE[name]
+  if (DeLucide) {
+    return (
+      <DeLucide
+        size={size}
+        strokeWidth={strokeWidth}
+        className={className}
+        aria-hidden="true"
+        focusable="false"
+      />
+    )
+  }
+
   const path = PATHS[name] ?? PATHS.tag
   return (
     <svg
@@ -426,10 +449,19 @@ export function Icon({ name, size = 18, className, strokeWidth = 1.8, filled }: 
 
 /** Iconos ofrecidos en los selectores de categoría y cuenta. */
 export const CATEGORY_ICONS: string[] = [
-  'cart', 'restaurant', 'bus', 'fuel', 'home', 'bolt', 'phone', 'health', 'fun', 'tv',
-  'clothes', 'beauty', 'sport', 'education', 'travel', 'gift', 'pet', 'tax', 'shield',
-  'salary', 'tools', 'chart', 'coins', 'refund', 'invest', 'piggy', 'card', 'bank',
-  'wallet', 'target', 'calendar', 'tag'
+  'cart', 'restaurant', 'bus', 'fuel', 'home', 'bolt', 'phone', 'health',
+  'fun', 'tv', 'clothes', 'beauty', 'sport', 'education', 'travel', 'gift',
+  'pet', 'tax', 'shield', 'salary', 'tools', 'chart', 'coins', 'refund',
+  'invest', 'piggy', 'card', 'bank', 'wallet', 'target', 'calendar', 'tag',
+  'bebe', 'bici', 'libro', 'tarta', 'coche', 'tabaco', 'nube', 'cafe',
+  'ordenador', 'bolleria', 'teatro', 'perro', 'cine', 'flor', 'videojuegos', 'gafas',
+  'obras', 'musica', 'corazon', 'hospital', 'portatil', 'planta', 'idea', 'maleta',
+  'prensa', 'paquete', 'arte', 'farmacia', 'pizza', 'palomitas', 'recibo', 'reciclaje',
+  'cohete', 'peluqueria', 'compras', 'barco', 'sofa', 'huerto', 'medico', 'tienda',
+  'tren', 'bosque', 'mudanza', 'seguro', 'universidad', 'vino', 'internet', 'cama',
+  'bano', 'trabajo', 'foto', 'agua', 'gas', 'llave', 'mapa', 'monitor',
+  'montana', 'pintura', 'impresora', 'ensalada', 'justicia', 'colegio', 'frio', 'entradas',
+  'juguetes', 'trofeo', 'propina'
 ]
 
 export const ACCOUNT_ICONS: string[] = [
