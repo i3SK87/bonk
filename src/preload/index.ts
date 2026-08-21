@@ -85,8 +85,8 @@ const api = {
     postNow: (id: number) => call<void>('scheduled:postNow', id),
     postDue: () => call<number>('scheduled:postDue'),
     debts: () => call<DebtProgress[]>('scheduled:debts'),
-    adjustDebt: (id: number, paidBefore: number, total: number | null) =>
-      call<void>('scheduled:adjustDebt', id, paidBefore, total),
+    adjustDebt: (id: number, paidBefore: number, total: number | null, installment?: number) =>
+      call<void>('scheduled:adjustDebt', id, paidBefore, total, installment),
     project: (from: string, to: string) => call<ProjectedTransaction[]>('scheduled:project', from, to)
   },
   reports: {

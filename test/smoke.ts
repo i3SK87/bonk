@@ -17,8 +17,8 @@ import * as reports from '../src/main/repos/reports'
 import * as settings from '../src/main/repos/settings'
 import * as tags from '../src/main/repos/tags'
 import * as csv from '../src/main/repos/csv'
+import type { DebtProgress } from '../src/shared/types'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
-import { keepNumericChars } from '../src/shared/numbers'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
 import { periodRange, addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
@@ -596,6 +596,19 @@ try {
   // Pagar de más no deja un pendiente negativo.
   scheduled.adjustDebt(plazos.id, 100000, 30000)
   equal('pagar de más no deja pendiente negativo', verDeuda().left, 0)
+  // La cuota, cuando te la suben: cambia en la programación, que es de donde
+  // salen los recibos que quedan por venir.
+  const antes = scheduled.getScheduled(plazos.id)!.amount
+  scheduled.adjustDebt(plazos.id, 10000, 30000, 4500)
+  equal('la cuota se puede corregir', scheduled.getScheduled(plazos.id)!.amount, 4500)
+  scheduled.adjustDebt(plazos.id, 10000, 30000, 0)
+  equal(
+    'una cuota de cero se ignora, no borra la que había',
+    scheduled.getScheduled(plazos.id)!.amount,
+    4500
+  )
+  scheduled.adjustDebt(plazos.id, 10000, 30000, antes)
+
   scheduled.adjustDebt(plazos.id, 0, null)
 
   // Pausar no es terminar: apaga, pero no sella.

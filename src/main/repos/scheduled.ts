@@ -275,17 +275,37 @@ export interface DebtSummary {
   lastDate: string | null
 }
 
-/** Lo que ha costado un plan, para poder contarlo al terminar. */
 /**
- * Ajusta lo que la aplicacion no vio de una deuda: lo que ya llevabas pagado
- * antes del primer apunte y, si lo sabes, el total de verdad.
+ * Los tres números de una deuda: la cuota, lo que ya llevabas pagado antes del
+ * primer apunte y el total de verdad.
+ *
+ * La cuota se guarda en la programación, que es de donde salen los recibos: al
+ * cambiarla aquí cambian también los que estén por venir, que es lo que se
+ * quiere —si te suben la cuota, sube para adelante—. Una cuota de cero no se
+ * guarda: la programación la rechazaría igual.
  */
-export function adjustDebt(id: number, paidBefore: number, total: number | null): void {
-  getDb()
-    .prepare('UPDATE scheduled SET debt_paid_before = ?, debt_total = ? WHERE id = ?')
-    .run(Math.max(0, Math.round(paidBefore)), total == null ? null : Math.max(0, Math.round(total)), id)
+export function adjustDebt(
+  id: number,
+  paidBefore: number,
+  total: number | null,
+  installment?: number
+): void {
+  const db = getDb()
+  atomic(() => {
+    db.prepare(
+      'UPDATE scheduled SET debt_paid_before = ?, debt_total = ? WHERE id = ?'
+    ).run(
+      Math.max(0, Math.round(paidBefore)),
+      total == null ? null : Math.max(0, Math.round(total)),
+      id
+    )
+    if (installment != null && installment > 0) {
+      db.prepare('UPDATE scheduled SET amount = ? WHERE id = ?').run(Math.round(installment), id)
+    }
+  })
 }
 
+/** Lo que ha costado un plan, para poder contarlo al terminar. */
 export function debtSummary(id: number): DebtSummary {
   const scheduled = getScheduled(id)
 

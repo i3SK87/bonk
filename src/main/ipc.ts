@@ -149,8 +149,10 @@ export function registerIpc(
   handle('scheduled:postDue', () => scheduled.postDue())
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))
   handle('scheduled:debts', () => scheduled.debtProgress())
-  handle('scheduled:adjustDebt', (id: number, paidBefore: number, total: number | null) =>
-    scheduled.adjustDebt(id, paidBefore, total)
+  handle(
+    'scheduled:adjustDebt',
+    (id: number, paidBefore: number, total: number | null, installment?: number) =>
+      scheduled.adjustDebt(id, paidBefore, total, installment)
   )
 
   // — Informes —

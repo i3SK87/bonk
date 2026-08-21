@@ -77,7 +77,7 @@ export function DebtsView(): ReactNode {
                 {formatMoney(alMes, settings.baseCurrency)}
               </div>
             </div>
-            <div className="col" style={{ gap: 2 }}>
+            <div className="col" style={{ gap: 2, justifyContent: 'center' }}>
               <span className="small muted">
                 {abiertas.length === 1 ? '1 deuda abierta' : `${abiertas.length} deudas abiertas`}
               </span>
@@ -224,13 +224,15 @@ function DebtCard({
 /**
  * Lo que la aplicación no puede saber de una deuda.
  *
- * Lo pagado se deduce de los movimientos, y eso solo alcanza hasta donde llegan
- * tus registros. Aquí se cuenta el resto: lo que ya llevabas pagado antes y, si
- * lo sabes, el total de verdad —que casi nunca es la cuota por las veces, porque
- * la última suele ser más corta—.
+ * La cuota vive en la programación y se corrige aquí porque es aquí donde se
+ * mira la deuda. Lo pagado, en cambio, se deduce de los movimientos, y eso solo
+ * alcanza hasta donde llegan tus registros: falta lo que ya llevabas pagado antes
+ * y, si lo sabes, el total de verdad —que casi nunca es la cuota por las veces,
+ * porque la última suele ser más corta—.
  */
 function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => void }): ReactNode {
   const { run, refresh } = useStore()
+  const [installment, setInstallment] = useState(debt.installment)
   const [paidBefore, setPaidBefore] = useState(debt.paid - debt.paidBySoftware)
   const [total, setTotal] = useState(debt.total ?? 0)
 
@@ -247,7 +249,13 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
             className="btn primary"
             onClick={async () => {
               const saved = await run(
-                () => api.scheduled.adjustDebt(debt.scheduledId, paidBefore, total > 0 ? total : null),
+                () =>
+                  api.scheduled.adjustDebt(
+                    debt.scheduledId,
+                    paidBefore,
+                    total > 0 ? total : null,
+                    installment
+                  ),
                 'Deuda ajustada'
               )
               if (saved !== undefined) {
@@ -261,6 +269,13 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         </>
       }
     >
+      <Field
+        label="Cuota"
+        hint="Lo que se paga cada vez. Cambiarla cambia también los recibos que están por venir, que es lo que toca si te la han subido."
+      >
+        <AmountInput value={installment} currency={debt.currency} onChange={setInstallment} />
+      </Field>
+
       <Field
         label="Ya pagado antes de tus registros"
         hint={`De esta deuda, BONK ve ${formatMoney(debt.paidBySoftware, debt.currency)} en tus movimientos. Si llevabas pagando desde antes, pon aquí lo que iba pagado hasta entonces.`}
