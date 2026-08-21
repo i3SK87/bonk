@@ -97,30 +97,39 @@ export function GoalsView(): ReactNode {
           </button>
         </AccionCabecera>
 
-        {/* Las huchas disponibles, como las cuentas en Movimientos. Con una sola
-            también se enseña: dice cuánto hay ahí sin tener que ir a Cuentas. */}
+        {/* La misma tira que preside Movimientos: la cifra que se busca al entrar
+            y, al lado, las cuentas donde vive. Aquí esa cifra es el ahorro libre
+            —lo que no está en ningún plan—, que antes iba abajo disfrazado de plan
+            y no lo es: no tiene meta, ni fecha, ni mando que mover. */}
         {huchas.length > 0 && (
-          <div className="card-body" style={{ borderBottom: '1px solid var(--border)' }}>
-            <div className="label" style={{ marginBottom: 8 }}>
-              Cuentas
+          <div className="card-body networth-strip" style={{ borderBottom: '1px solid var(--border)' }}>
+            <div className="networth">
+              <div className="label">Ahorro libre</div>
+              <div className={`value amount ${porRepartir > 0 ? 'positive' : 'neutral'}`}>
+                {formatMoney(porRepartir, settings.baseCurrency)}
+              </div>
             </div>
-            <div className="account-chips">
-              {huchas.map((account) => (
-                <button
-                  key={account.id}
-                  className={`account-chip${account.id === hucha?.id ? ' active' : ''}`}
-                  onClick={() => setPotId(account.id)}
-                  title={`Ver los planes de ${account.name}`}
-                >
-                  <Avatar icon={account.icon} color={account.color} size="small" />
-                  <span className="chip-text">
-                    <span className="chip-name truncate">{account.name}</span>
-                    <span className="chip-balance amount">
-                      {formatMoney(account.balance, account.currency)}
+
+            <div className="accounts-block">
+              <div className="label">Cuentas</div>
+              <div className="account-chips">
+                {huchas.map((account) => (
+                  <button
+                    key={account.id}
+                    className={`account-chip${account.id === hucha?.id ? ' active' : ''}`}
+                    onClick={() => setPotId(account.id)}
+                    title={`Ver los planes de ${account.name}`}
+                  >
+                    <Avatar icon={account.icon} color={account.color} size="small" />
+                    <span className="chip-text">
+                      <span className="chip-name truncate">{account.name}</span>
+                      <span className="chip-balance amount">
+                        {formatMoney(account.balance, account.currency)}
+                      </span>
                     </span>
-                  </span>
-                </button>
-              ))}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -130,28 +139,6 @@ export function GoalsView(): ReactNode {
         ) : (
           <>
             <div className="card-body col" style={{ gap: 20 }}>
-              {/* El ahorro libre es un plan más: el dinero que no está en ninguno.
-                  Sin mando y sin barra —sube y baja solo, y contra nada se mide—:
-                  lo que importa aquí es cuánto hay, así que la cifra manda. */}
-              <div className="row" style={{ gap: 14 }}>
-                {/* La cara de la hucha que se esta mirando: es su dinero. */}
-                <Avatar icon={hucha?.icon ?? 'piggy'} color={hucha?.color ?? 'var(--fg-subtle)'} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontWeight: 570 }}>Ahorro libre</div>
-                  <div className="small muted">
-                    {reservado > 0
-                      ? `Lo que no está en ningún plan, de ${formatMoney(potTotal, settings.baseCurrency)} en la hucha`
-                      : 'Todo lo que hay en la hucha, sin repartir'}
-                  </div>
-                </div>
-                <div className="spacer" />
-                <div
-                  className={`value amount ${porRepartir > 0 ? 'positive' : 'neutral'}`}
-                  style={{ fontSize: 30 }}
-                >
-                  {formatMoney(porRepartir, settings.baseCurrency)}
-                </div>
-              </div>
 
               {open.map((goal) => (
                 <GoalCard
