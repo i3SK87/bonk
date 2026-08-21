@@ -3,6 +3,21 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.18.0
+
+- **Reparte la hucha entre tus hitos desde Ahorro.** Un botón nuevo, «Repartir la
+  hucha», abre un campo por hito con lo que le asignas, el ahorro libre siempre a
+  la vista y una barra que enseña cómo queda. Sirve para lo que metes hoy y para
+  recolocar lo que ya estaba, sin tocar ningún movimiento.
+- **Con atajos**: «Al tope» le da a un hito todo lo que quepa, «A partes iguales»
+  divide lo que hay, y «Vaciar» lo devuelve todo al montón común.
+- **Campos de importe y no un deslizador**, a propósito: con dinero pesa la
+  precisión —quieres 250,00 €, no un 24 % aproximado— y con varios hitos los
+  deslizadores tienen que robarse cantidad entre ellos. La barra es el resultado,
+  no el mando.
+- El selector del traspaso sigue donde estaba, como atajo para apartar en el mismo
+  gesto: lo que aparta ahí es lo mismo que se ve aquí.
+
 ## Novedades de la 1.17.0
 
 - **Al traspasar dinero a una hucha puedes decir para qué hito es.** Aparece un

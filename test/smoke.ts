@@ -881,6 +881,50 @@ try {
     goalId: tarde.id
   })
   equal('un gasto no puede apartarse para un hito', transactions.getTransaction(gastoConHito.id)!.goalId, null)
+  // Y lo mismo, pero repartiendo a mano desde Ahorro: la reserva vive en el hito,
+  // así que se puede recolocar sin tocar ningún movimiento.
+  goals.setGoalReserves([
+    { id: pronto.id, amount: 500 },
+    { id: tarde.id, amount: 1000 }
+  ])
+  equal('repartir a mano manda sobre la fecha', reparto(tarde.id), 1000)
+  equal('y al cercano le queda lo suyo', reparto(pronto.id), 500)
+
+  // Borrar el traspaso que sostenía una reserva se la lleva con él.
+  const conDueno = transactions.saveTransaction({
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 300,
+    goalId: tarde.id
+  })
+  equal('apartar al traspasar suma a la reserva', goals.getGoal(tarde.id)!.reserved, 1300)
+  transactions.deleteTransactions([conDueno.id])
+  equal('y borrarlo la deshace', goals.getGoal(tarde.id)!.reserved, 1000)
+
+  // Cambiar el hito de un traspaso mueve la reserva entera, no la duplica.
+  const cambiante = transactions.saveTransaction({
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 300,
+    goalId: tarde.id
+  })
+  transactions.saveTransaction({
+    id: cambiante.id,
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: alcancia2.id,
+    amount: 300,
+    goalId: pronto.id
+  })
+  equal('cambiar de hito se lleva la reserva', goals.getGoal(tarde.id)!.reserved, 1000)
+  equal('y la deja en el nuevo', goals.getGoal(pronto.id)!.reserved, 800)
+  transactions.deleteTransactions([cambiante.id])
+
   transactions.deleteTransactions([gastoConHito.id, extra.id, suelto.id])
   goals.deleteGoal(pronto.id)
   goals.deleteGoal(tarde.id)

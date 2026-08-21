@@ -3,6 +3,7 @@ import { convert, parseAmount } from '@shared/money'
 import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
+import { addToGoalReserve } from './goals'
 import type { Transaction, TransactionView, TransactionInput, TransactionFilter, TxType } from '@shared/types'
 
 interface TxRow {
@@ -456,6 +457,12 @@ export function saveTransaction(input: TransactionInput): TransactionView {
     // una cuenta que no lo admite, el error deshace toda la transacción.
     assertNoOverdraft([input.accountId, toAccountId, previousAccountId, previousToAccountId])
 
+    // La reserva del hito se mueve con el movimiento: se retira lo que aportaba
+    // antes y se apunta lo que aporta ahora. Sin esto, cambiar de hito o bajar el
+    // importe dejaría apartado un dinero que ya no está.
+    if (previous?.goalId) addToGoalReserve(previous.goalId, -(previous.amountTo ?? previous.amount))
+    if (goalId) addToGoalReserve(goalId, amountTo ?? input.amount)
+
     return getTransaction(id)!
   })
 }
@@ -473,6 +480,8 @@ export function deleteTransactions(ids: number[]): number {
     for (const id of ids) {
       const row = getTransaction(id)
       if (row) affected.push(row.accountId, row.toAccountId)
+      // El dinero que sostenía una reserva se va con él.
+      if (row?.goalId) addToGoalReserve(row.goalId, -(row.amountTo ?? row.amount))
       stmt.run(id)
     }
     assertNoOverdraft(affected)

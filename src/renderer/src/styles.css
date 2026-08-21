@@ -1660,6 +1660,21 @@ p { margin: 0; }
   font-weight: 600;
 }
 
+/* Como queda repartida la hucha. Es el resultado de lo que se escribe arriba, no
+   un mando: lo que no llena ningun hito se ve como hueco. */
+.reparto-barra {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.reparto-barra span {
+  transition: width 0.15s ease;
+}
+
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }
 

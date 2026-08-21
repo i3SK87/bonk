@@ -382,5 +382,24 @@ export const MIGRATIONS: string[] = [
   `
   ALTER TABLE transactions ADD COLUMN goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
   CREATE INDEX idx_tx_goal ON transactions(goal_id);
+  `,
+
+  // v14 — la reserva pasa a vivir en el hito.
+  //
+  // Deducirla de los traspasos valía mientras solo se pudiera apartar dinero al
+  // meterlo. Desde que se reparte la hucha entera a mano —incluido lo que entró
+  // hace meses o el saldo de partida— ya no hay traspaso del que deducir nada, así
+  // que la cifra se guarda aquí y el selector del traspaso la alimenta.
+  //
+  // Lo ya apartado se conserva: se vuelca lo que sumaban esos traspasos.
+  `
+  ALTER TABLE goals ADD COLUMN reserved INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE goals
+     SET reserved = COALESCE((
+           SELECT SUM(COALESCE(t.amount_to, t.amount))
+             FROM transactions t
+            WHERE t.goal_id = goals.id AND t.type = 'transfer'
+         ), 0);
   `
 ]

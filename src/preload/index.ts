@@ -68,6 +68,7 @@ const api = {
   goals: {
     list: () => call<Goal[]>('goals:list'),
     progress: (reference?: string) => call<GoalProgress[]>('goals:progress', reference),
+    reserve: (entries: Array<{ id: number; amount: number }>) => call<number>('goals:reserve', entries),
     save: (input: unknown) => call<Goal>('goals:save', input),
     remove: (id: number) => call<void>('goals:delete', id),
     setAchieved: (id: number, achieved: boolean) => call<Goal>('goals:achieved', id, achieved)

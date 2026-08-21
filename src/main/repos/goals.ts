@@ -1,4 +1,4 @@
-import { getDb, bind, nowISO } from '../db'
+import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { today, addDays } from '@shared/dates'
 import { listAccountsWithBalance } from './accounts'
 import { getSettings } from './settings'
@@ -13,6 +13,7 @@ interface GoalRow {
   icon: string
   color: string
   note: string | null
+  reserved: number
   achieved_at: string | null
   created_at: string
 }
@@ -27,6 +28,7 @@ function mapGoal(row: GoalRow): Goal {
     icon: row.icon,
     color: row.color,
     note: row.note,
+    reserved: row.reserved,
     achievedAt: row.achieved_at,
     createdAt: row.created_at
   }
@@ -213,21 +215,30 @@ export function clearGoalReached(id: number): void {
 }
 
 /**
- * Lo que se ha apartado para cada hito a propósito.
+ * Reparte la hucha a mano.
  *
- * Son los traspasos que entran en la hucha diciendo para qué son. En uno entre
- * divisas cuenta lo que llega y no lo que sale, que es lo que de verdad queda.
+ * Lo que no aparece en la lista se deja como está, que así se puede tocar un
+ * hito sin arrastrar a los demás. En negativo no se guarda nada: apartar menos
+ * que nada no significa nada.
  */
-function earmarkedByGoal(): Map<number, number> {
-  const rows = getDb()
-    .prepare(
-      `SELECT goal_id AS id, SUM(COALESCE(amount_to, amount)) AS total
-         FROM transactions
-        WHERE goal_id IS NOT NULL AND type = 'transfer'
-        GROUP BY goal_id`
-    )
-    .all() as unknown as Array<{ id: number; total: number }>
-  return new Map(rows.map((row) => [row.id, Number(row.total ?? 0)]))
+export function setGoalReserves(entries: Array<{ id: number; amount: number }>): void {
+  const db = getDb()
+  return atomic(() => {
+    const stmt = db.prepare('UPDATE goals SET reserved = ? WHERE id = ?')
+    for (const entry of entries) stmt.run(Math.max(0, Math.round(entry.amount)), entry.id)
+  })
+}
+
+/**
+ * Suma —o resta— a la reserva de un hito. Es lo que hace el selector del
+ * traspaso: apartar dinero al meterlo es lo mismo que repartirlo después, solo
+ * que en el mismo gesto.
+ */
+export function addToGoalReserve(id: number, delta: number): void {
+  if (!delta) return
+  getDb()
+    .prepare('UPDATE goals SET reserved = MAX(0, reserved + ?) WHERE id = ?')
+    .run(Math.round(delta), id)
 }
 
 export function goalProgress(reference = today()): GoalProgress[] {
@@ -237,7 +248,6 @@ export function goalProgress(reference = today()): GoalProgress[] {
   const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
   const remaining = new Map<number, number>()
   const paces = new Map<number, number>()
-  const earmarked = earmarkedByGoal()
   const savedByGoal = new Map<number, number>()
 
   /*
@@ -260,7 +270,7 @@ export function goalProgress(reference = today()): GoalProgress[] {
       continue
     }
     const pot = remaining.get(goal.accountId)!
-    const suyo = Math.min(earmarked.get(goal.id) ?? 0, goal.targetAmount, pot)
+    const suyo = Math.min(goal.reserved, goal.targetAmount, pot)
     savedByGoal.set(goal.id, suyo)
     remaining.set(goal.accountId, pot - suyo)
   }

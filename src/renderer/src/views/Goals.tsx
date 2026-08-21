@@ -45,11 +45,12 @@ const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = 
 }
 
 export function GoalsView(): ReactNode {
-  const { settings, accounts, revision, run, fail } = useStore()
+  const { settings, accounts, revision, run, refresh, fail } = useStore()
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -129,7 +130,24 @@ export function GoalsView(): ReactNode {
                   Ahorro libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
                 </span>
               </div>
+              <div className="spacer" />
+              {open.length > 0 && (
+                <button className="btn small" onClick={() => setSharing((value) => !value)}>
+                  <Icon name="target" size={15} />
+                  {sharing ? 'Cerrar el reparto' : 'Repartir la hucha'}
+                </button>
+              )}
             </div>
+
+            {sharing && open.length > 0 && (
+              <ReparteHucha
+                key={revision}
+                goals={open}
+                pot={potTotal}
+                currency={settings.baseCurrency}
+                onSaved={() => { setSharing(false); refresh() }}
+              />
+            )}
 
             <div className="card-body col" style={{ gap: 20 }}>
               {open.map((goal) => (
@@ -192,6 +210,130 @@ export function GoalsView(): ReactNode {
         />
       )}
     </>
+  )
+}
+
+/**
+ * El reparto de la hucha, a mano.
+ *
+ * Campos de importe y no un deslizador: con dinero pesa la precisión —quieres
+ * 250,00 €, no «un 24 % más o menos»— y en cuanto hay varios hitos los
+ * deslizadores tienen que robarse cantidad entre ellos, que es el gesto que nadie
+ * entiende a la primera. La barra de abajo es el resultado, no el mando.
+ */
+function ReparteHucha({
+  goals,
+  pot,
+  currency,
+  onSaved
+}: {
+  goals: GoalProgress[]
+  pot: number
+  currency: string
+  onSaved: () => void
+}): ReactNode {
+  const [values, setValues] = useState<Record<number, number>>(() =>
+    Object.fromEntries(goals.map((goal) => [goal.id, Math.min(goal.reserved, goal.targetAmount)]))
+  )
+  const { run } = useStore()
+
+  const total = goals.reduce((sum, goal) => sum + (values[goal.id] ?? 0), 0)
+  const free = pot - total
+  const sobra = free < 0
+
+  const set = (id: number, amount: number): void =>
+    setValues((current) => ({ ...current, [id]: Math.max(0, amount) }))
+
+  /** Lo que cabe para un hito: ni más de lo que le falta ni más de lo que hay. */
+  const cabe = (goal: GoalProgress): number =>
+    Math.min(goal.targetAmount, (values[goal.id] ?? 0) + Math.max(0, free))
+
+  return (
+    <div className="card-body col" style={{ gap: 14, borderBottom: '1px solid var(--border)' }}>
+      {goals.map((goal) => (
+        <div key={goal.id} className="row" style={{ gap: 12 }}>
+          <Avatar icon={goal.icon} color={goal.color} size="small" />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 570 }} className="truncate">
+              {goal.name}
+            </div>
+            <div className="small subtle">
+              Su meta son {formatMoney(goal.targetAmount, currency)}
+            </div>
+          </div>
+          <div style={{ width: 170 }}>
+            <AmountInput
+              value={values[goal.id] ?? 0}
+              currency={currency}
+              onChange={(amount) => set(goal.id, amount)}
+              compact
+            />
+          </div>
+          <button
+            className="btn small ghost"
+            disabled={cabe(goal) === (values[goal.id] ?? 0)}
+            onClick={() => set(goal.id, cabe(goal))}
+            title="Darle todo lo que quepa"
+          >
+            Al tope
+          </button>
+        </div>
+      ))}
+
+      {/* La barra dice de un vistazo cómo queda la hucha. */}
+      <div className="reparto-barra">
+        {goals.map((goal) => {
+          const parte = pot > 0 ? ((values[goal.id] ?? 0) / pot) * 100 : 0
+          return parte > 0 ? (
+            <span
+              key={goal.id}
+              style={{ width: `${Math.min(100, parte)}%`, background: goal.color }}
+              title={goal.name}
+            />
+          ) : null
+        })}
+      </div>
+
+      <div className="row" style={{ gap: 10 }}>
+        <span className={`small ${sobra ? 'negative' : 'muted'}`}>
+          {sobra
+            ? `Te pasas ${formatMoney(-free, currency)} de lo que hay en la hucha`
+            : `Ahorro libre: ${formatMoney(free, currency)}`}
+        </span>
+        <div className="spacer" />
+        <button
+          className="btn small"
+          onClick={() =>
+            setValues(
+              Object.fromEntries(
+                goals.map((goal) => [goal.id, Math.min(goal.targetAmount, Math.floor(pot / goals.length))])
+              )
+            )
+          }
+        >
+          A partes iguales
+        </button>
+        <button
+          className="btn small"
+          onClick={() => setValues(Object.fromEntries(goals.map((goal) => [goal.id, 0])))}
+        >
+          Vaciar
+        </button>
+        <button
+          className="btn primary small"
+          disabled={sobra}
+          onClick={async () => {
+            const saved = await run(
+              () => api.goals.reserve(goals.map((goal) => ({ id: goal.id, amount: values[goal.id] ?? 0 }))),
+              'Hucha repartida'
+            )
+            if (saved !== undefined) onSaved()
+          }}
+        >
+          Guardar el reparto
+        </button>
+      </div>
+    </div>
   )
 }
 

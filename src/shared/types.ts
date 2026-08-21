@@ -175,6 +175,11 @@ export interface Goal {
   icon: string
   color: string
   note: string | null
+  /**
+   * Lo que se ha apartado para él de la hucha. Manda sobre el reparto automático
+   * por fecha: lo apartado es suyo aunque otro hito venza antes.
+   */
+  reserved: number
   /** Se sella al darlo por cumplido; a partir de ahí deja de repartirse saldo. */
   achievedAt: string | null
   createdAt: string

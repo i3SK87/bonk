@@ -121,6 +121,12 @@ export function registerIpc(
   })
   handle('goals:delete', (id: number) => goals.deleteGoal(id))
   handle('goals:achieved', (id: number, achieved: boolean) => goals.setGoalAchieved(id, achieved))
+  // Devuelve cuántos ha tocado y no nada: la ventana necesita algo con lo que
+  // distinguir el guardado bueno del que se quedó por el camino.
+  handle('goals:reserve', (entries: Array<{ id: number; amount: number }>) => {
+    goals.setGoalReserves(entries)
+    return entries.length
+  })
 
   // — Programadas —
   handle('scheduled:list', () => scheduled.listScheduled())
