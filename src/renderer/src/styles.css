@@ -1729,21 +1729,26 @@ p { margin: 0; }
   margin-top: 10px;
 }
 
-/* La cantidad apartada se puede teclear. No lleva pinta de campo: es la misma
-   cifra de siempre, y solo al pasar por encima enseña que se puede tocar. */
+/* La cantidad apartada se puede teclear, y tiene que verse sin tener que pasar
+   por encima: lleva su caja de campo desde el principio. Discreta -el borde
+   justo, sin fondo- para no competir con la cifra, que es lo que se lee. */
 .cifra-editable {
   background: none;
-  border: 0;
-  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 1px 8px;
   font: inherit;
   color: inherit;
   cursor: text;
-  border-bottom: 1px dashed transparent;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .cifra-editable:hover,
 .cifra-editable:focus-visible {
-  border-bottom-color: var(--border-strong);
+  background: var(--bg-sunken);
+  border-color: var(--border-strong);
 }
 
 /*
