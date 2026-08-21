@@ -3,6 +3,24 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.13.5
+
+- **Un solo separador en el importe, y siempre decimal.** Da igual la coma que
+  el punto: «1,23334» y «1.23334» son el mismo importe, y en cuanto hay uno
+  puesto el campo no admite otro. Los millares se quedan donde tienen sentido,
+  que es al importar un CSV de un banco: allí «1.234,56» sigue siendo mil
+  doscientos treinta y cuatro con cincuenta y seis.
+- **El buscador también busca en lo previsto.** Con el botón «Programados»
+  encendido, escribir en el buscador apagaba las previsiones y solo quedaban
+  los movimientos ya registrados. Ahora se busca en las dos cosas a la vez, por
+  la nota, quien cobra, la categoría y la cuenta.
+- **El buscador se limpia con su propia aspa**, dentro del campo, o con Escape.
+  «Limpiar» ya no se lleva por delante lo que estabas buscando: quita los
+  filtros y nada más.
+- **«Programados» se ha movido a la derecha de «Filtros»** y de «Limpiar». No
+  filtra la lista, le añade lo que todavía no ha pasado, así que su sitio está
+  después de los que sí filtran.
+
 ## Novedades de la 1.13.4
 
 - **La coma y el punto valen igual al escribir un importe.** «12,50» y «12.50»
