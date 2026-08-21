@@ -35,6 +35,24 @@ function titleOf(row: Pick<ScheduledView, 'name' | 'note' | 'categoryName'>): st
   return row.name || row.note || row.categoryName || 'Movimiento programado'
 }
 
+/**
+ * Cómo se lee un gasto programado en el desplegable de reembolsos. La categoría
+ * dice de qué es y la nota dice cuál: dos recibos de la misma categoría e
+ * importe parecido no se distinguen de ninguna otra forma.
+ */
+function refundOptionLabel(row: ScheduledView): string {
+  const category = row.categoryName ?? 'Sin categoría'
+  // El nombre solo lo llevan las programaciones de antes del campo nota.
+  const note = row.note || row.name
+  return [
+    category,
+    note && note !== category ? note : null,
+    formatMoney(row.amount, row.accountCurrency)
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
 function describeFrequency(freq: Frequency, interval: number): string {
   const entry = FREQUENCIES.find((item) => item.value === freq)
   if (!entry) return ''
@@ -432,8 +450,7 @@ function ScheduleModal({ schedule, siblings, onClose, onSave, onDelete }: Schedu
                 .filter((item) => item.type === 'expense')
                 .map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name || item.categoryName || 'Sin categoría'} ·{' '}
-                    {formatMoney(item.amount, item.accountCurrency)}
+                    {refundOptionLabel(item)}
                   </option>
                 ))}
             </select>
