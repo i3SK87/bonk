@@ -11,8 +11,9 @@ import {
   markSettlementNotified,
   debtSummary
 } from './repos/scheduled'
+import { pendingGoals, markGoalReached } from './repos/goals'
 import { getSettings } from './repos/settings'
-import type { ScheduledView, Settlement } from '@shared/types'
+import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
 
 /**
  * Avisos del día antes de cada movimiento programado.
@@ -184,6 +185,28 @@ export function announceSettlements(icon: string, onClick: () => void): Settleme
   return done
 }
 
+/**
+ * Hitos de ahorro recién alcanzados. Una sola enhorabuena por hito: queda
+ * marcado en cuanto se cuenta, para que el repaso de cada media hora no lo
+ * repita mientras el dinero siga en la hucha.
+ */
+export function announceGoals(icon: string, onClick: () => void): GoalReached[] {
+  const done: GoalReached[] = []
+
+  for (const goal of pendingGoals()) {
+    if (Notification.isSupported()) {
+      notify(imageFor(icon, null), onClick, {
+        title: `¡${goal.title} conseguido!`,
+        body: `${formatMoney(goal.total, goal.currency)} juntados en ${goal.accountName}.`
+      })
+    }
+    markGoalReached(goal.id)
+    done.push(goal)
+  }
+
+  return done
+}
+
 /** «agosto de 2025», para contar desde cuándo se pagaba. */
 function monthOf(date: string | null): string {
   if (!date) return 'el principio'
@@ -209,7 +232,8 @@ export function startBackgroundWork(
   onClick: () => void,
   onDataChanged: () => void,
   onFailure: (reason: string) => void,
-  onSettled: (settlements: Settlement[]) => void
+  onSettled: (settlements: Settlement[]) => void,
+  onGoalReached: (goals: GoalReached[]) => void
 ): void {
   // El de la sesión anterior sigue ahí: se retira al arrancar para que el
   // centro de notificaciones enseñe BONK también en los avisos ya recibidos.
@@ -243,6 +267,14 @@ export function startBackgroundWork(
       if (settled.length > 0) onSettled(settled)
     } catch (error) {
       console.error('No se pudo dar la enhorabuena:', error)
+    }
+    try {
+      // La hucha puede llegar a la meta sin que nadie toque nada: una programada
+      // que aparta dinero cada mes lo hace sola mientras la aplicación duerme.
+      const reached = announceGoals(icon, onClick)
+      if (reached.length > 0) onGoalReached(reached)
+    } catch (error) {
+      console.error('No se pudo celebrar el hito:', error)
     }
     try {
       checkReminders(icon, onClick)

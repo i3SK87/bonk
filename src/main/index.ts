@@ -203,7 +203,8 @@ if (!app.requestSingleInstanceLock()) {
       showWindow,
       () => mainWindow?.webContents.send('data:changed'),
       (reason) => mainWindow?.webContents.send('scheduled:failed', reason),
-      (settlements) => mainWindow?.webContents.send('debt:settled', settlements)
+      (settlements) => mainWindow?.webContents.send('debt:settled', settlements),
+      (goals) => mainWindow?.webContents.send('goal:reached', goals)
     )
 
     app.on('activate', () => {

@@ -11,7 +11,7 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { applyAutoLaunch } from './autostart'
-import { sendTestNotification, setCategoryIcons, announceSettlements } from './reminders'
+import { sendTestNotification, setCategoryIcons, announceSettlements, announceGoals } from './reminders'
 import type { TransactionFilter, CategoryKind, Settings } from '@shared/types'
 
 /**
@@ -32,6 +32,20 @@ export function registerIpc(
   getWindow: () => BrowserWindow | null,
   notifications: { icon: string; onClick: () => void }
 ): void {
+  /**
+   * Lo que haya que celebrar, en el mismo gesto que lo provoca.
+   *
+   * El repaso de fondo pasa cada media hora, pero apartar el dinero que faltaba
+   * y no ver nada hasta media hora después no es celebrar nada. Y como aquí ya
+   * queda marcado, el repaso tampoco lo repetiría luego.
+   */
+  function celebrate(): void {
+    const settled = announceSettlements(notifications.icon, notifications.onClick)
+    if (settled.length > 0) getWindow()?.webContents.send('debt:settled', settled)
+    const reached = announceGoals(notifications.icon, notifications.onClick)
+    if (reached.length > 0) getWindow()?.webContents.send('goal:reached', reached)
+  }
+
   // — Ajustes —
   handle('settings:get', () => settings.getSettings())
   handle('settings:update', (patch: Partial<Settings>) => {
@@ -60,7 +74,12 @@ export function registerIpc(
   handle('tx:list', (filter: TransactionFilter) => transactions.listTransactions(filter))
   handle('tx:count', (filter: TransactionFilter) => transactions.countTransactions(filter))
   handle('tx:get', (id: number) => transactions.getTransaction(id))
-  handle('tx:save', (input) => transactions.saveTransaction(input))
+  handle('tx:save', (input) => {
+    const saved = transactions.saveTransaction(input)
+    // Apartar dinero en la hucha puede ser justo lo que cierra un hito.
+    celebrate()
+    return saved
+  })
   handle('tx:delete', (id: number) => transactions.deleteTransaction(id))
   handle('tx:deleteMany', (ids: number[]) => transactions.deleteTransactions(ids))
   handle('tx:bulkCategory', (ids: number[], categoryId: number | null) =>
@@ -75,7 +94,12 @@ export function registerIpc(
   // — Presupuestos —
   handle('goals:list', () => goals.listGoals())
   handle('goals:progress', (reference: string | undefined) => goals.goalProgress(reference))
-  handle('goals:save', (input) => goals.saveGoal(input))
+  handle('goals:save', (input) => {
+    const saved = goals.saveGoal(input)
+    // Bajar la meta de un hito puede dejarlo conseguido al momento.
+    celebrate()
+    return saved
+  })
   handle('goals:delete', (id: number) => goals.deleteGoal(id))
   handle('goals:achieved', (id: number, achieved: boolean) => goals.setGoalAchieved(id, achieved))
 
@@ -88,7 +112,7 @@ export function registerIpc(
   // el mismo gesto, y de paso el aviso de Windows.
   handle('scheduled:finish', (id: number) => {
     scheduled.finishScheduled(id)
-    return announceSettlements(notifications.icon, notifications.onClick)
+    celebrate()
   })
   handle('scheduled:postNow', (id: number) => scheduled.postNow(id))
   handle('scheduled:postDue', () => scheduled.postDue())

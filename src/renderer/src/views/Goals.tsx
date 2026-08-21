@@ -278,7 +278,6 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
   const [targetDate, setTargetDate] = useState(goal?.targetDate ?? '')
   const [icon, setIcon] = useState(goal?.icon ?? 'piggy')
   const [color, setColor] = useState(goal?.color ?? PALETTE[0])
-  const [note, setNote] = useState(goal?.note ?? '')
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -300,7 +299,10 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
       targetDate: targetDate || null,
       icon,
       color,
-      note: note.trim() || null,
+      // El hito ya se explica con su título: una nota aparte era un campo más
+      // que rellenar para decir lo mismo. La columna se queda por si alguien
+      // tenía algo escrito, y lo escrito se sigue enseñando en la lista.
+      note: goal?.note ?? null,
       achievedAt: goal?.achievedAt ?? null
     })
     if (saved) onClose()
@@ -328,7 +330,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
           </>
         }
       >
-        <Field label="Qué quieres juntar" error={error}>
+        <Field label="Título" error={error}>
           <input
             className="input"
             value={name}
@@ -365,15 +367,6 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
             </select>
           </Field>
         </div>
-
-        <Field label="Nota" hint="Opcional.">
-          <input
-            className="input"
-            value={note}
-            placeholder="El modelo, el enlace, con quién…"
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Field>
 
         <Field label="Icono">
           <IconPicker value={icon} options={GOAL_ICONS} onChange={setIcon} />

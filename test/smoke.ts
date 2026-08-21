@@ -792,6 +792,62 @@ try {
       transactions.listTransactions({ limit: 500 }).every((row) => row.date >= span.from && row.date <= span.to)
   )
 
+  section('Hitos alcanzados')
+  // Llegar a la meta se celebra una sola vez. El repaso de fondo pasa cada media
+  // hora, así que sin marca la enhorabuena se repetiría mientras el dinero
+  // siguiera en la hucha, que es justo lo que se quiere que pase.
+  // En una cuenta propia y vacía: el saldo de una hucha se reparte entre los
+  // hitos que apuntan a ella, y aquí interesa medir uno solo.
+  const alcancia = accounts.saveAccount({
+    name: 'Alcancía',
+    type: 'savings',
+    currency: 'EUR',
+    initialBalance: 0,
+    icon: 'piggy',
+    color: '#34C759',
+    excludeFromTotal: false
+  })
+  const meta = goals.saveGoal({
+    name: 'Un teclado',
+    accountId: alcancia.id,
+    targetAmount: 1000,
+    icon: 'piggy',
+    color: '#34C759'
+  })
+  const alcanzado = (): boolean => goals.pendingGoals().some((row) => row.id === meta.id)
+  check('un hito sin saldo todavía no se celebra', !alcanzado())
+
+  transactions.saveTransaction({
+    type: 'income',
+    date: day,
+    accountId: alcancia.id,
+    amount: 1000
+  })
+  check('el hito alcanzado se celebra', alcanzado())
+  const celebrado = goals.pendingGoals().find((row) => row.id === meta.id)!
+  equal('con su título', celebrado.title, 'Un teclado')
+  equal('y lo juntado es la meta', celebrado.total, 1000)
+  goals.markGoalReached(meta.id)
+  check('y no se repite después', !alcanzado())
+
+  // El que se da por conseguido a mano no necesita fuegos artificiales: ya se ha
+  // celebrado en ese mismo gesto.
+  const aMano = goals.saveGoal({
+    name: 'Un ratón',
+    accountId: alcancia.id,
+    targetAmount: 500,
+    icon: 'piggy',
+    color: '#34C759'
+  })
+  goals.setGoalAchieved(aMano.id, true)
+  check(
+    'sellarlo a mano no dispara la enhorabuena',
+    !goals.pendingGoals().some((row) => row.id === aMano.id)
+  )
+  goals.deleteGoal(aMano.id)
+  goals.deleteGoal(meta.id)
+  accounts.deleteAccount(alcancia.id)
+
   section('Cuenta principal')
   equal('al principio no hay cuenta principal', settings.getSettings().defaultAccountId, null)
   settings.updateSettings({ defaultAccountId: bank.id })

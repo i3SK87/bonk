@@ -321,5 +321,32 @@ export const MIGRATIONS: string[] = [
   UPDATE scheduled
      SET settled_at = end_date, settled_notified = 1
    WHERE active = 0 AND end_date IS NOT NULL;
+  `,
+
+  // v11 — hitos de ahorro alcanzados.
+  //
+  // Llegar a la meta merece la misma enhorabuena que saldar una deuda, y hace
+  // falta recordar a cuáles ya se les ha dado: sin esto, el repaso de cada media
+  // hora la repetiría para siempre.
+  //
+  // Los que ya estaban conseguidos arrancan marcados. Se cuenta como conseguido
+  // el que tiene sello a mano y el que ya llega a su meta con el saldo de su
+  // cuenta —la misma suma que hace el saldo: el inicial, más lo que entra, menos
+  // lo que sale, más lo que recibe de un traspaso—. Celebrar hoy un hito que se
+  // alcanzó en marzo no tendría ninguna gracia.
+  `
+  ALTER TABLE goals ADD COLUMN reached_notified INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE goals
+     SET reached_notified = 1
+   WHERE achieved_at IS NOT NULL
+      OR target_amount <= (
+           SELECT a.initial_balance
+                + COALESCE((SELECT SUM(CASE WHEN t.type IN ('income','refund') THEN t.amount ELSE -t.amount END)
+                             FROM transactions t WHERE t.account_id = a.id), 0)
+                + COALESCE((SELECT SUM(COALESCE(t.amount_to, t.amount))
+                             FROM transactions t WHERE t.type = 'transfer' AND t.to_account_id = a.id), 0)
+             FROM accounts a WHERE a.id = goals.account_id
+         );
   `
 ]

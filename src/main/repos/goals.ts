@@ -1,7 +1,8 @@
 import { getDb, bind, nowISO } from '../db'
 import { today, addDays } from '@shared/dates'
 import { listAccountsWithBalance } from './accounts'
-import type { Goal, GoalProgress } from '@shared/types'
+import { getSettings } from './settings'
+import type { Goal, GoalProgress, GoalReached } from '@shared/types'
 
 interface GoalRow {
   id: number
@@ -155,6 +156,39 @@ function monthlyPace(accountId: number, reference: string): number {
  * Los hitos ya dados por cumplidos quedan fuera del reparto: ese dinero se
  * considera comprometido, aunque siga en la cuenta hasta que se gaste.
  */
+/**
+ * Hitos que han llegado a su meta y todavía no se han celebrado.
+ *
+ * Solo los que llegan por su propio pie: el que se sella a mano ya se da por
+ * conseguido en ese gesto y no necesita fuegos artificiales.
+ */
+export function pendingGoals(reference = today()): GoalReached[] {
+  const marked = new Set(
+    (
+      getDb().prepare('SELECT id FROM goals WHERE reached_notified = 1').all() as unknown as Array<{
+        id: number
+      }>
+    ).map((row) => row.id)
+  )
+  const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
+  return goalProgress(reference)
+    .filter((goal) => goal.status === 'complete' && !marked.has(goal.id))
+    .map((goal) => ({
+      id: goal.id,
+      title: goal.name,
+      total: goal.targetAmount,
+      currency: accounts.get(goal.accountId)?.currency ?? getSettings().baseCurrency,
+      accountName: goal.accountName,
+      since: goal.createdAt.slice(0, 10),
+      targetDate: goal.targetDate
+    }))
+}
+
+/** Una sola enhorabuena por hito, aunque el saldo suba y baje después. */
+export function markGoalReached(id: number): void {
+  getDb().prepare('UPDATE goals SET reached_notified = 1 WHERE id = ?').run(id)
+}
+
 export function goalProgress(reference = today()): GoalProgress[] {
   const goals = listGoals()
   if (goals.length === 0) return []

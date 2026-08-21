@@ -296,6 +296,20 @@ export interface Settlement {
   lastDate: string | null
 }
 
+/** Un hito de ahorro que acaba de llegar a su meta. */
+export interface GoalReached {
+  id: number
+  title: string
+  /** Lo juntado, que al llegar es la meta entera. */
+  total: number
+  currency: string
+  accountName: string
+  /** Desde cuándo se estaba juntando. */
+  since: string
+  /** La fecha que se puso de meta, si se puso alguna. */
+  targetDate: string | null
+}
+
 export interface NoteTotal {
   /** La nota tal y como se escribió; «Sin nota» cuando el movimiento no lleva ninguna. */
   note: string

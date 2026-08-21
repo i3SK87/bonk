@@ -3,7 +3,7 @@ import { useStore } from './lib/store'
 import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
-import { Celebration } from './components/Celebration'
+import { Celebration, GoalCelebration } from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
@@ -12,7 +12,7 @@ import { SchedulesView } from './views/Schedules'
 import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
-import type { Settlement } from '@shared/types'
+import type { Settlement, GoalReached } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -52,6 +52,7 @@ export function App(): ReactNode {
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
+  const [reached, setReached] = useState<GoalReached[]>([])
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
@@ -78,6 +79,13 @@ export function App(): ReactNode {
         refresh()
       }
     })
+    // Y un hito de ahorro que llega a su meta, igual.
+    const offReached = window.bonk.events.on('goal:reached', (detail) => {
+      if (Array.isArray(detail) && detail.length > 0) {
+        setReached((current) => [...current, ...(detail as GoalReached[])])
+        refresh()
+      }
+    })
     const onKey = (event: KeyboardEvent): void => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
@@ -91,6 +99,7 @@ export function App(): ReactNode {
       offChanged()
       offFailed()
       offSettled()
+      offReached()
       window.removeEventListener('keydown', onKey)
     }
   }, [toast, refresh])
@@ -161,11 +170,21 @@ export function App(): ReactNode {
 
       {ready && composing && <TransactionForm onClose={() => setComposing(false)} />}
 
-      {ready && settlements.length > 0 && (
+      {/* La deuda manda si caen las dos a la vez: cerrar un plazo es más raro
+          que llegar a una meta, y las dos van en cola de todas formas. */}
+      {ready && settlements.length > 0 ? (
         <Celebration
           settlement={settlements[0]}
           onClose={() => setSettlements((current) => current.slice(1))}
         />
+      ) : (
+        ready &&
+        reached.length > 0 && (
+          <GoalCelebration
+            goal={reached[0]}
+            onClose={() => setReached((current) => current.slice(1))}
+          />
+        )
       )}
       <Toasts />
     </div>

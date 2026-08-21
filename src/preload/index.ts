@@ -122,7 +122,8 @@ const api = {
         | 'menu:backup-done'
         | 'data:changed'
         | 'scheduled:failed'
-        | 'debt:settled',
+        | 'debt:settled'
+        | 'goal:reached',
       callback: (detail?: unknown) => void
     ) => {
       const listener = (_event: unknown, detail?: unknown): void => callback(detail)

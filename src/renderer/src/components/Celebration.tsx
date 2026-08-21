@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { formatMoney } from '@shared/money'
-import type { Settlement } from '@shared/types'
+import { today as todayISO } from '@shared/dates'
+import type { Settlement, GoalReached } from '@shared/types'
 
 /**
  * La enhorabuena por una deuda saldada.
@@ -137,11 +138,16 @@ function Confetti(): ReactNode {
   return <canvas ref={ref} className="confetti" aria-hidden="true" />
 }
 
-export function Celebration({
-  settlement,
+/** El sello, el papelillo y el botón: lo que comparten las dos buenas noticias. */
+function Party({
+  title,
+  lede,
+  stats,
   onClose
 }: {
-  settlement: Settlement
+  title: string
+  lede: string
+  stats: Array<{ value: string; label: string }>
   onClose: () => void
 }): ReactNode {
   useEffect(() => {
@@ -163,25 +169,16 @@ export function Celebration({
           </svg>
         </div>
 
-        <h2>¡{settlement.title} pagado!</h2>
-        <p className="celebration-lede">
-          {span(settlement.firstDate, settlement.lastDate)} y ya no debes nada. Esta cuota deja de
-          salir de tu cuenta.
-        </p>
+        <h2>{title}</h2>
+        <p className="celebration-lede">{lede}</p>
 
         <div className="celebration-stats">
-          <div>
-            <b>{settlement.count}</b>
-            <span>{settlement.count === 1 ? 'cuota' : 'cuotas'}</span>
-          </div>
-          <div>
-            <b>{formatMoney(settlement.total, settlement.currency)}</b>
-            <span>pagado</span>
-          </div>
-          <div>
-            <b>{span(settlement.firstDate, settlement.lastDate)}</b>
-            <span>desde {monthOf(settlement.firstDate)}</span>
-          </div>
+          {stats.map((stat) => (
+            <div key={stat.label}>
+              <b>{stat.value}</b>
+              <span>{stat.label}</span>
+            </div>
+          ))}
         </div>
 
         <button className="btn primary" onClick={onClose} autoFocus>
@@ -189,5 +186,72 @@ export function Celebration({
         </button>
       </div>
     </div>
+  )
+}
+
+/** La deuda que se acaba de saldar. */
+export function Celebration({
+  settlement,
+  onClose
+}: {
+  settlement: Settlement
+  onClose: () => void
+}): ReactNode {
+  const duration = span(settlement.firstDate, settlement.lastDate)
+  return (
+    <Party
+      title={`¡${settlement.title} pagado!`}
+      lede={`${duration} y ya no debes nada. Esta cuota deja de salir de tu cuenta.`}
+      stats={[
+        { value: String(settlement.count), label: settlement.count === 1 ? 'cuota' : 'cuotas' },
+        { value: formatMoney(settlement.total, settlement.currency), label: 'pagado' },
+        { value: duration, label: `desde ${monthOf(settlement.firstDate)}` }
+      ]}
+      onClose={onClose}
+    />
+  )
+}
+
+/**
+ * El hito de ahorro que acaba de llegar a su meta.
+ *
+ * Se celebra por lo mismo que una deuda saldada: es el final de algo que ha
+ * costado meses. Cambia la cuenta que se echa —lo juntado y desde cuándo, en vez
+ * de las cuotas pagadas— y, si había fecha, si se ha llegado antes de tiempo,
+ * que es la mitad de la gracia.
+ */
+export function GoalCelebration({
+  goal,
+  onClose
+}: {
+  goal: GoalReached
+  onClose: () => void
+}): ReactNode {
+  const duration = span(goal.since, todayISO())
+  const days =
+    goal.targetDate == null
+      ? null
+      : Math.round(
+          (Date.parse(`${goal.targetDate}T12:00:00`) - Date.parse(`${todayISO()}T12:00:00`)) / 86400000
+        )
+
+  return (
+    <Party
+      title={`¡${goal.title} conseguido!`}
+      lede={
+        days != null && days > 0
+          ? `Ya está juntado, y con ${days} ${days === 1 ? 'día' : 'días'} de adelanto. El dinero te espera en ${goal.accountName}.`
+          : `Ya está juntado. El dinero te espera en ${goal.accountName}.`
+      }
+      stats={[
+        { value: formatMoney(goal.total, goal.currency), label: 'juntado' },
+        { value: duration, label: `desde ${monthOf(goal.since)}` },
+        {
+          value: days == null ? '—' : days > 0 ? `${days} d` : days === 0 ? 'hoy' : `+${Math.abs(days)} d`,
+          label: days == null ? 'sin fecha' : days >= 0 ? 'de adelanto' : 'de retraso'
+        }
+      ]}
+      onClose={onClose}
+    />
   )
 }
