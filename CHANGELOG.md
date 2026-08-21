@@ -3,6 +3,16 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.20.2
+
+- **El mando de cada plan vuelve a ocupar el ancho de la ficha.** Se había quedado
+  con el tamaño por defecto del navegador, un palmo escaso, y arrastrar un euro o
+  cien costaba lo mismo.
+- **Y dice cuánto estás metiendo mientras arrastras**, con la cifra a su derecha y
+  sitio fijo para que no baile.
+- **De veinticinco en veinticinco euros.** A saltos más cortos se nota mejor lo que
+  se mueve.
+
 ## Novedades de la 1.20.1
 
 - **El ahorro libre se lee de un vistazo.** Fuera la barra —no se mide contra

@@ -1660,19 +1660,28 @@ p { margin: 0; }
   font-weight: 600;
 }
 
-/* El mando con el que se le reserva dinero a un plan. Va debajo de su barra de
-   progreso, que es donde se ve el efecto. */
+/* El mando con el que se le reserva dinero a un plan. Ocupa el ancho de la
+   ficha porque hace también de barra de progreso: cuanto más lleno, más tiene. */
 .reserva {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 8px;
+  gap: 14px;
+  margin-top: 10px;
 }
 
 .reserva input[type='range'] {
   flex: 1;
-  height: 4px;
+  min-width: 0;
+  height: 6px;
   cursor: pointer;
+}
+
+/* Ancho fijo para que la cifra no baile mientras se arrastra. */
+.reserva-cifra {
+  min-width: 104px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 650;
 }
 
 .list-row.clickable { cursor: pointer; }

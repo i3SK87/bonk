@@ -34,10 +34,10 @@ const GOAL_ICONS = [
 ]
 
 /**
- * De cincuenta en cincuenta euros. Al céntimo el mando pedía puntería y nadie
- * reparte una hucha con esa precisión.
+ * De veinticinco en veinticinco euros. Al céntimo el mando resbalaba y no había
+ * forma de saber dónde se paraba; a saltos se nota lo que se mueve.
  */
-const PASO = 5000
+const PASO = 2500
 
 /** Cómo se lee cada estado en la ficha del plan. */
 const STATUS: Record<GoalProgress['status'], { label: string; tone: string }> = {
@@ -289,19 +289,25 @@ function GoalCard({
           arrastrando no se puede repartir de más ni quitarle a otro plan. Se guarda
           al soltar. */}
       {onReserve ? (
-        <input
-          className="reserva"
-          type="range"
-          min={0}
-          max={tope}
-          step={PASO}
-          value={Math.min(reserva, tope)}
-          style={{ accentColor: color }}
-          onChange={(event) => setReserva(Number(event.target.value))}
-          onMouseUp={() => onReserve(Math.min(reserva, techo))}
-          onKeyUp={() => onReserve(Math.min(reserva, techo))}
-          aria-label={`Ahorrado para ${goal.name}`}
-        />
+        <div className="reserva">
+          <input
+            type="range"
+            min={0}
+            max={tope}
+            step={PASO}
+            value={Math.min(reserva, tope)}
+            style={{ accentColor: color }}
+            onChange={(event) => setReserva(Number(event.target.value))}
+            onMouseUp={() => onReserve(Math.min(reserva, techo))}
+            onKeyUp={() => onReserve(Math.min(reserva, techo))}
+            aria-label={`Ahorrado para ${goal.name}`}
+          />
+          {/* La cifra va al lado y no debajo: arrastrando se mira el mando, y ahí
+              es donde hace falta leer cuánto se está metiendo. */}
+          <span className="reserva-cifra amount">
+            {formatMoney(Math.min(reserva, techo), currency)}
+          </span>
+        </div>
       ) : (
         <ProgressBar percent={goal.percent} color={color} />
       )}
