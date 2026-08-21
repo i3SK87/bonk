@@ -133,17 +133,12 @@ export function SchedulesView(): ReactNode {
       )}
 
       <div className="card flush">
-        <div className="card-header">
-          <span className="small muted">
-            Recibos, nóminas y cuotas que se repiten.
-          </span>
-          <AccionCabecera>
-            <button className="btn primary" onClick={() => setCreating(true)}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
-              Nueva programación
-            </button>
-          </AccionCabecera>
-        </div>
+        <AccionCabecera>
+          <button className="btn primary" onClick={() => setCreating(true)}>
+            <Icon name="plus" size={16} strokeWidth={2.2} />
+            Nueva programación
+          </button>
+        </AccionCabecera>
 
         {loading ? (
           <Loading />

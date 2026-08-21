@@ -90,17 +90,12 @@ export function GoalsView(): ReactNode {
   return (
     <>
       <div className="card">
-        <div className="card-header">
-          <span className="small muted">
-            Lo que no repartas entre tus planes se queda como ahorro libre.
-          </span>
-          <AccionCabecera>
-            <button className="btn primary" onClick={() => setCreating(true)}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
-              Nuevo plan
-            </button>
-          </AccionCabecera>
-        </div>
+        <AccionCabecera>
+          <button className="btn primary" onClick={() => setCreating(true)}>
+            <Icon name="plus" size={16} strokeWidth={2.2} />
+            Nuevo plan
+          </button>
+        </AccionCabecera>
 
         {/* Las huchas disponibles, como las cuentas en Movimientos. Con una sola
             también se enseña: dice cuánto hay ahí sin tener que ir a Cuentas. */}
