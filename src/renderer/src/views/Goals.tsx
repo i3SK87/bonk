@@ -69,6 +69,20 @@ export function GoalsView(): ReactNode {
     .filter((account) => potIds.has(account.id))
     .reduce((sum, account) => sum + account.balance, 0)
   const committed = open.reduce((sum, goal) => sum + goal.saved, 0)
+  /**
+   * De quién es ese dinero apartado.
+   *
+   * Con un solo hito tirando de la hucha se dice su nombre, que es lo que se
+   * quiere saber. Con varios se cuentan: la lista entera de nombres no cabe en
+   * una línea y, puestos a resumir, el número dice más.
+   */
+  const financiados = open.filter((goal) => goal.saved > 0)
+  const paraQuien =
+    financiados.length === 1
+      ? financiados[0].name
+      : financiados.length === 0
+        ? 'tus hitos'
+        : `${financiados.length} hitos`
 
   return (
     <>
@@ -109,10 +123,10 @@ export function GoalsView(): ReactNode {
               </div>
               <div className="col" style={{ gap: 2 }}>
                 <span className="small muted">
-                  Comprometido en hitos: {formatMoney(committed, settings.baseCurrency)}
+                  Presupuesto para {paraQuien}: {formatMoney(committed, settings.baseCurrency)}
                 </span>
                 <span className="small subtle">
-                  Libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
+                  Ahorro libre: {formatMoney(Math.max(0, potTotal - committed), settings.baseCurrency)}
                 </span>
               </div>
             </div>

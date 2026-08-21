@@ -3,6 +3,14 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 1.16.3
+
+- **La hucha dice a qué se destina.** «Comprometido en hitos» pasa a ser
+  «Presupuesto para [el hito]», con su nombre cuando solo hay uno tirando del
+  dinero, y «Libre» pasa a «Ahorro libre». Con varios hitos a la vez se cuentan —
+  «Presupuesto para 3 hitos»—, que la lista entera de nombres no cabe en una
+  línea.
+
 ## Novedades de la 1.16.2
 
 - **Las etiquetas se leen al pasar el ratón.** Iban del mismo gris que el resalte,
