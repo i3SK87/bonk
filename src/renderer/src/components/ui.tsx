@@ -185,7 +185,8 @@ export function Toasts(): ReactNode {
 /* ---------- Campos ---------- */
 
 interface FieldProps {
-  label: string
+  /** Sin rótulo cuando el propio campo ya se explica: un selector de tres. */
+  label?: string
   children: ReactNode
   error?: string | null
   hint?: string
@@ -198,10 +199,12 @@ export function Field({ label, children, error, hint, required }: FieldProps): R
     <div className="field">
       {/* Los pocos campos obligatorios llevan marca; el resto no dice nada, que
           decir «opcional» en la mayoría es repetir lo mismo en cada renglón. */}
-      <label>
-        {label}
-        {required && <span className="requerido">*</span>}
-      </label>
+      {label && (
+        <label>
+          {label}
+          {required && <span className="requerido">*</span>}
+        </label>
+      )}
       {children}
       {error ? <span className="field-error">{error}</span> : hint ? <span className="field-hint">{hint}</span> : null}
     </div>
@@ -336,13 +339,27 @@ interface AmountInputProps {
   invalid?: boolean
   /** Para los importes que no son el protagonista del formulario. */
   compact?: boolean
+  /**
+   * Admite el signo. Casi ningún importe lo necesita —el de un movimiento lo
+   * pone su tipo—, pero el saldo de una cuenta sí: una tarjeta de crédito o un
+   * préstamo están en números rojos y se escriben tal cual.
+   */
+  signed?: boolean
 }
 
 /**
  * Trabaja con texto mientras se escribe y solo convierte a céntimos al soltar,
  * para que se puedan teclear estados intermedios como "12," sin pelearse con el campo.
  */
-export function AmountInput({ value, currency, onChange, autoFocus, invalid, compact }: AmountInputProps): ReactNode {
+export function AmountInput({
+  value,
+  currency,
+  onChange,
+  autoFocus,
+  invalid,
+  compact,
+  signed
+}: AmountInputProps): ReactNode {
   const [text, setText] = useState(() => (value ? String(value / 100).replace('.', ',') : ''))
   const [focused, setFocused] = useState(false)
   // El estado del foco también en una referencia: el efecto de abajo corre
@@ -377,16 +394,17 @@ export function AmountInput({ value, currency, onChange, autoFocus, invalid, com
           focusedRef.current = false
           setFocused(false)
           const parsed = parseAmount(text, currency, { grouping: false })
-          onChange(parsed == null ? 0 : Math.abs(parsed))
+          onChange(parsed == null ? 0 : signed ? parsed : Math.abs(parsed))
         }}
         onChange={(event) => {
-          // Los importes son siempre positivos: el signo lo pone el tipo de movimiento.
-          const cleaned = keepNumericChars(event.target.value, { decimals: true })
+          // Salvo donde se pida, los importes son positivos: el signo lo pone el
+          // tipo de movimiento, no quien escribe.
+          const cleaned = keepNumericChars(event.target.value, { decimals: true, negative: signed })
           setText(cleaned)
           // Un solo separador y decimal: aquí no se agrupan millares, así que
           // "1,23334" y "1.23334" son el mismo importe.
           const parsed = parseAmount(cleaned, currency, { grouping: false })
-          if (parsed != null) onChange(Math.abs(parsed))
+          if (parsed != null) onChange(signed ? parsed : Math.abs(parsed))
         }}
       />
       <span

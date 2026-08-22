@@ -122,21 +122,14 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-        <Field
-          label="Cada cuánto vuelve"
-          hint={
-            comportamiento === 'deuda'
-              ? 'Cuotas de algo que se acaba.'
-              : comportamiento === 'repite'
-                ? 'Suscripciones, recibos, alquiler. Al apuntar uno, se ofrece repetirlo.'
-                : 'Un gasto o un ingreso corriente, cada vez el suyo.'
-          }
-        >
+        {/* Las tres opciones se explican solas y se leen de un vistazo: el rótulo
+            preguntaba lo que la propia botonera ya contesta. */}
+        <Field>
           <Segmented
             value={comportamiento}
             onChange={setComportamiento}
             options={[
-              { value: 'suelto', label: 'No vuelve' },
+              { value: 'suelto', label: 'No se repite' },
               { value: 'repite', label: 'Se repite' },
               { value: 'deuda', label: 'Deuda a plazos' }
             ]}
@@ -146,15 +139,13 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         <Checkbox
           checked={keepsInvoices}
           onChange={setKeepsInvoices}
-          label="Guardar facturas en sus movimientos"
-          hint="Adjunta facturas a tus movimientos."
+          label="Adjuntar facturas"
         />
 
         <Checkbox
           checked={breakdownByNote}
           onChange={setBreakdownByNote}
-          label="Desglosar por título"
-          hint="Desglose en informes."
+          label="Desglose en la pestaña Informes"
         />
 
         {category && (

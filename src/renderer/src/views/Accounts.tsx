@@ -185,7 +185,6 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
    */
   const movements = account ? account.balance - account.initialBalance : 0
   const [balance, setBalance] = useState(account?.balance ?? 0)
-  const [negative, setNegative] = useState((account?.balance ?? 0) < 0)
   const [icon, setIcon] = useState(account?.icon ?? 'bank')
   const [color, setColor] = useState(account?.color ?? '#0A84FF')
   const [excludeFromTotal, setExclude] = useState(account?.excludeFromTotal ?? false)
@@ -210,14 +209,13 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
 
   async function save(): Promise<void> {
     if (!name.trim()) return setError('La cuenta necesita un nombre')
-    const target = negative ? -Math.abs(balance) : Math.abs(balance)
     const saved = await onSave({
       id: account?.id,
       name: name.trim(),
       type,
       currency,
       // Se guarda el punto de partida que hace que el saldo acabe donde toca.
-      initialBalance: target - movements,
+      initialBalance: balance - movements,
       icon,
       color,
       excludeFromTotal,
@@ -277,20 +275,18 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
         </div>
 
         {/* Cuánto hay, a lo ancho: es la cifra del formulario y la que se teclea.
-            La casilla va fuera del campo, que dentro contaba como contenido suyo y
-            empujaba la explicación por debajo de ella. */}
+            El signo se escribe, sin casilla que lo diga aparte: una tarjeta de
+            crédito está en −250, y así es como se teclea. */}
         <Field
           label={account ? 'Saldo actual' : 'Saldo inicial'}
           hint={
             account && movements !== 0
               ? `Sus movimientos suman ${formatMoney(movements, currency, { sign: true })}.`
-              : 'Lo que hay antes de registrar nada.'
+              : undefined
           }
         >
-          <AmountInput value={Math.abs(balance)} currency={currency} onChange={setBalance} />
+          <AmountInput value={balance} currency={currency} onChange={setBalance} signed />
         </Field>
-
-        <Checkbox checked={negative} onChange={setNegative} label="Es un saldo negativo" />
 
         {/* Y debajo, a la par, los dos cortos. La ayuda del aviso cabe en un renglón
             a este ancho: con la larga estiraba la fila y dejaba un hueco al lado. */}
