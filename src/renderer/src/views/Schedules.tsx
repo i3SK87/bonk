@@ -149,6 +149,7 @@ export function SchedulesView(): ReactNode {
                 key={row.id}
                 className={[
                   'list-row',
+                  'clickable',
                   row.active ? '' : 'paused',
                   // La anidada ya se ve colgando: la marca del canto sobraría.
                   family !== undefined && !nested ? 'linked' : '',
@@ -158,6 +159,8 @@ export function SchedulesView(): ReactNode {
                 ]
                   .filter(Boolean)
                   .join(' ')}
+                role="button"
+                onClick={() => setEditing(row)}
                 onMouseEnter={() => family !== undefined && setHoveredFamily(family)}
                 onMouseLeave={() => family !== undefined && setHoveredFamily(null)}
               >
@@ -211,10 +214,13 @@ export function SchedulesView(): ReactNode {
                   </div>
                 </div>
 
+                {/* Los mandos de la fila hacen lo suyo y ahí se quedan: sin frenar
+                    el clic, cada uno abriría además la ficha por detrás. */}
                 <button
                   className="btn small"
                   title="Registrar ahora sin esperar a la fecha"
-                  onClick={async () => {
+                  onClick={async (event) => {
+                    event.stopPropagation()
                     await run(() => api.scheduled.postNow(row.id))
                     toast('Movimiento registrado', 'success')
                   }}
@@ -225,7 +231,10 @@ export function SchedulesView(): ReactNode {
                   <button
                     className="btn ghost icon"
                     title="Finalizar: la deuda queda saldada y no se generan más cuotas"
-                    onClick={() => setFinishing(row)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      setFinishing(row)
+                    }}
                   >
                     <Icon name="finish" size={16} />
                   </button>
@@ -233,18 +242,17 @@ export function SchedulesView(): ReactNode {
                   <button
                     className="btn ghost icon"
                     title={row.active ? 'Pausar' : 'Reanudar'}
-                    onClick={() => run(() => api.scheduled.setActive(row.id, !row.active))}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      run(() => api.scheduled.setActive(row.id, !row.active))
+                    }}
                   >
                     <Icon name={row.active ? 'pause' : 'play'} size={16} />
                   </button>
                 )}
-                <button
-                  className="btn ghost icon"
-                  onClick={() => setEditing(row)}
-                  aria-label="Editar"
-                >
-                  <Icon name="edit" size={16} />
-                </button>
+                {/* El lápiz ya no es un botón: la fila entera abre la ficha, y esto
+                    solo lo enseña, como en Cuentas y en Categorías. */}
+                <Icon name="edit" size={16} className="muted" />
               </div>
             )
           })
@@ -260,7 +268,12 @@ export function SchedulesView(): ReactNode {
             </span>
           </div>
           {finalizadas.map((row) => (
-            <div key={row.id} className="list-row finished">
+            <div
+              key={row.id}
+              className="list-row finished clickable"
+              role="button"
+              onClick={() => setEditing(row)}
+            >
               <Avatar icon={row.categoryIcon ?? 'repeat'} color={row.categoryColor ?? '#8E8E93'} />
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="row tight">
@@ -287,13 +300,7 @@ export function SchedulesView(): ReactNode {
                   row.accountCurrency,
                 )}
               </div>
-              <button
-                className="btn ghost icon"
-                onClick={() => setEditing(row)}
-                aria-label="Editar"
-              >
-                <Icon name="edit" size={16} />
-              </button>
+              <Icon name="edit" size={16} className="muted" />
             </div>
           ))}
         </div>

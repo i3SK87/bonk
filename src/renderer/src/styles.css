@@ -1933,6 +1933,29 @@ textarea::placeholder {
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }
 
+/* Una tarjeta que se abre entera, como una fila pero con más cuerpo: la de una
+   deuda. Se sale a los lados hasta el borde de la tarjeta que la contiene, para
+   que el resaltado sea una franja y no un recuadro flotando. */
+.tarjeta-clicable {
+  cursor: pointer;
+  margin: 0 -12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s ease;
+}
+
+.tarjeta-clicable:hover {
+  background: var(--bg-sunken);
+}
+
+/* Las categorías van en cuadrícula, no en lista: cada una lleva su recuadro. */
+.list-row.recuadrada {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  text-align: left;
+}
+
 /* Las filas que se pueden abrir son botones de verdad, para que el tabulador
    llegue a ellas; aquí se les quita el aspecto de botón. */
 button.list-row {

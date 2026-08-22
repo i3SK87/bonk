@@ -178,7 +178,12 @@ export function GoalsView(): ReactNode {
           </div>
           <div>
             {done.map((goal) => (
-              <div key={goal.id} className="list-row">
+              <div
+                key={goal.id}
+                className="list-row clickable"
+                role="button"
+                onClick={() => setEditing(goal)}
+              >
                 <Avatar icon={goal.icon} color={goal.color} />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 570 }}>{goal.name}</div>
@@ -187,16 +192,19 @@ export function GoalsView(): ReactNode {
                   </div>
                 </div>
                 <div className="amount">{formatMoney(goal.targetAmount, settings.baseCurrency)}</div>
+                {/* Reabrir no es editar: se queda de botón, y frena el clic para
+                    no abrir además la ficha por detrás. */}
                 <button
                   className="btn small"
                   title="Volver a ponerlo en marcha"
-                  onClick={() => run(() => api.goals.setAchieved(goal.id, false), 'Plan reabierto')}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    run(() => api.goals.setAchieved(goal.id, false), 'Plan reabierto')
+                  }}
                 >
                   <Icon name="refresh" size={15} />
                 </button>
-                <button className="btn ghost icon" onClick={() => setEditing(goal)} aria-label="Editar">
-                  <Icon name="edit" size={16} />
-                </button>
+                <Icon name="edit" size={16} className="muted" />
               </div>
             ))}
           </div>

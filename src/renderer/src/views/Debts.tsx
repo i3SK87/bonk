@@ -127,7 +127,7 @@ export function DebtsView(): ReactNode {
             message="Las deudas salen de las programaciones cuya categoría está marcada como deuda a plazos, y con fecha de fin para saber cuándo se acaban."
           />
         ) : (
-          <div className="card-body col" style={{ gap: 20 }}>
+          <div className="card-body col" style={{ gap: 2 }}>
             {abiertas.map((debt) => (
               <DebtCard
                 key={debt.scheduledId}
@@ -148,7 +148,12 @@ export function DebtsView(): ReactNode {
           </div>
           <div>
             {pagadas.map((debt) => (
-              <div key={debt.scheduledId} className="list-row">
+              <div
+                key={debt.scheduledId}
+                className="list-row clickable"
+                role="button"
+                onClick={() => setAdjusting(debt)}
+              >
                 <Avatar
                   icon={debt.categoryIcon ?? 'debt'}
                   color={debt.categoryColor ?? '#8E8E93'}
@@ -164,6 +169,7 @@ export function DebtsView(): ReactNode {
                   </div>
                 </div>
                 <div className="amount muted">{formatMoney(debt.paid, debt.currency)}</div>
+                <Icon name="edit" size={16} className="muted" />
               </div>
             ))}
           </div>
@@ -200,8 +206,10 @@ function DebtCard({
 }): ReactNode {
   const quienCobra = findLender(debt.lender)
 
+  // La tarjeta entera abre el ajuste: dentro no hay ningún mando con el que
+  // pelearse —la barra de cuotas es dibujo— y el lápiz se queda de enseña.
   return (
-    <div>
+    <div className="tarjeta-clicable" role="button" onClick={onAdjust}>
       {/* Sin icono delante: en una pantalla que solo tiene deudas, un distintivo
           de deuda repetido en cada ficha no distingue nada. */}
       <div className="row">
@@ -234,9 +242,7 @@ function DebtCard({
             {debt.left != null ? `Faltan ${formatMoney(debt.left, currency)}` : 'Sin total conocido'}
           </div>
         </div>
-        <button className="btn ghost icon" onClick={onAdjust} aria-label="Ajustar la deuda">
-          <Icon name="edit" size={16} />
-        </button>
+        <Icon name="edit" size={16} className="muted" />
       </div>
 
       {/* Sin fecha de fin no hay barra: no se puede medir contra un total que no

@@ -369,14 +369,32 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </div>
         ) : (
           <div className="row" style={{ justifyContent: 'center' }}>
+            {/*
+             * En un gasto que ya existe, el cuarto botón no dice qué es esto: abre
+             * la devolución de esto. «Reembolso» arriba y «Registrar reembolso»
+             * abajo eran dos puertas a lo mismo en la misma ficha, y la de abajo
+             * sobra ahora.
+             *
+             * Solo en los gastos: una devolución cuelga de un gasto, así que en un
+             * ingreso o en un traspaso no hay nada que devolver, y ahí el cuarto
+             * botón sigue siendo el tipo de siempre.
+             */}
             <Segmented
               value={type}
-              onChange={setType}
+              onChange={(elegido) => {
+                if (elegido === 'refund' && existing?.type === 'expense') {
+                  setRefunding(true)
+                  return
+                }
+                setType(elegido)
+              }}
               options={[
                 { value: 'expense', label: 'Gasto', tone: 'expense' },
                 { value: 'income', label: 'Ingreso', tone: 'income' },
                 { value: 'transfer', label: 'Traspaso', tone: 'transfer' },
-                { value: 'refund', label: 'Reembolso', tone: 'refund' }
+                existing?.type === 'expense'
+                  ? { value: 'refund', label: 'Registrar reembolso', tone: 'refund' }
+                  : { value: 'refund', label: 'Reembolso', tone: 'refund' }
               ]}
             />
           </div>
@@ -598,7 +616,9 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         )}
 
 
-        {existing?.type === 'expense' && (
+        {/* Solo lo devuelto: el botón de registrar una devolución vive arriba, en
+            el cuarto botón de la botonera. Sin nada devuelto no hay nada que ver. */}
+        {existing?.type === 'expense' && refunds.length > 0 && (
           <Field label="Reembolsos">
             {refunds.length > 0 && (
               <div className="col" style={{ gap: 6, marginBottom: 8 }}>
@@ -626,10 +646,6 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
                 </div>
               </div>
             )}
-            <button className="btn small" onClick={() => setRefunding(true)}>
-              <Icon name="refund" size={14} />
-              Registrar reembolso
-            </button>
           </Field>
         )}
 

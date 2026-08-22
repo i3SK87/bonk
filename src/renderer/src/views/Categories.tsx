@@ -39,14 +39,10 @@ export function CategoriesView(): ReactNode {
           {visible.map((category) => (
             <button
               key={category.id}
-              className="list-row clickable"
-              style={{
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                background: 'transparent',
-                textAlign: 'left',
-                cursor: 'pointer'
-              }}
+              /* El fondo iba en un estilo suelto, y un estilo suelto le gana a
+                 cualquier regla: se comía el resaltado al pasar por encima y la
+                 fila parecía muerta aunque sí abría. Ahora lo lleva la hoja. */
+              className="list-row clickable recuadrada"
               onClick={() => setEditing(category)}
             >
               <Avatar icon={category.icon} color={category.color} size="small" />
