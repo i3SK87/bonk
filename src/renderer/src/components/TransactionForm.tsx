@@ -382,10 +382,6 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </div>
         )}
 
-        {type === 'refund' && !refundFor && (
-          <p className="field-hint">Elige abajo el gasto que te devuelven.</p>
-        )}
-
         {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
             título encabeza y se lleva el foco. De una línea, que es un título y no
             un cuaderno. */}
