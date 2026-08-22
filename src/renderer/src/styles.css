@@ -1837,9 +1837,12 @@ textarea::placeholder {
 /* Las filas que se pueden abrir son botones de verdad, para que el tabulador
    llegue a ellas; aquí se les quita el aspecto de botón. */
 button.list-row {
-  /* Sin ancho forzado: como caja flex de bloque ya ocupa lo que hay, y con el
-     100% se sumaba a los márgenes laterales y el resalte se salía de la
-     tarjeta por la derecha. */
+  /* Un botón se encoge a su contenido aunque sea caja flex, así que necesita que
+     se le diga el ancho. Y no puede ser 100%: se suma a sus márgenes laterales y
+     la fila sobresale de la tarjeta. «fill-available» es justo eso, el hueco
+     menos los márgenes. */
+  width: -webkit-fill-available;
+  max-width: 100%;
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border);
