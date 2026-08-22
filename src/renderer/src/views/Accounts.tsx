@@ -276,6 +276,29 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           <Avatar icon={icon} color={color} size="large" />
         </div>
 
+        {/* Cuánto hay, a lo ancho: es la cifra del formulario y la que se teclea.
+            La casilla va fuera del campo, que dentro contaba como contenido suyo y
+            empujaba la explicación por debajo de ella. */}
+        <Field
+          label={account ? 'Saldo actual' : 'Saldo inicial'}
+          hint={
+            account && movements !== 0
+              ? `Sus movimientos suman ${formatMoney(movements, currency, { sign: true })}.`
+              : 'Lo que hay antes de registrar nada.'
+          }
+        >
+          <AmountInput value={Math.abs(balance)} currency={currency} onChange={setBalance} />
+        </Field>
+
+        <Checkbox
+          checked={negative}
+          onChange={setNegative}
+          label="Es un saldo negativo"
+          hint="Para tarjetas de crédito o préstamos pendientes."
+        />
+
+        {/* Y debajo, a la par, los dos cortos. La ayuda del aviso cabe en un renglón
+            a este ancho: con la larga estiraba la fila y dejaba un hueco al lado. */}
         <div className="grid cols-2">
           <Field label="Tipo">
             <select
@@ -300,30 +323,10 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             </select>
           </Field>
 
-          {/* Lo que define la cuenta va arriba y a la par: qué es y con cuánto
-              empieza. El aviso de saldo bajo no es eso, es una opción, y se ha ido
-              abajo con las demás: su ayuda de dos renglones estiraba esta fila y
-              dejaba un socavón debajo del tipo. */}
-          <Field
-            label={account ? 'Saldo actual' : 'Saldo inicial'}
-            hint={
-              account && movements !== 0
-                ? `Sus movimientos suman ${formatMoney(movements, currency, { sign: true })}.`
-                : 'Lo que hay antes de registrar nada.'
-            }
-          >
-            <AmountInput value={Math.abs(balance)} currency={currency} onChange={setBalance} />
+          <Field label="Avisarme si baja de" hint="En cero no avisa nunca.">
+            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} />
           </Field>
         </div>
-
-        {/* La casilla, fuera del campo del saldo: dentro contaba como contenido
-            suyo y empujaba la explicación por debajo de ella, huérfana. */}
-        <Checkbox
-          checked={negative}
-          onChange={setNegative}
-          label="Es un saldo negativo"
-          hint="Para tarjetas de crédito o préstamos pendientes."
-        />
 
         <Field label="Icono">
           <IconPicker value={icon} options={ACCOUNT_ICONS} onChange={setIcon} />
@@ -333,16 +336,6 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-
-        {/* Y aquí abajo, lo que es comportamiento y no identidad. */}
-        <Field
-          label="Avisarme si baja de"
-          hint="Aviso de Windows mientras dure. En cero no avisa nunca."
-        >
-          <div style={{ maxWidth: 220 }}>
-            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} compact />
-          </div>
-        </Field>
 
         {/* Una principal por tipo: la del banco es la que viene marcada al
             registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
