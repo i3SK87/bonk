@@ -17,9 +17,17 @@ interface Props {
   /** Gasto del que se está registrando una devolución. */
   refundFor?: TransactionView | null
   onClose: () => void
+  /** Solo cuando se ha guardado; al cancelar no se llama. */
+  onSaved?: () => void
 }
 
-export function TransactionForm({ existing, defaultAccountId, refundFor, onClose }: Props): ReactNode {
+export function TransactionForm({
+  existing,
+  defaultAccountId,
+  refundFor,
+  onClose,
+  onSaved
+}: Props): ReactNode {
   const { accounts, categories, run, toast, settings, fail } = useStore()
 
   const [type, setType] = useState<TxType>(existing?.type ?? (refundFor ? 'refund' : 'expense'))
@@ -146,8 +154,11 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
   // Al elegir una categoría de deuda se propone repetir; al salir de ella, se
   // recoge la propuesta si no se ha tocado nada.
   useEffect(() => {
-    if (!existing) setRepite(seRepiteSola)
-  }, [seRepiteSola, existing])
+    // Una devolución no se repite, aunque el gasto que devuelve sí: hereda su
+    // categoría, y con una de deuda la casilla salía marcada sola y al guardar
+    // dejaba montada una programación de reembolsos que nadie había pedido.
+    if (!existing) setRepite(type === 'refund' ? false : seRepiteSola)
+  }, [seRepiteSola, existing, type])
 
   /*
    * Al marcar la casilla aparecen dos campos debajo, y en un formulario que ya
@@ -306,6 +317,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
       toast('Listo para el siguiente', 'info')
       return
     }
+    onSaved?.()
     onClose()
   }
 
@@ -567,7 +579,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </Field>
         )}
 
-        {!existing && type !== 'transfer' && (
+        {!existing && type !== 'transfer' && type !== 'refund' && (
           <>
             <Checkbox
               checked={repite}
@@ -721,8 +733,16 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         />
       )}
 
+      {/* Guardada la devolución, se cierra también la ficha del gasto: registrarla
+          era lo que se venía a hacer, y quedarse mirando el formulario de debajo
+          se lee como si no hubiera pasado nada. Cancelando, en cambio, se vuelve
+          al gasto, que es de donde se salió. */}
       {refunding && existing && (
-        <TransactionForm refundFor={existing} onClose={() => setRefunding(false)} />
+        <TransactionForm
+          refundFor={existing}
+          onClose={() => setRefunding(false)}
+          onSaved={onClose}
+        />
       )}
 
       {confirmDelete && (
