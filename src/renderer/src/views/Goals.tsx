@@ -93,7 +93,6 @@ export function GoalsView(): ReactNode {
       <div className="card">
         <AccionCabecera>
           <button className="btn primary" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={16} strokeWidth={2.2} />
             Nuevo plan
           </button>
         </AccionCabecera>

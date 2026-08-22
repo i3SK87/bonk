@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
-import { Icon } from '../components/Icon'
 import { Avatar, Segmented, AccionCabecera } from '../components/ui'
 import { CategoryModal } from '../components/CategoryForm'
 import type { Category, CategoryKind } from '@shared/types'
@@ -29,7 +28,6 @@ export function CategoriesView(): ReactNode {
           />
           <AccionCabecera>
             <button className="btn primary" onClick={() => setCreating(true)}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
               Nueva categoría
             </button>
           </AccionCabecera>

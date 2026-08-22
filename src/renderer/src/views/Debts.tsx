@@ -11,7 +11,6 @@ import {
   AmountInput,
   NumberInput
 } from '../components/ui'
-import { Icon } from '../components/Icon'
 import { AccionCabecera } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { findLender } from '@shared/lenders'
@@ -79,7 +78,6 @@ export function DebtsView(): ReactNode {
       {categoriaDeuda && (
         <AccionCabecera>
           <button className="btn primary" onClick={() => setCreando(true)}>
-            <Icon name="plus" size={16} strokeWidth={2.2} />
             Nueva deuda
           </button>
         </AccionCabecera>

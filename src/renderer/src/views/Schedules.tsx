@@ -118,7 +118,6 @@ export function SchedulesView(): ReactNode {
       <div className="card flush">
         <AccionCabecera>
           <button className="btn primary" onClick={() => setCreating(true)}>
-            <Icon name="plus" size={16} strokeWidth={2.2} />
             Nueva programación
           </button>
         </AccionCabecera>

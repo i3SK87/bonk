@@ -173,7 +173,6 @@ export function App(): ReactNode {
               Ctrl+N sigue funcionando desde cualquier pestaña. */}
           {view === 'transactions' && (
             <button className="btn primary" onClick={() => setComposing(true)}>
-              <Icon name="plus" size={16} strokeWidth={2.2} />
               Nuevo movimiento
             </button>
           )}

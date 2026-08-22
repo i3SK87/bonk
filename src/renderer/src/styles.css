@@ -853,13 +853,48 @@ p { margin: 0; }
   padding: 3px 0;
 }
 
+/*
+ * La casilla se dibuja aquí, no la pinta Windows.
+ *
+ * Con `accent-color` solo se manda en el color de la marcada; la vacía la pinta
+ * el sistema, y la pinta blanca. En una aplicación oscura eran dos cuadrados de
+ * luz en mitad de un formulario gris.
+ */
 .checkbox input {
+  appearance: none;
   margin: 2px 0 0;
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
-  cursor: pointer;
   flex: none;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--bg-sunken);
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.checkbox:hover input {
+  border-color: var(--fg-subtle);
+}
+
+.checkbox input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* La marca: dos trazos de un borde, girados cuarenta y cinco grados. */
+.checkbox input:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  margin-top: -2px;
+  border: solid var(--accent-contrast);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .checkbox .checkbox-text {
@@ -1354,7 +1389,8 @@ p { margin: 0; }
 .tx-row.linked-active .pill,
 .list-row:hover .pill,
 .card.flush .list-row.linked-active .pill,
-.list-row.clickable:hover .pill {
+.list-row.clickable:hover .pill,
+.tarjeta-clicable:hover .pill {
   background: var(--border-strong);
   color: var(--fg);
 }
@@ -1365,7 +1401,8 @@ p { margin: 0; }
 .tx-row.linked-active .pill.tag,
 .list-row:hover .pill.tag,
 .card.flush .list-row.linked-active .pill.tag,
-.list-row.clickable:hover .pill.tag {
+.list-row.clickable:hover .pill.tag,
+.tarjeta-clicable:hover .pill.tag {
   background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
   color: var(--tag-color, var(--fg-muted));
 }
