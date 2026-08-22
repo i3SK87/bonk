@@ -399,13 +399,6 @@ function GoalCard({
         <ProgressBar percent={goal.percent} color={color} />
       )}
 
-      {/* Cuando el mando se para antes de la meta, el motivo se dice: si no,
-          parece que el deslizador está roto. */}
-      {ajustable && techo < goal.targetAmount && (
-        <div className="small subtle" style={{ marginTop: 5 }}>
-          Con lo que hay en la hucha puedes llegar a {formatMoney(techo, currency)}.
-        </div>
-      )}
 
       <div className="small subtle" style={{ marginTop: 5 }}>
         {falta === 0
