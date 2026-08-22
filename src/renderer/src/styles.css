@@ -847,6 +847,12 @@ p { margin: 0; }
   border-right: 1px solid var(--border);
 }
 
+/* Cuando la cifra va sola en la tira, la raya no separa de nada. */
+.networth.suelto {
+  border-right: none;
+  padding-right: 4px;
+}
+
 /* El último no separa de nada: en Deudas la tira acaba en un bloque, y la raya
    se quedaba colgando al final. */
 .networth:last-child {

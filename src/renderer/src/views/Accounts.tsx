@@ -109,7 +109,7 @@ export function AccountsView(): ReactNode {
           className="card-body networth-strip"
           style={{ borderTop: '1px solid var(--border)' }}
         >
-          <div className="networth">
+          <div className="networth suelto">
             <div className="label">Patrimonio total</div>
             <div className={`value amount ${total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral'}`}>
               {formatMoney(total, settings.baseCurrency)}

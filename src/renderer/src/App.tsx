@@ -136,10 +136,11 @@ export function App(): ReactNode {
           </button>
         ))}
 
-        {/* En Movimientos el patrimonio ya preside la lista, y allí puede estar
-            en modo previsión: repetirlo aquí en su versión real dejaba dos
-            cifras distintas a la vez en la misma pantalla. */}
-        {view !== 'transactions' && (
+        {/* Donde la cifra ya está en pantalla, aquí sobra: en Movimientos preside
+            la lista —y allí puede estar en modo previsión, así que repetirla en su
+            versión real dejaba dos cifras distintas a la vez—, y en Cuentas cierra
+            la tarjeta. */}
+        {view !== 'transactions' && view !== 'accounts' && (
           <div className="sidebar-footer">
             <div className="sidebar-networth">
               Patrimonio total
