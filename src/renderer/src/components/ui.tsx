@@ -189,12 +189,19 @@ interface FieldProps {
   children: ReactNode
   error?: string | null
   hint?: string
+  /** Sin esto no se puede guardar. Se marca con un asterisco junto al rótulo. */
+  required?: boolean
 }
 
-export function Field({ label, children, error, hint }: FieldProps): ReactNode {
+export function Field({ label, children, error, hint, required }: FieldProps): ReactNode {
   return (
     <div className="field">
-      <label>{label}</label>
+      {/* Los pocos campos obligatorios llevan marca; el resto no dice nada, que
+          decir «opcional» en la mayoría es repetir lo mismo en cada renglón. */}
+      <label>
+        {label}
+        {required && <span className="requerido">*</span>}
+      </label>
       {children}
       {error ? <span className="field-error">{error}</span> : hint ? <span className="field-hint">{hint}</span> : null}
     </div>

@@ -491,7 +491,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
           </>
         }
       >
-        <Field label="Título" error={error}>
+        <Field label="Título" required error={error}>
           {/* El foco entra por el nombre: es lo primero que se piensa de un plan, y
               la cantidad se decide después. */}
           <input
@@ -503,7 +503,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
           />
         </Field>
 
-        <Field label="Cuánto">
+        <Field label="Cuánto" required>
           <AmountInput value={targetAmount} currency={currency} onChange={setTargetAmount} />
         </Field>
 

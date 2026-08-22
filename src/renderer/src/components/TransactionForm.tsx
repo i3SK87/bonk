@@ -398,7 +398,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         </Field>
 
         <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
-          <Field label="Importe">
+          <Field label="Importe" required>
             <AmountInput
               value={amount}
               currency={currency}
@@ -409,7 +409,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         </div>
 
         <div className="grid cols-2">
-          <Field label={type === 'transfer' ? 'Desde' : 'Cuenta'}>
+          <Field label={type === 'transfer' ? 'Desde' : 'Cuenta'} required>
             <select
               className="select"
               value={accountId ?? ''}
@@ -425,7 +425,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
           </Field>
 
           {type === 'transfer' ? (
-            <Field label="Hacia">
+            <Field label="Hacia" required>
               <select
                 className="select"
                 value={toAccountId ?? ''}
@@ -519,6 +519,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         {type === 'refund' && !refundFor && (
           <Field
             label="Gasto que te devuelven"
+            required
             hint={
               candidates.length === 0
                 ? `Ningún gasto del ${formatDate(date)} tiene nada pendiente. Cambia la fecha o hazlo desde el gasto.`

@@ -263,7 +263,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             hacia dentro y era el único que no arrancaba donde los demás. */}
         <div className="row" style={{ alignItems: 'flex-end' }}>
           <div style={{ flex: 1 }}>
-            <Field label="Título" error={error}>
+            <Field label="Título" required error={error}>
               <input
                 className="input"
                 value={name}

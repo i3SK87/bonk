@@ -533,7 +533,7 @@ export function ScheduleModal({
             placeholder="Netflix, alquiler, la cuota del PC…"
           />
         </Field>
-        <Field label="Importe" error={error}>
+        <Field label="Importe" required error={error}>
           <AmountInput value={amount} currency={currency} onChange={setAmount} />
         </Field>
 
@@ -553,7 +553,7 @@ export function ScheduleModal({
           </Field>
 
           {type === 'transfer' ? (
-            <Field label="Hacia">
+            <Field label="Hacia" required>
               <select
                 className="select"
                 value={toAccountId ?? ''}
@@ -591,7 +591,7 @@ export function ScheduleModal({
             «el PC» son dos años de cuotas, y lo que se recuerda es que las cobra
             Aplázame. Opcional, que no todas las deudas son de una financiera. */}
         {esDeuda && (
-          <Field label="Quién la cobra" hint="Opcional.">
+          <Field label="Quién la cobra">
             <select className="select" value={lender} onChange={(e) => setLender(e.target.value)}>
               <option value="">Sin especificar</option>
               {LENDERS.map((item) => (

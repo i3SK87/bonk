@@ -746,6 +746,14 @@ p { margin: 0; }
   color: var(--fg-muted);
 }
 
+/* El asterisco de los obligatorios: en el color de la aplicación, no en rojo,
+   que todavía no ha pasado nada malo. */
+.field > label .requerido {
+  color: var(--accent);
+  margin-left: 3px;
+  font-weight: 700;
+}
+
 .input,
 .select,
 .textarea {
