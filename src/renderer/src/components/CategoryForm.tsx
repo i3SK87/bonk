@@ -86,10 +86,11 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           </>
         }
       >
-        <div className="row">
+        {/* El icono, a ras del campo y no del rótulo. */}
+        <div className="row" style={{ alignItems: 'flex-end' }}>
           <Avatar icon={icon} color={color} size="large" />
           <div style={{ flex: 1 }}>
-            <Field label="Nombre" error={error}>
+            <Field label="Título" error={error}>
               <input
                 className="input"
                 value={name}

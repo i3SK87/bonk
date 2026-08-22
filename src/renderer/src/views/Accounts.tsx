@@ -191,7 +191,9 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
   const [excludeFromTotal, setExclude] = useState(account?.excludeFromTotal ?? false)
   const [lowBalance, setLowBalance] = useState(account?.lowBalanceThreshold ?? 0)
   const [archived, setArchived] = useState(account?.archived ?? false)
-  const [note, setNote] = useState(account?.note ?? '')
+  // La nota ya no se edita —el título dice lo que hay que decir—, pero la que
+  // tuviera una cuenta de antes viaja intacta al guardar en vez de borrarse sola.
+  const note = account?.note ?? ''
   const [allowNegative, setAllowNegative] = useState(
     account ? account.allowNegative : type !== 'cash' && type !== 'savings'
   )
@@ -255,10 +257,12 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           </>
         }
       >
-        <div className="row">
+        {/* El icono, a ras del campo y no del rótulo: alineados por abajo, los dos
+            cuadrados —el del avatar y el del campo— comparten canto. */}
+        <div className="row" style={{ alignItems: 'flex-end' }}>
           <Avatar icon={icon} color={color} size="large" />
           <div style={{ flex: 1 }}>
-            <Field label="Nombre" error={error}>
+            <Field label="Título" error={error}>
               <input
                 className="input"
                 value={name}
@@ -321,14 +325,6 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-        <Field label="Nota">
-          <input
-            className="input"
-            value={note}
-            placeholder="Número parcial, banco, titular…"
-            onChange={(event) => setNote(event.target.value)}
-          />
-        </Field>
 
         <Field
           label="Avisarme si baja de"
