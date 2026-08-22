@@ -524,10 +524,7 @@ export function ScheduleModal({
         )}
 
         {/* Como en un movimiento: el título primero y con el foco puesto. */}
-        <Field
-          label="Título"
-          hint="Se lee en la lista, y lo hereda cada movimiento."
-        >
+        <Field label="Título">
           <input
             className="input"
             autoFocus
