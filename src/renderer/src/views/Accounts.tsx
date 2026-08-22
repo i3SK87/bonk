@@ -324,7 +324,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           </Field>
 
           <Field label="Avisarme si baja de" hint="En cero no avisa nunca.">
-            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} />
+            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} compact />
           </Field>
         </div>
 
