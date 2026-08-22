@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, Checkbox, NumberInput } from './ui'
+import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, NumberInput } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
 import { useStore } from '../lib/store'
@@ -69,12 +69,13 @@ export function TransactionForm({
    * Solo al crear: sobre un movimiento que ya existe, marcarlo volvería a
    * montar una programación que probablemente ya está montada.
    */
-  const [repite, setRepite] = useState(false)
+  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>('suelto')
+  const repite = comportamiento !== 'suelto'
+  const esDeuda = comportamiento === 'deuda'
   const repeticion = useRef<HTMLDivElement>(null)
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
-  const [esDeuda, setEsDeuda] = useState(false)
   const [lender, setLender] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */
@@ -134,6 +135,12 @@ export function TransactionForm({
       setAccountId(existing?.accountId ?? defaultAccountId ?? null)
     }
   }, [accounts, accountId, existing, defaultAccountId])
+
+  // Un ingreso no se debe a nadie: pasando a ingreso con «Deuda a plazos»
+  // elegida, la respuesta se queda en repetirse, que es lo que sigue valiendo.
+  useEffect(() => {
+    if (type !== 'expense') setComportamiento((actual) => (actual === 'deuda' ? 'repite' : actual))
+  }, [type])
 
   // Al cambiar de gasto a ingreso la categoría anterior deja de tener sentido.
   useEffect(() => {
@@ -563,12 +570,27 @@ export function TransactionForm({
 
         {!existing && type !== 'transfer' && type !== 'refund' && (
           <>
-            <Checkbox
-              checked={repite}
-              onChange={setRepite}
-              label="Se repite cada cierto tiempo"
-              hint="La próxima vez se registra sola."
-            />
+            {/* La misma pregunta que se hacía con dos casillas encadenadas —marca
+                esta y aparece la otra—, en tres botones que se leen de una vez.
+                «Deuda a plazos» solo en los gastos: no se debe cobrando. */}
+            <Field>
+              <Segmented
+                value={comportamiento}
+                onChange={setComportamiento}
+                options={
+                  type === 'expense'
+                    ? [
+                        { value: 'suelto', label: 'No se repite' },
+                        { value: 'repite', label: 'Se repite' },
+                        { value: 'deuda', label: 'Deuda a plazos' }
+                      ]
+                    : [
+                        { value: 'suelto', label: 'No se repite' },
+                        { value: 'repite', label: 'Se repite' }
+                      ]
+                }
+              />
+            </Field>
             {repite && (
               <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
                 <Field label="Repetición">
@@ -603,26 +625,9 @@ export function TransactionForm({
               </div>
             )}
 
-            {/*
-             * Y si eso que se repite es una deuda.
-             *
-             * Un gasto a plazos se apunta aquí como cualquier otro: la primera
-             * cuota. Lo que lo convierte en deuda es su repetición, que ya se
-             * monta desde este mismo formulario, así que marcarlo es un gesto
-             * más y no una visita a otra pestaña.
-             *
-             * Solo en los gastos: no se debe dinero cobrándolo.
-             */}
-            {repite && type === 'expense' && (
-              <Checkbox
-                checked={esDeuda}
-                onChange={setEsDeuda}
-                label="Es una deuda a plazos"
-                hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
-              />
-            )}
-
-            {repite && esDeuda && type === 'expense' && (
+            {/* Quién cobra solo se pregunta en una deuda: en la compra del súper
+                no hay financiera que valga. */}
+            {esDeuda && (
               <Field label="Quién la cobra">
                 <select
                   className="select"
