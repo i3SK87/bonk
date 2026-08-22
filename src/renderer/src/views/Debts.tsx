@@ -284,6 +284,10 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
   const [lastAmount, setLastAmount] = useState(debt.lastInstallment ?? 0)
   const [total, setTotal] = useState(debt.fixedTotal ?? 0)
 
+  // Las que se dieron por pagadas la última vez que se ajustó: la diferencia
+  // entre lo que hay apuntado y lo que dice el contador.
+  const deAntes = debt.paidCount - debt.countBySoftware
+
   return (
     <Modal
       title={`Ajustar ${debt.title}`}
@@ -314,7 +318,16 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
     >
       <Field
         label="Cuotas pagadas"
-        hint={`BONK ve ${debt.countBySoftware} en tus movimientos. Si llevabas pagando desde antes, pon aquí cuántas van en total.`}
+        /*
+         * La frase contaba solo los movimientos, y con cuotas puestas a mano no
+         * cuadraba con el número del campo: «BONK ve 2» debajo de un 3 sin decir
+         * de dónde salía la tercera.
+         */
+        hint={
+          deAntes > 0
+            ? `BONK ve ${debt.countBySoftware} en tus movimientos y ${deAntes} más que pusiste tú por las de antes. Cambia el número si no cuadra.`
+            : `BONK ve ${debt.countBySoftware} en tus movimientos. Si llevabas pagando desde antes, pon aquí cuántas van en total.`
+        }
       >
         {/* Noventa y nueve cuotas son más de ocho años pagando: de sobra. Y con
             el mismo ancho que los contadores de repetición, que son hermanos. */}
