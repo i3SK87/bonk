@@ -171,8 +171,9 @@ export function SchedulesView(): ReactNode {
                       {titleOf(row)}
                     </span>
                     {/* La categoría manda en los informes, así que se ve sin abrir la ficha.
-                        Solo estorba cuando el nombre ya es la propia categoría. */}
-                    {row.categoryName && row.categoryName !== titleOf(row) && (
+                        Estorba cuando el nombre ya es la propia categoría, y en un
+                        reembolso, que cuelga del gasto que la lleva justo encima. */}
+                    {row.type !== 'refund' && row.categoryName && row.categoryName !== titleOf(row) && (
                       <span className="pill">{row.categoryName}</span>
                     )}
                     {!row.active && (
