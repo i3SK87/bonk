@@ -17,6 +17,8 @@ import { entender, type OrdenVoz } from '@shared/voz'
 import { today } from '@shared/dates'
 import { Grabadora, escuchaLista, prepararEscucha, transcribir, type EstadoEscucha } from '../lib/escucha'
 
+const api = window.bonk
+
 interface Props {
   onClose: () => void
   onEntendido: (orden: OrdenVoz) => void
@@ -32,6 +34,9 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
 
   // Soltar el micrófono si el diálogo se cierra a media grabación.
   useEffect(() => () => grabadora.current?.abortar(), [])
+
+  // La descarga la lleva el proceso principal y va contando por su cuenta.
+  useEffect(() => api.events.on('voz:progreso', (dato) => setProgreso(Number(dato) || 0)), [])
 
   const catalogo = {
     cuentas: accounts.map((cuenta) => ({ id: cuenta.id, name: cuenta.name })),
@@ -52,21 +57,27 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
   async function empezar(): Promise<void> {
     setError(null)
     try {
-      // Cargar el modelo antes de grabar: si se hace después, el silencio entre
-      // soltar el botón y ver la frase serían noventa segundos sin explicación.
+      /*
+       * Todo lo lento, antes de grabar. Si el modelo se carga después de hablar,
+       * lo que ve uno es un silencio de un minuto sin nada que lo explique.
+       */
       if (!escuchaLista()) {
         setEstado('preparando')
-        await prepararEscucha(setProgreso)
+        const estado = await api.voz.estado()
+        if (!estado.listo) await api.voz.descargar()
+        await prepararEscucha()
       }
       grabadora.current = new Grabadora()
       await grabadora.current.empezar()
       setEstado('grabando')
     } catch (fallo) {
       setEstado('dormido')
+      const motivo = (fallo as Error)?.message ?? 'fallo desconocido'
+      api.voz.apuntar(`preparar: ${motivo}`)
       setError(
-        (fallo as Error)?.message?.includes('Permission')
+        /permission|denied|notallowed/i.test(motivo)
           ? 'Windows no deja usar el micrófono. Mira Configuración ▸ Privacidad ▸ Micrófono.'
-          : `No se ha podido preparar el dictado: ${(fallo as Error)?.message ?? 'fallo desconocido'}`
+          : `No se ha podido preparar el dictado: ${motivo}`
       )
     }
   }
@@ -79,7 +90,7 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
       grabadora.current = null
       if (!muestras) {
         setEstado('dormido')
-        setError('No he oído nada. Mantén pulsado mientras hablas.')
+        setError('No he oído nada. Habla entre los dos toques.')
         return
       }
       const frase = await transcribir(muestras)
@@ -93,7 +104,9 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
       setTexto(frase)
     } catch (fallo) {
       setEstado('dormido')
-      setError(`No se ha podido transcribir: ${(fallo as Error)?.message ?? 'fallo desconocido'}`)
+      const motivo = (fallo as Error)?.message ?? 'fallo desconocido'
+      api.voz.apuntar(`transcribir: ${motivo}`)
+      setError(`No se ha podido transcribir: ${motivo}`)
     }
   }
 
@@ -117,13 +130,14 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
       }
     >
       <div className="dictado">
+        {/* Un clic para empezar y otro para parar: mantener pulsado obliga a no
+            soltar el ratón mientras se habla, que es justo lo que no se quiere
+            estar pensando mientras se dicta. */}
         <button
           className={`microfono${estado === 'grabando' ? ' escuchando' : ''}`}
           disabled={estado === 'preparando' || estado === 'pensando'}
-          onPointerDown={empezar}
-          onPointerUp={terminar}
-          onPointerLeave={terminar}
-          title="Mantén pulsado mientras hablas"
+          onClick={() => (estado === 'grabando' ? terminar() : empezar())}
+          title={estado === 'grabando' ? 'Pulsa para terminar' : 'Pulsa y habla'}
         >
           <Icon name="microfono" size={26} strokeWidth={1.8} />
         </button>
@@ -132,10 +146,10 @@ export function Dictado({ onClose, onEntendido }: Props): ReactNode {
           {estado === 'preparando'
             ? `Preparando el dictado… ${progreso}%. La primera vez se descarga; luego funciona sin conexión.`
             : estado === 'grabando'
-              ? 'Te escucho. Suelta cuando termines.'
+              ? 'Te escucho. Pulsa otra vez cuando termines.'
               : estado === 'pensando'
                 ? 'Entendiendo lo que has dicho…'
-                : 'Mantén pulsado y habla. O escríbelo aquí abajo.'}
+                : 'Pulsa y habla. O escríbelo aquí abajo.'}
         </div>
       </div>
 

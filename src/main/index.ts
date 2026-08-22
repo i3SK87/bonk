@@ -8,6 +8,8 @@ import { postDue } from './repos/scheduled'
 import { getSettings, setSetting } from './repos/settings'
 import { applyAutoLaunch, startedHidden } from './autostart'
 import { startBackgroundWork } from './reminders'
+import { carpetaModelos } from './voz'
+import { registrarFallo } from './registro'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -98,11 +100,13 @@ function createWindow(): void {
    * Solo lo que está dentro de la carpeta del renderer, y solo hacia abajo: sin
    * la comprobación, un «bonk://../../» serviría cualquier fichero del disco.
    */
-  const raizWeb = join(__dirname, '../renderer')
   protocol.handle('bonk', (peticion) => {
-    const ruta = decodeURIComponent(new URL(peticion.url).pathname)
-    const destino = join(raizWeb, ruta)
-    if (!destino.startsWith(raizWeb)) return new Response('No', { status: 403 })
+    const url = new URL(peticion.url)
+    // Dos destinos: «app» es lo que viaja dentro del programa —el motor de
+    // reconocimiento—, y «modelo» lo que se bajó a la carpeta de datos.
+    const raiz = url.hostname === 'modelo' ? carpetaModelos() : join(__dirname, '../renderer')
+    const destino = join(raiz, decodeURIComponent(url.pathname))
+    if (!destino.startsWith(raiz)) return new Response('Fuera', { status: 403 })
     return net.fetch(pathToFileURL(destino).toString())
   })
 
@@ -224,7 +228,7 @@ if (!app.requestSingleInstanceLock()) {
     try {
       postDue()
     } catch (error) {
-      console.error('No se pudieron generar las transacciones programadas:', error)
+      registrarFallo('arranque', error)
     }
 
     const theme = getSettings().theme

@@ -20,7 +20,19 @@ env.backends.onnx.wasm!.wasmPaths = 'bonk://app/onnx/'
 // Sin cabeceras de aislamiento no hay memoria compartida, y con más de un hilo
 // el runtime aborta al arrancar en vez de apañárselas.
 env.backends.onnx.wasm!.numThreads = 1
-env.allowLocalModels = false
+
+/*
+ * El modelo se lee de disco, no de internet.
+ *
+ * Pedirlo desde aquí no funciona: los ficheros grandes de HuggingFace contestan
+ * con un desvío a su almacén, y la política de seguridad de esta ventana corta
+ * el desvío —llegaban los `.json` de dos kilos y no los `.onnx` de setenta
+ * megas—. Lo baja el proceso principal, que no tiene esa atadura, y aquí se lee
+ * por el protocolo propio.
+ */
+env.allowRemoteModels = false
+env.allowLocalModels = true
+env.localModelPath = 'bonk://modelo/'
 
 /** Whisper en pequeño. El mediano entiende mejor pero pesa tres veces más. */
 const MODELO = 'onnx-community/whisper-base'
@@ -32,23 +44,12 @@ export type EstadoEscucha = 'dormido' | 'preparando' | 'grabando' | 'pensando'
 
 let cargando: Promise<AutomaticSpeechRecognitionPipeline> | null = null
 
-/**
- * Prepara el modelo una sola vez por sesión. La primera llamada tarda —hay que
- * bajarlo—, las siguientes son inmediatas.
- */
-export function prepararEscucha(
-  progreso?: (porcentaje: number) => void
-): Promise<AutomaticSpeechRecognitionPipeline> {
+/** Deja el modelo en memoria. Una vez por sesión; después, inmediato. */
+export function prepararEscucha(): Promise<AutomaticSpeechRecognitionPipeline> {
   if (!cargando) {
-    cargando = pipeline('automatic-speech-recognition', MODELO, {
-      dtype: 'q8',
-      progress_callback: (info: unknown) => {
-        const dato = info as { status?: string; progress?: number }
-        if (dato.status === 'progress' && typeof dato.progress === 'number') {
-          progreso?.(Math.round(dato.progress))
-        }
-      }
-    }).catch((error) => {
+    // Los ficheros ya están en disco cuando se llega aquí: esto solo los lee y
+    // los mete en memoria, y de contar la descarga se encarga quien la hace.
+    cargando = pipeline('automatic-speech-recognition', MODELO, { dtype: 'q8' }).catch((error) => {
       // Un fallo no puede dejar la promesa cacheada: el siguiente intento
       // volvería a recibir el mismo error sin haberlo intentado siquiera.
       cargando = null
