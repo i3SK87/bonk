@@ -7,6 +7,7 @@ import { CategoryModal } from './CategoryForm'
 import { today, formatDate, nextOccurrence } from '@shared/dates'
 import { formatMoney } from '@shared/money'
 import { FRECUENCIAS } from '../lib/frecuencias'
+import { LENDERS } from '@shared/lenders'
 import type { Attachment, Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
@@ -70,12 +71,14 @@ export function TransactionForm({
    */
   const [repite, setRepite] = useState(false)
   const repeticion = useRef<HTMLDivElement>(null)
-  // Solo al marcarla a mano: si se marcase sola al elegir una categoría de deuda,
-  // el foco saltaría del título nada más abrir el formulario.
+  // Solo al marcarla a mano: si se marcase sola al elegir una categoría de las
+  // que se repiten, el foco saltaría del título nada más abrir el formulario.
   const primeraVez = useRef(true)
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
+  const [esDeuda, setEsDeuda] = useState(false)
+  const [lender, setLender] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */
   const [pending, setPending] = useState<Array<{ path: string; name: string }>>([])
@@ -149,8 +152,8 @@ export function TransactionForm({
     }
   }, [type, categoryId, visibleCategories])
 
-  // Al elegir una categoría de deuda se propone repetir; al salir de ella, se
-  // recoge la propuesta si no se ha tocado nada.
+  // Al elegir una categoría de las que vuelven se propone repetir; al salir de
+  // ella, se recoge la propuesta si no se ha tocado nada.
   useEffect(() => {
     // Una devolución no se repite, aunque el gasto que devuelve sí: hereda su
     // categoría, y con una de deuda la casilla salía marcada sola y al guardar
@@ -288,7 +291,9 @@ export function TransactionForm({
             nextDate: nextOccurrence(date, freq, interval),
             endDate: endDate || null,
             autoPost: true,
-            remind: true
+            remind: true,
+            isDebt: esDeuda && type === 'expense',
+            lender: esDeuda && type === 'expense' ? lender || null : null
           }),
         'Repetición programada'
       )
@@ -612,11 +617,47 @@ export function TransactionForm({
 
                 <Field
                   label="Termina el"
-                  hint="Déjalo vacío si no tiene fin."
+                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Déjalo vacío si no tiene fin.'}
                 >
                   <DateInput value={endDate} onChange={setEndDate} clearable />
                 </Field>
               </div>
+            )}
+
+            {/*
+             * Y si eso que se repite es una deuda.
+             *
+             * Un gasto a plazos se apunta aquí como cualquier otro: la primera
+             * cuota. Lo que lo convierte en deuda es su repetición, que ya se
+             * monta desde este mismo formulario, así que marcarlo es un gesto
+             * más y no una visita a otra pestaña.
+             *
+             * Solo en los gastos: no se debe dinero cobrándolo.
+             */}
+            {repite && type === 'expense' && (
+              <Checkbox
+                checked={esDeuda}
+                onChange={setEsDeuda}
+                label="Es una deuda a plazos"
+                hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
+              />
+            )}
+
+            {repite && esDeuda && type === 'expense' && (
+              <Field label="Quién la cobra">
+                <select
+                  className="select"
+                  value={lender}
+                  onChange={(event) => setLender(event.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {LENDERS.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             )}
           </>
         )}
