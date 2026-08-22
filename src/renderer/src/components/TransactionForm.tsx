@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, Checkbox, NumberInput } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
-import { useStore, usePreferredAccountId } from '../lib/store'
+import { useStore } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
 import { today, formatDate, nextOccurrence } from '@shared/dates'
 import { formatMoney } from '@shared/money'
@@ -21,12 +21,19 @@ interface Props {
 
 export function TransactionForm({ existing, defaultAccountId, refundFor, onClose }: Props): ReactNode {
   const { accounts, categories, run, toast, settings, fail } = useStore()
-  const preferredAccountId = usePreferredAccountId()
 
   const [type, setType] = useState<TxType>(existing?.type ?? (refundFor ? 'refund' : 'expense'))
   const [amount, setAmount] = useState(existing?.amount ?? 0)
-  const [accountId, setAccountId] = useState(
-    existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? preferredAccountId
+  /*
+   * La cuenta no se supone.
+   *
+   * Antes caía en la principal cuando no se sabía cuál, y mirando la hucha el
+   * gasto acababa en el banco sin decir nada. Ahora: la del movimiento que se
+   * edita, la del gasto que se devuelve, o la que se esté mirando en la lista.
+   * Si no hay ninguna de esas, se queda vacía y hay que elegirla.
+   */
+  const [accountId, setAccountId] = useState<number | null>(
+    existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? null
   )
   const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
   const [goalId, setGoalId] = useState<number | null>(existing?.goalId ?? null)
@@ -119,13 +126,13 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
     [categories, type]
   )
 
-  // Si la cuenta elegida ya no está en la lista —porque los datos aún no habían
-  // llegado al montar, o porque se archivó— se vuelve a la principal.
+  // Si la cuenta elegida ya no está en la lista —porque se archivó, o porque los
+  // datos aún no habían llegado al montar— se vuelve a dejar en blanco.
   useEffect(() => {
-    if (accounts.length > 0 && !accounts.some((item) => item.id === accountId)) {
-      setAccountId(existing?.accountId ?? defaultAccountId ?? preferredAccountId)
+    if (accountId != null && accounts.length > 0 && !accounts.some((item) => item.id === accountId)) {
+      setAccountId(existing?.accountId ?? defaultAccountId ?? null)
     }
-  }, [accounts, accountId, existing, defaultAccountId, preferredAccountId])
+  }, [accounts, accountId, existing, defaultAccountId])
 
   // Al cambiar de gasto a ingreso la categoría anterior deja de tener sentido.
   useEffect(() => {
@@ -410,7 +417,12 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
 
         <div className="grid cols-2">
           <Field label={type === 'transfer' ? 'Desde' : 'Cuenta'}>
-            <select className="select" value={accountId} onChange={(e) => setAccountId(Number(e.target.value))}>
+            <select
+              className="select"
+              value={accountId ?? ''}
+              onChange={(e) => setAccountId(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Elige una cuenta…</option>
               {accounts.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name} · {formatMoney(item.balance, item.currency)}

@@ -87,7 +87,17 @@ function nestProjected(
 }
 
 export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) => void }): ReactNode {
-  const { accounts, categories, settings, revision, run, toast, updateSettings, fail } = useStore()
+  const {
+    accounts,
+    categories,
+    settings,
+    revision,
+    run,
+    toast,
+    updateSettings,
+    fail,
+    setFocusedAccountId
+  } = useStore()
 
   const [range, setRange] = useState<RangeId>('month')
   const [customFrom, setCustomFrom] = useState(startOfMonth(today()))
@@ -102,6 +112,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * Se quita pulsándola, y entonces vuelve el patrimonio de todas.
    */
   const [accountIds, setAccountIds] = useState<number[]>(accounts[0] ? [accounts[0].id] : [])
+
+  /*
+   * Con una sola cuenta a la vista, un movimiento nuevo nace en ella.
+   *
+   * El formulario lo abre la cabecera de la ventana, que no sabe nada de este
+   * filtro: mirando la hucha, el gasto se guardaba en la cuenta principal y solo
+   * te enterabas después. Con varias elegidas no se supone nada.
+   */
+  useEffect(() => {
+    setFocusedAccountId(accountIds.length === 1 ? accountIds[0] : null)
+    return () => setFocusedAccountId(null)
+  }, [accountIds, setFocusedAccountId])
   const [categoryIds, setCategoryIds] = useState<number[]>([])
   /** «Sin categoría» no es una categoría: es la falta de ella, y se filtra aparte. */
   const [uncategorized, setUncategorized] = useState(false)

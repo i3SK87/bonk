@@ -52,7 +52,7 @@ const TITLES: Record<ViewId, string> = {
 }
 
 export function App(): ReactNode {
-  const { ready, accounts, categories, settings, toast, refresh } = useStore()
+  const { ready, accounts, categories, settings, toast, refresh, focusedAccountId } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
@@ -188,7 +188,12 @@ export function App(): ReactNode {
         )}
       </main>
 
-      {ready && composing && <TransactionForm onClose={() => setComposing(false)} />}
+      {ready && composing && (
+        <TransactionForm
+          defaultAccountId={focusedAccountId ?? undefined}
+          onClose={() => setComposing(false)}
+        />
+      )}
 
       {/* La deuda manda si caen las dos a la vez: cerrar un plazo es más raro
           que llegar a una meta, y las dos van en cola de todas formas. */}

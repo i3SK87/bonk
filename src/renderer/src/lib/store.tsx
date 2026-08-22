@@ -26,6 +26,15 @@ interface StoreValue {
   categories: Category[]
   /** Se incrementa en cada cambio de datos; las vistas lo usan para recargar. */
   revision: number
+  /**
+   * La cuenta que se está mirando en Movimientos, cuando hay una sola elegida.
+   *
+   * Vive aquí porque quien la elige —la lista— y quien la necesita —el
+   * formulario de un movimiento nuevo, que lo abre la cabecera— no se conocen
+   * entre sí.
+   */
+  focusedAccountId: number | null
+  setFocusedAccountId: (id: number | null) => void
   refresh: () => Promise<void>
   refreshCatalogues: () => Promise<void>
   updateSettings: (patch: Partial<Settings>) => Promise<void>
@@ -64,6 +73,7 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [revision, setRevision] = useState(0)
+  const [focusedAccountId, setFocusedAccountId] = useState<number | null>(null)
   const [toasts, setToasts] = useState<Toast[]>([])
   const toastId = useRef(0)
 
@@ -181,6 +191,8 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
       accounts,
       categories,
       revision,
+      focusedAccountId,
+      setFocusedAccountId,
       refresh,
       refreshCatalogues,
       updateSettings,
@@ -196,6 +208,7 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
       accounts,
       categories,
       revision,
+      focusedAccountId,
       refresh,
       refreshCatalogues,
       updateSettings,
