@@ -26,8 +26,17 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [archived, setArchived] = useState(category?.archived ?? false)
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
-  const [isDebt, setIsDebt] = useState(category?.isDebt ?? false)
-  const [recurring, setRecurring] = useState(category?.recurring ?? false)
+  /*
+   * Deuda y repetición eran dos casillas, y se pisaban: una deuda a plazos es,
+   * por definición, algo que vuelve cada mes. Marcar las dos decía lo mismo dos
+   * veces y dejar solo la de deuda parecía apagar la otra.
+   *
+   * Es una sola pregunta con tres respuestas, y por dentro sigue guardándose en
+   * las dos marcas de siempre.
+   */
+  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>(
+    category?.isDebt ? 'deuda' : category?.recurring ? 'repite' : 'suelto'
+  )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -49,8 +58,8 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       archived,
       breakdownByNote,
       keepsInvoices,
-      isDebt,
-      recurring
+      isDebt: comportamiento === 'deuda',
+      recurring: comportamiento === 'repite'
     })
     if (saved) onClose()
   }
@@ -110,19 +119,26 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-        <Checkbox
-          checked={isDebt}
-          onChange={setIsDebt}
-          label="Es una deuda a plazos"
-          hint="Sus programaciones se finalizan en vez de pausarse: si saldas la deuda antes de tiempo, esas cuotas ya no van a existir."
-        />
-
-        <Checkbox
-          checked={recurring}
-          onChange={setRecurring}
-          label="Vuelve sola cada cierto tiempo"
-          hint="Suscripciones, recibos, el alquiler: al apuntar un movimiento suyo se propone dejar montada la repetición."
-        />
+        <Field
+          label="Cada cuánto vuelve"
+          hint={
+            comportamiento === 'deuda'
+              ? 'Cuotas de algo que se acaba. Sale en la pestaña Deudas, con lo que llevas pagado y lo que falta, y su programación se finaliza en vez de pausarse.'
+              : comportamiento === 'repite'
+                ? 'Suscripciones, recibos, el alquiler. Al apuntar un movimiento suyo se propone dejar montada la repetición.'
+                : 'Un gasto o un ingreso corriente, cada vez el suyo.'
+          }
+        >
+          <Segmented
+            value={comportamiento}
+            onChange={setComportamiento}
+            options={[
+              { value: 'suelto', label: 'No vuelve' },
+              { value: 'repite', label: 'Se repite' },
+              { value: 'deuda', label: 'Deuda a plazos' }
+            ]}
+          />
+        </Field>
 
         <Checkbox
           checked={keepsInvoices}

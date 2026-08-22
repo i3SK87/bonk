@@ -414,11 +414,27 @@ interface AvatarProps {
   size?: 'small' | 'normal' | 'large'
 }
 
+/**
+ * Con qué tinta se dibuja encima.
+ *
+ * El icono es blanco, que va bien sobre los colores vivos de la paleta; sobre
+ * blanco o gris claro desaparecía. Se mira cuánta luz tiene el fondo y, si es
+ * mucha, se dibuja en oscuro. Los colores que no son un hexadecimal —alguno sale
+ * de una variable del tema— se dejan como estaban.
+ */
+function tinta(fondo: string): string | undefined {
+  const hex = /^#([0-9a-f]{6})$/i.exec(fondo)
+  if (!hex) return undefined
+  const n = parseInt(hex[1], 16)
+  const luz = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
+  return luz > 0.68 ? '#15171b' : undefined
+}
+
 export function Avatar({ icon, color, size = 'normal' }: AvatarProps): ReactNode {
   const className = size === 'normal' ? 'avatar' : `avatar ${size}`
   const iconSize = size === 'small' ? 15 : size === 'large' ? 23 : 19
   return (
-    <div className={className} style={{ background: color }}>
+    <div className={className} style={{ background: color, color: tinta(color) }}>
       <Icon name={icon} size={iconSize} strokeWidth={1.9} />
     </div>
   )

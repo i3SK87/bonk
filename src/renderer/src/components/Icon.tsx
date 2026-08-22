@@ -472,5 +472,8 @@ export const ACCOUNT_ICONS: string[] = [
 export const PALETTE: string[] = [
   '#0A84FF', '#5AC8FA', '#00C7BE', '#34C759', '#30D158', '#FFCC00',
   '#FF9500', '#FF6B35', '#FF3B30', '#FF375F', '#FF2D55', '#FF6482',
-  '#AF52DE', '#BF5AF2', '#5E5CE6', '#64D2FF', '#A2845E', '#8E8E93'
+  '#AF52DE', '#BF5AF2', '#5E5CE6', '#64D2FF', '#A2845E', '#8E8E93',
+  // Los neutros: faltaban, y son los que mejor le sientan a lo que no quiere
+  // llamar la atención. El dibujo se pone oscuro solo cuando el fondo es claro.
+  '#FFFFFF', '#C7C7CC', '#48484A', '#1C1C1E'
 ]
