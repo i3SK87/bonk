@@ -289,6 +289,13 @@ try {
   })
   check('una categoría nueva se desglosa por defecto', debt.breakdownByNote)
   check('y no guarda facturas hasta que se le diga', debt.keepsInvoices === false)
+  // A plazos solo se paga: un ingreso que entra a plazos son varios ingresos.
+  check(
+    'un ingreso no puede ser una deuda a plazos',
+    categories.saveCategory({
+      name: 'Paga extra', kind: 'income', icon: 'coins', color: '#34C759', isDebt: true
+    }).isDebt === false
+  )
   check(
     'la casilla de facturas se guarda',
     categories.saveCategory({ ...debt, keepsInvoices: true }).keepsInvoices

@@ -47,6 +47,12 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
     api.categories.countTransactions(category.id).then(setLinked).catch(() => undefined)
   }, [category])
 
+  // Pasando una deuda a ingreso, el tercer botón desaparece: sin esto la
+  // respuesta se quedaba elegida en un botón que ya no estaba en pantalla.
+  useEffect(() => {
+    if (kind === 'income') setComportamiento((actual) => (actual === 'deuda' ? 'suelto' : actual))
+  }, [kind])
+
   async function save(): Promise<void> {
     if (!name.trim()) return setError('La categoría necesita un nombre')
     const saved = await onSave({
@@ -116,16 +122,28 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
 
         {/* Debajo del tipo, que las dos botoneras dicen qué clase de categoría es
             esto: la de arriba si entra o sale, y esta si vuelve. Las tres opciones
-            se explican solas, así que no llevan rótulo. */}
+            se explican solas, así que no llevan rótulo.
+
+            A plazos solo se paga: un ingreso que entra a plazos son varios
+            ingresos, no una deuda. Estando marcada, la Deudas mostraba el icono
+            de esa categoría en su pestaña, que toma el de la primera deuda que
+            encuentra y los ingresos van antes en la lista. */}
         <Field>
           <Segmented
             value={comportamiento}
             onChange={setComportamiento}
-            options={[
-              { value: 'suelto', label: 'No se repite' },
-              { value: 'repite', label: 'Se repite' },
-              { value: 'deuda', label: 'Deuda a plazos' }
-            ]}
+            options={
+              kind === 'income'
+                ? [
+                    { value: 'suelto', label: 'No se repite' },
+                    { value: 'repite', label: 'Se repite' }
+                  ]
+                : [
+                    { value: 'suelto', label: 'No se repite' },
+                    { value: 'repite', label: 'Se repite' },
+                    { value: 'deuda', label: 'Deuda a plazos' }
+                  ]
+            }
           />
         </Field>
 

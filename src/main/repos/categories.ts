@@ -65,6 +65,18 @@ export interface CategoryInput {
 
 export function saveCategory(input: CategoryInput): Category {
   const db = getDb()
+
+  /*
+   * A plazos solo se paga.
+   *
+   * Un ingreso que entra a plazos son varios ingresos, no una deuda: no hay
+   * nada que saldar ni que quede por pagar, que es de lo que habla la pestaña
+   * Deudas. Marcado en un ingreso, además, se colaba en el icono de esa
+   * pestaña, que toma el de la primera categoría de deuda y los ingresos van
+   * antes en la lista.
+   */
+  const isDebt = input.kind === 'income' ? false : (input.isDebt ?? false)
+
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
@@ -79,7 +91,7 @@ export function saveCategory(input: CategoryInput): Category {
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
-      input.isDebt ? 1 : 0,
+      isDebt ? 1 : 0,
       input.recurring ? 1 : 0,
       input.id
     )
@@ -102,7 +114,7 @@ export function saveCategory(input: CategoryInput): Category {
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
-      input.isDebt ? 1 : 0,
+      isDebt ? 1 : 0,
       input.recurring ? 1 : 0
     )
   return getCategory(Number(result.lastInsertRowid))!
