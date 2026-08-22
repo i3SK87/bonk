@@ -1837,7 +1837,9 @@ textarea::placeholder {
 /* Las filas que se pueden abrir son botones de verdad, para que el tabulador
    llegue a ellas; aquí se les quita el aspecto de botón. */
 button.list-row {
-  width: 100%;
+  /* Sin ancho forzado: como caja flex de bloque ya ocupa lo que hay, y con el
+     100% se sumaba a los márgenes laterales y el resalte se salía de la
+     tarjeta por la derecha. */
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--border);

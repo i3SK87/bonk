@@ -95,7 +95,9 @@ export function AccountsView(): ReactNode {
                     <div className="small subtle">≈ {formatMoney(account.balanceInBase, settings.baseCurrency)}</div>
                   )}
                 </div>
-                <Icon name="chevronRight" size={16} className="muted" />
+                {/* El mismo lápiz que abre la ficha en el resto de la aplicación. La
+                    fila entera sigue siendo el botón, así que aquí solo se dibuja. */}
+                <Icon name="edit" size={16} className="muted" />
               </button>
                 ))}
               </div>
@@ -103,15 +105,18 @@ export function AccountsView(): ReactNode {
           </div>
         )}
 
-        <div className="card-body row" style={{ borderTop: '1px solid var(--border)' }}>
-          <div>
+        <div
+          className="card-body networth-strip"
+          style={{ borderTop: '1px solid var(--border)' }}
+        >
+          <div className="networth">
             <div className="label">Patrimonio total</div>
-            <div className="amount" style={{ fontSize: 22, fontWeight: 700 }}>
+            <div className={`value amount ${total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral'}`}>
               {formatMoney(total, settings.baseCurrency)}
             </div>
           </div>
           {excluded.length > 0 && (
-            <div className="small subtle" style={{ maxWidth: 300 }}>
+            <div className="small subtle" style={{ maxWidth: 300, alignSelf: 'center' }}>
               {excluded.length === 1 ? 'Hay 1 cuenta excluida' : `Hay ${excluded.length} cuentas excluidas`} del
               total.
             </div>
