@@ -204,7 +204,6 @@ export function GoalsView(): ReactNode {
                 >
                   <Icon name="refresh" size={15} />
                 </button>
-                <Icon name="edit" size={16} className="muted" />
               </div>
             ))}
           </div>

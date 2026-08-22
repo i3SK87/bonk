@@ -250,9 +250,6 @@ export function SchedulesView(): ReactNode {
                     <Icon name={row.active ? 'pause' : 'play'} size={16} />
                   </button>
                 )}
-                {/* El lápiz ya no es un botón: la fila entera abre la ficha, y esto
-                    solo lo enseña, como en Cuentas y en Categorías. */}
-                <Icon name="edit" size={16} className="muted" />
               </div>
             )
           })
@@ -300,7 +297,6 @@ export function SchedulesView(): ReactNode {
                   row.accountCurrency,
                 )}
               </div>
-              <Icon name="edit" size={16} className="muted" />
             </div>
           ))}
         </div>

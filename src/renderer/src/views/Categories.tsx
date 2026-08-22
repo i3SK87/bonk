@@ -49,7 +49,6 @@ export function CategoriesView(): ReactNode {
               <span className="truncate" style={{ flex: 1 }}>
                 {category.name}
               </span>
-              <Icon name="edit" size={14} className="muted" />
             </button>
           ))}
         </div>

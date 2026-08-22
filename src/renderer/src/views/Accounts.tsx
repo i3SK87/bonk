@@ -95,9 +95,6 @@ export function AccountsView(): ReactNode {
                     <div className="small subtle">≈ {formatMoney(account.balanceInBase, settings.baseCurrency)}</div>
                   )}
                 </div>
-                {/* El mismo lápiz que abre la ficha en el resto de la aplicación. La
-                    fila entera sigue siendo el botón, así que aquí solo se dibuja. */}
-                <Icon name="edit" size={16} className="muted" />
               </button>
                 ))}
               </div>

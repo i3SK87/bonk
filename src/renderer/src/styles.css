@@ -1654,7 +1654,12 @@ p { margin: 0; }
   flex-shrink: 0;
 }
 
-.table.breakdown tr.expandable:hover .row > svg { color: var(--fg); }
+/* En Informes no se resalta nada al pasar por encima: es una tabla que se lee
+   de arriba abajo, y la franja saltando de fila en fila mientras se leen las
+   cifras molestaba más de lo que ayudaba. */
+.table.breakdown tbody tr:hover {
+  background: transparent;
+}
 
 /* Sangría igual al ancho del chevrón: las categorías sin desglose no bailan. */
 .breakdown-flat {

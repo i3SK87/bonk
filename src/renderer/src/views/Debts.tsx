@@ -169,7 +169,6 @@ export function DebtsView(): ReactNode {
                   </div>
                 </div>
                 <div className="amount muted">{formatMoney(debt.paid, debt.currency)}</div>
-                <Icon name="edit" size={16} className="muted" />
               </div>
             ))}
           </div>
@@ -207,7 +206,7 @@ function DebtCard({
   const quienCobra = findLender(debt.lender)
 
   // La tarjeta entera abre el ajuste: dentro no hay ningún mando con el que
-  // pelearse —la barra de cuotas es dibujo— y el lápiz se queda de enseña.
+  // pelearse, que la barra de cuotas es dibujo.
   return (
     <div className="tarjeta-clicable" role="button" onClick={onAdjust}>
       {/* Sin icono delante: en una pantalla que solo tiene deudas, un distintivo
@@ -242,7 +241,6 @@ function DebtCard({
             {debt.left != null ? `Faltan ${formatMoney(debt.left, currency)}` : 'Sin total conocido'}
           </div>
         </div>
-        <Icon name="edit" size={16} className="muted" />
       </div>
 
       {/* Sin fecha de fin no hay barra: no se puede medir contra un total que no
