@@ -401,6 +401,30 @@ export function TransactionForm({
           </div>
         )}
 
+        {/* Debajo, la otra mitad de la misma pregunta: qué es esto y si vuelve.
+            «Deuda a plazos» solo en los gastos, que no se debe cobrando; en un
+            traspaso o un reembolso no se pregunta nada. */}
+        {!existing && type !== 'transfer' && type !== 'refund' && (
+          <Field>
+            <Segmented
+              value={comportamiento}
+              onChange={setComportamiento}
+              options={
+                type === 'expense'
+                  ? [
+                      { value: 'suelto', label: 'No se repite' },
+                      { value: 'repite', label: 'Se repite' },
+                      { value: 'deuda', label: 'Deuda a plazos' }
+                    ]
+                  : [
+                      { value: 'suelto', label: 'No se repite' },
+                      { value: 'repite', label: 'Se repite' }
+                    ]
+              }
+            />
+          </Field>
+        )}
+
         {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
             título encabeza y se lleva el foco. De una línea, que es un título y no
             un cuaderno. */}
@@ -570,27 +594,6 @@ export function TransactionForm({
 
         {!existing && type !== 'transfer' && type !== 'refund' && (
           <>
-            {/* La misma pregunta que se hacía con dos casillas encadenadas —marca
-                esta y aparece la otra—, en tres botones que se leen de una vez.
-                «Deuda a plazos» solo en los gastos: no se debe cobrando. */}
-            <Field>
-              <Segmented
-                value={comportamiento}
-                onChange={setComportamiento}
-                options={
-                  type === 'expense'
-                    ? [
-                        { value: 'suelto', label: 'No se repite' },
-                        { value: 'repite', label: 'Se repite' },
-                        { value: 'deuda', label: 'Deuda a plazos' }
-                      ]
-                    : [
-                        { value: 'suelto', label: 'No se repite' },
-                        { value: 'repite', label: 'Se repite' }
-                      ]
-                }
-              />
-            </Field>
             {repite && (
               <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
                 <Field label="Repetición">

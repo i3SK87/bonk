@@ -1,7 +1,7 @@
 {
   "name": "bonk",
   "productName": "BONK",
-  "version": "1.61.0",
+  "version": "1.61.1",
   "description": "Gestor de finanzas personales para Windows",
   "author": "okli2",
   "private": true,
