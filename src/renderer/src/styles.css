@@ -724,9 +724,20 @@ p { margin: 0; }
 }
 
 /* Un campo es una columna, y sus hijos se estiran a lo ancho. Un selector de dos
-   o tres opciones no necesita todo el ancho del formulario: se queda con el suyo. */
+   o tres opciones no necesita todo el ancho de una pantalla de ajustes: se queda
+   con el suyo. */
 .field > .segmented {
   align-self: flex-start;
+}
+
+/* En un diálogo sí lo ocupa: son 520 px y una botonera encogida a la izquierda
+   deja un hueco que no dice nada. */
+.modal .field > .segmented {
+  align-self: stretch;
+}
+
+.modal .field > .segmented button {
+  flex: 1;
 }
 
 .field > label {

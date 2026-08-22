@@ -298,6 +298,14 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             </select>
           </Field>
 
+          {/* La rejilla era de dos columnas con un solo campo dentro: media fila en
+              blanco. El aviso de saldo es igual de corto y va aquí. */}
+          <Field
+            label="Avisarme si baja de"
+            hint="Aviso de Windows mientras dure. En cero no avisa nunca."
+          >
+            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} />
+          </Field>
         </div>
 
         <Field
@@ -325,15 +333,6 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-
-        <Field
-          label="Avisarme si baja de"
-          hint="Notificación de Windows y un aviso en Movimientos, mientras dure. Se vuelve a armar solo cuando el saldo remonta. En cero no avisa nunca."
-        >
-          <div style={{ maxWidth: 200 }}>
-            <AmountInput value={lowBalance} currency={currency} onChange={setLowBalance} compact />
-          </div>
-        </Field>
 
         {/* Una principal por tipo: la del banco es la que viene marcada al
             registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
