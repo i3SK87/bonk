@@ -31,25 +31,9 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps): R
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        onClose()
-        return
-      }
-      // El tabulador da vueltas dentro del diálogo en vez de irse a la ventana
-      // de detrás, que está inerte mientras esto esté abierto.
-      if (event.key !== 'Tab') return
-      const items = focusableInside()
-      if (items.length === 0) return
-
-      const first = items[0]
-      const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
+      // Escape y nada más: el tabulador está apagado en toda la aplicación, así
+      // que no hay foco que se escape del diálogo ni vueltas que darle.
+      if (event.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

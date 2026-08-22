@@ -628,12 +628,6 @@ try {
     conHistoria.paid,
     cerrada.paid + 2 * conHistoria.installment
   )
-  equal(
-    'lo que la aplicación ve se sigue diciendo aparte',
-    conHistoria.countBySoftware,
-    cerrada.paidCount
-  )
-  equal('y su dinero también', conHistoria.paidBySoftware, cerrada.paid)
   scheduled.adjustDebt(plazos.id, { paidCount: 0 })
   equal('a cero, vuelven a contarse las que se ven', verDeuda().paidCount, cerrada.paidCount)
 
@@ -716,7 +710,6 @@ try {
   scheduled.postNow(corta.id)
   equal('y la cuota que entra hoy suma una más', verCorta().paidCount, 3)
   equal('con su dinero detrás', verCorta().paid, 30000)
-  equal('sin recontar lo que ya se veía', verCorta().countBySoftware, 1)
   const generada = transactions.listTransactions({ limit: 500 }).filter((t) => t.scheduledId === corta.id)
   transactions.deleteTransactions(generada.map((t) => t.id))
   scheduled.adjustDebt(corta.id, {})

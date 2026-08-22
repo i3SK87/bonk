@@ -96,6 +96,17 @@ export function App(): ReactNode {
         setComposing(true)
       }
     }
+    /*
+     * Aquí no se tabula.
+     *
+     * BONK se lleva con el ratón, y el tabulador iba dejando el recuadro del
+     * foco en botones e iconos que no se estaban usando. En captura, para
+     * llegar antes que cualquier campo o diálogo.
+     */
+    const sinTabulador = (event: KeyboardEvent): void => {
+      if (event.key === 'Tab') event.preventDefault()
+    }
+    window.addEventListener('keydown', sinTabulador, true)
     window.addEventListener('keydown', onKey)
     return () => {
       offNew()
@@ -104,6 +115,7 @@ export function App(): ReactNode {
       offFailed()
       offSettled()
       offReached()
+      window.removeEventListener('keydown', sinTabulador, true)
       window.removeEventListener('keydown', onKey)
     }
   }, [toast, refresh])

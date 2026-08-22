@@ -462,8 +462,6 @@ export function debtProgress(reference = today()): DebtProgress[] {
                 : 'año',
       paidCount,
       paid,
-      paidBySoftware: summary.total,
-      countBySoftware: summary.count,
       leftCount,
       left,
       total,

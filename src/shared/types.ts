@@ -377,10 +377,6 @@ export interface DebtProgress {
   /** Cuántas cuotas se han pagado ya y cuánto suman, con lo de antes incluido. */
   paidCount: number
   paid: number
-  /** Solo lo que la aplicación ve en tus movimientos, sin lo que le hayas dicho. */
-  paidBySoftware: number
-  /** Y cuántas cuotas ve, para poder decir de dónde sale la cuenta. */
-  countBySoftware: number
   /** Cuántas quedan y cuánto suman, cuando hay fecha de fin. */
   leftCount: number | null
   left: number | null
