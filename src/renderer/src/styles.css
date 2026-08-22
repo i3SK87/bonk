@@ -2532,3 +2532,69 @@ button.list-row:focus-visible {
   border-top-right-radius: var(--radius-pill);
   border-bottom-right-radius: var(--radius-pill);
 }
+
+/* ---------- Dictado ---------- */
+
+.dictado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Un botón redondo y grande: se mantiene pulsado mientras se habla, y eso hay
+   que poder hacerlo sin apuntar. */
+.microfono {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-sunken);
+  color: var(--fg-muted);
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.microfono:hover:not(:disabled) {
+  color: var(--fg);
+  border-color: var(--fg-subtle);
+}
+
+.microfono:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Grabando: el latido dice que la ventana sigue viva, que es la duda que da
+   hablarle a un ordenador y no ver nada moverse. */
+.microfono.escuchando {
+  background: var(--negative);
+  border-color: var(--negative);
+  color: #fff;
+  animation: latido 1.1s ease-in-out infinite;
+}
+
+@keyframes latido {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* Lo entendido, antes de abrir el formulario. */
+.entendido {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}

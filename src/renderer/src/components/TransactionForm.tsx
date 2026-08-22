@@ -9,6 +9,7 @@ import { formatMoney } from '@shared/money'
 import { FRECUENCIAS } from '../lib/frecuencias'
 import { LENDERS } from '@shared/lenders'
 import type { Attachment, Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
+import type { OrdenVoz } from '@shared/voz'
 
 const api = window.bonk
 
@@ -20,6 +21,11 @@ interface Props {
   onClose: () => void
   /** Solo cuando se ha guardado; al cancelar no se llama. */
   onSaved?: () => void
+  /**
+   * Un formulario a medio rellenar, dictado. Solo manda al crear: sobre un
+   * movimiento que ya existe, sus datos son los suyos y no los de una frase.
+   */
+  dictado?: OrdenVoz | null
 }
 
 export function TransactionForm({
@@ -27,12 +33,15 @@ export function TransactionForm({
   defaultAccountId,
   refundFor,
   onClose,
-  onSaved
+  onSaved,
+  dictado
 }: Props): ReactNode {
   const { accounts, categories, run, toast, settings, fail } = useStore()
 
-  const [type, setType] = useState<TxType>(existing?.type ?? (refundFor ? 'refund' : 'expense'))
-  const [amount, setAmount] = useState(existing?.amount ?? 0)
+  const [type, setType] = useState<TxType>(
+    existing?.type ?? (refundFor ? 'refund' : (dictado?.tipo ?? 'expense'))
+  )
+  const [amount, setAmount] = useState(existing?.amount ?? dictado?.importe ?? 0)
   /*
    * La cuenta no se supone.
    *
@@ -42,20 +51,22 @@ export function TransactionForm({
    * Si no hay ninguna de esas, se queda vacía y hay que elegirla.
    */
   const [accountId, setAccountId] = useState<number | null>(
-    existing?.accountId ?? refundFor?.accountId ?? defaultAccountId ?? null
+    existing?.accountId ?? refundFor?.accountId ?? dictado?.cuentaId ?? defaultAccountId ?? null
   )
-  const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
+  const [toAccountId, setToAccountId] = useState<number | null>(
+    existing?.toAccountId ?? dictado?.cuentaDestinoId ?? null
+  )
   const [goalId, setGoalId] = useState<number | null>(existing?.goalId ?? null)
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(
-    existing?.categoryId ?? refundFor?.categoryId ?? null
+    existing?.categoryId ?? refundFor?.categoryId ?? dictado?.categoriaId ?? null
   )
   const [refundForId, setRefundForId] = useState<number | null>(existing?.refundForId ?? refundFor?.id ?? null)
   const [candidates, setCandidates] = useState<TransactionView[]>([])
   const [date, setDate] = useState(existing?.date ?? today())
   // La hora no se pide, pero la que traiga el movimiento se conserva.
   const time = existing?.time ?? ''
-  const [note, setNote] = useState(existing?.note ?? '')
+  const [note, setNote] = useState(existing?.note ?? dictado?.titulo ?? '')
 
   /*
    * Dejar montada la repetición desde aquí.
@@ -69,12 +80,14 @@ export function TransactionForm({
    * Solo al crear: sobre un movimiento que ya existe, marcarlo volvería a
    * montar una programación que probablemente ya está montada.
    */
-  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>('suelto')
+  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>(
+    dictado?.repeticion ?? 'suelto'
+  )
   const repite = comportamiento !== 'suelto'
   const esDeuda = comportamiento === 'deuda'
-  const [freq, setFreq] = useState<Frequency>('monthly')
-  const [interval, setInterval] = useState(1)
-  const [endDate, setEndDate] = useState('')
+  const [freq, setFreq] = useState<Frequency>(dictado?.freq ?? 'monthly')
+  const [interval, setInterval] = useState(dictado?.interval ?? 1)
+  const [endDate, setEndDate] = useState(dictado?.fechaFin ?? '')
   const [lender, setLender] = useState('')
   const [attachments, setAttachments] = useState<Attachment[]>([])
   /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */

@@ -3,6 +3,8 @@ import { useStore } from './lib/store'
 import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
+import { Dictado } from './components/Dictado'
+import type { OrdenVoz } from '@shared/voz'
 import { Celebration, GoalCelebration } from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
@@ -57,6 +59,9 @@ export function App(): ReactNode {
   const { ready, accounts, settings, toast, refresh, focusedAccountId } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
+  // Lo dictado espera aquí a que el formulario se monte con ello puesto.
+  const [dictando, setDictando] = useState(false)
+  const [dictado, setDictado] = useState<OrdenVoz | null>(null)
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [reached, setReached] = useState<GoalReached[]>([])
 
@@ -169,9 +174,21 @@ export function App(): ReactNode {
           {/* Solo donde se listan: en Ahorro o en Categorías no pinta nada.
               Ctrl+N sigue funcionando desde cualquier pestaña. */}
           {view === 'transactions' && (
-            <button className="btn primary" onClick={() => setComposing(true)}>
-              Nuevo movimiento
-            </button>
+            <>
+              {/* Dictar está en Movimientos por lo mismo que el botón de al lado:
+                  es donde se apunta, y lo que se dicta acaba siendo un apunte. */}
+              <button
+                className="btn icon"
+                onClick={() => setDictando(true)}
+                title="Dictar un movimiento"
+                aria-label="Dictar un movimiento"
+              >
+                <Icon name="microfono" size={16} />
+              </button>
+              <button className="btn primary" onClick={() => setComposing(true)}>
+                Nuevo movimiento
+              </button>
+            </>
           )}
 
           {/* Y aquí aterrizan las de las demás pantallas. Cada una sigue siendo
@@ -196,10 +213,24 @@ export function App(): ReactNode {
         )}
       </main>
 
+      {ready && dictando && (
+        <Dictado
+          onClose={() => setDictando(false)}
+          onEntendido={(orden) => {
+            setDictado(orden)
+            setComposing(true)
+          }}
+        />
+      )}
+
       {ready && composing && (
         <TransactionForm
           defaultAccountId={focusedAccountId ?? undefined}
-          onClose={() => setComposing(false)}
+          dictado={dictado}
+          onClose={() => {
+            setComposing(false)
+            setDictado(null)
+          }}
         />
       )}
 

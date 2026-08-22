@@ -22,6 +22,7 @@ import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
+import { entender, numeroDicho, importeDicho, parecido, repeticionDicha, duracionDicha } from '../src/shared/voz'
 import { periodRange, addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
 
 let passed = 0
@@ -1338,6 +1339,90 @@ try {
       mezcla.some((row) => row.categoryId === conCategoria.categoryId) &&
       mezcla.some((row) => row.categoryId == null)
   )
+
+  section('Lo que se dice en voz alta')
+  /*
+   * El analizador no toca la base: convierte una frase en un formulario a medio
+   * rellenar. Se comprueba aquí, con las cuentas y categorías de verdad de esta
+   * prueba, porque los nombres propios son justo lo que se dice mal.
+   */
+  // Con un nombre de banco de verdad, que es donde la voz se equivoca: los de
+  // esta prueba —«Banco», «Cartera»— se dicen bien a la primera y no probarían
+  // nada.
+  const caixa = accounts.saveAccount({
+    name: 'CaixaBank', type: 'bank', currency: 'EUR', initialBalance: 0,
+    icon: 'bank', color: '#0A84FF', excludeFromTotal: false
+  })
+  const laHucha = accounts.saveAccount({
+    name: 'Hucha', type: 'savings', currency: 'EUR', initialBalance: 0,
+    icon: 'piggy', color: '#34C759', excludeFromTotal: false
+  })
+  const catalogo = {
+    cuentas: accounts.listAccounts().map((a) => ({ id: a.id, name: a.name })),
+    categorias: categories.listCategories().map((c) => ({ id: c.id, name: c.name, kind: c.kind }))
+  }
+
+  // Los números, dichos de las dos maneras.
+  equal('doscientos son doscientos', numeroDicho(['doscientos']), 200)
+  equal('y doscientos cincuenta también', numeroDicho(['doscientos', 'cincuenta']), 250)
+  equal('mil doscientos, con su mil delante', numeroDicho(['mil', 'doscientos']), 1200)
+  equal('treinta y cinco, con la y en medio', numeroDicho(['treinta', 'y', 'cinco']), 35)
+  check('y una palabra que no es número corta la cuenta', numeroDicho(['cuenta']) === null)
+
+  // El importe llega en céntimos, como todo el dinero de la casa.
+  equal('«200 euros» son veinte mil céntimos', importeDicho(['200', 'euros']), 20000)
+  equal('«doscientos euros» también', importeDicho(['doscientos', 'euros']), 20000)
+  equal('«200 con 50» se lleva los céntimos', importeDicho(['200', 'con', '50', 'euros']), 20050)
+  equal('y sin decir euros se entiende igual', importeDicho(['traspasa', '200', 'de', 'aqui']), 20000)
+
+  // Los nombres propios, que es lo que la voz estropea.
+  check('«caja bank» encuentra CaixaBank', parecido('caja bank', catalogo.cuentas)?.name === 'CaixaBank')
+  check('«caixa» también', parecido('caixa', catalogo.cuentas)?.name === 'CaixaBank')
+  check('y lo que no se parece a nada no elige nada', parecido('zaragoza', catalogo.cuentas) === undefined)
+
+  // La frecuencia y cuánto dura.
+  equal('«mensual» es cada un mes', repeticionDicha(['mensual'])?.interval, 1)
+  equal('«cada dos meses» son dos', repeticionDicha(['cada', 'dos', 'meses'])?.interval, 2)
+  equal(
+    'dos años mensuales son veinticuatro cuotas',
+    duracionDicha(['a', 'dos', 'anos'], { freq: 'monthly', interval: 1 }),
+    24
+  )
+  equal(
+    'y a doce meses, doce',
+    duracionDicha(['a', '12', 'meses'], { freq: 'monthly', interval: 1 }),
+    12
+  )
+
+  // Y las dos frases enteras.
+  const elTraspaso = entender('Haz un traspaso de CaixaBank a Hucha, 200 euros', catalogo, day)
+  equal('un traspaso se reconoce como traspaso', elTraspaso.tipo, 'transfer')
+  equal('con su importe', elTraspaso.importe, 20000)
+  equal('de dónde sale', elTraspaso.cuentaId, caixa.id)
+  equal('y a dónde va', elTraspaso.cuentaDestinoId, laHucha.id)
+  check('sin nada que echar en falta', elTraspaso.falta.length === 0)
+
+  const laDeudaDicha = entender(
+    'crea una nueva deuda llamada portatil de 128 euros al mes a dos años',
+    catalogo,
+    day
+  )
+  equal('una deuda es un gasto', laDeudaDicha.tipo, 'expense')
+  equal('y se marca como deuda', laDeudaDicha.repeticion, 'deuda')
+  equal('con su cuota', laDeudaDicha.importe, 12800)
+  equal('cada mes', laDeudaDicha.freq, 'monthly')
+  equal('su nombre', laDeudaDicha.titulo, 'portatil')
+  equal(
+    'y la última cuota veintitrés meses después de la primera',
+    laDeudaDicha.fechaFin,
+    addMonths(day, 23)
+  )
+
+  // Lo que no se entiende se dice, no se inventa.
+  const coja = entender('haz un traspaso', catalogo, day)
+  check('sin importe, se avisa', coja.falta.includes('el importe'))
+  check('y sin cuentas, también', coja.falta.includes('la cuenta de destino'))
+  check('pero nunca revienta', coja.tipo === 'transfer')
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })

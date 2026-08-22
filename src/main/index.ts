@@ -1,4 +1,5 @@
-import { app, shell, BrowserWindow, Menu, Tray, nativeTheme, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, Menu, Tray, nativeTheme, nativeImage, protocol, net } from 'electron'
+import { pathToFileURL } from 'node:url'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { openDatabase, closeDatabase, makeBackup } from './db'
@@ -19,6 +20,22 @@ const iconPath = join(__dirname, '../../resources/icon.ico')
 
 /** Identidad de la aplicación ante Windows: barra de tareas, inicio y avisos. */
 const APP_ID = 'com.bonk.desktop'
+
+/*
+ * Un protocolo propio para los ficheros que hay que pedir con fetch.
+ *
+ * La ventana se carga desde `file://`, y desde ahí Chromium no deja pedir con
+ * fetch ni a los ficheros de al lado: el motor de reconocimiento de voz, que
+ * carga su WebAssembly así, se quedaría en la puerta. Con esto esos ficheros se
+ * sirven desde un origen de verdad, sin abrir la mano en el resto de la
+ * aplicación.
+ */
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'bonk',
+    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
+  }
+])
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -60,6 +77,33 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
+  })
+
+  /*
+   * El micrófono, y solo el micrófono.
+   *
+   * Sin manejador, Chromium deniega todo por defecto y el dictado no llegaría
+   * ni a pedir permiso. Se concede a mano lo que hace falta y se niega el resto
+   * —cámara, ubicación, pantalla— en vez de abrir la mano entera: esta ventana
+   * carga código nuestro, pero la lista de lo que puede pedir es larga.
+   */
+  mainWindow.webContents.session.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(permission === 'media')
+  })
+  mainWindow.webContents.session.setPermissionCheckHandler(
+    (_contents, permission) => permission === 'media'
+  )
+
+  /*
+   * Solo lo que está dentro de la carpeta del renderer, y solo hacia abajo: sin
+   * la comprobación, un «bonk://../../» serviría cualquier fichero del disco.
+   */
+  const raizWeb = join(__dirname, '../renderer')
+  protocol.handle('bonk', (peticion) => {
+    const ruta = decodeURIComponent(new URL(peticion.url).pathname)
+    const destino = join(raizWeb, ruta)
+    if (!destino.startsWith(raizWeb)) return new Response('No', { status: 403 })
+    return net.fetch(pathToFileURL(destino).toString())
   })
 
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
