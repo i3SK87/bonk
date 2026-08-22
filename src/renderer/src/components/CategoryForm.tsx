@@ -114,16 +114,9 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           />
         </Field>
 
-        <Field label="Icono">
-          <IconPicker value={icon} options={CATEGORY_ICONS} onChange={setIcon} />
-        </Field>
-
-        <Field label="Color">
-          <ColorPicker value={color} onChange={setColor} />
-        </Field>
-
-        {/* Las tres opciones se explican solas y se leen de un vistazo: el rótulo
-            preguntaba lo que la propia botonera ya contesta. */}
+        {/* Debajo del tipo, que las dos botoneras dicen qué clase de categoría es
+            esto: la de arriba si entra o sale, y esta si vuelve. Las tres opciones
+            se explican solas, así que no llevan rótulo. */}
         <Field>
           <Segmented
             value={comportamiento}
@@ -134,6 +127,14 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
               { value: 'deuda', label: 'Deuda a plazos' }
             ]}
           />
+        </Field>
+
+        <Field label="Icono">
+          <IconPicker value={icon} options={CATEGORY_ICONS} onChange={setIcon} />
+        </Field>
+
+        <Field label="Color">
+          <ColorPicker value={color} onChange={setColor} />
         </Field>
 
         <Checkbox
