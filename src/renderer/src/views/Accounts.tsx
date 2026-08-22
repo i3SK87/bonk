@@ -324,34 +324,37 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
         </Field>
 
 
-        {/* Una principal por tipo: la del banco es la que viene marcada al
-            registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
-        <Checkbox
-          checked={isPrimary && !archived}
-          onChange={setIsPrimary}
-          label={`Usar como ${(ACCOUNT_TYPES.find((item) => item.value === type)?.label ?? 'cuenta').toLowerCase()} principal`}
-          hint={
-            archived
-              ? 'Archivada no puede ser la principal.'
-              : 'La que se propone por defecto. Solo una por tipo.'
-          }
-        />
-
-        <Checkbox
-          checked={excludeFromTotal}
-          onChange={setExclude}
-          label="Excluir del patrimonio total"
-          hint="Dinero de terceros, o que no cuentas como tuyo."
-        />
-
-        {account && (
+        {/* A la par: son respuestas de sí o no, y en columna estiraban la ficha. */}
+        <div className="casillas">
+          {/* Una principal por tipo: la del banco es la que viene marcada al
+              registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
           <Checkbox
-            checked={archived}
-            onChange={setArchived}
-            label="Archivar la cuenta"
-            hint="No sale en los desplegables; conserva su histórico."
+            checked={isPrimary && !archived}
+            onChange={setIsPrimary}
+            label={`Usar como ${(ACCOUNT_TYPES.find((item) => item.value === type)?.label ?? 'cuenta').toLowerCase()} principal`}
+            hint={
+              archived
+                ? 'Archivada no puede ser la principal.'
+                : 'La que se propone por defecto. Solo una por tipo.'
+            }
           />
-        )}
+
+          <Checkbox
+            checked={excludeFromTotal}
+            onChange={setExclude}
+            label="Excluir del patrimonio total"
+            hint="Dinero de terceros, o que no cuentas como tuyo."
+          />
+
+          {account && (
+            <Checkbox
+              checked={archived}
+              onChange={setArchived}
+              label="Archivar la cuenta"
+              hint="No sale en los desplegables; conserva su histórico."
+            />
+          )}
+        </div>
       </Modal>
 
       {confirmDelete && account && (

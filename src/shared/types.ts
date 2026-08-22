@@ -60,8 +60,6 @@ export interface Category {
   breakdownByNote: boolean
   /** Si sus movimientos pueden llevar facturas adjuntas. */
   keepsInvoices: boolean
-  /** Deuda a plazos: sus programaciones se finalizan en vez de pausarse. */
-  isDebt: boolean
   /**
    * Lo que vuelve solo —suscripciones, recibos, el alquiler—: al apuntar un
    * movimiento suyo se propone dejar montada la repetición.
@@ -251,6 +249,12 @@ export interface Scheduled {
    * las veces: la última suele ser más corta.
    */
   debtTotal: number | null
+  /**
+   * Deuda a plazos: sale en su pestaña con lo pagado y lo que falta, y termina
+   * en vez de pausarse. Es del plan y no de la categoría, para que el portátil
+   * pueda estar en Tecnología y contar igual.
+   */
+  isDebt: boolean
   /** Avisa el día antes. Se puede silenciar una sin callar las demás. */
   remind: boolean
   /** Fecha de la ocurrencia ya avisada; evita repetir el aviso en cada arranque. */

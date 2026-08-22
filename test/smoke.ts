@@ -282,20 +282,11 @@ try {
   equal('el último mes acumula el gasto', series[11].expense, 6550)
 
   section('Desglose por notas')
-  // Marcada como deuda a plazos: es lo que la hace salir en la pestaña Deudas y
-  // lo que dispara la enhorabuena al saldarla.
   const debt = categories.saveCategory({
-    name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30', isDebt: true
+    name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30'
   })
   check('una categoría nueva se desglosa por defecto', debt.breakdownByNote)
   check('y no guarda facturas hasta que se le diga', debt.keepsInvoices === false)
-  // A plazos solo se paga: un ingreso que entra a plazos son varios ingresos.
-  check(
-    'un ingreso no puede ser una deuda a plazos',
-    categories.saveCategory({
-      name: 'Paga extra', kind: 'income', icon: 'coins', color: '#34C759', isDebt: true
-    }).isDebt === false
-  )
   check(
     'la casilla de facturas se guarda',
     categories.saveCategory({ ...debt, keepsInvoices: true }).keepsInvoices
@@ -574,7 +565,8 @@ try {
     interval: 1,
     nextDate: nextOccurrence(day, 'monthly', 1),
     endDate: addMonths(day, 5),
-    autoPost: true
+    autoPost: true,
+    isDebt: true
   })
   const laDeuda = scheduled.debtProgress(day).find((row) => row.title === 'Sofá cama')!
   check('con su repetición, ya sale en Deudas', laDeuda != null)
@@ -595,8 +587,14 @@ try {
     type: 'expense', name: null, note: 'Kindle', accountId: bank.id,
     categoryId: deuda ? deuda.id : food.id,
     amount: 1999, freq: 'monthly', interval: 1,
-    nextDate: addMonths(day, -1), endDate: day, autoPost: true
+    nextDate: addMonths(day, -1), endDate: day, autoPost: true, isDebt: true
   })
+  // Es del plan y no de su categoría: así el portátil puede ir en Tecnología.
+  check('la deuda sale por su propia marca, no por la categoría', plazos.isDebt)
+  check(
+    'y su categoría no sabe nada de deudas',
+    scheduled.debtProgress(day).some((row) => row.scheduledId === plazos.id)
+  )
   scheduled.postDue(day)
   const saldada = scheduled.getScheduled(plazos.id)!
   check('registra las cuotas del plan', saldada.lastPosted != null)
@@ -664,6 +662,7 @@ try {
     amount: 10000,
     freq: 'monthly',
     interval: 1,
+    isDebt: true,
     nextDate: day,
     endDate: addMonths(day, 2),
     autoPost: false
@@ -697,6 +696,7 @@ try {
     amount: 10000,
     freq: 'monthly',
     interval: 1,
+    isDebt: true,
     nextDate: day,
     endDate: addMonths(day, 2),
     autoPost: false,

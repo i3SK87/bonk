@@ -40,16 +40,11 @@ function espera(days: number): string {
 }
 
 export function DebtsView(): ReactNode {
-  const { settings, categories, revision, fail, run } = useStore()
+  const { settings, revision, fail, run } = useStore()
   const [debts, setDebts] = useState<DebtProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [adjusting, setAdjusting] = useState<DebtProgress | null>(null)
   const [creando, setCreando] = useState(false)
-
-  // Una deuda es una programación con categoría de deuda, así que el botón abre
-  // esa misma ficha con la categoría ya elegida. Sin ninguna categoría marcada
-  // como deuda no hay nada que crear, y el cartel de vacío ya lo explica.
-  const categoriaDeuda = categories.find((item) => item.isDebt && !item.archived)
 
 
   useEffect(() => {
@@ -75,13 +70,14 @@ export function DebtsView(): ReactNode {
 
   return (
     <>
-      {categoriaDeuda && (
-        <AccionCabecera>
-          <button className="btn primary" onClick={() => setCreando(true)}>
-            Nueva deuda
-          </button>
-        </AccionCabecera>
-      )}
+      {/* Una deuda es una programación marcada como tal, así que el botón abre
+          esa misma ficha con la casilla ya puesta. Su categoría la eliges tú: el
+          portátil en Tecnología y el curso en Formación, si así los piensas. */}
+      <AccionCabecera>
+        <button className="btn primary" onClick={() => setCreando(true)}>
+          Nueva deuda
+        </button>
+      </AccionCabecera>
 
       <div className="card flush">
         {!loading && abiertas.length > 0 && (
@@ -177,12 +173,12 @@ export function DebtsView(): ReactNode {
         <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
       )}
 
-      {creando && categoriaDeuda && (
+      {creando && (
         <ScheduleModal
           schedule={null}
           siblings={[]}
-          defaultCategoryId={categoriaDeuda.id}
           soloGasto
+          deudaPorDefecto
           titulo="Nueva deuda"
           onClose={() => setCreando(false)}
           onSave={(input) => run(() => api.scheduled.save(input), 'Deuda creada')}

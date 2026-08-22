@@ -1990,6 +1990,17 @@ textarea::placeholder {
   background: var(--bg-sunken);
 }
 
+/* Las casillas de un formulario, a la par. Son respuestas de sí o no y en fila
+   india estiraban la ficha media pantalla; de dos en dos se leen de un vistazo.
+   Con `auto-fit` se acomodan solas: si el diálogo se estrecha, vuelven a una
+   por renglón sin necesidad de medir nada. */
+.casillas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px 20px;
+  align-items: start;
+}
+
 /* Las categorías van en cuadrícula, no en lista: cada una lleva su recuadro. */
 .list-row.recuadrada {
   border: 1px solid var(--border);

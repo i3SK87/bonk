@@ -14,7 +14,6 @@ interface CategoryRow {
   breakdown_by_note: number
   keeps_invoices: number
   recurring: number
-  is_debt: number
 }
 
 function mapCategory(row: CategoryRow): Category {
@@ -29,7 +28,6 @@ function mapCategory(row: CategoryRow): Category {
     sortOrder: row.sort_order,
     breakdownByNote: row.breakdown_by_note === 1,
     keepsInvoices: row.keeps_invoices === 1,
-    isDebt: row.is_debt === 1,
     recurring: row.recurring === 1
   }
 }
@@ -59,29 +57,16 @@ export interface CategoryInput {
   archived?: boolean
   breakdownByNote?: boolean
   keepsInvoices?: boolean
-  isDebt?: boolean
   recurring?: boolean
 }
 
 export function saveCategory(input: CategoryInput): Category {
   const db = getDb()
-
-  /*
-   * A plazos solo se paga.
-   *
-   * Un ingreso que entra a plazos son varios ingresos, no una deuda: no hay
-   * nada que saldar ni que quede por pagar, que es de lo que habla la pestaña
-   * Deudas. Marcado en un ingreso, además, se colaba en el icono de esa
-   * pestaña, que toma el de la primera categoría de deuda y los ingresos van
-   * antes en la lista.
-   */
-  const isDebt = input.kind === 'income' ? false : (input.isDebt ?? false)
-
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
     db.prepare(
-      'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ?, is_debt = ?, recurring = ? WHERE id = ?'
+      'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ?, recurring = ? WHERE id = ?'
     ).run(
       input.name,
       input.kind,
@@ -91,7 +76,6 @@ export function saveCategory(input: CategoryInput): Category {
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
-      isDebt ? 1 : 0,
       input.recurring ? 1 : 0,
       input.id
     )
@@ -103,7 +87,7 @@ export function saveCategory(input: CategoryInput): Category {
     .get(input.kind) as unknown as { m: number }
   const result = db
     .prepare(
-      'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices, is_debt, recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices, recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
       input.name,
@@ -114,7 +98,6 @@ export function saveCategory(input: CategoryInput): Category {
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
-      isDebt ? 1 : 0,
       input.recurring ? 1 : 0
     )
   return getCategory(Number(result.lastInsertRowid))!

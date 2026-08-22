@@ -27,15 +27,15 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
   /*
-   * Deuda y repetición eran dos casillas, y se pisaban: una deuda a plazos es,
-   * por definición, algo que vuelve cada mes. Marcar las dos decía lo mismo dos
-   * veces y dejar solo la de deuda parecía apagar la otra.
+   * Si lo suyo vuelve solo. No decide nada por sí mismo: al apuntar un
+   * movimiento de esta categoría, la casilla de repetirlo sale ya marcada.
    *
-   * Es una sola pregunta con tres respuestas, y por dentro sigue guardándose en
-   * las dos marcas de siempre.
+   * Ser una deuda a plazos estuvo aquí y se fue a la programación: era lo que
+   * obligaba a meter el portátil, el Kindle y un curso en la misma categoría
+   * para que salieran en su pestaña.
    */
-  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>(
-    category?.isDebt ? 'deuda' : category?.recurring ? 'repite' : 'suelto'
+  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite'>(
+    category?.recurring ? 'repite' : 'suelto'
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -46,12 +46,6 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
     // Igual que en cuentas: sin recuento el aviso pierde detalle, no utilidad.
     api.categories.countTransactions(category.id).then(setLinked).catch(() => undefined)
   }, [category])
-
-  // Pasando una deuda a ingreso, el tercer botón desaparece: sin esto la
-  // respuesta se quedaba elegida en un botón que ya no estaba en pantalla.
-  useEffect(() => {
-    if (kind === 'income') setComportamiento((actual) => (actual === 'deuda' ? 'suelto' : actual))
-  }, [kind])
 
   async function save(): Promise<void> {
     if (!name.trim()) return setError('La categoría necesita un nombre')
@@ -64,7 +58,6 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       archived,
       breakdownByNote,
       keepsInvoices,
-      isDebt: comportamiento === 'deuda',
       recurring: comportamiento === 'repite'
     })
     if (saved) onClose()
@@ -121,29 +114,15 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         </Field>
 
         {/* Debajo del tipo, que las dos botoneras dicen qué clase de categoría es
-            esto: la de arriba si entra o sale, y esta si vuelve. Las tres opciones
-            se explican solas, así que no llevan rótulo.
-
-            A plazos solo se paga: un ingreso que entra a plazos son varios
-            ingresos, no una deuda. Estando marcada, la Deudas mostraba el icono
-            de esa categoría en su pestaña, que toma el de la primera deuda que
-            encuentra y los ingresos van antes en la lista. */}
+            esto: la de arriba si entra o sale, y esta si vuelve. */}
         <Field>
           <Segmented
             value={comportamiento}
             onChange={setComportamiento}
-            options={
-              kind === 'income'
-                ? [
-                    { value: 'suelto', label: 'No se repite' },
-                    { value: 'repite', label: 'Se repite' }
-                  ]
-                : [
-                    { value: 'suelto', label: 'No se repite' },
-                    { value: 'repite', label: 'Se repite' },
-                    { value: 'deuda', label: 'Deuda a plazos' }
-                  ]
-            }
+            options={[
+              { value: 'suelto', label: 'No se repite' },
+              { value: 'repite', label: 'Se repite' }
+            ]}
           />
         </Field>
 
@@ -155,26 +134,29 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-        <Checkbox
-          checked={keepsInvoices}
-          onChange={setKeepsInvoices}
-          label="Adjuntar facturas"
-        />
-
-        <Checkbox
-          checked={breakdownByNote}
-          onChange={setBreakdownByNote}
-          label="Desglose en la pestaña Informes"
-        />
-
-        {category && (
+        {/* A la par: son respuestas de sí o no, y en columna estiraban la ficha. */}
+        <div className="casillas">
           <Checkbox
-            checked={archived}
-            onChange={setArchived}
-            label="Archivar la categoría"
-            hint="No sale al crear movimientos; el histórico se conserva."
+            checked={keepsInvoices}
+            onChange={setKeepsInvoices}
+            label="Adjuntar facturas"
           />
-        )}
+
+          <Checkbox
+            checked={breakdownByNote}
+            onChange={setBreakdownByNote}
+            label="Desglose en la pestaña Informes"
+          />
+
+          {category && (
+            <Checkbox
+              checked={archived}
+              onChange={setArchived}
+              label="Archivar la categoría"
+              hint="No sale al crear movimientos; el histórico se conserva."
+            />
+          )}
+        </div>
       </Modal>
 
       {confirmDelete && (

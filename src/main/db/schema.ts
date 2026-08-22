@@ -527,5 +527,32 @@ export const MIGRATIONS: string[] = [
 
   UPDATE categories SET recurring = 1
    WHERE name IN ('Suscripciones', 'Facturas', 'Alquiler', 'Seguros', 'Nómina');
+  `,
+
+  // v23 — la deuda es del plan, no de la categoría.
+  //
+  // Ser una deuda a plazos era una marca de la categoría, y eso obligaba a
+  // meter en la misma todo lo que se paga a plazos para que saliera en su
+  // pestaña: el portátil, el Kindle y un curso acababan juntos por cómo se
+  // pagan, no por lo que son. La categoría dejaba de decir en qué te gastas el
+  // dinero, que es su único trabajo, y para volver a separarlos dentro hubo que
+  // inventar el desglose por título.
+  //
+  // Una deuda no es tampoco un movimiento suelto: es el plan entero de
+  // veintiséis cuotas. Su sitio es la programación, que es lo que la pestaña
+  // Deudas mira de verdad. Así el portátil puede ir en Tecnología y seguir
+  // contando como deuda, y quien llame «chopped» a las suyas no tiene que
+  // renombrar nada.
+  //
+  // Las que ya existen se marcan desde su categoría, para que el primer día
+  // nadie eche nada en falta. Y la marca de la categoría se va: ya no significa
+  // nada, y dejarla ahí solo invitaría a volver a usarla.
+  `
+  ALTER TABLE scheduled ADD COLUMN is_debt INTEGER NOT NULL DEFAULT 0;
+
+  UPDATE scheduled SET is_debt = 1
+   WHERE category_id IN (SELECT id FROM categories WHERE is_debt = 1);
+
+  ALTER TABLE categories DROP COLUMN is_debt;
   `
 ]

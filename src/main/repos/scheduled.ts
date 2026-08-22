@@ -39,6 +39,7 @@ interface ScheduledRow {
   debt_start_date: string | null
   lender: string | null
   debt_total: number | null
+  is_debt: number
   remind: number
   reminded_for: string | null
   settled_at: string | null
@@ -81,6 +82,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     debtStartDate: row.debt_start_date,
     lender: row.lender,
     debtTotal: row.debt_total,
+    isDebt: row.is_debt === 1,
     remind: row.remind === 1,
     remindedFor: row.reminded_for,
     settledAt: row.settled_at
@@ -146,6 +148,8 @@ export interface ScheduledInput {
   goalId?: number | null
   /** Quién cobra, cuando es una deuda. */
   lender?: string | null
+  /** Si el plan es una deuda a plazos: lo que sale en la pestaña Deudas. */
+  isDebt?: boolean
   remind?: boolean
 }
 
@@ -176,7 +180,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
           SET name = ?, type = ?, account_id = ?, to_account_id = ?, category_id = ?, amount = ?,
               amount_to = ?, payee = ?, note = ?, freq = ?, interval = ?, next_date = ?, end_date = ?,
               auto_post = ?, active = ?, refund_for_scheduled_id = ?, goal_id = ?, remind = ?,
-              lender = ?
+              lender = ?, is_debt = ?
         WHERE id = ?`
     ).run(
       bind(input.name?.trim() || null),
@@ -198,6 +202,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(goalId),
       input.remind === false ? 0 : 1,
       bind(input.lender?.trim() || null),
+      input.isDebt ? 1 : 0,
       input.id
     )
     return getScheduled(input.id)!
@@ -208,8 +213,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       `INSERT INTO scheduled
          (name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
           freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, goal_id, remind,
-          lender)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          lender, is_debt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       bind(input.name?.trim() || null),
@@ -231,7 +236,8 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(refundForScheduledId),
       bind(goalId),
       input.remind === false ? 0 : 1,
-      bind(input.lender?.trim() || null)
+      bind(input.lender?.trim() || null),
+      input.isDebt ? 1 : 0
     )
   return getScheduled(Number(result.lastInsertRowid))!
 }
@@ -392,7 +398,7 @@ function monthlyCost(amount: number, freq: Frequency, interval: number): number 
 
 export function debtProgress(reference = today()): DebtProgress[] {
   const rows = getDb()
-    .prepare(`${VIEW_SELECT} WHERE c.is_debt = 1 ORDER BY s.settled_at IS NOT NULL, s.next_date, s.id`)
+    .prepare(`${VIEW_SELECT} WHERE s.is_debt = 1 ORDER BY s.settled_at IS NOT NULL, s.next_date, s.id`)
     .all() as unknown as ScheduledViewRow[]
 
   return rows.map((row) => {
@@ -489,7 +495,7 @@ export function pendingSettlements(): ScheduledView[] {
       `${VIEW_SELECT}
         WHERE s.settled_at IS NOT NULL
           AND s.settled_notified = 0
-          AND c.is_debt = 1
+          AND s.is_debt = 1
         ORDER BY s.settled_at, s.id`
     )
     .all() as unknown as ScheduledViewRow[]

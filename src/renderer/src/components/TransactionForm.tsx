@@ -115,12 +115,10 @@ export function TransactionForm({
     setCategoryId(candidates.find((item) => item.id === id)?.categoryId ?? null)
   }
 
-  // Una deuda a plazos sin programación no sale en Deudas, y una suscripción
-  // apuntada a mano se olvida al mes siguiente: en las dos, la repetición se
-  // ofrece con el interruptor ya puesto.
+  // Una suscripción apuntada a mano se olvida al mes siguiente: marcada la
+  // categoría, la repetición se ofrece con el interruptor ya puesto.
   const categoria = categories.find((item) => item.id === categoryId)
-  const esDeuda = categoria?.isDebt === true
-  const seRepiteSola = esDeuda || categoria?.recurring === true
+  const seRepiteSola = categoria?.recurring === true
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
@@ -585,11 +583,7 @@ export function TransactionForm({
               checked={repite}
               onChange={setRepite}
               label="Se repite cada cierto tiempo"
-              hint={
-                esDeuda
-                  ? 'Sin repetición no sale en Deudas ni se sabe cuánto queda.'
-                  : 'La próxima vez se registra sola.'
-              }
+              hint="La próxima vez se registra sola."
             />
             {repite && (
               <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
@@ -618,7 +612,7 @@ export function TransactionForm({
 
                 <Field
                   label="Termina el"
-                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Déjalo vacío si no tiene fin.'}
+                  hint="Déjalo vacío si no tiene fin."
                 >
                   <DateInput value={endDate} onChange={setEndDate} clearable />
                 </Field>

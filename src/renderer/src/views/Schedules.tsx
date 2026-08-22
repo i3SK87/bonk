@@ -51,21 +51,13 @@ function refundOptionLabel(row: ScheduledView): string {
 }
 
 export function SchedulesView(): ReactNode {
-  const { categories, revision, run, toast, fail } = useStore()
+  const { revision, run, toast, fail } = useStore()
   const [rows, setRows] = useState<ScheduledView[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ScheduledView | null>(null)
   const [creating, setCreating] = useState(false)
   const [finishing, setFinishing] = useState<ScheduledView | null>(null)
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
-
-  /**
-   * Una cuota de deuda no se pausa, se termina: si la saldas antes de tiempo
-   * esas cuotas ya no van a existir. Lo marca la categoría, no el nombre, para
-   * que renombrarla no rompa nada.
-   */
-  const isDebt = (row: ScheduledView): boolean =>
-    categories.some((category) => category.id === row.categoryId && category.isDebt)
 
   useEffect(() => {
     setLoading(true)
@@ -179,7 +171,7 @@ export function SchedulesView(): ReactNode {
                       <span className="pill">{row.categoryName}</span>
                     )}
                     {!row.active && (
-                      <span className="pill">{isDebt(row) ? 'Finalizada' : 'En pausa'}</span>
+                      <span className="pill">{row.isDebt ? 'Finalizada' : 'En pausa'}</span>
                     )}
                   </div>
                   <div className="small muted truncate">
@@ -226,7 +218,7 @@ export function SchedulesView(): ReactNode {
                 >
                   <Icon name="check" size={15} />
                 </button>
-                {isDebt(row) && row.active ? (
+                {row.isDebt && row.active ? (
                   <button
                     className="btn ghost icon"
                     title="Finalizar: la deuda queda saldada y no se generan más cuotas"
@@ -360,6 +352,8 @@ export interface ScheduleModalProps {
    * traspaso. Con un solo tipo posible, el selector no pinta nada.
    */
   soloGasto?: boolean
+  /** Nace ya marcada como deuda: es como la crea la pestaña Deudas. */
+  deudaPorDefecto?: boolean
   /** Cómo se titula. Desde Deudas esto no es «una programación», es una deuda. */
   titulo?: string
   onClose: () => void
@@ -372,6 +366,7 @@ export function ScheduleModal({
   siblings,
   defaultCategoryId,
   soloGasto,
+  deudaPorDefecto,
   titulo,
   onClose,
   onSave,
@@ -404,6 +399,15 @@ export function ScheduleModal({
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  /*
+   * Que este plan sea una deuda a plazos.
+   *
+   * Estuvo en la categoría, y obligaba a meter en una sola todo lo que se paga
+   * a plazos para que saliera en su pestaña. Aquí el portátil puede ir en
+   * Tecnología y contar igual, y quien llame «chopped» a sus deudas no tiene
+   * que renombrar nada.
+   */
+  const [esDeuda, setEsDeuda] = useState(schedule?.isDebt ?? deudaPorDefecto ?? false)
 
   /**
    * Apartar lo mismo cada mes para el mismo plan es una decisión que se toma una
@@ -429,9 +433,6 @@ export function ScheduleModal({
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
-  // Quién cobra solo tiene sentido en una deuda: en la compra del súper no hay
-  // financiera que valga, y el campo sobraría en el noventa por ciento del uso.
-  const esDeuda = categories.some((item) => item.id === categoryId && item.isDebt)
   const visibleCategories = categories.filter(
     (category) => category.kind === (type === 'income' ? 'income' : 'expense'),
   )
@@ -459,6 +460,7 @@ export function ScheduleModal({
       refundForScheduledId: type === 'refund' ? refundForScheduledId : null,
       goalId: hucha ? goalId : null,
       lender: esDeuda ? lender || null : null,
+      isDebt: esDeuda,
     })
     if (saved) onClose()
   }
@@ -658,19 +660,33 @@ export function ScheduleModal({
           </Field>
         </div>
 
-        <Checkbox
-          checked={autoPost}
-          onChange={setAutoPost}
-          label="Registrar automáticamente"
-          hint="Desactivado, solo avisa y la registras tú."
-        />
+        {/* Las tres casillas, a la par: son respuestas de sí o no, cortas, y en
+            columna estiraban el formulario media pantalla para nada. */}
+        <div className="casillas">
+          <Checkbox
+            checked={autoPost}
+            onChange={setAutoPost}
+            label="Registrar automáticamente"
+            hint="Desactivado, solo avisa y la registras tú."
+          />
 
-        <Checkbox
-          checked={remind}
-          onChange={setRemind}
-          label="Avisarme el día antes"
-          hint="Requiere los avisos encendidos en Ajustes."
-        />
+          <Checkbox
+            checked={remind}
+            onChange={setRemind}
+            label="Avisarme el día antes"
+            hint="Requiere los avisos encendidos en Ajustes."
+          />
+
+          {/* Un traspaso no se debe a nadie, y un reembolso es dinero que vuelve. */}
+          {type !== 'transfer' && type !== 'refund' && (
+            <Checkbox
+              checked={esDeuda}
+              onChange={setEsDeuda}
+              label="Es una deuda a plazos"
+              hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
+            />
+          )}
+        </div>
       </Modal>
 
       {confirmDelete && (
