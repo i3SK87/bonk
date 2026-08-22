@@ -773,11 +773,18 @@ p { margin: 0; }
 }
 
 /* El mismo campo cuando el importe no es lo que se viene a escribir, sino un
-   ajuste de la ficha: el tamaño de titular ahí gritaba sin motivo. */
+   ajuste de la ficha: el tamaño de titular ahí gritaba sin motivo.
+
+   La letra, la de cualquier otro campo: con quince píxeles quedaba 2,5 más alto
+   que el desplegable con el que comparte fila, y dos cajas casi iguales se ven
+   peor que dos distintas. */
 .input.amount-input.compact {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 620;
   padding: 9px 12px;
+  /* Y el mismo interlineado que un desplegable, que el de los campos de texto
+     es un pelo mayor y dejaba la caja un píxel más alta. */
+  line-height: 20px;
 }
 
 .input.amount-input {
