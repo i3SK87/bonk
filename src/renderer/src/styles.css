@@ -279,20 +279,19 @@ body {
   cursor: default;
 }
 
-/* Los datos se pueden seleccionar y copiar —un importe, una nota, una ruta—,
-   que para eso están. Lo que no se selecciona es la tramoya: botones, pestañas
-   y la barra lateral, donde arrastrar solo pinta texto en azul sin querer. */
-.sidebar,
-.btn,
-.nav-item,
-.segmented,
-.account-chip,
-.pill,
-.avatar,
-.day-heading,
-.modal-header,
-.table th {
+/* Los rótulos de la aplicación no se seleccionan.
+
+   Ir a lista por lista era pelear una por una y siempre quedaba alguna: un
+   doble clic sobre «Se repite cada cierto tiempo» dejaba la frase en azul, como
+   si fuera el texto de un documento. Aquí no hay documento; lo que se escribe
+   son los campos, y esos siguen seleccionándose. */
+body {
   user-select: none;
+}
+
+input,
+textarea {
+  user-select: text;
 }
 
 input,

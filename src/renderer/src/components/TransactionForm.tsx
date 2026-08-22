@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, Checkbox, NumberInput } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
@@ -54,6 +54,10 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
    * montar una programación que probablemente ya está montada.
    */
   const [repite, setRepite] = useState(false)
+  const repeticion = useRef<HTMLDivElement>(null)
+  // Solo al marcarla a mano: si se marcase sola al elegir una categoría de deuda,
+  // el foco saltaría del título nada más abrir el formulario.
+  const primeraVez = useRef(true)
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
@@ -137,6 +141,22 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
   useEffect(() => {
     if (!existing) setRepite(seRepiteSola)
   }, [seRepiteSola, existing])
+
+  /*
+   * Al marcar la casilla aparecen dos campos debajo, y en un formulario que ya
+   * llega abajo eso queda fuera de la vista: uno marca y no pasa nada visible.
+   * Llevando el foco al primero, la ventana lo trae a la vista sola.
+   */
+  useEffect(() => {
+    if (primeraVez.current) {
+      primeraVez.current = false
+      return
+    }
+    if (!repite) return
+    const campo = repeticion.current?.querySelector('input')
+    campo?.focus()
+    repeticion.current?.scrollIntoView({ block: 'nearest' })
+  }, [repite])
 
   useEffect(() => {
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
@@ -536,7 +556,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
               }
             />
             {repite && (
-              <div className="grid cols-2" style={{ marginTop: 10 }}>
+              <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
                 <Field label="Repetición">
                   <div className="row tight">
                     <NumberInput
