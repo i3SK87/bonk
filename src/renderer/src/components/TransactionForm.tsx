@@ -263,13 +263,18 @@ export function TransactionForm({
      * La próxima cae una vuelta después de este movimiento, que ya está pagado.
      * Se registra sola, como las demás; si no se quiere, se apaga desde su ficha.
      */
-    if (repite && !existing && type !== 'transfer' && type !== 'refund') {
+    if (repite && !existing) {
       await run(
         () =>
           api.scheduled.save({
             type,
             accountId,
-            categoryId,
+            // Un traspaso programado necesita su destino, y si entra en una
+            // hucha, el plan al que va: lo mismo que el movimiento que acaba de
+            // guardarse, para que la copia mensual sea de verdad una copia.
+            toAccountId: type === 'transfer' ? toAccountId : null,
+            goalId: type === 'transfer' && hucha ? goalId : null,
+            categoryId: type === 'transfer' ? null : categoryId,
             amount,
             note: note || null,
             freq,
@@ -402,9 +407,12 @@ export function TransactionForm({
         )}
 
         {/* Debajo, la otra mitad de la misma pregunta: qué es esto y si vuelve.
-            «Deuda a plazos» solo en los gastos, que no se debe cobrando; en un
-            traspaso o un reembolso no se pregunta nada. */}
-        {!existing && type !== 'transfer' && type !== 'refund' && (
+            Se repite lo que sea: el alquiler, la nómina, el traspaso mensual a la
+            hucha y la parte del alquiler que devuelve el otro. «Deuda a plazos»
+            solo en los gastos, que no se debe dinero cobrándolo. Devolviendo un
+            gasto concreto tampoco: esa devolución es de ese gasto y de ninguno
+            más. */}
+        {!existing && !refundFor && (
           <Field>
             <Segmented
               value={comportamiento}
@@ -592,7 +600,7 @@ export function TransactionForm({
           </Field>
         )}
 
-        {!existing && type !== 'transfer' && type !== 'refund' && (
+        {!existing && !refundFor && (
           <>
             {repite && (
               <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
