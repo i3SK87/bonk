@@ -318,8 +318,18 @@ export function NumberInput({
           decimals: decimals > 0,
           negative: min != null && min < 0
         })
-        setText(cleaned)
-        if (cleaned !== '' && cleaned !== '-') commit(cleaned)
+        /*
+         * El máximo también manda mientras se escribe. Recortarlo solo al salir
+         * guardaba bien el número, pero por el camino el campo aceptaba un
+         * «9123131231231» que no significaba nada. El mínimo no se toca: se
+         * escribe de izquierda a derecha, y un 5 camino del 50 no es un error
+         * todavía.
+         */
+        const numero = Number(cleaned.replace(',', '.'))
+        const visible =
+          max != null && Number.isFinite(numero) && numero > max ? String(max) : cleaned
+        setText(visible)
+        if (visible !== '' && visible !== '-') commit(visible)
       }}
     />
   )

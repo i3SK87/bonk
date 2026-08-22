@@ -316,7 +316,15 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         label="Cuotas pagadas"
         hint={`BONK ve ${debt.countBySoftware} en tus movimientos. Si llevabas pagando desde antes, pon aquí cuántas van en total.`}
       >
-        <NumberInput value={paidCount} onChange={setPaidCount} min={0} max={999} style={{ width: 110 }} />
+        {/* Noventa y nueve cuotas son más de ocho años pagando: de sobra. Y con
+            el mismo ancho que los contadores de repetición, que son hermanos. */}
+        <NumberInput
+          value={paidCount}
+          onChange={setPaidCount}
+          min={0}
+          max={99}
+          style={{ width: 74 }}
+        />
       </Field>
 
       <Field
