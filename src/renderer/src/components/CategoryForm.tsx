@@ -26,17 +26,6 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [archived, setArchived] = useState(category?.archived ?? false)
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
-  /*
-   * Si lo suyo vuelve solo. No decide nada por sí mismo: al apuntar un
-   * movimiento de esta categoría, la casilla de repetirlo sale ya marcada.
-   *
-   * Ser una deuda a plazos estuvo aquí y se fue a la programación: era lo que
-   * obligaba a meter el portátil, el Kindle y un curso en la misma categoría
-   * para que salieran en su pestaña.
-   */
-  const [comportamiento, setComportamiento] = useState<'suelto' | 'repite'>(
-    category?.recurring ? 'repite' : 'suelto'
-  )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -57,8 +46,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       color,
       archived,
       breakdownByNote,
-      keepsInvoices,
-      recurring: comportamiento === 'repite'
+      keepsInvoices
     })
     if (saved) onClose()
   }
@@ -109,19 +97,6 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
             options={[
               { value: 'expense', label: 'Gasto', tone: 'expense' },
               { value: 'income', label: 'Ingreso', tone: 'income' }
-            ]}
-          />
-        </Field>
-
-        {/* Debajo del tipo, que las dos botoneras dicen qué clase de categoría es
-            esto: la de arriba si entra o sale, y esta si vuelve. */}
-        <Field>
-          <Segmented
-            value={comportamiento}
-            onChange={setComportamiento}
-            options={[
-              { value: 'suelto', label: 'No se repite' },
-              { value: 'repite', label: 'Se repite' }
             ]}
           />
         </Field>

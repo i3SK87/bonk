@@ -13,7 +13,6 @@ interface CategoryRow {
   sort_order: number
   breakdown_by_note: number
   keeps_invoices: number
-  recurring: number
 }
 
 function mapCategory(row: CategoryRow): Category {
@@ -27,8 +26,7 @@ function mapCategory(row: CategoryRow): Category {
     archived: row.archived === 1,
     sortOrder: row.sort_order,
     breakdownByNote: row.breakdown_by_note === 1,
-    keepsInvoices: row.keeps_invoices === 1,
-    recurring: row.recurring === 1
+    keepsInvoices: row.keeps_invoices === 1
   }
 }
 
@@ -57,7 +55,6 @@ export interface CategoryInput {
   archived?: boolean
   breakdownByNote?: boolean
   keepsInvoices?: boolean
-  recurring?: boolean
 }
 
 export function saveCategory(input: CategoryInput): Category {
@@ -66,7 +63,7 @@ export function saveCategory(input: CategoryInput): Category {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
     db.prepare(
-      'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ?, recurring = ? WHERE id = ?'
+      'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ? WHERE id = ?'
     ).run(
       input.name,
       input.kind,
@@ -76,7 +73,6 @@ export function saveCategory(input: CategoryInput): Category {
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
-      input.recurring ? 1 : 0,
       input.id
     )
     return getCategory(input.id)!
@@ -87,7 +83,7 @@ export function saveCategory(input: CategoryInput): Category {
     .get(input.kind) as unknown as { m: number }
   const result = db
     .prepare(
-      'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices, recurring) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
       input.name,
@@ -97,8 +93,7 @@ export function saveCategory(input: CategoryInput): Category {
       input.color,
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
-      input.keepsInvoices ? 1 : 0,
-      input.recurring ? 1 : 0
+      input.keepsInvoices ? 1 : 0
     )
   return getCategory(Number(result.lastInsertRowid))!
 }

@@ -60,11 +60,6 @@ export interface Category {
   breakdownByNote: boolean
   /** Si sus movimientos pueden llevar facturas adjuntas. */
   keepsInvoices: boolean
-  /**
-   * Lo que vuelve solo —suscripciones, recibos, el alquiler—: al apuntar un
-   * movimiento suyo se propone dejar montada la repetición.
-   */
-  recurring: boolean
 }
 
 export interface Tag {

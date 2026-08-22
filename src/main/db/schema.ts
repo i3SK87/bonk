@@ -554,5 +554,19 @@ export const MIGRATIONS: string[] = [
    WHERE category_id IN (SELECT id FROM categories WHERE is_debt = 1);
 
   ALTER TABLE categories DROP COLUMN is_debt;
+  `,
+
+  // v24 — una categoría es solo una categoría.
+  //
+  // Marcarla como «se repite» solo servía para que la casilla de repetir el
+  // movimiento saliera ya puesta al elegirla. Era una comodidad, pero metía en
+  // la categoría una decisión que es del movimiento: si el recibo de la luz de
+  // este mes se va a repetir o no lo decides al apuntarlo, y una categoría solo
+  // tiene que decir en qué te gastas el dinero.
+  //
+  // Con `is_debt` fuera en la v23, esta era la última marca de comportamiento
+  // que le quedaba. Se va detrás.
+  `
+  ALTER TABLE categories DROP COLUMN recurring;
   `
 ]

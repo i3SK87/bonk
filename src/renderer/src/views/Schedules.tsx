@@ -677,8 +677,12 @@ export function ScheduleModal({
             hint="Requiere los avisos encendidos en Ajustes."
           />
 
-          {/* Un traspaso no se debe a nadie, y un reembolso es dinero que vuelve. */}
-          {type !== 'transfer' && type !== 'refund' && (
+          {/* Un traspaso no se debe a nadie, y un reembolso es dinero que vuelve.
+              Y creando una deuda desde su pestaña la casilla sobra: preguntarle a
+              quien acaba de pulsar «Nueva deuda» si esto es una deuda es hacerle
+              repetir lo que ya dijo. Editando sí sale, que ahí se puede cambiar
+              de idea. */}
+          {type !== 'transfer' && type !== 'refund' && !(deudaPorDefecto && !schedule) && (
             <Checkbox
               checked={esDeuda}
               onChange={setEsDeuda}

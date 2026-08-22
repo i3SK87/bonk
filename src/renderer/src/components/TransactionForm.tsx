@@ -71,9 +71,6 @@ export function TransactionForm({
    */
   const [repite, setRepite] = useState(false)
   const repeticion = useRef<HTMLDivElement>(null)
-  // Solo al marcarla a mano: si se marcase sola al elegir una categoría de las
-  // que se repiten, el foco saltaría del título nada más abrir el formulario.
-  const primeraVez = useRef(true)
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
@@ -118,11 +115,6 @@ export function TransactionForm({
     setCategoryId(candidates.find((item) => item.id === id)?.categoryId ?? null)
   }
 
-  // Una suscripción apuntada a mano se olvida al mes siguiente: marcada la
-  // categoría, la repetición se ofrece con el interruptor ya puesto.
-  const categoria = categories.find((item) => item.id === categoryId)
-  const seRepiteSola = categoria?.recurring === true
-
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
   // Las facturas solo salen donde tienen sentido: lo decide la categoría.
@@ -152,25 +144,12 @@ export function TransactionForm({
     }
   }, [type, categoryId, visibleCategories])
 
-  // Al elegir una categoría de las que vuelven se propone repetir; al salir de
-  // ella, se recoge la propuesta si no se ha tocado nada.
-  useEffect(() => {
-    // Una devolución no se repite, aunque el gasto que devuelve sí: hereda su
-    // categoría, y con una de deuda la casilla salía marcada sola y al guardar
-    // dejaba montada una programación de reembolsos que nadie había pedido.
-    if (!existing) setRepite(type === 'refund' ? false : seRepiteSola)
-  }, [seRepiteSola, existing, type])
-
   /*
    * Al marcar la casilla aparecen dos campos debajo, y en un formulario que ya
    * llega abajo eso queda fuera de la vista: uno marca y no pasa nada visible.
    * Llevando el foco al primero, la ventana lo trae a la vista sola.
    */
   useEffect(() => {
-    if (primeraVez.current) {
-      primeraVez.current = false
-      return
-    }
     if (!repite) return
     const campo = repeticion.current?.querySelector('input')
     campo?.focus()
@@ -277,7 +256,7 @@ export function TransactionForm({
      * La próxima cae una vuelta después de este movimiento, que ya está pagado.
      * Se registra sola, como las demás; si no se quiere, se apaga desde su ficha.
      */
-    if (repite && !existing && type !== 'transfer') {
+    if (repite && !existing && type !== 'transfer' && type !== 'refund') {
       await run(
         () =>
           api.scheduled.save({
