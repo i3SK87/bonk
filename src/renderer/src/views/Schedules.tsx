@@ -502,7 +502,7 @@ export function ScheduleModal({
         {type === 'refund' && (
           <Field
             label="Devolución de esta programada"
-            hint="Al registrarse, la devolución se engancha sola al movimiento que haya dejado esa programación. Sin enlazar, entra como devolución suelta de su categoría."
+            hint="Se engancha sola al movimiento de esa programación."
           >
             <select
               className="select"
@@ -526,7 +526,7 @@ export function ScheduleModal({
         {/* Como en un movimiento: el título primero y con el foco puesto. */}
         <Field
           label="Título"
-          hint="Es lo que se lee en la lista y lo que llevará cada movimiento que genere."
+          hint="Se lee en la lista, y lo hereda cada movimiento."
         >
           <input
             className="input"
@@ -663,14 +663,14 @@ export function ScheduleModal({
           checked={autoPost}
           onChange={setAutoPost}
           label="Registrar automáticamente"
-          hint="Si lo desactivas, la programación solo sirve de recordatorio y la registras tú a mano."
+          hint="Desactivado, solo avisa y la registras tú."
         />
 
         <Checkbox
           checked={remind}
           onChange={setRemind}
           label="Avisarme el día antes"
-          hint="Solo si los avisos están encendidos en Ajustes. Desmárcalo para callar esta sin callar las demás."
+          hint="Requiere los avisos encendidos en Ajustes."
         />
       </Modal>
 

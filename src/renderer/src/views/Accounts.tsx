@@ -290,12 +290,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           <AmountInput value={Math.abs(balance)} currency={currency} onChange={setBalance} />
         </Field>
 
-        <Checkbox
-          checked={negative}
-          onChange={setNegative}
-          label="Es un saldo negativo"
-          hint="Para tarjetas de crédito o préstamos pendientes."
-        />
+        <Checkbox checked={negative} onChange={setNegative} label="Es un saldo negativo" />
 
         {/* Y debajo, a la par, los dos cortos. La ayuda del aviso cabe en un renglón
             a este ancho: con la larga estiraba la fila y dejaba un hueco al lado. */}
@@ -345,8 +340,8 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           label={`Usar como ${(ACCOUNT_TYPES.find((item) => item.value === type)?.label ?? 'cuenta').toLowerCase()} principal`}
           hint={
             archived
-              ? 'Una cuenta archivada no puede ser la principal.'
-              : 'La que se da por supuesta en su tipo. Solo puede haber una.'
+              ? 'Archivada no puede ser la principal.'
+              : 'La que se propone por defecto. Solo una por tipo.'
           }
         />
 
@@ -354,7 +349,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           checked={excludeFromTotal}
           onChange={setExclude}
           label="Excluir del patrimonio total"
-          hint="Dinero de terceros, o que no consideras tuyo."
+          hint="Dinero de terceros, o que no cuentas como tuyo."
         />
 
         {account && (
@@ -362,7 +357,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             checked={archived}
             onChange={setArchived}
             label="Archivar la cuenta"
-            hint="Desaparece de los desplegables pero conserva su histórico."
+            hint="No sale en los desplegables; conserva su histórico."
           />
         )}
       </Modal>

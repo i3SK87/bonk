@@ -507,7 +507,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
           <AmountInput value={targetAmount} currency={currency} onChange={setTargetAmount} />
         </Field>
 
-        <Field label="Para cuándo" hint="Opcional: sin fecha no se calcula ritmo.">
+        <Field label="Para cuándo" hint="Sin fecha no se calcula el ritmo.">
           <DateInput value={targetDate} onChange={setTargetDate} clearable />
         </Field>
 

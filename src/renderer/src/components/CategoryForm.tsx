@@ -126,9 +126,9 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           label="Cada cuánto vuelve"
           hint={
             comportamiento === 'deuda'
-              ? 'Cuotas de algo que se acaba. Sale en la pestaña Deudas, con lo que llevas pagado y lo que falta, y su programación se finaliza en vez de pausarse.'
+              ? 'Cuotas de algo que se acaba.'
               : comportamiento === 'repite'
-                ? 'Suscripciones, recibos, el alquiler. Al apuntar un movimiento suyo se propone dejar montada la repetición.'
+                ? 'Suscripciones, recibos, alquiler. Al apuntar uno, se ofrece repetirlo.'
                 : 'Un gasto o un ingreso corriente, cada vez el suyo.'
           }
         >
@@ -147,14 +147,14 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           checked={keepsInvoices}
           onChange={setKeepsInvoices}
           label="Guardar facturas en sus movimientos"
-          hint="El campo para adjuntar la factura solo sale en los movimientos de las categorías que lo tengan puesto."
+          hint="Adjunta facturas a tus movimientos."
         />
 
         <Checkbox
           checked={breakdownByNote}
           onChange={setBreakdownByNote}
-          label="Desglosar por notas en los informes"
-          hint="Para categorías que son un cajón: Deuda se abre en 4Geeks, PC y Kindle. Desactívalo en las fijas, donde la nota no distingue nada."
+          label="Desglosar por título"
+          hint="Desglose en informes."
         />
 
         {category && (
@@ -162,7 +162,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
             checked={archived}
             onChange={setArchived}
             label="Archivar la categoría"
-            hint="Deja de aparecer al crear movimientos, pero el histórico se conserva."
+            hint="No sale al crear movimientos; el histórico se conserva."
           />
         )}
       </Modal>

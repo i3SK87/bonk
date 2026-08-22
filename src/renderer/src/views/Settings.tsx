@@ -58,14 +58,14 @@ export function SettingsView(): ReactNode {
             checked={settings.startWithWindows}
             onChange={(value) => updateSettings({ startWithWindows: value })}
             label="Arrancar con Windows, en la bandeja"
-            hint="Se abre al iniciar sesión pero sin ventana: se queda como icono junto al reloj, y desde ahí la abres cuando la necesitas. Así las programadas vencidas se registran solas aunque no entres."
+            hint="Arranca sin ventana, como icono junto al reloj. Así las programadas vencidas se registran solas."
           />
 
           <Checkbox
             checked={settings.closeToTray}
             onChange={(value) => updateSettings({ closeToTray: value })}
             label="Al cerrar la ventana, seguir en la bandeja"
-            hint="El aspa esconde la ventana en vez de cerrar BONK. Para salir del todo, «Salir» en el menú del icono de la bandeja o en Archivo."
+            hint="El aspa esconde la ventana. Para salir del todo, «Salir» en la bandeja o en Archivo."
           />
 
           <div className="divider" />
@@ -74,14 +74,14 @@ export function SettingsView(): ReactNode {
             checked={settings.remindersEnabled}
             onChange={(value) => updateSettings({ remindersEnabled: value })}
             label="Avisarme el día antes de cada movimiento programado"
-            hint="Notificación de Windows con el importe y la cuenta. Como las programaciones tienen fecha pero no hora, el aviso llega en cuanto BONK ve que algo vence mañana: hace falta que esté abierta o en la bandeja. Cada programación se puede callar por separado desde su ficha."
+            hint="Notificación de Windows con el importe y la cuenta. Hace falta que BONK esté abierta o en la bandeja."
           />
 
 
           <div className="row">
             <div className="small muted" style={{ maxWidth: 460 }}>
-              Si no ves los avisos, revisa que BONK tenga permiso en Configuración de Windows ▸ Sistema ▸
-              Notificaciones, y que no esté puesto el asistente de concentración.
+              Si no ves los avisos, mira el permiso en Windows ▸ Sistema ▸ Notificaciones y el asistente de
+              concentración.
             </div>
             <div className="spacer" />
             <button
@@ -118,7 +118,7 @@ export function SettingsView(): ReactNode {
             />
           </Field>
 
-          <Field label="Paleta" hint="Cada una tiene su versión clara y su versión oscura.">
+          <Field label="Paleta" hint="Cada una, en claro y en oscuro.">
             <div className="palette-grid">
               {PALETAS.map((item) => (
                 <button
@@ -365,7 +365,7 @@ function ImportModal({
             checked={createMissing}
             onChange={setCreateMissing}
             label="Crear cuentas y categorías que no existan"
-            hint="Si lo desactivas, las filas con cuentas desconocidas se descartan."
+            hint="Desactivado, esas filas se descartan."
           />
         </>
       )}

@@ -383,10 +383,7 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
         )}
 
         {type === 'refund' && !refundFor && (
-          <p className="field-hint">
-            Un reembolso entra en tu cuenta pero descuenta del gasto al que lo enlaces, en vez de contar como
-            ingreso. Elige abajo el gasto que te devuelven.
-          </p>
+          <p className="field-hint">Elige abajo el gasto que te devuelven.</p>
         )}
 
         {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
@@ -528,8 +525,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
             label="Gasto que te devuelven"
             hint={
               candidates.length === 0
-                ? `Ningún gasto del ${formatDate(date)} tiene algo pendiente de devolver. Cambia la fecha, o apunta el reembolso desde la ficha del gasto.`
-                : 'La devolución se descuenta de ese gasto y hereda su categoría.'
+                ? `Ningún gasto del ${formatDate(date)} tiene nada pendiente. Cambia la fecha o hazlo desde el gasto.`
+                : 'Se descuenta de ese gasto y hereda su categoría.'
             }
           >
             <select
@@ -563,8 +560,8 @@ export function TransactionForm({ existing, defaultAccountId, refundFor, onClose
               label="Se repite cada cierto tiempo"
               hint={
                 esDeuda
-                  ? 'Una deuda vive de su repetición: sin ella no sale en Deudas ni se sabe cuánto queda.'
-                  : 'Suscripciones, recibos, cuotas: la próxima vez se registra sola.'
+                  ? 'Sin repetición no sale en Deudas ni se sabe cuánto queda.'
+                  : 'La próxima vez se registra sola.'
               }
             />
             {repite && (
