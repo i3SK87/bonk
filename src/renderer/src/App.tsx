@@ -130,6 +130,8 @@ export function App(): ReactNode {
             key={item.id}
             className={`nav-item${view === item.id ? ' active' : ''}`}
             onClick={() => setView(item.id)}
+            // Plegada a iconos, es lo único que dice cuál es cuál.
+            title={item.label}
           >
             <Icon name={item.id === 'debts' ? iconoDeuda : item.icon} size={17} />
             {item.label}

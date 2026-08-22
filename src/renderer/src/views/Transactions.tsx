@@ -456,10 +456,12 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           <div className="spacer" />
 
           <div className="row tight">
-            <div style={{ position: 'relative', marginRight: 8 }}>
+            <div
+              style={{ position: 'relative', marginRight: 8, flex: '1 1 210px', minWidth: 150, maxWidth: 240 }}
+            >
               <input
                 className="input"
-                style={{ paddingLeft: 30, paddingRight: search ? 30 : 12, width: 210 }}
+                style={{ paddingLeft: 30, paddingRight: search ? 30 : 12, width: '100%' }}
                 placeholder="Buscar…"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -531,11 +533,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
         {range === 'custom' && (
           <div className="card-body row" style={{ paddingBottom: 0 }}>
-            <div style={{ width: 170 }}>
+            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
               <DateInput value={customFrom} onChange={setCustomFrom} />
             </div>
             <span className="muted">hasta</span>
-            <div style={{ width: 170 }}>
+            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
               <DateInput value={customTo} onChange={setCustomTo} />
             </div>
           </div>

@@ -348,6 +348,36 @@ p { margin: 0; }
   height: 100vh;
 }
 
+/*
+ * En ventana estrecha, la barra se queda en iconos.
+ *
+ * Son 168 px que vuelven al contenido justo cuando no los hay, y los iconos
+ * bastan: son ocho pestañas y siempre las mismas. El nombre de cada una sigue
+ * saliendo al pasar por encima.
+ */
+@media (max-width: 1080px) {
+  .app { grid-template-columns: 64px 1fr; }
+
+  .sidebar {
+    padding: 16px 8px 12px;
+    align-items: center;
+  }
+
+  /* El texto se va con el tamaño de letra a cero; el icono lleva su medida
+     puesta en el propio SVG, así que se queda. */
+  .sidebar .nav-item,
+  .sidebar-brand {
+    justify-content: center;
+    font-size: 0;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* El patrimonio no cabe en 64 px, y en Movimientos ya preside la lista. */
+  .sidebar-footer { display: none; }
+}
+
 .sidebar {
   background: var(--sidebar-bg);
   color: var(--sidebar-fg);
@@ -455,6 +485,8 @@ p { margin: 0; }
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  /* Lo que hace que las reglas de arriba puedan preguntar por su ancho. */
+  container-type: inline-size;
 }
 
 .topbar {
@@ -497,6 +529,9 @@ p { margin: 0; }
   gap: 12px;
   padding: 15px 18px;
   border-bottom: 1px solid var(--border);
+  /* Antes de que los botones se estrujen unos contra otros, que bajen de
+     línea: una barra de herramientas apretada no se lee. */
+  flex-wrap: wrap;
 }
 
 /* Una cabecera que no tiene nada debajo no separa nada: sin esto, su raya
@@ -527,13 +562,24 @@ p { margin: 0; }
 .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
-@media (max-width: 1180px) {
+/*
+ * Las rejillas se miden contra el contenido, no contra la ventana.
+ *
+ * Con consultas de ventana, los 232 px de la barra lateral no contaban: en una
+ * ventana de 940 —el mínimo— quedaban 708 de contenido, pero como 940 no baja
+ * de 860, las tarjetas seguían en tres columnas de 230 px. Justo donde más
+ * falta hacía, la regla no llegaba a dispararse.
+ *
+ * Preguntando al contenedor da igual lo que ocupe la barra, y sigue valiendo
+ * cuando se pliega.
+ */
+@container (max-width: 940px) {
   .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   /* Los de tres son cifras sueltas y caben de sobra: partirlos en 2 + 1 dejaba
      una tarjeta huérfana en su propia fila. */
 }
 
-@media (max-width: 860px) {
+@container (max-width: 620px) {
   .grid.cols-2,
   .grid.cols-3,
   .grid.cols-4 { grid-template-columns: minmax(0, 1fr); }
@@ -2327,4 +2373,40 @@ button.list-row:focus-visible {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+/* ---------- La barra de una deuda, cuota a cuota ---------- */
+
+/* Tramos con una rendija entre ellos, como los bloques de una barra de vida:
+   cada uno es una cuota, y de un vistazo se cuentan las que van. */
+.cuotas {
+  display: flex;
+  gap: 3px;
+  margin-top: 10px;
+  height: 9px;
+}
+
+.cuota {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px;
+  background: var(--bg-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Lo pagado va en verde: en una deuda, lo que sube es lo bueno. */
+.cuota.pagada {
+  background: var(--positive);
+  box-shadow: none;
+}
+
+/* Los cabos, redondeados como la barra de una pieza. */
+.cuota:first-child {
+  border-top-left-radius: var(--radius-pill);
+  border-bottom-left-radius: var(--radius-pill);
+}
+
+.cuota:last-child {
+  border-top-right-radius: var(--radius-pill);
+  border-bottom-right-radius: var(--radius-pill);
 }

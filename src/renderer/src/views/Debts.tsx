@@ -198,13 +198,13 @@ function DebtCard({
   currency: string
   onAdjust: () => void
 }): ReactNode {
-  const color = debt.categoryColor ?? '#FF453A'
   const quienCobra = findLender(debt.lender)
 
   return (
     <div>
+      {/* Sin icono delante: en una pantalla que solo tiene deudas, un distintivo
+          de deuda repetido en cada ficha no distingue nada. */}
       <div className="row">
-        <Avatar icon={debt.categoryIcon ?? 'debt'} color={color} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="row tight">
             <span style={{ fontWeight: 570 }} className="truncate">
@@ -218,23 +218,17 @@ function DebtCard({
             )}
           </div>
           <div className="small muted truncate">
-            {/* La línea de contexto, en tres piezas cortas: cuánto es una cuota, de
-                dónde sale y cuándo se acaba. Lo que se pregunta de una deuda es
-                cuándo termina, no cuándo empezó; el «cada vez» sobraba porque en
-                una deuda a plazos no hay otra cosa que pueda ser. */}
-            {formatMoney(debt.installment, currency)}/{debt.cadence} · {debt.accountName}
+            {/* Dos piezas y ya: cuánto es una cuota y cuándo se acaba. La cuenta de
+                la que sale no cambia nada de lo que se viene a mirar aquí. */}
+            {formatMoney(debt.installment, currency)}/{debt.cadence}
             {debt.endDate ? ` · Hasta el ${formatDate(debt.endDate)}` : ' · Sin fecha de fin'}
           </div>
         </div>
         <div className="spacer" />
         <div style={{ textAlign: 'right' }}>
           <div className="amount" style={{ fontSize: 16 }}>
-            {formatMoney(debt.paid, currency)}{' '}
-            {debt.total != null && (
-              <span className="muted" style={{ fontWeight: 500 }}>
-                de {formatMoney(debt.total, currency)}
-              </span>
-            )}
+            {formatMoney(debt.paid, currency)}
+            {debt.total != null && ` de ${formatMoney(debt.total, currency)}`}
           </div>
           <div className="small muted">
             {debt.left != null ? `Faltan ${formatMoney(debt.left, currency)}` : 'Sin total conocido'}
@@ -247,10 +241,14 @@ function DebtCard({
 
       {/* Sin fecha de fin no hay barra: no se puede medir contra un total que no
           existe. Lo pagado se sigue diciendo, que es lo que se sabe. */}
-      {debt.percent != null && (
-        <div style={{ marginTop: 10 }}>
-          <ProgressBar percent={debt.percent} color={color} />
-        </div>
+      {debt.leftCount != null ? (
+        <BarraCuotas pagadas={debt.paidCount} restantes={debt.leftCount} />
+      ) : (
+        debt.percent != null && (
+          <div style={{ marginTop: 10 }}>
+            <ProgressBar percent={debt.percent} color={'var(--positive)'} />
+          </div>
+        )
       )}
 
       <div className="small subtle" style={{ marginTop: 5 }}>
@@ -336,5 +334,41 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         <AmountInput value={total} currency={debt.currency} onChange={setTotal} />
       </Field>
     </Modal>
+  )
+}
+
+/**
+ * La barra de una deuda, cuota a cuota.
+ *
+ * Una barra continua dice un porcentaje, y de una deuda no se piensa en
+ * porcentajes: se piensa en cuántas van y cuántas quedan. Partida en tramos,
+ * cada uno es una cuota y se cuentan de un vistazo.
+ *
+ * En verde, que es lo pagado: lo que sube es lo bueno. Con muchas cuotas los
+ * tramos se estrechan hasta que dejan de leerse, así que a partir de sesenta se
+ * vuelve a una barra de una pieza.
+ */
+function BarraCuotas({ pagadas, restantes }: { pagadas: number; restantes: number }): ReactNode {
+  const total = pagadas + restantes
+  if (total === 0) return null
+
+  if (total > 60) {
+    return (
+      <div style={{ marginTop: 10 }}>
+        <ProgressBar percent={(pagadas / total) * 100} color="var(--positive)" />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="cuotas"
+      role="img"
+      aria-label={`${pagadas} de ${total} cuotas pagadas`}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className={i < pagadas ? 'cuota pagada' : 'cuota'} />
+      ))}
+    </div>
   )
 }
