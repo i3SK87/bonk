@@ -2183,10 +2183,13 @@ button.list-row:focus-visible {
 
 .calc-key.clear { color: var(--negative); }
 
+/* Los veintidós colores, en dos filas de once y centradas. Envolviéndose solos
+   partían donde cabía —quince y siete— y la segunda fila quedaba coja. */
 .color-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(11, 26px);
   gap: 7px;
+  justify-content: center;
 }
 
 .swatch {
