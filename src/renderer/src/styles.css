@@ -506,6 +506,13 @@ p { margin: 0; }
   border-bottom: 1px solid var(--border);
 }
 
+/* El hueco de las acciones, cuando la pantalla no manda ninguna, no debe ocupar
+   ni separar: vacío seguía cobrando los 14 px de separación de la cabecera, y el
+   botón quedaba desalineado con el canto de las tarjetas de abajo. */
+#acciones-cabecera:empty {
+  display: none;
+}
+
 .topbar h1 {
   margin-right: auto;
 }
