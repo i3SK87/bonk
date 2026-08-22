@@ -259,8 +259,9 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
       >
         {/* El icono, a ras del campo y no del rótulo: alineados por abajo, los dos
             cuadrados —el del avatar y el del campo— comparten canto. */}
+        {/* El avatar, a la derecha: delante empujaba el rótulo del título 50 px
+            hacia dentro y era el único que no arrancaba donde los demás. */}
         <div className="row" style={{ alignItems: 'flex-end' }}>
-          <Avatar icon={icon} color={color} size="large" />
           <div style={{ flex: 1 }}>
             <Field label="Título" error={error}>
               <input
@@ -272,6 +273,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
               />
             </Field>
           </div>
+          <Avatar icon={icon} color={color} size="large" />
         </div>
 
         <div className="grid cols-2">
@@ -312,8 +314,8 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           label={account ? 'Saldo actual' : 'Saldo inicial'}
           hint={
             account && movements !== 0
-              ? `Lo que tiene la cuenta ahora mismo. Sus movimientos suman ${formatMoney(movements, currency, { sign: true })}, así que al cambiarlo se ajusta solo el saldo de partida.`
-              : 'El saldo que tiene la cuenta antes de empezar a registrar movimientos.'
+              ? `Sus movimientos suman ${formatMoney(movements, currency, { sign: true })}: al cambiar esto se ajusta solo el saldo de partida.`
+              : 'Lo que hay en ella antes de registrar nada.'
           }
         >
           <AmountInput value={Math.abs(balance)} currency={currency} onChange={setBalance} />
@@ -343,7 +345,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           hint={
             archived
               ? 'Una cuenta archivada no puede ser la principal.'
-              : 'La principal de cada tipo es la que la aplicación da por supuesta: la del banco al registrar un movimiento, la de ahorro al abrir Planes Ahorro. Solo puede haber una por tipo.'
+              : 'La que se da por supuesta en su tipo. Solo puede haber una.'
           }
         />
 
@@ -351,7 +353,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           checked={excludeFromTotal}
           onChange={setExclude}
           label="Excluir del patrimonio total"
-          hint="Útil para cuentas de terceros o dinero que no consideras tuyo."
+          hint="Dinero de terceros, o que no consideras tuyo."
         />
 
         {account && (

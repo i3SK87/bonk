@@ -87,8 +87,9 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         }
       >
         {/* El icono, a ras del campo y no del rótulo. */}
+        {/* El avatar, a la derecha: delante empujaba el rótulo del título 50 px
+            hacia dentro y era el único que no arrancaba donde los demás. */}
         <div className="row" style={{ alignItems: 'flex-end' }}>
-          <Avatar icon={icon} color={color} size="large" />
           <div style={{ flex: 1 }}>
             <Field label="Título" error={error}>
               <input
@@ -99,6 +100,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
               />
             </Field>
           </div>
+          <Avatar icon={icon} color={color} size="large" />
         </div>
 
         <Field label="Tipo">
