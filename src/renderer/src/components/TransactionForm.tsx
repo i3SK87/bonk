@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, NumberInput } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
@@ -72,7 +72,6 @@ export function TransactionForm({
   const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>('suelto')
   const repite = comportamiento !== 'suelto'
   const esDeuda = comportamiento === 'deuda'
-  const repeticion = useRef<HTMLDivElement>(null)
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
@@ -150,18 +149,6 @@ export function TransactionForm({
       setCategoryId(null)
     }
   }, [type, categoryId, visibleCategories])
-
-  /*
-   * Al marcar la casilla aparecen dos campos debajo, y en un formulario que ya
-   * llega abajo eso queda fuera de la vista: uno marca y no pasa nada visible.
-   * Llevando el foco al primero, la ventana lo trae a la vista sola.
-   */
-  useEffect(() => {
-    if (!repite) return
-    const campo = repeticion.current?.querySelector('input')
-    campo?.focus()
-    repeticion.current?.scrollIntoView({ block: 'nearest' })
-  }, [repite])
 
   useEffect(() => {
     if (type === 'transfer' && toAccountId === accountId) setToAccountId(null)
@@ -603,7 +590,7 @@ export function TransactionForm({
         {!existing && !refundFor && (
           <>
             {repite && (
-              <div className="grid cols-2" style={{ marginTop: 10 }} ref={repeticion}>
+              <div className="grid cols-2" style={{ marginTop: 10 }}>
                 <Field label="Repetición">
                   <div className="row tight">
                     <NumberInput
