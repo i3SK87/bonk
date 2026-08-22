@@ -26,16 +26,16 @@ type ViewId =
   | 'reports'
   | 'settings'
 
-// De lo que se mira a diario a lo que se toca de vez en cuando: primero los
-// movimientos y lo que viene, después el ahorro, y al final lo que solo se
-// configura una vez.
+// De lo que se mira a diario a lo que se toca de vez en cuando: los movimientos
+// y lo que viene, luego lo que se debe y lo que se guarda —una deuda tiene fecha
+// y un plan espera—, y al final lo que solo se configura.
 const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'transactions', label: 'Movimientos', icon: 'list' },
   { id: 'schedules', label: 'Programados', icon: 'calendar' },
-  { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
   { id: 'debts', label: 'Deudas', icon: 'debt' }, // lo pisa el de la categoría de deuda
-  { id: 'categories', label: 'Categorías', icon: 'tag' },
+  { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
+  { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'reports', label: 'Informes', icon: 'chart' },
   { id: 'settings', label: 'Ajustes', icon: 'settings' }
 ]
