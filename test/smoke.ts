@@ -574,6 +574,27 @@ try {
   )
   scheduled.finishScheduled(recurring.id, day)
 
+  /*
+   * Y el botón de Reanudar, que es el mismo camino sin pasar por la ficha.
+   *
+   * La comprobación que importa es la última: una finalizada tiene la fecha de
+   * fin en el pasado, así que encenderla sin quitársela la dejaba viva hasta el
+   * primer repaso, que volvía a sellarla por agotada. Un botón que se deshace
+   * solo a los cinco minutos no es un botón.
+   */
+  scheduled.resumeScheduled(recurring.id)
+  const reanudada = scheduled.getScheduled(recurring.id)!
+  check('reanudar la enciende', reanudada.active === true)
+  equal('le quita el sello', reanudada.settledAt, null)
+  equal('y la fecha de fin, que la tenía pasada', reanudada.endDate, null)
+  scheduled.postDue(addMonths(day, 1))
+  equal(
+    'sigue viva tras el repaso, sin volver a sellarse sola',
+    scheduled.getScheduled(recurring.id)!.settledAt,
+    null
+  )
+  scheduled.finishScheduled(recurring.id, day)
+
   section('Una deuda desde su primer gasto')
   // Lo que hace el formulario de un movimiento cuando se marca «se repite»:
   // guarda el gasto y monta la programación con los mismos datos, con la

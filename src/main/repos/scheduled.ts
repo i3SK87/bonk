@@ -299,6 +299,28 @@ export function finishScheduled(id: number, date = today()): void {
 }
 
 /**
+ * Lo contrario de finalizar: le quita el sello y la fecha de fin, y la enciende.
+ *
+ * La fecha de fin se va con el sello y no es un extra: una finalizada la tiene
+ * en el pasado, así que reanimarla sin tocarla la dejaba encendida un rato y el
+ * primer repaso volvía a sellarla por agotada. Un botón que deshace su propio
+ * efecto a los cinco minutos no es un botón.
+ *
+ * Queda abierta, sin fecha de fin, que es la única forma de que de verdad tenga
+ * cuotas por delante. Si el plan tenía un final concreto, se le pone desde su
+ * ficha; lo que ya se pagó no se toca.
+ */
+export function resumeScheduled(id: number): void {
+  getDb()
+    .prepare(
+      `UPDATE scheduled
+          SET active = 1, end_date = NULL, settled_at = NULL, settled_notified = 0
+        WHERE id = ?`
+    )
+    .run(id)
+}
+
+/**
  * Da el plan por agotado: la última cuota ya entró y la siguiente caería más
  * allá de la fecha de fin. Se apaga y se sella, que es lo que la manda a
  * Finalizadas.

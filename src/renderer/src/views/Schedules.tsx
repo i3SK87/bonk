@@ -60,6 +60,7 @@ export function SchedulesView(): ReactNode {
   const [editing, setEditing] = useState<ScheduledView | null>(null)
   const [creating, setCreating] = useState(false)
   const [finishing, setFinishing] = useState<ScheduledView | null>(null)
+  const [resuming, setResuming] = useState<ScheduledView | null>(null)
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
 
   useEffect(() => {
@@ -259,9 +260,7 @@ export function SchedulesView(): ReactNode {
         <div className="card flush">
           <div className="card-header">
             <h2>Finalizadas</h2>
-            <span className="small muted">
-              Ya no generan nada. Para revivir una, quítale la fecha de fin desde su ficha.
-            </span>
+            <span className="small muted">Ya no generan nada.</span>
           </div>
           {finalizadas.map((row) => (
             <div
@@ -296,6 +295,19 @@ export function SchedulesView(): ReactNode {
                   row.accountCurrency,
                 )}
               </div>
+
+              {/* Como los mandos de arriba: hace lo suyo y para el clic, que si
+                  no abriría además la ficha por detrás. */}
+              <button
+                className="btn ghost icon"
+                title="Reanudar: vuelve a generar movimientos"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setResuming(row)
+                }}
+              >
+                <Icon name="play" size={16} />
+              </button>
             </div>
           ))}
         </div>
@@ -313,6 +325,22 @@ export function SchedulesView(): ReactNode {
           onConfirm={async () => {
             await run(() => api.scheduled.finish(finishing.id), 'Cuota finalizada')
             setFinishing(null)
+          }}
+        />
+      )}
+
+      {resuming && (
+        <Confirm
+          title="Reanudar"
+          message={
+            `«${titleOf(resuming)}» volverá a generar movimientos y se quedará sin fecha de fin. ` +
+            'Si tenía un final, vuelve a ponérselo desde su ficha. Lo ya registrado no se toca.'
+          }
+          confirmLabel="Reanudar"
+          onCancel={() => setResuming(null)}
+          onConfirm={async () => {
+            await run(() => api.scheduled.resume(resuming.id), 'Programación reanudada')
+            setResuming(null)
           }}
         />
       )}
