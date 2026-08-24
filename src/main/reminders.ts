@@ -14,6 +14,7 @@ import {
 import { pendingGoals, markGoalReached } from './repos/goals'
 import { listAccountsWithBalance, isLowBalanceWarned, setLowBalanceWarned } from './repos/accounts'
 import { getSettings } from './repos/settings'
+import { registrar, registrarFallo } from './registro'
 import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
 
 /**
@@ -302,17 +303,38 @@ export function startBackgroundWork(
 
   const sweep = (): void => {
     try {
+      const { created, failed } = postDue()
       // Si ha creado algo, la ventana tiene que enterarse: puede llevar días
       // abierta enseñando la lista de antes.
-      if (postDue() > 0) onDataChanged()
-      failureReported = false
+      if (created > 0) onDataChanged()
+
+      /*
+       * Las que no han podido entrar. Ya no arrastran a las demás —cada una va
+       * en su propia transacción—, pero siguen sin registrarse, y una cuota que
+       * no entra en silencio es una cuenta que no cuadra a fin de mes.
+       *
+       * Se cuenta una vez y no en cada vuelta de media hora, que sería un
+       * martilleo; vuelve a contarse en cuanto el repaso sale limpio y algo se
+       * tuerce otra vez.
+       */
+      if (failed.length === 0) {
+        failureReported = false
+      } else {
+        registrar('repaso', failed.map((f) => `«${f.title}» no entró: ${f.reason}`).join(' · '))
+        if (!failureReported) {
+          failureReported = true
+          onFailure(
+            failed.length === 1
+              ? `«${failed[0].title}» no se ha podido registrar. ${failed[0].reason}`
+              : `${failed.length} programaciones no se han podido registrar. La primera: ${failed[0].reason}`
+          )
+        }
+      }
     } catch (error) {
+      // Aquí ya no llega lo de una programada suelta, solo lo que impida el
+      // repaso entero —la base caída, por ejemplo—.
       const reason = (error as Error).message ?? 'Error inesperado'
-      console.error('No se pudieron generar las programadas vencidas:', error)
-      // Una programada que no entra —porque dejaría una cuenta sin números
-      // rojos en negativo, por ejemplo— se quedaría atascada repitiendo el
-      // intento cada media hora sin que nadie se enterara. Se cuenta una vez, y
-      // no en cada vuelta, que sería un martilleo.
+      registrarFallo('repaso', error)
       if (!failureReported) {
         failureReported = true
         onFailure(reason)

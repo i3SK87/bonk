@@ -7,7 +7,7 @@ import { postDue } from './repos/scheduled'
 import { getSettings, setSetting } from './repos/settings'
 import { applyAutoLaunch, startedHidden } from './autostart'
 import { startBackgroundWork } from './reminders'
-import { registrarFallo } from './registro'
+import { registrar, registrarFallo } from './registro'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -179,7 +179,10 @@ if (!app.requestSingleInstanceLock()) {
 
     // Las recurrencias vencidas se generan al abrir, aunque la app lleve meses cerrada.
     try {
-      postDue()
+      const { failed } = postDue()
+      for (const fallo of failed) {
+        registrar('arranque', `«${fallo.title}» no entró: ${fallo.reason}`)
+      }
     } catch (error) {
       registrarFallo('arranque', error)
     }

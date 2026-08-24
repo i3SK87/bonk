@@ -158,7 +158,7 @@ export function registerIpc(
     return posted
   })
   handle('scheduled:postDue', () => {
-    const posted = scheduled.postDue()
+    const posted = scheduled.postDue().created
     celebrate()
     return posted
   })

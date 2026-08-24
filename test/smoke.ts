@@ -561,13 +561,13 @@ try {
     nextDate: addMonths(day, -2),
     autoPost: true
   })
-  const created = scheduled.postDue(day)
+  const created = scheduled.postDue(day).created
   check('genera las repeticiones vencidas', created >= 2, `generó ${created}`)
   const refreshed = scheduled.getScheduled(recurring.id)!
   check('deja la próxima fecha en el futuro', refreshed.nextDate > day, refreshed.nextDate)
   // El repaso se repite cada media hora mientras la aplicación esté viva, así
   // que no puede duplicar nada al volver a pasar el mismo día.
-  equal('repetir el repaso el mismo día no genera nada', scheduled.postDue(day), 0)
+  equal('repetir el repaso el mismo día no genera nada', scheduled.postDue(day).created, 0)
 
   // «Registrar ahora» adelanta el pago, no adelanta el calendario: el dinero
   // sale hoy, pero la cuota que se da por cumplida es la del día que tocaba y la
@@ -606,7 +606,7 @@ try {
     scheduled.projectUpcoming(day, addMonths(day, 6)).filter((p) => p.scheduledId === recurring.id).length,
     0
   )
-  equal('ni genera movimientos nuevos', scheduled.postDue(addMonths(day, 3)), 0)
+  equal('ni genera movimientos nuevos', scheduled.postDue(addMonths(day, 3)).created, 0)
   check('registra la última ejecución', refreshed.lastPosted != null)
 
   /*
@@ -963,6 +963,170 @@ try {
     !scheduled.pendingReminders(addMonths(manana, 1)).some((row) => row.id === luz.id)
   )
   for (const id of [luz.id, callada.id, pasado.id]) scheduled.deleteScheduled(id)
+
+  /*
+   * El sello de la enhorabuena.
+   *
+   * Una deuda saldada se celebra una sola vez: el repaso pasa cada media hora y
+   * sin marca daría la enhorabuena en cada vuelta, para siempre.
+   */
+  section('La enhorabuena, una sola vez')
+  const deudaSaldada = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Saldada',
+    amount: 4000, freq: 'monthly', interval: 1, nextDate: day, endDate: day,
+    autoPost: true, isDebt: true, lender: 'amazon'
+  })
+  scheduled.finishScheduled(deudaSaldada.id, day)
+  check(
+    'una deuda recién deudaSaldada espera su enhorabuena',
+    scheduled.pendingSettlements().some((row) => row.id === deudaSaldada.id)
+  )
+  scheduled.markSettlementNotified(deudaSaldada.id)
+  check(
+    'y contada una vez, no vuelve a la cola',
+    !scheduled.pendingSettlements().some((row) => row.id === deudaSaldada.id)
+  )
+  // Lo que se acaba sin ser deuda no se celebra: que termine una suscripción no
+  // es una buena noticia, es que toca renovarla.
+  const suscripcion = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Suscripción que acaba',
+    amount: 999, freq: 'monthly', interval: 1, nextDate: day, endDate: day, autoPost: true
+  })
+  scheduled.finishScheduled(suscripcion.id, day)
+  check(
+    'lo que no es deuda no da enhorabuena',
+    !scheduled.pendingSettlements().some((row) => row.id === suscripcion.id)
+  )
+  scheduled.deleteScheduled(deudaSaldada.id)
+  scheduled.deleteScheduled(suscripcion.id)
+
+  /*
+   * El aviso de saldo bajo, con su pestillo.
+   *
+   * Sin pestillo, una cuenta por debajo del suelo avisaría cada media hora
+   * hasta que la recargaras. Se arma al avisar y se desarma solo cuando el
+   * saldo remonta, que es lo que permite que el siguiente bajón vuelva a avisar.
+   */
+  section('Saldo bajo')
+  const vigilada = accounts.saveAccount({
+    name: 'Vigilada', type: 'bank', currency: 'EUR', initialBalance: 10000,
+    icon: 'bank', color: '#0A84FF', excludeFromTotal: false, lowBalanceThreshold: 5000
+  })
+  equal('el suelo se guarda', accounts.getAccount(vigilada.id)!.lowBalanceThreshold, 5000)
+  check('y nace sin el aviso puesto', accounts.isLowBalanceWarned(vigilada.id) === false)
+
+  const bajon = transactions.saveTransaction({
+    type: 'expense', date: day, accountId: vigilada.id, categoryId: food.id, amount: 7000
+  })
+  const conPocoSaldo = accounts.listAccountsWithBalance().find((a) => a.id === vigilada.id)!
+  check('el saldo cae por debajo del suelo', conPocoSaldo.balance < 5000, `${conPocoSaldo.balance}`)
+
+  accounts.setLowBalanceWarned(vigilada.id, true)
+  check('avisado una vez, queda armado', accounts.isLowBalanceWarned(vigilada.id))
+  accounts.setLowBalanceWarned(vigilada.id, false)
+  check('y se puede desarmar al remontar', accounts.isLowBalanceWarned(vigilada.id) === false)
+
+  // Suelo en cero es no vigilar: sin esto, toda cuenta a cero avisaría siempre.
+  const libre = accounts.saveAccount({
+    name: 'Sin vigilar', type: 'cash', currency: 'EUR', initialBalance: 0,
+    icon: 'wallet', color: '#8E8E93', excludeFromTotal: false
+  })
+  equal('sin suelo puesto, no se vigila', accounts.getAccount(libre.id)!.lowBalanceThreshold, 0)
+  transactions.deleteTransaction(bajon.id)
+  accounts.deleteAccount(vigilada.id)
+  accounts.deleteAccount(libre.id)
+
+  /* Lo que viene, para el resumen: por fecha y sin las pausadas. */
+  section('Los próximos vencimientos')
+  const vencePronto = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Pronto',
+    amount: 1000, freq: 'monthly', interval: 1, nextDate: addDays(day, 1), autoPost: true
+  })
+  const venceTarde = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Tarde',
+    amount: 1000, freq: 'monthly', interval: 1, nextDate: addDays(day, 20), autoPost: true
+  })
+  const dormida = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Dormida',
+    amount: 1000, freq: 'monthly', interval: 1, nextDate: addDays(day, 2), autoPost: true, active: false
+  })
+  const proximos = scheduled.upcoming(10)
+  const posPronto = proximos.findIndex((row) => row.id === vencePronto.id)
+  const posTarde = proximos.findIndex((row) => row.id === venceTarde.id)
+  check('los ordena por fecha', posPronto >= 0 && posTarde >= 0 && posPronto < posTarde, `${posPronto} vs ${posTarde}`)
+  check('y deja fuera las pausadas', !proximos.some((row) => row.id === dormida.id))
+  equal('respeta el tope que se le pida', scheduled.upcoming(1).length, 1)
+  for (const id of [vencePronto.id, venceTarde.id, dormida.id]) scheduled.deleteScheduled(id)
+
+  /*
+   * Una programada que no puede entrar no puede llevarse por delante a las demás.
+   *
+   * El repaso metía todas dentro de una sola transacción, así que la primera que
+   * reventaba deshacía también las que ya habían entrado bien. Un traspaso que
+   * dejaría la hucha en números rojos —y la hucha no los admite— bastaba para
+   * que ese día no se registrara nada: ni el alquiler, ni la nómina, ni las
+   * cuotas. Y sin más rastro que un aviso.
+   *
+   * Cada una va ahora en la suya: la que falla se queda sin entrar y se cuenta
+   * aparte, y las demás siguen su camino.
+   */
+  section('Una programada rota no arrastra a las otras')
+  const huchaCerrada = accounts.saveAccount({
+    name: 'Hucha cerrada', type: 'savings', currency: 'EUR', initialBalance: 1000,
+    icon: 'piggy', color: '#AF52DE', excludeFromTotal: false
+  })
+  check('la hucha no admite números rojos', huchaCerrada.allowNegative === false)
+
+  const imposible = scheduled.saveScheduled({
+    type: 'expense', accountId: huchaCerrada.id, categoryId: food.id, note: 'No cabe',
+    amount: 999999, freq: 'monthly', interval: 1, nextDate: day, autoPost: true
+  })
+  const buena = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Sí cabe',
+    amount: 1500, freq: 'monthly', interval: 1, nextDate: day, autoPost: true
+  })
+
+  const resultado = scheduled.postDue(day)
+  const entradas = transactions.listTransactions({ search: 'Sí cabe', limit: 10 })
+  check('la buena entra igualmente', entradas.length === 1, `${entradas.length} movimientos`)
+  equal('y se cuenta como registrada', resultado.created, 1)
+  equal('la que no cabe se cuenta aparte', resultado.failed.length, 1)
+  check(
+    'diciendo cuál y por qué',
+    resultado.failed[0]?.id === imposible.id && /números rojos/.test(resultado.failed[0]?.reason ?? ''),
+    JSON.stringify(resultado.failed[0])
+  )
+  equal(
+    'la rota no deja movimiento',
+    transactions.listTransactions({ search: 'No cabe', limit: 10 }).length,
+    0
+  )
+  equal(
+    'ni mueve su próxima fecha',
+    scheduled.getScheduled(imposible.id)!.nextDate,
+    day
+  )
+  check(
+    'y la buena sí avanza la suya',
+    scheduled.getScheduled(buena.id)!.nextDate > day,
+    scheduled.getScheduled(buena.id)!.nextDate
+  )
+  // Repetir el repaso no duplica la que ya entró ni deja de intentar la rota.
+  const segundoRepaso = scheduled.postDue(day)
+  equal('al repetir, la buena ya no vuelve a entrar', segundoRepaso.created, 0)
+  equal('y la rota se sigue contando', segundoRepaso.failed.length, 1)
+  equal(
+    'sin duplicar la que entró',
+    transactions.listTransactions({ search: 'Sí cabe', limit: 10 }).length,
+    1
+  )
+
+  for (const fila of transactions.listTransactions({ search: 'Sí cabe', limit: 10 })) {
+    transactions.deleteTransaction(fila.id)
+  }
+  scheduled.deleteScheduled(imposible.id)
+  scheduled.deleteScheduled(buena.id)
+  accounts.deleteAccount(huchaCerrada.id)
 
   section('Programadas proyectadas en la lista')
   const mensual = scheduled.saveScheduled({

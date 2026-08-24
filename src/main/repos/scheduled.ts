@@ -618,7 +618,25 @@ function post(row: Scheduled, date: string, consumed = date): void {
  * Materializa todas las repeticiones vencidas hasta hoy. Se llama al arrancar,
  * así que si la app lleva meses cerrada recupera todo lo pendiente de una vez.
  */
-export function postDue(reference = today()): number {
+/** Lo que dejó el repaso: cuántas entraron y cuáles no pudieron, con su motivo. */
+export interface PostDueResult {
+  created: number
+  failed: Array<{ id: number; title: string; reason: string }>
+}
+
+/**
+ * Materializa todas las repeticiones vencidas hasta hoy.
+ *
+ * Cada programada va en su propia transacción, y ese es el punto. Antes iban
+ * todas dentro de una sola: la primera que reventaba deshacía también las que
+ * ya habían entrado bien, así que un traspaso que dejaría la hucha en números
+ * rojos —y la hucha no los admite— bastaba para que ese día no se registrara
+ * nada, ni el alquiler ni la nómina ni las cuotas. Se veía un aviso y punto.
+ *
+ * Aisladas, la que no puede entrar se queda donde está —sin movimiento y sin
+ * mover su fecha, para volver a intentarlo— y las demás siguen su camino.
+ */
+export function postDue(reference = today()): PostDueResult {
   // Se miran también las que ya no vencen: una cuyo plan se agotó con la última
   // cuota tiene la siguiente fecha más allá del fin, así que nunca volvería a
   // entrar aquí y se quedaría encendida para siempre.
@@ -631,34 +649,52 @@ export function postDue(reference = today()): number {
     )
     .all(reference) as unknown as ScheduledRow[]
 
-  let created = 0
-  atomic(() => {
-    for (const raw of rows) {
-      let current = mapScheduled(raw)
-      // Tope de seguridad por si una diaria lleva años sin abrirse.
-      let guard = 0
-      while (current.active && current.nextDate <= reference && guard < 500) {
-        if (current.endDate && current.nextDate > current.endDate) break
-        post(current, current.nextDate)
-        created++
-        guard++
-        const refreshed = getDb().prepare('SELECT * FROM scheduled WHERE id = ?').get(current.id) as
-          | ScheduledRow
-          | undefined
-        if (!refreshed) break
-        current = mapScheduled(refreshed)
-      }
+  const resultado: PostDueResult = { created: 0, failed: [] }
 
-      // El plan se ha agotado: la última cuota ya entró y la siguiente caería
-      // más allá del fin. Se comprueba fuera del bucle porque esa fecha suele
-      // quedar en el futuro, y entonces el bucle sale por su condición sin
-      // llegar nunca a la ruptura de dentro.
-      if (current.active && current.endDate && current.nextDate > current.endDate) {
-        settleExhausted(current.id, current.lastPosted ?? current.endDate)
-      }
+  for (const raw of rows) {
+    // Se cuenta aparte y solo se suma al total si su transacción sale adelante:
+    // al volver atrás, sus movimientos dejan de existir y contarlos haría que la
+    // ventana se recargara buscando apuntes que no están.
+    let suyas = 0
+    try {
+      // Lo de una programada sí es todo o nada: si su tercera cuota no entra, no
+      // puede quedarse con las dos primeras puestas y la fecha a medio camino.
+      atomic(() => {
+        suyas = 0
+        let current = mapScheduled(raw)
+        // Tope de seguridad por si una diaria lleva años sin abrirse.
+        let guard = 0
+        while (current.active && current.nextDate <= reference && guard < 500) {
+          if (current.endDate && current.nextDate > current.endDate) break
+          post(current, current.nextDate)
+          suyas++
+          guard++
+          const refreshed = getDb().prepare('SELECT * FROM scheduled WHERE id = ?').get(current.id) as
+            | ScheduledRow
+            | undefined
+          if (!refreshed) break
+          current = mapScheduled(refreshed)
+        }
+
+        // El plan se ha agotado: la última cuota ya entró y la siguiente caería
+        // más allá del fin. Se comprueba fuera del bucle porque esa fecha suele
+        // quedar en el futuro, y entonces el bucle sale por su condición sin
+        // llegar nunca a la ruptura de dentro.
+        if (current.active && current.endDate && current.nextDate > current.endDate) {
+          settleExhausted(current.id, current.lastPosted ?? current.endDate)
+        }
+      })
+      resultado.created += suyas
+    } catch (error) {
+      resultado.failed.push({
+        id: raw.id,
+        title: raw.name || raw.note || 'Programación',
+        reason: (error as Error).message ?? 'Error inesperado'
+      })
     }
-  })
-  return created
+  }
+
+  return resultado
 }
 
 /** Ejecuta ahora una programada concreta, sin esperar a su fecha. */
