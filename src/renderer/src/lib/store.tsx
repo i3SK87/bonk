@@ -9,6 +9,7 @@ import {
   type ReactNode
 } from 'react'
 import { pushNotificationIcons } from './notificationIcons'
+import { recordarTema } from './tema'
 import type { AccountWithBalance, Category, Settings } from '@shared/types'
 
 const api = window.bonk
@@ -164,8 +165,17 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
     }
   }, [refreshCatalogues, toast])
 
-  // El tema del sistema se sigue en vivo mientras esté en modo automático.
+  /*
+   * El tema del sistema se sigue en vivo mientras esté en modo automático.
+   *
+   * No se toca nada hasta que los ajustes de verdad han llegado. Antes de eso lo
+   * puesto es lo que dejó `aplicarTemaGuardado` al arrancar, que ya acertó; si
+   * este efecto corriera con los ajustes de fábrica pisaría ese acierto con un
+   * «automático» que puede no ser lo que el usuario tiene elegido, y volvería el
+   * cambiazo que se ha venido a quitar.
+   */
   useEffect(() => {
+    if (!ready) return
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const apply = (): void => {
       const dark = settings.theme === 'dark' || (settings.theme === 'system' && media.matches)
@@ -174,13 +184,21 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
     apply()
     media.addEventListener('change', apply)
     return () => media.removeEventListener('change', apply)
-  }, [settings.theme])
+  }, [ready, settings.theme])
 
   // La paleta vive en el elemento raíz, junto al claro/oscuro: cada combinación
   // de los dos tiene su juego de variables en la hoja de estilos.
   useEffect(() => {
+    if (!ready) return
     document.documentElement.setAttribute('data-palette', settings.palette)
-  }, [settings.palette])
+  }, [ready, settings.palette])
+
+  // Y se apunta para el próximo arranque, que es de donde sale el tema antes de
+  // que haya nada que preguntar.
+  useEffect(() => {
+    if (!ready) return
+    recordarTema(settings.theme, settings.palette)
+  }, [ready, settings.theme, settings.palette])
 
   const value = useMemo<StoreValue>(
     () => ({

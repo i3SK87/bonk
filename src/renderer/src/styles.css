@@ -2745,12 +2745,21 @@ button.list-row:focus-visible {
 .calendario-mes {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 2px;
   margin-bottom: 8px;
 }
 
-/* El mes, en versales como los demás rótulos que presiden algo. */
+/*
+ * El mes, en versales como los demás rótulos que presiden algo.
+ *
+ * Se lleva el hueco que sobra y se centra dentro de él, en vez de repartir el
+ * espacio entre todos. Con dos flechas por lado, repartir a partes iguales las
+ * habría separado a pares y el par de fuera —el del año— se leería como si
+ * fuera de otra cosa.
+ */
 .calendario-mes strong {
+  flex: 1;
+  text-align: center;
   font-size: 12px;
   font-weight: 650;
   text-transform: uppercase;

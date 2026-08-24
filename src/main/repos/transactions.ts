@@ -1,5 +1,5 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
-import { convert, parseAmount } from '@shared/money'
+import { convert, currencyDecimals } from '@shared/money'
 import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
@@ -188,14 +188,31 @@ function buildWhere(filter: TransactionFilter): { sql: string; params: Array<str
     ]
     params.push(needle, needle, needle, needle, needle, needle)
 
-    // Buscar «9,17» encuentra lo que costó 9,17 €. Se lee con los decimales de
-    // la divisa base, que es como se escriben los importes en la lista, y sin
-    // millares: se busca una cifra concreta, no un texto. El signo sobra, que
-    // los importes se guardan siempre en positivo.
-    const typed = parseAmount(text, getSettings().baseCurrency, { grouping: false })
-    if (typed != null && typed !== 0) {
-      parts.push('t.amount = ?', 't.amount_to = ?')
-      params.push(Math.abs(typed), Math.abs(typed))
+    /*
+     * Los importes se buscan por trozos, igual que los nombres.
+     *
+     * Buscaban por igualdad, así que hasta no escribir «9,17» entero no aparecía
+     * nada: escribir «9» no encontraba los 9,17 € y el buscador parecía roto
+     * mientras se teclea, justo al revés que con los nombres, que van
+     * estrechando la lista letra a letra.
+     *
+     * Se compara contra el importe escrito como se lee —«9,17» y no 917— para
+     * que la coma cuente y «9,1» no traiga los 91 €. Sin millares a propósito:
+     * quien busca «1234» quiere los 1.234,00 € y no va a escribir el punto.
+     *
+     * Los decimales son los de la divisa base, que es con los que se escriben
+     * los importes en la lista. El signo sobra: se guardan siempre en positivo.
+     */
+    const soloCifra = /^[0-9]*[.,]?[0-9]*$/.test(text) && /[0-9]/.test(text)
+    if (soloCifra) {
+      const decimales = currencyDecimals(getSettings().baseCurrency)
+      const divisor = 10 ** decimales
+      // El punto del teclado numérico vale igual que la coma.
+      const trozo = `%${text.replace(/\./g, ',')}%`
+      const comoSeLee = (columna: string): string =>
+        `replace(printf('%.${decimales}f', ${columna} / ${divisor}.0), '.', ',')`
+      parts.push(`${comoSeLee('t.amount')} LIKE ?`, `${comoSeLee('t.amount_to')} LIKE ?`)
+      params.push(trozo, trozo)
     }
     clauses.push(`(${parts.join(' OR ')})`)
   }

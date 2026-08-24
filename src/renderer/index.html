@@ -8,6 +8,30 @@
       content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
     />
     <title>BONK</title>
+    <style>
+      /*
+       * El fondo mientras todavía no hay tema puesto.
+       *
+       * Entre que la hoja de estilos entra y el módulo pone `data-theme` hay un
+       * hueco en el que el navegador ya puede pintar, y sin el atributo la hoja
+       * usa su juego de variables por defecto, que es el claro: de ahí el
+       * fogonazo blanco al arrancar, medido en un brillo medio de 203 sobre 255
+       * contra los 22 de la aplicación ya vestida.
+       *
+       * Va aquí y no en la hoja de estilos porque tiene que valer antes que
+       * ella. El cuerpo se queda transparente hasta que el tema esté decidido y
+       * deja ver este fondo liso, que es a propósito el mismo color con el que
+       * el proceso principal pinta la ventana nativa: así el hueco no se
+       * distingue del marco que ya está en pantalla.
+       *
+       * Transparente y no escondido: si el módulo no llegara a ejecutarse, una
+       * ventana del color de siempre es mejor que una ventana en blanco para
+       * siempre.
+       */
+      html { background: #f5f6f8; }
+      @media (prefers-color-scheme: dark) { html { background: #14161a; } }
+      html:not([data-theme]) body { background: transparent; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

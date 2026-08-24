@@ -308,6 +308,9 @@ const PATHS: Record<string, JSX.Element> = {
   chevronDown: <path d="M6 9.5l6 6 6-6" />,
   chevronRight: <path d="M9.5 6l6 6-6 6" />,
   chevronLeft: <path d="M14.5 6l-6 6 6 6" />,
+  // Dobles: saltar de año en el calendario, al lado de los de un solo mes.
+  chevronsRight: <path d="M6.5 6l6 6-6 6M13.5 6l6 6-6 6" />,
+  chevronsLeft: <path d="M17.5 6l-6 6 6 6M10.5 6l-6 6 6 6" />,
   arrowUp: <path d="M12 20V4M5.5 10.5L12 4l6.5 6.5" />,
   arrowDown: <path d="M12 4v16M5.5 13.5L12 20l6.5-6.5" />,
   transfer: (

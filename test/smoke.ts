@@ -1935,6 +1935,48 @@ try {
     'un importe que no existe no devuelve nada',
     transactions.listTransactions({ search: '9,18' }).every((row) => row.id !== conImporte.id)
   )
+
+  /*
+   * Y va estrechando mientras se escribe, igual que con los nombres.
+   *
+   * Buscaba por igualdad, así que hasta no escribir «9,17» entero no salía nada
+   * y el buscador parecía roto a media palabra.
+   */
+  check(
+    'con la primera cifra ya aparece',
+    transactions.listTransactions({ search: '9' }).some((row) => row.id === conImporte.id)
+  )
+  check(
+    'y con la coma puesta también',
+    transactions.listTransactions({ search: '9,1' }).some((row) => row.id === conImporte.id)
+  )
+  check(
+    'los decimales cuentan como parte del importe',
+    transactions.listTransactions({ search: ',17' }).some((row) => row.id === conImporte.id)
+  )
+  /*
+   * La coma no se salta: buscar «91» son noventa y un euros, no los 9,17 €.
+   * Sin esto, comparar contra el número guardado en céntimos —917— haría que
+   * cualquier trozo de cifra trajera importes que no se le parecen.
+   */
+  check(
+    'la coma separa: «91» no trae los 9,17 €',
+    transactions.listTransactions({ search: '91' }).every((row) => row.id !== conImporte.id)
+  )
+  // Un importe de más de mil se busca sin el punto de los millares, que nadie
+  // lo escribe al teclear una cifra de memoria.
+  const conMillares = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: transactions.listTransactions({ limit: 1 })[0].accountId,
+    amount: 123400,
+    note: 'Tampoco hay texto aquí'
+  })
+  check(
+    'un importe con millares se busca sin el punto',
+    transactions.listTransactions({ search: '1234' }).some((row) => row.id === conMillares.id)
+  )
+  transactions.deleteTransactions([conMillares.id])
   // Y sigue buscando texto, que es lo que hacía antes.
   check(
     'el texto sigue encontrándose',

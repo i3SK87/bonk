@@ -185,12 +185,28 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
             }}
           >
             <div className="calendario">
+          {/*
+            El año, en flechas dobles por fuera de las del mes.
+            Doce clics para llegar a un cumpleaños del año pasado no los da
+            nadie. Fuera y no dentro porque saltan más lejos: el orden en que se
+            ven es el orden en que se mueven.
+          */}
           <div className="calendario-mes">
+            <button
+              type="button"
+              className="btn ghost icon"
+              onClick={() => setMes(addMonths(mes, -12))}
+              aria-label="Año anterior"
+              title="Año anterior"
+            >
+              <Icon name="chevronsLeft" size={16} />
+            </button>
             <button
               type="button"
               className="btn ghost icon"
               onClick={() => setMes(addMonths(mes, -1))}
               aria-label="Mes anterior"
+              title="Mes anterior"
             >
               <Icon name="chevronLeft" size={16} />
             </button>
@@ -202,8 +218,18 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
               className="btn ghost icon"
               onClick={() => setMes(addMonths(mes, 1))}
               aria-label="Mes siguiente"
+              title="Mes siguiente"
             >
               <Icon name="chevronRight" size={16} />
+            </button>
+            <button
+              type="button"
+              className="btn ghost icon"
+              onClick={() => setMes(addMonths(mes, 12))}
+              aria-label="Año siguiente"
+              title="Año siguiente"
+            >
+              <Icon name="chevronsRight" size={16} />
             </button>
           </div>
 
