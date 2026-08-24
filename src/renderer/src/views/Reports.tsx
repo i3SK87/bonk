@@ -18,12 +18,11 @@ const api = window.bonk
  * esa diferencia salía que la media diaria del mismo periodo dijera 45,84 € en
  * una pantalla y 59,21 € en la otra.
  *
- * Uno de más: «Año pasado». Con «Personalizado» se puede pedir escribiendo dos
- * fechas, pero comparar un año con el anterior es de lo que más se hace en una
- * pantalla de informes, y cambiar un botón por cuatro clics y teclear no es
- * ganar nada. Se quedan los dos.
+ * Los mismos y ninguno más: «Año pasado» tuvo su botón hasta que «Personalizado»
+ * llegó a esta pantalla, y con dos fechas se pide igual. Siete pastillas para lo
+ * que hacen seis es una fila más larga de leer a cambio de nada.
  */
-const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all', 'custom']
+const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all', 'custom']
 
 /**
  * Una categoría se puede abrir cuando tiene desglose y al menos dos entradas,
@@ -142,19 +141,26 @@ export function ReportsView(): ReactNode {
             <Icon name="download" size={15} />
             Exportar
           </button>
-        </div>
 
-        {period === 'custom' && (
-          <div className="card-body row" style={{ paddingTop: 0 }}>
-            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-              <DateInput value={customFrom} onChange={setCustomFrom} />
+          {/*
+            Las fechas van dentro de la cabecera y no en una tira aparte debajo.
+            La cabecera lleva raya cuando algo la sigue, y esa raya partía en dos
+            lo que es un solo mando: eliges el periodo y, si es a mano, lo
+            escribes. Ocupando toda la línea bajan solas, y el hueco que las
+            separa es el mismo que separa cualquier par de cosas aquí.
+          */}
+          {period === 'custom' && (
+            <div className="row" style={{ flexBasis: '100%', marginTop: 4 }}>
+              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+                <DateInput value={customFrom} onChange={setCustomFrom} />
+              </div>
+              <span className="muted">hasta</span>
+              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+                <DateInput value={customTo} onChange={setCustomTo} />
+              </div>
             </div>
-            <span className="muted">hasta</span>
-            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-              <DateInput value={customTo} onChange={setCustomTo} />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {loading ? (
