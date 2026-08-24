@@ -123,6 +123,15 @@ const HEADER_ALIASES: Record<string, string> = {
   note: 'note',
   notes: 'note',
   description: 'note',
+  // «Concepto» es como lo llaman los extractos de los bancos de aquí, y era
+  // justo la que faltaba: la columna entraba sin reconocer y los movimientos se
+  // importaban sin nada escrito, en silencio. «Título» es como lo llama esta
+  // aplicación desde que las notas pasaron a ser títulos.
+  concepto: 'note',
+  titulo: 'note',
+  título: 'note',
+  detalle: 'note',
+  memo: 'note',
   etiquetas: 'tags',
   tags: 'tags',
   lugar: 'place',

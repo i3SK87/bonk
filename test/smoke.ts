@@ -1026,6 +1026,62 @@ try {
   )
   check('reutiliza las cuentas existentes por nombre', result.createdAccounts.length === 0)
 
+  /*
+   * «Concepto» es como llaman a esta columna los extractos de los bancos de
+   * aquí, y no estaba en la lista: la cabecera entraba sin reconocer y los
+   * movimientos se importaban con el título en blanco, sin decir nada. Un
+   * extracto del banco perdía justo lo único que explica cada apunte.
+   */
+  const conceptoPath = join(dir, 'concepto.csv')
+  writeFileSync(
+    conceptoPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Concepto',
+     '2026-08-16;Gasto;Cartera;Alimentación;-8,40;Compra del súper'].join('\r\n'),
+    'utf8'
+  )
+  equal('importa la fila con «Concepto»', csv.importCsv(conceptoPath).imported, 1)
+  const porConcepto = transactions.listTransactions({ search: 'Compra del súper' })
+  equal('y el concepto llega al título', porConcepto.length, 1)
+  equal('con su texto entero', porConcepto[0]?.note, 'Compra del súper')
+
+  /*
+   * La vista previa: lo que se enseña antes de importar nada.
+   *
+   * Detrás de un diálogo de Windows en la aplicación, así que aquí es donde se
+   * puede comprobar. Adivina el separador porque cada banco usa el suyo.
+   */
+  const previa = csv.previewCsv(conceptoPath)
+  equal('adivina el punto y coma', previa.delimiter, ';')
+  equal('lee las cabeceras', previa.headers.length, 6)
+  equal('y cuenta las filas sin la cabecera', previa.total, 1)
+  const comaPath = join(dir, 'comas.csv')
+  writeFileSync(comaPath, ['fecha,tipo,cuenta,importe', '2026-08-14,Gasto,Cartera,-1,00'].join('\r\n'), 'utf8')
+  equal('y adivina la coma cuando toca', csv.previewCsv(comaPath).delimiter, ',')
+  let vacioAviso = ''
+  try {
+    const vacioPath = join(dir, 'vacio.csv')
+    writeFileSync(vacioPath, '', 'utf8')
+    csv.previewCsv(vacioPath)
+  } catch (error) {
+    vacioAviso = (error as Error).message
+  }
+  check('y avisa si el archivo está vacío', vacioAviso.includes('vacío'), vacioAviso)
+
+  // Lo mismo con «Título», que es como lo llama esta aplicación.
+  const tituloPath = join(dir, 'titulo.csv')
+  writeFileSync(
+    tituloPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Título',
+     '2026-08-15;Gasto;Cartera;Alimentación;-3,20;Café de la mañana'].join('\r\n'),
+    'utf8'
+  )
+  csv.importCsv(tituloPath)
+  equal(
+    'y «Título» también',
+    transactions.listTransactions({ search: 'Café de la mañana' })[0]?.note,
+    'Café de la mañana'
+  )
+
   section('Cuentas que no admiten números rojos')
   const hucha = accounts.saveAccount({
     name: 'Hucha', type: 'savings', currency: 'EUR', initialBalance: 10000,
