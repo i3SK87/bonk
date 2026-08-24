@@ -79,6 +79,64 @@ function tonoDe(delta: number, kind: CategoryKind): string {
 }
 
 /**
+ * El cambio de una cifra de cabecera, con el mismo lenguaje que la tabla.
+ *
+ * Triángulo y porcentaje, y el rótulo de al pasar con las dos cifras crudas. Lo
+ * de arriba llevaba euros y lo de abajo porcentajes: dos formas de decir lo
+ * mismo en la misma pantalla, y al mirar de reojo no se sabía cuál era cuál.
+ *
+ * El recuento de movimientos también se colorea, aunque tener más apuntes no sea
+ * bueno ni malo por sí solo. Dejarlo gris entre dos coloreados pedía una
+ * explicación que no cabe en una tarjeta, y en una pantalla de gastos más
+ * apuntes acompañan a más gasto casi siempre.
+ */
+function Delta({
+  ahora,
+  antes,
+  kind,
+  contra,
+  formatea
+}: {
+  ahora: number
+  antes: number
+  kind: CategoryKind
+  contra: string
+  formatea: (valor: number) => string
+}): ReactNode {
+  const pista = `${formatea(ahora)} ahora · ${formatea(antes)} ${contra}`
+
+  // Sin nada antes no hay porcentaje, igual que en la tabla.
+  if (antes === 0) {
+    return (
+      <div className="delta" title={pista}>
+        <span className={tonoDe(ahora, kind)}>nuevo</span>
+        <span>que {contra}</span>
+      </div>
+    )
+  }
+
+  const delta = ahora - antes
+  const porcentaje = Math.round((delta / antes) * 100)
+  if (porcentaje === 0) {
+    return (
+      <div className="delta" title={pista}>
+        <span className="muted">igual</span>
+        <span>que {contra}</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="delta" title={pista}>
+      <span className={tonoDe(delta, kind)}>
+        {delta > 0 ? '▲' : '▼'} {Math.abs(porcentaje)}%
+      </span>
+      <span>que {contra}</span>
+    </div>
+  )
+}
+
+/**
  * Cuánto ha cambiado una categoría, en pequeño y debajo de su importe.
  *
  * Tuvo una columna para ella sola con los euros y el porcentaje, y era demasiado:
@@ -252,6 +310,22 @@ export function ReportsView(): ReactNode {
    * Las fechas se leen con `parseISO` y no con `new Date`, que interpreta
    * «YYYY-MM-DD» como UTC y en España cambia el día.
    */
+  const movimientosAntes = antes.reduce((sum, item) => sum + item.count, 0)
+
+  /*
+   * La media del periodo anterior se reparte entre sus días, todos.
+   *
+   * El de ahora se reparte entre los transcurridos, porque los que faltan no han
+   * pasado; el de antes ya está cerrado, así que sus días son los suyos. Comparar
+   * dos ritmos así es lo único que tiene sentido: son euros por día, y da igual
+   * que un mes tenga treinta y el otro treinta y uno.
+   */
+  const mediaAntes = (() => {
+    if (!comparacion) return 0
+    const dias = Math.max(1, daysBetween(comparacion.from, comparacion.to) + 1)
+    return Math.round(totalAntes / dias)
+  })()
+
   const dailyAverage = (() => {
     const hoy = today()
     const fin = range.to > hoy ? hoy : range.to
@@ -340,21 +414,40 @@ export function ReportsView(): ReactNode {
                 {formatMoney(total, currency)}
               </div>
               {comparacion && (
-                <div className="delta">
-                  <span className={tonoDe(total - totalAntes, kind)}>
-                    {formatMoney(total - totalAntes, currency, { sign: true })}
-                  </span>
-                  <span>que {contra}</span>
-                </div>
+                <Delta
+                  ahora={total}
+                  antes={totalAntes}
+                  kind={kind}
+                  contra={contra}
+                  formatea={(valor) => formatMoney(valor, currency)}
+                />
               )}
             </div>
             <div className="card stat">
               <div className="label">Movimientos</div>
               <div className="value">{movements}</div>
+              {comparacion && (
+                <Delta
+                  ahora={movements}
+                  antes={movimientosAntes}
+                  kind={kind}
+                  contra={contra}
+                  formatea={(valor) => String(valor)}
+                />
+              )}
             </div>
             <div className="card stat">
               <div className="label">Media diaria</div>
               <div className="value">{formatMoney(dailyAverage, currency)}</div>
+              {comparacion && (
+                <Delta
+                  ahora={dailyAverage}
+                  antes={mediaAntes}
+                  kind={kind}
+                  contra={contra}
+                  formatea={(valor) => formatMoney(valor, currency)}
+                />
+              )}
             </div>
           </div>
 
