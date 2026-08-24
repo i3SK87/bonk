@@ -35,11 +35,6 @@ async function call<T>(channel: string, ...args: unknown[]): Promise<T> {
 }
 
 const api = {
-  voz: {
-    estado: () => call<{ listo: boolean; registro: string }>('voz:estado'),
-    descargar: () => call<{ listo: boolean }>('voz:descargar'),
-    apuntar: (mensaje: string) => call<boolean>('voz:apuntar', mensaje)
-  },
   settings: {
     get: () => call<Settings>('settings:get'),
     update: (patch: Partial<Settings>) => call<Settings>('settings:update', patch)
@@ -136,8 +131,7 @@ const api = {
         | 'data:changed'
         | 'scheduled:failed'
         | 'debt:settled'
-        | 'goal:reached'
-        | 'voz:progreso',
+        | 'goal:reached',
       callback: (detail?: unknown) => void
     ) => {
       const listener = (_event: unknown, detail?: unknown): void => callback(detail)

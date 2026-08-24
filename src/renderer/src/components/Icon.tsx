@@ -110,7 +110,6 @@ import {
   Undo2,
   University,
   Utensils,
-  Mic,
   Wallet,
   Wifi,
   Wine,
@@ -122,7 +121,6 @@ import {
 const LUCIDE: Record<string, LucideIcon> = {
   cart: ShoppingCart,
   restaurant: Utensils,
-  microfono: Mic,
   bus: Bus,
   fuel: Fuel,
   home: House,

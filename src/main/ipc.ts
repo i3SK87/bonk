@@ -11,8 +11,6 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { applyAutoLaunch } from './autostart'
-import { modeloListo, descargarModelo } from './voz'
-import { registrar, registrarFallo, rutaDelRegistro } from './registro'
 import {
   sendTestNotification,
   setCategoryIcons,
@@ -58,30 +56,6 @@ export function registerIpc(
   }
 
   // — Ajustes —
-  /*
-   * El dictado. Bajar el modelo se hace aquí y no en la ventana: los ficheros
-   * grandes de HuggingFace contestan con un desvío a su almacén, y la política
-   * de seguridad de la ventana corta ese desvío.
-   */
-  handle('voz:estado', () => ({ listo: modeloListo(), registro: rutaDelRegistro() }))
-  handle('voz:descargar', async () => {
-    try {
-      await descargarModelo((porcentaje) => {
-        getWindow()?.webContents.send('voz:progreso', porcentaje)
-      })
-      return { listo: true }
-    } catch (error) {
-      registrarFallo('voz:descargar', error)
-      throw error
-    }
-  })
-  // Lo que revienta dentro de la ventana no deja rastro en ningún sitio; así
-  // sí, y en el mismo cuaderno que lo del proceso principal.
-  handle('voz:apuntar', (mensaje: string) => {
-    registrar('ventana', String(mensaje).slice(0, 2000))
-    return true
-  })
-
   handle('settings:get', () => settings.getSettings())
   handle('settings:update', (patch: Partial<Settings>) => {
     const next = settings.updateSettings(patch)
