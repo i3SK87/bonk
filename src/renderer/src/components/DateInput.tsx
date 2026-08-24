@@ -76,14 +76,29 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
     if (value) setMes(startOfMonth(value))
   }, [value])
 
-  // Un clic fuera cierra: es un desplegable, no un diálogo.
+  /*
+   * Escape cierra. De cerrar al pulsar fuera se encarga el velo.
+   *
+   * Había aquí un vigilante de clics que cerraba en cuanto se pulsaba fuera del
+   * campo, y desde que el calendario se abre en su propio cuadro colgado de la
+   * raíz, «fuera del campo» es también el calendario entero: cambiar de mes lo
+   * hacía desaparecer antes de que el botón llegara a su cometido.
+   *
+   * El vigilante sobra, porque el velo ya sabe distinguir lo suyo de lo de
+   * fuera. Lo que sí hace falta es Escape a nivel de ventana: el del campo solo
+   * sirve mientras el campo tenga el foco, y en cuanto pulsas un mes lo pierde.
+   */
   useEffect(() => {
     if (!abierto) return
-    const fuera = (event: MouseEvent): void => {
-      if (!caja.current?.contains(event.target as Node)) setAbierto(false)
+    const conEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      // Sin dejar que llegue al formulario que hay debajo: cerrar el calendario
+      // no puede cerrar de paso la ficha entera.
+      event.stopPropagation()
+      setAbierto(false)
     }
-    window.addEventListener('mousedown', fuera)
-    return () => window.removeEventListener('mousedown', fuera)
+    window.addEventListener('keydown', conEscape, true)
+    return () => window.removeEventListener('keydown', conEscape, true)
   }, [abierto])
 
   /*

@@ -33,7 +33,18 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps): R
     const onKey = (event: KeyboardEvent): void => {
       // Escape y nada más: el tabulador está apagado en toda la aplicación, así
       // que no hay foco que se escape del diálogo ni vueltas que darle.
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape') return
+      /*
+       * Con el calendario delante, Escape es suyo.
+       *
+       * Se mira si está en pantalla en vez de fiarlo a que uno pare el evento
+       * antes que el otro: los dos escuchan en la ventana, y cuál va primero
+       * depende de cuál se montó antes, que no es algo sobre lo que apoyarse.
+       * Cerrar el calendario no puede llevarse por delante la ficha entera con
+       * lo que llevabas escrito.
+       */
+      if (document.querySelector('.calendario-velo')) return
+      onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

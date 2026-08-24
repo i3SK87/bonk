@@ -461,7 +461,10 @@ function Columna({
           {formatMoney(total, currency)}
         </strong>
         {antes > 0 && delta !== 0 && (
-          <span className={`cambio ${tono}`}>
+          <span
+            className={`cambio ${tono}`}
+            title={`${formatMoney(total, currency)} este mes · ${formatMoney(antes, currency)} el anterior`}
+          >
             {delta > 0 ? '▲' : '▼'} {Math.abs(Math.round((delta / antes) * 100))}%
           </span>
         )}

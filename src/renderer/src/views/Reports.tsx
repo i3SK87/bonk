@@ -77,21 +77,56 @@ function tonoDe(delta: number, kind: CategoryKind): string {
 function Cambio({
   ahora,
   antes,
-  kind
+  kind,
+  currency,
+  desde,
+  hasta
 }: {
   ahora: number
   antes: number
   kind: CategoryKind
+  currency: string
+  desde: string
+  hasta: string
 }): ReactNode {
-  if (antes === 0) return <span className="cambio muted">nuevo</span>
+  /*
+   * Al pasar por encima, la cuenta entera.
+   *
+   * Un porcentaje suelto no dice contra qué se mide, y aquí la base cambia con
+   * la pastilla: «este mes» se compara con lo que llevabas el mes pasado a
+   * estas alturas, y «mes pasado» con el mes entero anterior. Dos bases
+   * distintas pueden dar el mismo tanto por ciento con las mismas cifras
+   * delante, y eso, sin poder mirar los números, parece un error.
+   */
+  const explicacion = `${formatMoney(ahora, currency)} ahora · ${formatMoney(antes, currency)} entre el ${formatDate(desde)} y el ${formatDate(hasta)}`
+
+  /*
+   * Sin nada antes no hay porcentaje: dividir entre cero no da un número. Se
+   * dice cuánto ha subido en euros, que además es más honrado que «nuevo»: una
+   * categoría puede tener cero en el trozo comparado y mucho el mes entero, y
+   * llamarla nueva sería mentir.
+   */
+  if (antes === 0) {
+    return (
+      <span className={`cambio ${tonoDe(ahora, kind)}`} title={explicacion}>
+        ▲ {formatMoney(ahora, currency)}
+      </span>
+    )
+  }
 
   const delta = ahora - antes
   const porcentaje = Math.round((delta / antes) * 100)
   // Por debajo del uno por ciento no ha cambiado nada que merezca decirse.
-  if (porcentaje === 0) return <span className="cambio muted">igual</span>
+  if (porcentaje === 0) {
+    return (
+      <span className="cambio muted" title={explicacion}>
+        igual
+      </span>
+    )
+  }
 
   return (
-    <span className={`cambio ${tonoDe(delta, kind)}`}>
+    <span className={`cambio ${tonoDe(delta, kind)}`} title={explicacion}>
       {delta > 0 ? '▲' : '▼'} {Math.abs(porcentaje)}%
     </span>
   )
@@ -406,7 +441,14 @@ export function ReportsView(): ReactNode {
                             <td className="num amount">
                               {formatMoney(row.total, currency)}
                               {comparacion && (
-                                <Cambio ahora={row.total} antes={gastoAntes} kind={kind} />
+                                <Cambio
+                                  ahora={row.total}
+                                  antes={gastoAntes}
+                                  kind={kind}
+                                  currency={currency}
+                                  desde={comparacion.from}
+                                  hasta={comparacion.to}
+                                />
                               )}
                             </td>
                           </tr>
