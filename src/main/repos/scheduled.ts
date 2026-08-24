@@ -153,6 +153,30 @@ export interface ScheduledInput {
   remind?: boolean
 }
 
+/**
+ * Le quita el sello de terminada a la que vuelve a tener cuotas por delante.
+ *
+ * Finalizadas dice «para revivir una, quítale la fecha de fin desde su ficha», y
+ * eso era mentira: guardar escribía la fecha nueva pero el sello seguía puesto,
+ * así que la programación se quedaba en Finalizadas —donde ya no genera nada— y
+ * encima sin la fecha que esa lista enseña.
+ *
+ * El sello se cae solo cuando de verdad queda algo por venir: sin fecha de fin,
+ * o con una que aún no ha llegado a la próxima cuota. Editar una terminada sin
+ * tocarle el fin la deja terminada, que es lo suyo.
+ */
+function revivirSiVuelveATener(id: number): void {
+  getDb()
+    .prepare(
+      `UPDATE scheduled
+          SET settled_at = NULL, settled_notified = 0, active = 1
+        WHERE id = ?
+          AND settled_at IS NOT NULL
+          AND (end_date IS NULL OR end_date >= next_date)`
+    )
+    .run(id)
+}
+
 export function saveScheduled(input: ScheduledInput): ScheduledView {
   if (!Number.isInteger(input.amount) || input.amount <= 0) {
     throw new Error('El importe tiene que ser mayor que cero')
@@ -205,6 +229,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.isDebt ? 1 : 0,
       input.id
     )
+    revivirSiVuelveATener(input.id)
     return getScheduled(input.id)!
   }
 

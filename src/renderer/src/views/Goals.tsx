@@ -18,6 +18,9 @@ import { formatMoney } from '@shared/money'
 import { formatDate, today } from '@shared/dates'
 import type { GoalProgress } from '@shared/types'
 
+/** Un plan con la fecha de cumplido puesta. */
+type Cumplido = GoalProgress & { achievedAt: string }
+
 const api = window.bonk
 
 const GOAL_ICONS = [
@@ -79,7 +82,9 @@ export function GoalsView(): ReactNode {
   const potTotal = hucha?.balance ?? 0
   const suyos = goals.filter((goal) => goal.accountId === hucha?.id)
   const open = suyos.filter((goal) => !goal.achievedAt)
-  const done = suyos.filter((goal) => goal.achievedAt)
+  // El predicado lleva la fecha al tipo: así el «Cumplido el» de abajo la
+  // enseña sin un `!` que prometa lo que la lista ya garantiza.
+  const done = suyos.filter((goal): goal is Cumplido => goal.achievedAt != null)
   // Lo reservado a mano es lo único que sale de la hucha; el resto es ahorro
   // libre, y es lo que limita cuánto puede subir otro plan.
   //
@@ -187,7 +192,7 @@ export function GoalsView(): ReactNode {
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontWeight: 570 }}>{goal.name}</div>
                   <div className="small muted truncate">
-                    Cumplido el {formatDate(goal.achievedAt!)} · {goal.accountName}
+                    Cumplido el {formatDate(goal.achievedAt)} · {goal.accountName}
                   </div>
                 </div>
                 <div className="amount">{formatMoney(goal.targetAmount, settings.baseCurrency)}</div>

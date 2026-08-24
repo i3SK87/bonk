@@ -3,6 +3,7 @@ import { useStore } from './lib/store'
 import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
+import { Contencion } from './components/Contencion'
 import { Celebration, GoalCelebration } from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
@@ -184,14 +185,19 @@ export function App(): ReactNode {
           <Loading />
         ) : (
           <div className="content">
-            {view === 'transactions' && <TransactionsView onNavigate={(next) => setView(next as ViewId)} />}
-            {view === 'accounts' && <AccountsView />}
-            {view === 'categories' && <CategoriesView />}
-            {view === 'goals' && <GoalsView />}
-            {view === 'debts' && <DebtsView />}
-            {view === 'schedules' && <SchedulesView />}
-            {view === 'reports' && <ReportsView />}
-            {view === 'settings' && <SettingsView />}
+            {/* Cada pestaña, dentro de su propio cortafuegos. La clave es la
+                pestaña: al cambiar de una rota a otra, la contención se
+                reinicia sola y la nueva entra limpia. */}
+            <Contencion key={view}>
+              {view === 'transactions' && <TransactionsView onNavigate={(next) => setView(next as ViewId)} />}
+              {view === 'accounts' && <AccountsView />}
+              {view === 'categories' && <CategoriesView />}
+              {view === 'goals' && <GoalsView />}
+              {view === 'debts' && <DebtsView />}
+              {view === 'schedules' && <SchedulesView />}
+              {view === 'reports' && <ReportsView />}
+              {view === 'settings' && <SettingsView />}
+            </Contencion>
           </div>
         )}
       </main>

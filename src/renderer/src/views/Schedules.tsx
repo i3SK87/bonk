@@ -50,6 +50,9 @@ function refundOptionLabel(row: ScheduledView): string {
     .join(' · ')
 }
 
+/** Una programación con el sello puesto: la fecha de terminada está, seguro. */
+type Finalizada = ScheduledView & { settledAt: string }
+
 export function SchedulesView(): ReactNode {
   const { revision, run, toast, fail } = useStore()
   const [rows, setRows] = useState<ScheduledView[]>([])
@@ -72,8 +75,13 @@ export function SchedulesView(): ReactNode {
    * Finalizada es la que lleva sello: el plan se agotó o se cerró a mano. Una
    * pausada también está apagada, pero se queda en la lista principal en gris,
    * esperando a que la reanuden.
+   *
+   * El sello viaja en el tipo para poder enseñar su fecha sin prometerle a
+   * TypeScript que existe: aquí había un `endDate!` —otro campo, además del que
+   * decide esta lista— y una finalizada sin fecha de fin tiraba la pantalla
+   * entera.
    */
-  const isFinished = (row: ScheduledView): boolean => row.settledAt != null
+  const isFinished = (row: ScheduledView): row is Finalizada => row.settledAt != null
   const vigentes = rows.filter((row) => !isFinished(row))
   const finalizadas = rows.filter(isFinished)
 
@@ -279,7 +287,7 @@ export function SchedulesView(): ReactNode {
                     </span>
                   )}
                   {describeFrequency(row.freq, row.interval)} · {row.accountName} · Terminó el{' '}
-                  {formatDate(row.endDate!)}
+                  {formatDate(row.settledAt)}
                 </div>
               </div>
               <div className="amount">
