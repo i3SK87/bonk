@@ -619,15 +619,16 @@ p { margin: 0; }
 /*
  * Cuánto ha cambiado una cifra: una flecha, un porcentaje y su color.
  *
- * Va con ancho fijo, y de ahí sale la alineación: «▲ 154%» y «=» no miden lo
- * mismo, así que sin un hueco reservado cada insignia empezaría en un sitio
- * distinto. Con todas del mismo ancho y alineadas a la derecha, los dígitos
- * caen unos debajo de otros y el símbolo de porcentaje forma su propia columna.
+ * Va con ancho fijo y centrada dentro de él, y de ahí sale que todas caigan
+ * sobre el mismo eje: «▲ 154%» y «=» no miden lo mismo, así que sin un hueco
+ * reservado cada una empezaría en un sitio distinto. Alineadas a la derecha los
+ * dígitos cuadraban entre ellos, pero un signo suelto quedaba descolgado a un
+ * lado de la masa del porcentaje de arriba; centradas, todas comparten eje.
  */
 .cambio {
   display: inline-block;
   min-width: 58px;
-  text-align: right;
+  text-align: center;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -635,26 +636,29 @@ p { margin: 0; }
 }
 
 /*
- * Un signo suelto se centra en su hueco, y va más gordo.
+ * Un signo suelto va más gordo.
  *
- * «=» y «-» no son cifras: no tienen dígitos que cuadrar con los de arriba, y
- * alineados a la derecha como los porcentajes se quedaban pegados al borde y
- * colgando de la nada. Centrados se leen como lo que son, la marca de que ahí
- * no hay nada que comparar.
- *
- * Un poco mayores y más gruesos porque son dos rayas finas contra un triángulo
- * relleno y tres cifras: al mismo cuerpo que un porcentaje casi no se ven.
+ * Son dos rayas finas contra un triángulo relleno y tres cifras: al mismo
+ * cuerpo que un porcentaje casi no se ven.
  */
 .cambio.signo {
-  text-align: center;
   font-size: 14px;
   font-weight: 800;
   /* Atado, que un cuerpo mayor no le levante el alto a la fila. */
   line-height: 11px;
 }
 
-/* Separada de la cifra, que en la tarjeta no hay columna que las aparte. */
-.stat-fila .cambio { margin-left: 10px; }
+/*
+ * En la tarjeta, pegada a su cifra.
+ *
+ * Aquí no hay columna que cuadrar —cada tarjeta va por su cuenta—, así que el
+ * hueco fijo solo servía para dejar aire de más entre el número y su flecha, y
+ * de un ancho distinto según lo que midiera el porcentaje.
+ */
+.stat-fila .cambio {
+  min-width: 0;
+  margin-left: 10px;
+}
 
 /* La cifra grande de una tarjeta y su cambio, en la misma línea. */
 .stat-fila {
@@ -2775,24 +2779,6 @@ button.list-row:focus-visible {
   font-weight: 650;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-}
-
-/* El nombre de una categoría en Informes: lleva a su ficha sin salir de aquí.
-   Se pinta como texto normal y solo se subraya al pasar, que una tabla llena de
-   enlaces azules no se lee. */
-.nombre-categoria {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-}
-
-.nombre-categoria:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .calendario-rejilla {

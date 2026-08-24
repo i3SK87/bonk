@@ -2,13 +2,12 @@ import { Fragment, useEffect, useMemo, useState, type KeyboardEvent, type ReactN
 import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
-import { CategoryModal } from '../components/CategoryForm'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
 import { DateInput } from '../components/DateInput'
 import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
-import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
+import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
 
@@ -168,9 +167,7 @@ function Cambio({
 }
 
 export function ReportsView(): ReactNode {
-  const { settings, categories: catalogo, revision, run, toast, fail } = useStore()
-  /** La categoría que se está retocando desde aquí, sin salir del informe. */
-  const [editando, setEditando] = useState<Category | null>(null)
+  const { settings, revision, run, toast, fail } = useStore()
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
   const [categories, setCategories] = useState<CategoryTotal[]>([])
@@ -500,28 +497,7 @@ export function ReportsView(): ReactNode {
                                   <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} />
                                 )}
                                 <Avatar icon={row.icon} color={row.color} size="small" />
-                                {/*
-                                  El nombre abre la ficha de la categoría; la
-                                  fila sigue plegando su desglose. Se para el
-                                  clic para que pulsar el nombre no haga las dos
-                                  cosas a la vez.
-                                */}
-                                {row.categoryId == null ? (
-                                  row.name
-                                ) : (
-                                  <button
-                                    type="button"
-                                    className="nombre-categoria"
-                                    title="Editar la categoría"
-                                    onClick={(event) => {
-                                      event.stopPropagation()
-                                      const ficha = catalogo.find((item) => item.id === row.categoryId)
-                                      if (ficha) setEditando(ficha)
-                                    }}
-                                  >
-                                    {row.name}
-                                  </button>
-                                )}
+                                {row.name}
                               </div>
                               <div className="cat-bar">
                                 <div
@@ -595,16 +571,6 @@ export function ReportsView(): ReactNode {
               )}
             </div>
           </div>
-
-      {editando && (
-        <CategoryModal
-          category={editando}
-          defaultKind={editando.kind}
-          onClose={() => setEditando(null)}
-          onSave={(input) => run(() => api.categories.save(input), 'Categoría actualizada')}
-          onDelete={() => run(() => api.categories.remove(editando.id), 'Categoría eliminada')}
-        />
-      )}
 
           <div className="grid cols-2">
             <div className="card">
