@@ -403,8 +403,6 @@ const PATHS: Record<string, JSX.Element> = {
   )
 }
 
-export type IconName = keyof typeof PATHS
-
 interface IconProps {
   name: string
   size?: number

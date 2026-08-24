@@ -58,9 +58,6 @@ export function seedDefaults(db: DatabaseSync): void {
     theme: 'system',
     palette: 'grafito',
     startOfWeek: 'monday',
-    lockEnabled: '0',
-    lockPin: '',
-    lockDelaySeconds: '0',
     lastBackupAt: ''
   }
   for (const [key, value] of Object.entries(defaults)) insertSetting.run(key, value)

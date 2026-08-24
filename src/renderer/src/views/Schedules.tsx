@@ -16,6 +16,7 @@ import {
   AccionCabecera,
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
+import { tituloProgramada } from '@shared/text'
 import { LENDERS } from '@shared/lenders'
 import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
 import { DateInput } from '../components/DateInput'
@@ -28,9 +29,8 @@ const api = window.bonk
  * Cómo se llama una programación en la lista. Las nuevas solo tienen nota; las
  * de antes podían tener además un nombre, y ese manda mientras exista.
  */
-function titleOf(row: Pick<ScheduledView, 'name' | 'note' | 'categoryName'>): string {
-  return row.name || row.note || row.categoryName || 'Movimiento programado'
-}
+const titleOf = (row: Pick<ScheduledView, 'name' | 'note' | 'categoryName'>): string =>
+  tituloProgramada(row)
 
 /**
  * Cómo se lee un gasto programado en el desplegable de reembolsos. La categoría

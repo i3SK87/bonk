@@ -568,5 +568,19 @@ export const MIGRATIONS: string[] = [
   // que le quedaba. Se va detrás.
   `
   ALTER TABLE categories DROP COLUMN recurring;
+  `,
+
+  // v25 — fuera el bloqueo por PIN, que nunca llegó a existir.
+  //
+  // Se guardaban tres ajustes —encendido, PIN y demora— y ninguna pantalla los
+  // leía: se podía poner un PIN y la aplicación abría igual. Configuración que
+  // promete algo que no pasa es peor que no tenerla.
+  //
+  // Y el PIN se guardaba en claro, en el mismo fichero que los movimientos.
+  // Cifrarlo habría aportado poco —quien tiene el fichero ya tiene tus
+  // finanzas—, pero dejar escrito un número que alguien podría reutilizar en
+  // otro sitio no hace falta para nada. Se borran.
+  `
+  DELETE FROM settings WHERE key IN ('lockEnabled', 'lockPin', 'lockDelaySeconds');
   `
 ]

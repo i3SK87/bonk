@@ -22,7 +22,7 @@ import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
-import { periodRange, addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
+import { addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
 
 let passed = 0
 let failed = 0
@@ -166,11 +166,6 @@ try {
   section('Fechas')
   equal('suma meses recortando al último día', addMonths('2026-01-31', 1), '2026-02-28')
   equal('el mes siguiente de una programada mensual', nextOccurrence('2026-08-18', 'monthly', 1), '2026-09-18')
-  const monthPeriod = periodRange('monthly', '2026-01-01', '2026-08-18')
-  equal('el periodo mensual empieza el día 1', monthPeriod.start, '2026-08-01')
-  equal('el periodo mensual acaba el día 31', monthPeriod.end, '2026-08-31')
-  equal('el índice del periodo cuenta desde el inicio', monthPeriod.index, 7)
-
   section('Cuentas y saldos')
   const cash = accounts.saveAccount({
     name: 'Cartera',

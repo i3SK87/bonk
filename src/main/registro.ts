@@ -39,7 +39,3 @@ export function registrarFallo(donde: string, error: unknown): void {
   const guapo = error instanceof Error ? `${error.message}\n${error.stack ?? ''}` : String(error)
   registrar(donde, `FALLO ${guapo}`)
 }
-
-export function rutaDelRegistro(): string {
-  return fichero()
-}

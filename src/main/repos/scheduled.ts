@@ -3,6 +3,7 @@ import { today, nextOccurrence, formatDate } from '@shared/dates'
 import { saveTransaction } from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
+import { tituloProgramada } from '@shared/text'
 import type {
   Scheduled,
   ScheduledView,
@@ -512,7 +513,7 @@ export function debtProgress(reference = today()): DebtProgress[] {
 
     return {
       scheduledId: debt.id,
-      title: debt.name || debt.note || debt.categoryName || 'Deuda',
+      title: tituloProgramada(debt, 'Deuda'),
       categoryName: debt.categoryName,
       categoryIcon: debt.categoryIcon,
       categoryColor: debt.categoryColor,
@@ -704,7 +705,10 @@ export function postDue(reference = today()): PostDueResult {
     } catch (error) {
       resultado.failed.push({
         id: raw.id,
-        title: raw.name || raw.note || 'Programación',
+        // Con la categoría de vuelta: sin ella, una programación sin título
+        // salía como «Programación» a secas justo al contar por qué falló, que
+        // es cuando más falta hace saber de cuál se está hablando.
+        title: tituloProgramada(getScheduled(raw.id) ?? mapScheduled(raw), 'Programación'),
         reason: (error as Error).message ?? 'Error inesperado'
       })
     }

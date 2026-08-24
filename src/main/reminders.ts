@@ -14,6 +14,7 @@ import {
 import { pendingGoals, markGoalReached } from './repos/goals'
 import { listAccountsWithBalance, isLowBalanceWarned, setLowBalanceWarned } from './repos/accounts'
 import { getSettings } from './repos/settings'
+import { tituloProgramada } from '@shared/text'
 import { registrar, registrarFallo } from './registro'
 import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
 
@@ -31,9 +32,7 @@ const CHECK_EVERY_MS = 30 * 60 * 1000
 /** A partir de cuatro, un solo aviso: el día 1 del mes vencen media docena. */
 const MAX_INDIVIDUAL = 3
 
-function title(row: ScheduledView): string {
-  return row.name || row.note || row.categoryName || 'Movimiento programado'
-}
+const title = (row: ScheduledView): string => tituloProgramada(row)
 
 function amountOf(row: ScheduledView): string {
   return formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {

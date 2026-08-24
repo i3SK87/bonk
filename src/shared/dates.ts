@@ -50,13 +50,6 @@ export function endOfMonth(iso: string): string {
   return toISO(new Date(d.getFullYear(), d.getMonth() + 1, 0))
 }
 
-export function startOfWeek(iso: string, mondayFirst = true): string {
-  const d = parseISO(iso)
-  const day = d.getDay()
-  const diff = mondayFirst ? (day === 0 ? 6 : day - 1) : day
-  return addDays(iso, -diff)
-}
-
 export function startOfYear(iso: string): string {
   return `${iso.slice(0, 4)}-01-01`
 }
@@ -65,56 +58,9 @@ export function endOfYear(iso: string): string {
   return `${iso.slice(0, 4)}-12-31`
 }
 
-export function startOfQuarter(iso: string): string {
-  const month = Number(iso.slice(5, 7))
-  const first = Math.floor((month - 1) / 3) * 3 + 1
-  return `${iso.slice(0, 4)}-${String(first).padStart(2, '0')}-01`
-}
-
 export function daysBetween(a: string, b: string): number {
   const ms = parseISO(b).getTime() - parseISO(a).getTime()
   return Math.round(ms / 86400000)
-}
-
-export function monthsBetween(a: string, b: string): number {
-  const from = parseISO(a)
-  const to = parseISO(b)
-  return (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth())
-}
-
-/** Rango del periodo de un presupuesto que contiene a `reference`, anclado en `startDate`. */
-export function periodRange(
-  period: 'weekly' | 'monthly' | 'quarterly' | 'yearly',
-  startDate: string,
-  reference: string,
-  mondayFirst = true
-): { start: string; end: string; index: number } {
-  switch (period) {
-    case 'weekly': {
-      const anchor = startOfWeek(startDate, mondayFirst)
-      const index = Math.floor(daysBetween(anchor, reference) / 7)
-      const start = addDays(anchor, index * 7)
-      return { start, end: addDays(start, 6), index }
-    }
-    case 'monthly': {
-      const anchor = startOfMonth(startDate)
-      const index = monthsBetween(anchor, reference)
-      const start = addMonths(anchor, index)
-      return { start, end: endOfMonth(start), index }
-    }
-    case 'quarterly': {
-      const anchor = startOfQuarter(startDate)
-      const index = Math.floor(monthsBetween(anchor, reference) / 3)
-      const start = addMonths(anchor, index * 3)
-      return { start, end: addDays(addMonths(start, 3), -1), index }
-    }
-    case 'yearly': {
-      const anchor = startOfYear(startDate)
-      const index = Number(reference.slice(0, 4)) - Number(anchor.slice(0, 4))
-      const start = addYears(anchor, index)
-      return { start, end: endOfYear(start), index }
-    }
-  }
 }
 
 export function nextOccurrence(

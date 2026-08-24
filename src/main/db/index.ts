@@ -44,6 +44,14 @@ function adoptPreviousName(): void {
   const source = new DatabaseSync(previous)
   try {
     source.exec(`VACUUM INTO '${target.replace(/'/g, "''")}'`)
+    /*
+     * A la consola y no al cuaderno de bitácora, por mucho que apeteciera.
+     *
+     * `registro.ts` pide la carpeta de datos a Electron, y esta capa la usa el
+     * banco de pruebas, que corre en Node pelado: importarlo aquí arrastra
+     * Electron al paquete y tumba las trescientas cincuenta comprobaciones. Que
+     * los datos no sepan nada de Electron es justo lo que las hace posibles.
+     */
     console.log('Base de datos renombrada:', previous, '→', target)
   } finally {
     source.close()

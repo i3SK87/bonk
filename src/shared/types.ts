@@ -8,7 +8,6 @@
 export type TxType = 'expense' | 'income' | 'transfer' | 'refund'
 export type CategoryKind = 'expense' | 'income'
 export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 'debt'
-export type BudgetPeriod = 'weekly' | 'monthly' | 'quarterly' | 'yearly'
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
@@ -322,9 +321,6 @@ export interface Settings {
   closeToTray: boolean
   /** Avisa por notificación de Windows el día antes de cada programación. */
   remindersEnabled: boolean
-  lockEnabled: boolean
-  lockPin: string | null
-  lockDelaySeconds: number
   lastBackupAt: string | null
 }
 
