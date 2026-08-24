@@ -51,6 +51,28 @@ const CONTRA: Partial<Record<RangoId, { suelto: string; deEse: string }>> = {
   custom: { suelto: 'los mismos días de antes', deEse: 'de los mismos días de antes' }
 }
 
+const MESES_LARGOS = new Intl.DateTimeFormat('es-ES', { month: 'long' })
+
+/**
+ * Un periodo escrito como se dice en alto: «al 1–24 de julio».
+ *
+ * Dos fechas completas —«del 01/07/2026 al 24/07/2026»— son exactas y no las lee
+ * nadie de pasada. Casi siempre los dos extremos caen en el mismo mes, y ahí
+ * basta con nombrarlo una vez.
+ */
+function periodoCorto(desde: string, hasta: string): string {
+  const mes = (iso: string): string => MESES_LARGOS.format(new Date(`${iso}T12:00:00`))
+  const dia = (iso: string): number => Number(iso.slice(8, 10))
+
+  if (desde.slice(0, 7) === hasta.slice(0, 7)) {
+    // El mes entero se nombra por su nombre, sin recitar del 1 al 31.
+    const ultimo = endOfMonth(desde)
+    if (desde.endsWith('-01') && hasta === ultimo) return `a ${mes(desde)}`
+    return `al ${dia(desde)}–${dia(hasta)} de ${mes(desde)}`
+  }
+  return `al ${formatDate(desde)} – ${formatDate(hasta)}`
+}
+
 /**
  * Si esa diferencia es buena o mala.
  *
@@ -345,6 +367,19 @@ export function ReportsView(): ReactNode {
           <div className="card">
             <div className="card-header">
               <h2>Reparto por categorías</h2>
+              {/*
+                Contra qué se comparan las flechas, escrito y a la vista.
+                Estaba solo en el rótulo que sale al pasar por encima, y eso vale
+                para salir de dudas pero no para no tenerlas: mirando la tabla no
+                había forma de saber que un mes en curso se mide contra el mismo
+                trozo del anterior. Una categoría con lo mismo en los dos meses
+                enteros puede llevar flecha, y sin esta línea parece un error.
+              */}
+              {comparacion && (
+                <span className="small muted">
+                  ▲▼ frente {periodoCorto(comparacion.from, comparacion.to)}
+                </span>
+              )}
               <div className="spacer" />
               <Segmented
                 value={kind}
