@@ -9,7 +9,7 @@ import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
-import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading } from '@shared/dates'
+import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading, formatShortDay, daysBetween } from '@shared/dates'
 import type { ProjectedTransaction, TransactionFilter, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
@@ -423,24 +423,76 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       }
     ]
 
-    // El gasto más gordo de los que se están viendo. Solo de los reales: uno
-    // previsto todavía no ha costado nada.
-    let mayor: TransactionView | null = null
-    for (const row of rows) {
-      if (row.type !== 'expense') continue
-      if (!mayor || Math.abs(row.amountInBase) > Math.abs(mayor.amountInBase)) mayor = row
+    /*
+     * Qué parte de lo que entró se ha quedado. Sin ingresos no hay porcentaje
+     * que sacar —sería dividir entre cero— y la cifra no sale.
+     *
+     * En rojo se le da la vuelta a la frase. «Ahorrado −145 % de los ingresos»
+     * es cierto y no lo entiende nadie; lo que dice de verdad es que se ha
+     * gastado el 245 % de lo que entró, y así se lee a la primera.
+     */
+    if (totals.income > 0) {
+      const ahorrado = Math.round((totals.net / totals.income) * 100)
+      lista.push(
+        ahorrado >= 0
+          ? { label: 'Ahorrado', value: `${ahorrado}% de los ingresos`, tone: 'positive' }
+          : {
+              label: 'Gastado',
+              value: `${Math.round((totals.expense / totals.income) * 100)}% de los ingresos`,
+              tone: 'negative'
+            }
+      )
     }
-    if (mayor) {
-      const nombre = mayor.note || mayor.categoryName
+
+    /*
+     * El ritmo de gasto, que es lo que deja comparar un mes con otro de
+     * distinta longitud.
+     *
+     * Se reparte entre los días que han pasado de verdad, no entre los que mide
+     * el rango: a día 3 de mes, dividir entre 31 dice que gastas una tercera
+     * parte de lo que gastas. Cuando se está mirando lo que viene sí cuenta el
+     * rango entero, porque entonces el gasto de esos días futuros también está
+     * sumado arriba.
+     */
+    const fechas = [...rows, ...projected].map((item) => item.date).sort()
+    const inicio = filter.from ?? fechas[0]
+    const finRango = filter.to ?? fechas[fechas.length - 1]
+    const fin = showingProjected ? finRango : finRango > today() ? today() : finRango
+    if (inicio && fin && totals.expense > 0) {
+      const dias = Math.max(1, daysBetween(inicio, fin) + 1)
       lista.push({
-        label: nombre ? `Mayor gasto · ${nombre}` : 'Mayor gasto',
-        value: formatMoney(-Math.abs(mayor.amountInBase), settings.baseCurrency),
+        label: 'Gasto medio al día',
+        value: formatMoney(Math.round(totals.expense / dias), settings.baseCurrency),
+        tone: 'negative'
+      })
+    }
+
+    /*
+     * El día que más se fue. Solo de lo real: un día que no ha llegado no es un
+     * día en que se haya gastado nada.
+     *
+     * Se suma como arriba —lo devuelto descuenta— para que un gasto grande ya
+     * reembolsado no se lleve el título.
+     */
+    const porDia = new Map<string, number>()
+    for (const row of rows) {
+      if (row.type === 'expense') porDia.set(row.date, (porDia.get(row.date) ?? 0) + Math.abs(row.amountInBase))
+      else if (row.type === 'refund') porDia.set(row.date, (porDia.get(row.date) ?? 0) - row.amountInBase)
+    }
+    let peor: { fecha: string; total: number } | null = null
+    for (const [fecha, total] of porDia) {
+      if (total > 0 && (!peor || total > peor.total)) peor = { fecha, total }
+    }
+    if (peor) {
+      lista.push({
+        label: `Día de más gasto · ${formatShortDay(peor.fecha)}`,
+        value: formatMoney(-peor.total, settings.baseCurrency),
         tone: 'negative'
       })
     }
 
     return lista
-  }, [totals, rows, projected, showingProjected, settings.baseCurrency])
+  }, [totals, rows, projected, showingProjected, settings.baseCurrency, filter.from, filter.to])
 
   /** Las cuentas que se están quedando cortas, cada una con su propio suelo. */
   const runningLow = accounts.filter(
