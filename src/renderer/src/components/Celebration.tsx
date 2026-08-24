@@ -15,6 +15,9 @@ import type { Settlement, GoalReached } from '@shared/types'
 /** Los mismos colores que llevan las categorías en las listas. */
 const COLORS = ['#64d2ff', '#40d873', '#ffb340', '#ff6961', '#f090c4', '#5fd8c4', '#a78bfa']
 
+/** Las estrellas van todas de un amarillo: de muchos colores parecían papelillo. */
+const AMARILLO = '#ffce3d'
+
 interface Piece {
   x: number
   y: number
@@ -50,7 +53,19 @@ function span(from: string | null, to: string | null): string {
   return years === 1 ? 'un año' : `${years} años`.replace('.', ',')
 }
 
-function Confetti(): ReactNode {
+/**
+ * El estallido de la celebración: papelillo o estrellas, la misma física.
+ *
+ * Sale disparado hacia arriba desde detrás del título, la gravedad lo devuelve y
+ * se va apagando por el camino. Las estrellas tuvieron lo suyo —subían despacio
+ * desde abajo y parpadeaban— y no era lo mismo: lo que se quiere ver es que
+ * broten, no que floten.
+ *
+ * Solo cambian dos cosas entre una forma y otra: qué se dibuja y de qué color.
+ * El resto —velocidades, gravedad, giro, apagado— es idéntico, así que vive una
+ * sola vez y no en dos animaciones que se van separando con cada retoque.
+ */
+function Estallido({ forma = 'papelillo' }: { forma?: 'papelillo' | 'estrella' }): ReactNode {
   const ref = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -64,11 +79,50 @@ function Confetti(): ReactNode {
     canvas.height = Math.round(rect.height * dpr)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
+    /*
+     * Una estrella de cinco puntas, centrada en el origen del lienzo.
+     *
+     * Se dibuja sin girarla: el giro ya lo trae puesto el propio lienzo cuando
+     * se la coloca, igual que con el papelillo.
+     */
+    const estrella = (radio: number): void => {
+      ctx.beginPath()
+      for (let i = 0; i < 10; i++) {
+        // Alternando radio grande y pequeño salen las cinco puntas.
+        const r = i % 2 === 0 ? radio : radio * 0.42
+        const angulo = (i * Math.PI) / 5 - Math.PI / 2
+        const px = Math.cos(angulo) * r
+        const py = Math.sin(angulo) * r
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    /** Cada pieza, ya girada y colocada por quien la llama. */
+    const pintar = (piece: Piece): void => {
+      ctx.fillStyle = piece.color
+      if (forma === 'estrella') {
+        estrella(piece.w * 0.8)
+        return
+      }
+      // Un papelillo que gira se ve más estrecho: se estrecha el ancho.
+      ctx.fillRect(
+        -piece.w / 2,
+        -piece.h / 2,
+        piece.w * Math.abs(Math.cos(piece.rot * 1.4)) + 1.5,
+        piece.h
+      )
+    }
+
     const pieces: Piece[] = []
     const originX = rect.width / 2
     const originY = rect.height / 2 - 130
 
-    for (let i = 0; i < 110; i++) {
+    // Menos estrellas que papelillos: ocupan más y con ciento diez se tapan.
+    const cuantas = forma === 'estrella' ? 76 : 110
+    for (let i = 0; i < cuantas; i++) {
       const angle = -Math.PI / 2 + (Math.random() - 0.5) * 2.5
       const speed = 260 + Math.random() * 420
       pieces.push({
@@ -80,7 +134,7 @@ function Confetti(): ReactNode {
         h: 8 + Math.random() * 7,
         rot: Math.random() * Math.PI,
         spin: (Math.random() - 0.5) * 11,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        color: forma === 'estrella' ? AMARILLO : COLORS[Math.floor(Math.random() * COLORS.length)],
         life: 0,
         max: 1.7 + Math.random() * 1.1
       })
@@ -92,8 +146,7 @@ function Confetti(): ReactNode {
         ctx.save()
         ctx.translate(piece.x + piece.vx * 0.35, piece.y + Math.abs(piece.vy) * 0.25 + 120)
         ctx.rotate(piece.rot)
-        ctx.fillStyle = piece.color
-        ctx.fillRect(-piece.w / 2, -piece.h / 2, piece.w, piece.h)
+        pintar(piece)
         ctx.restore()
       }
       return
@@ -123,9 +176,7 @@ function Confetti(): ReactNode {
         ctx.globalAlpha = Math.max(0, 1 - fading)
         ctx.translate(piece.x, piece.y)
         ctx.rotate(piece.rot)
-        ctx.fillStyle = piece.color
-        // Un papelillo que gira se ve más estrecho: se estrecha el ancho.
-        ctx.fillRect(-piece.w / 2, -piece.h / 2, piece.w * Math.abs(Math.cos(piece.rot * 1.4)) + 1.5, piece.h)
+        pintar(piece)
         ctx.restore()
       }
 
@@ -134,109 +185,7 @@ function Confetti(): ReactNode {
 
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [])
-
-  return <canvas ref={ref} className="confetti" aria-hidden="true" />
-}
-
-/**
-/**
- * Estrellas para el resumen del mes, en vez de papelillo.
- *
- * El papelillo estalla hacia arriba y cae: es una fiesta. Estas suben despacio y
- * se apagan, que acompaña sin celebrar nada en concreto —el mes puede haber ido
- * bien o mal y el cuadro sale igual—. Giran mientras suben y parpadean un poco,
- * lo justo para que no parezcan puntos quietos.
- */
-function Estrellas(): ReactNode {
-  const ref = useRef<HTMLCanvasElement>(null)
-
-  useEffect(() => {
-    const canvas = ref.current
-    const ctx = canvas?.getContext('2d')
-    if (!canvas || !ctx) return
-
-    const rect = canvas.getBoundingClientRect()
-    const dpr = window.devicePixelRatio || 1
-    canvas.width = Math.round(rect.width * dpr)
-    canvas.height = Math.round(rect.height * dpr)
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-
-    /** Una estrella de cinco puntas, dibujada desde su centro. */
-    const punta = (x: number, y: number, radio: number, giro: number): void => {
-      ctx.beginPath()
-      for (let i = 0; i < 10; i++) {
-        // Alternando radio grande y pequeño salen las cinco puntas.
-        const r = i % 2 === 0 ? radio : radio * 0.42
-        const angulo = giro + (i * Math.PI) / 5 - Math.PI / 2
-        const px = x + Math.cos(angulo) * r
-        const py = y + Math.sin(angulo) * r
-        if (i === 0) ctx.moveTo(px, py)
-        else ctx.lineTo(px, py)
-      }
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    const cuantas = 46
-    const piezas = Array.from({ length: cuantas }, () => ({
-      x: Math.random() * rect.width,
-      // Empiezan repartidas por debajo del borde, para que entren escalonadas.
-      y: rect.height + Math.random() * rect.height * 0.9,
-      vy: -(34 + Math.random() * 58),
-      vx: (Math.random() - 0.5) * 24,
-      radio: 3 + Math.random() * 6,
-      giro: Math.random() * Math.PI,
-      vueltas: (Math.random() - 0.5) * 1.5,
-      color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      // Cada una parpadea a su ritmo: todas a la vez parecería un fallo.
-      fase: Math.random() * Math.PI * 2,
-      ritmo: 1.6 + Math.random() * 2.2
-    }))
-
-    // Con el movimiento reducido se quedan puestas, sin subir ni parpadear.
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      for (const e of piezas) {
-        ctx.globalAlpha = 0.5
-        ctx.fillStyle = e.color
-        punta(e.x, e.y - rect.height * 0.55, e.radio, e.giro)
-      }
-      return
-    }
-
-    let frame = 0
-    let last = performance.now()
-    let vivido = 0
-
-    const tick = (now: number): void => {
-      const dt = Math.min(0.032, (now - last) / 1000)
-      last = now
-      vivido += dt
-      ctx.clearRect(0, 0, rect.width, rect.height)
-
-      // Se apagan a la vez al final, que si no se quedarían dando vueltas.
-      const apagado = Math.max(0, 1 - Math.max(0, vivido - 3.4) / 1.4)
-      if (apagado <= 0) return
-
-      for (const e of piezas) {
-        e.y += e.vy * dt
-        e.x += e.vx * dt
-        e.giro += e.vueltas * dt
-        // La que se sale por arriba vuelve por abajo mientras dure la entrada.
-        if (e.y < -20) e.y = rect.height + 20
-
-        const brillo = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(vivido * e.ritmo + e.fase))
-        ctx.globalAlpha = brillo * apagado
-        ctx.fillStyle = e.color
-        punta(e.x, e.y, e.radio, e.giro)
-      }
-
-      frame = requestAnimationFrame(tick)
-    }
-
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [])
+  }, [forma])
 
   return <canvas ref={ref} className="confetti" aria-hidden="true" />
 }
@@ -283,8 +232,8 @@ function Party({
 
   return (
     <div className="overlay" onClick={onClose}>
-      {adorno === 'papelillo' && <Confetti />}
-      {adorno === 'estrellas' && <Estrellas />}
+      {adorno === 'papelillo' && <Estallido />}
+      {adorno === 'estrellas' && <Estallido forma="estrella" />}
       <div
         className={`celebration${ancha ? ' ancha' : ''}`}
         onClick={(event) => event.stopPropagation()}

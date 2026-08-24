@@ -472,6 +472,32 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const runningLow = accounts.filter(
     (account) => account.lowBalanceThreshold > 0 && account.balance < account.lowBalanceThreshold
   )
+  const enAviso = new Set(runningLow.map((account) => account.id))
+
+  /*
+   * La cifra grande se tiñe si alguna de las cuentas que suma está avisando.
+   *
+   * Alguna y no todas. Con «todas» el ámbar no salía casi nunca: basta una hucha
+   * a cero y sin suelo puesto para que el patrimonio siguiera en verde con el
+   * aviso justo debajo, que es precisamente lo que había que arreglar.
+   *
+   * Se pierde algo de precisión —con tres cuentas y una corta, el total no está
+   * corto— y a cambio se gana lo que se buscaba: que una cifra en verde no tape
+   * un aviso. El ámbar dice «mira aquí», no «esto está mal», y el rótulo de
+   * debajo dice cuál es la cuenta.
+   *
+   * Solo entran las que la cifra suma: una cuenta apartada del total que ande
+   * corta no tiñe un patrimonio en el que no está.
+   */
+  const patrimonioEnAviso = shownAccounts.some((account) => enAviso.has(account.id))
+  const tonoPatrimonio =
+    netWorth < 0
+      ? 'negative'
+      : patrimonioEnAviso
+        ? 'warning'
+        : netWorth > 0
+          ? 'positive'
+          : 'neutral'
 
   return (
     <>
@@ -479,7 +505,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         <div className="card-body networth-strip">
           <div className="networth">
             <div className="label">{netWorthLabel}</div>
-            <div className={`value amount ${netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : 'neutral'}`}>
+            <div className={`value amount ${tonoPatrimonio}`}>
               {formatMoney(netWorth, settings.baseCurrency)}
             </div>
           </div>
@@ -490,6 +516,22 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               {accounts.map((account) => {
                 const active = accountIds.includes(account.id)
                 const balance = account.balance + (projectedDeltas.get(account.id) ?? 0)
+                /*
+                 * Del color del aviso mientras el aviso esté puesto.
+                 *
+                 * Se mira si la cuenta está avisando y no el saldo que se está
+                 * enseñando, para que el rótulo de abajo y la cifra digan lo
+                 * mismo también con los previstos puestos. En descubierto manda
+                 * el rojo: el aviso también sube de tono ahí.
+                 */
+                const tono =
+                  balance < 0
+                    ? 'negative'
+                    : enAviso.has(account.id)
+                      ? 'warning'
+                      : balance > 0
+                        ? 'positive'
+                        : 'neutral'
                 return (
                   <button
                     key={account.id}
@@ -502,7 +544,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                     <span className="chip-text">
                       <span className="chip-name truncate">{account.name}</span>
                       <span
-                        className={`chip-balance amount ${balance > 0 ? 'positive' : balance < 0 ? 'negative' : 'neutral'}`}
+                        className={`chip-balance amount ${tono}`}
                       >
                         {formatMoney(balance, account.currency)}
                       </span>

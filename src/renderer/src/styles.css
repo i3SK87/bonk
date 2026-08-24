@@ -675,6 +675,10 @@ p { margin: 0; }
 .cambio.negative { color: var(--negative); }
 .amount.neutral { color: var(--fg-muted); }
 
+/* El ámbar del aviso de fondos, para que la cifra y el rótulo de debajo digan lo
+   mismo: si la cuenta está avisando, su saldo se ve avisando. */
+.amount.warning { color: var(--warning); }
+
 /* ---------- Botones ---------- */
 
 .btn {
