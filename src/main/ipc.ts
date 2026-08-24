@@ -85,6 +85,9 @@ export function registerIpc(
   // — Movimientos —
   handle('tx:list', (filter: TransactionFilter) => transactions.listTransactions(filter))
   handle('tx:count', (filter: TransactionFilter) => transactions.countTransactions(filter))
+  // Los totales los suma la base de datos: la lista viene con tope y sumar lo
+  // cargado daba cifras de menos en cuanto el periodo pasaba de doscientos.
+  handle('tx:totals', (filter: TransactionFilter) => transactions.totalsForFilter(filter))
   handle('tx:get', (id: number) => transactions.getTransaction(id))
   handle('tx:save', (input) => {
     const saved = transactions.saveTransaction(input)

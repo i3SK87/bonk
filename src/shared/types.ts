@@ -443,3 +443,14 @@ export interface MonthlyPoint {
   net: number
 }
 
+
+/** Totales de todo lo que encaja con un filtro, contados en la base de datos. */
+export interface FilterTotals {
+  income: number
+  expense: number
+  net: number
+  /** Cuántos movimientos encajan de verdad, no cuántos se han traído. */
+  count: number
+  firstDate: string | null
+  lastDate: string | null
+}

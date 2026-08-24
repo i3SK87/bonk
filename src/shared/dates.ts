@@ -139,7 +139,6 @@ const dateFmt = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-dig
 const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 const monthFmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' })
 const shortMonthFmt = new Intl.DateTimeFormat('es-ES', { month: 'short' })
-const shortDayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' })
 
 export function formatDate(iso: string): string {
   return dateFmt.format(parseISO(iso))
@@ -152,11 +151,6 @@ export function formatMonth(iso: string): string {
 
 export function formatShortMonth(iso: string): string {
   return shortMonthFmt.format(parseISO(iso)).replace('.', '')
-}
-
-/** «vie 22», para donde la fecha entera sobra y el día de la semana ayuda. */
-export function formatShortDay(iso: string): string {
-  return shortDayFmt.format(parseISO(iso)).replace('.', '')
 }
 
 /** Cabecera de grupo en la lista de movimientos: "Hoy", "Ayer" o el día escrito. */

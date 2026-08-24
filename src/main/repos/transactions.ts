@@ -4,7 +4,14 @@ import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
 import { addToGoalReserve } from './goals'
-import type { Transaction, TransactionView, TransactionInput, TransactionFilter, TxType } from '@shared/types'
+import type {
+  Transaction,
+  TransactionView,
+  TransactionInput,
+  TransactionFilter,
+  FilterTotals,
+  TxType
+} from '@shared/types'
 
 interface TxRow {
   id: number
@@ -243,6 +250,73 @@ export function listTransactions(filter: TransactionFilter = {}): TransactionVie
   const rates = rateMap()
   const base = getSettings().baseCurrency
   return rows.map((row) => toView(row, tags, refunds, rates, base))
+}
+
+/**
+ * Los totales de todo lo que encaja con el filtro, no de lo que quepa en la
+ * lista.
+ *
+ * La pantalla de Movimientos los sacaba sumando las filas que tenía cargadas, y
+ * la lista viene con tope —doscientas— para no traerse años enteros de golpe.
+ * Con más movimientos que ese tope, las tres cifras de arriba contaban solo un
+ * trozo: en un año con trescientas noventa y tres, el balance salía en rojo
+ * cuando estaba en verde. Contaba lo que se veía y lo llamaba «del periodo».
+ *
+ * Aquí se suma en la base de datos, con el mismo filtro y sin tope. Se agrupa
+ * por divisa porque convertir hay que hacerlo antes de sumar: juntar euros con
+ * libras y convertir el montón daría cualquier cosa.
+ *
+ * Las fechas extremas salen de la misma pasada, que es lo que permite repartir
+ * el gasto entre los días que de verdad abarca lo filtrado.
+ */
+export function totalsForFilter(filter: TransactionFilter = {}): FilterTotals {
+  const { sql, params } = buildWhere(filter)
+  const rows = getDb()
+    .prepare(
+      `SELECT t.type       AS type,
+              a.currency   AS currency,
+              SUM(t.amount) AS total,
+              COUNT(*)     AS n,
+              MIN(t.date)  AS primera,
+              MAX(t.date)  AS ultima
+         FROM transactions t
+         JOIN accounts a        ON a.id = t.account_id
+         LEFT JOIN categories c ON c.id = t.category_id
+       ${sql}
+       GROUP BY t.type, a.currency`
+    )
+    .all(...params) as unknown as Array<{
+    type: string
+    currency: string
+    total: number
+    n: number
+    primera: string | null
+    ultima: string | null
+  }>
+
+  const rates = rateMap()
+  const base = getSettings().baseCurrency
+
+  let income = 0
+  let expense = 0
+  let count = 0
+  let firstDate: string | null = null
+  let lastDate: string | null = null
+
+  for (const row of rows) {
+    count += Number(row.n)
+    if (row.primera && (!firstDate || row.primera < firstDate)) firstDate = row.primera
+    if (row.ultima && (!lastDate || row.ultima > lastDate)) lastDate = row.ultima
+
+    const valor = convert(Number(row.total), row.currency, base, rates)
+    // Igual que en la lista: un traspaso no mueve el patrimonio, y lo devuelto
+    // deja de ser gasto en vez de convertirse en ingreso.
+    if (row.type === 'income') income += valor
+    else if (row.type === 'expense') expense += valor
+    else if (row.type === 'refund') expense -= valor
+  }
+
+  return { income, expense, net: income - expense, count, firstDate, lastDate }
 }
 
 export function countTransactions(filter: TransactionFilter = {}): number {

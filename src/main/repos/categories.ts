@@ -58,6 +58,11 @@ export interface CategoryInput {
 }
 
 export function saveCategory(input: CategoryInput): Category {
+  // La regla la sostiene quien guarda, no solo quien teclea: el formulario ya
+  // la pedía, pero una categoría sin nombre es una fila que la lista no sabe
+  // enseñar, y esas son las que acaban rompiendo una pantalla entera.
+  if (!input.name?.trim()) throw new Error('La categoría necesita un nombre')
+
   const db = getDb()
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
@@ -65,7 +70,7 @@ export function saveCategory(input: CategoryInput): Category {
     db.prepare(
       'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ? WHERE id = ?'
     ).run(
-      input.name,
+      input.name.trim(),
       input.kind,
       parentId,
       input.icon,
@@ -86,7 +91,7 @@ export function saveCategory(input: CategoryInput): Category {
       'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     )
     .run(
-      input.name,
+      input.name.trim(),
       input.kind,
       input.parentId ?? null,
       input.icon,

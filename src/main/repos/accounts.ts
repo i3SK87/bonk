@@ -186,6 +186,10 @@ export function saveAccount(input: AccountInput): Account {
 }
 
 function saveAccountInner(input: AccountInput): Account {
+  // Igual que en las categorías: el nombre lo exige quien guarda. Una cuenta sin
+  // nombre sale en blanco en cada desplegable de la aplicación.
+  if (!input.name?.trim()) throw new Error('La cuenta necesita un nombre')
+
   const db = getDb()
   const allowNegative = input.allowNegative ?? defaultAllowNegative(input.type)
 
@@ -197,7 +201,7 @@ function saveAccountInner(input: AccountInput): Account {
               low_balance_threshold = ?, archived = ?
         WHERE id = ?`
     ).run(
-      input.name,
+      input.name.trim(),
       input.type,
       input.currency.toUpperCase(),
       bind(input.initialBalance) as number,
@@ -227,7 +231,7 @@ function saveAccountInner(input: AccountInput): Account {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
-      input.name,
+      input.name.trim(),
       input.type,
       input.currency.toUpperCase(),
       bind(input.initialBalance) as number,

@@ -270,6 +270,80 @@ try {
   equal('sugiere el beneficiario tecleado', transactions.payeeSuggestions('merca')[0], 'Mercadona')
   equal('recuerda la categoría del beneficiario', transactions.categoryForPayee('Mercadona'), food.id)
 
+  /*
+   * Los totales del periodo se cuentan en la base de datos, no sumando la lista.
+   *
+   * La lista viene con tope para no traerse años enteros de golpe, y las cifras
+   * de arriba se sacaban de ella: con más movimientos que el tope contaban solo
+   * un trozo y lo llamaban «del periodo». En una base de casi cuatrocientos
+   * apuntes al año, el balance salía en rojo estando en verde.
+   */
+  section('Los totales del periodo cuentan todo, no lo que quepa')
+  const antes = transactions.totalsForFilter({})
+  // Veinte gastos de diez euros, y una lista que solo deja ver cinco.
+  for (let i = 0; i < 20; i++) {
+    transactions.saveTransaction({
+      type: 'expense',
+      date: day,
+      accountId: bank.id,
+      categoryId: food.id,
+      amount: 1000,
+      note: `Tope ${i}`
+    })
+  }
+  const conTope = transactions.listTransactions({ limit: 5 })
+  const sumados = transactions.totalsForFilter({ limit: 5 })
+  equal('la lista respeta el tope', conTope.length, 5)
+  equal(
+    'pero los totales cuentan los veinte',
+    sumados.expense - antes.expense,
+    20000
+  )
+  equal('y el recuento también', sumados.count - antes.count, 20)
+  check(
+    'sumar la lista con tope daría bastante menos',
+    conTope.reduce((s, r) => s + Math.abs(r.amountInBase), 0) < sumados.expense - antes.expense
+  )
+  // El filtro se aplica igual que en la lista, tope aparte.
+  const soloTope = transactions.totalsForFilter({ search: 'Tope' })
+  equal('el filtro se respeta en los totales', soloTope.expense, 20000)
+  equal('con sus fechas extremas', soloTope.firstDate, day)
+  equal('y la última igual', soloTope.lastDate, day)
+  // Un rango sin nada no puede reventar ni inventarse fechas.
+  const vacio = transactions.totalsForFilter({ from: '1999-01-01', to: '1999-12-31' })
+  equal('un periodo vacío suma cero', vacio.expense + vacio.income, 0)
+  equal('y no trae fechas', vacio.firstDate, null)
+  for (const fila of transactions.listTransactions({ search: 'Tope', limit: 100 })) {
+    transactions.deleteTransaction(fila.id)
+  }
+
+  /*
+   * El nombre lo exige quien guarda, no solo quien teclea.
+   *
+   * Los formularios ya lo pedían, así que por la interfaz no se colaba; pero una
+   * fila sin nombre es de las que la lista no sabe enseñar, y de esas ya hemos
+   * tenido una que se llevó por delante la pantalla entera.
+   */
+  section('Nada sin nombre')
+  for (const [titulo, intento] of [
+    ['una cuenta en blanco', () => accounts.saveAccount({ name: '   ', type: 'cash', currency: 'EUR', initialBalance: 0, icon: 'wallet', color: '#0A84FF', excludeFromTotal: false })],
+    ['una categoría en blanco', () => categories.saveCategory({ name: '', kind: 'expense', icon: 'tag', color: '#8E8E93' })]
+  ] as Array<[string, () => unknown]>) {
+    let rechazado = false
+    try {
+      intento()
+    } catch {
+      rechazado = true
+    }
+    check(`se rechaza ${titulo}`, rechazado)
+  }
+  const conEspacios = accounts.saveAccount({
+    name: '  Con espacios  ', type: 'cash', currency: 'EUR', initialBalance: 0,
+    icon: 'wallet', color: '#0A84FF', excludeFromTotal: false
+  })
+  equal('y el nombre se guarda recortado', conEspacios.name, 'Con espacios')
+  accounts.deleteAccount(conEspacios.id)
+
   section('Informes')
   const monthStart = startOfMonth(day)
   const expenses = reports.categoryTotals(monthStart, day, 'expense')

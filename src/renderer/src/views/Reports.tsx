@@ -11,6 +11,7 @@ import {
   addMonths,
   startOfYear,
   endOfYear,
+  daysBetween,
   formatDate
 } from '@shared/dates'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
@@ -108,13 +109,21 @@ export function ReportsView(): ReactNode {
   // total: si se midiera contra el total, todas saldrían diminutas.
   const widest = Math.max(1, ...categories.map((item) => item.total))
   const movements = categories.reduce((sum, item) => sum + item.count, 0)
+  /*
+   * Entre los días que han pasado, no entre los que mide el rango.
+   *
+   * Dividiendo por el rango entero, «Este mes» a día 3 decía que gastas la
+   * décima parte de lo que gastas, y «Este año» en agosto repartía entre los
+   * doce meses cuatro que aún no han llegado. Además decía una cosa distinta de
+   * la que dice Movimientos del mismo periodo, que es peor que las dos.
+   *
+   * Las fechas se leen con `parseISO` y no con `new Date`, que interpreta
+   * «YYYY-MM-DD» como UTC y en España cambia el día.
+   */
   const dailyAverage = (() => {
-    const days = Math.max(
-      1,
-      Math.round(
-        (new Date(range.to).getTime() - new Date(range.from).getTime()) / 86400000
-      ) + 1
-    )
+    const hoy = today()
+    const fin = range.to > hoy ? hoy : range.to
+    const days = Math.max(1, daysBetween(range.from, fin) + 1)
     return Math.round(total / days)
   })()
 

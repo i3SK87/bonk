@@ -17,7 +17,8 @@ import type {
   TransactionFilter,
   TransactionInput,
   TransactionView,
-  Settlement
+  Settlement,
+  FilterTotals
 } from '@shared/types'
 
 
@@ -58,6 +59,7 @@ const api = {
   transactions: {
     list: (filter: TransactionFilter = {}) => call<TransactionView[]>('tx:list', filter),
     count: (filter: TransactionFilter = {}) => call<number>('tx:count', filter),
+    totals: (filter: TransactionFilter = {}) => call<FilterTotals>('tx:totals', filter),
     get: (id: number) => call<TransactionView | null>('tx:get', id),
     save: (input: TransactionInput) => call<TransactionView>('tx:save', input),
     remove: (id: number) => call<void>('tx:delete', id),

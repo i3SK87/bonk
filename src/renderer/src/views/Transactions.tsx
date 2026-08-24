@@ -9,8 +9,14 @@ import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
-import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading, formatShortDay, daysBetween } from '@shared/dates'
-import type { ProjectedTransaction, TransactionFilter, TransactionView, TxType } from '@shared/types'
+import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
+import type {
+  FilterTotals,
+  ProjectedTransaction,
+  TransactionFilter,
+  TransactionView,
+  TxType
+} from '@shared/types'
 
 const api = window.bonk
 
@@ -133,6 +139,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [rows, setRows] = useState<TransactionView[]>([])
   const [projected, setProjected] = useState<ProjectedTransaction[]>([])
   const [total, setTotal] = useState(0)
+  /** Los totales del periodo entero, contados en la base de datos. */
+  const [sumas, setSumas] = useState<FilterTotals | null>(null)
   const [limit, setLimit] = useState(200)
   const [loading, setLoading] = useState(true)
   const [selection, setSelection] = useState<number[]>([])
@@ -160,11 +168,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([api.transactions.list(filter), api.transactions.count(filter)])
-      .then(([list, count]) => {
+    // Los totales aparte de la lista: la lista viene con tope y sumarla daba
+    // cifras de menos en cuanto el periodo pasaba de doscientos movimientos.
+    Promise.all([api.transactions.list(filter), api.transactions.totals(filter)])
+      .then(([list, sumas]) => {
         if (cancelled) return
         setRows(list)
-        setTotal(count)
+        setSumas(sumas)
+        setTotal(sumas.count)
       })
       .catch(fail('los movimientos'))
       .finally(() => !cancelled && setLoading(false))
@@ -239,22 +250,28 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * estén viendo: es una previsión, y al apagarlas las cifras vuelven a contar
    * solo lo que ha pasado de verdad.
    */
+  /*
+   * Lo real lo suma la base de datos y lo previsto se le añade aquí.
+   *
+   * Antes se sumaba la lista entera en la ventana, y la lista viene con tope
+   * para no traerse años de golpe: con más movimientos que ese tope, las cifras
+   * contaban solo un trozo y lo llamaban «del periodo». En un año con
+   * trescientas noventa y tres, el balance salía en rojo estando en verde.
+   *
+   * Lo previsto sí se suma aquí porque no existe en ninguna tabla: son las
+   * repeticiones que aún no han entrado, y se calculan al vuelo.
+   */
   const totals = useMemo(() => {
-    let income = 0
-    let expense = 0
-
-    const add = (type: TxType, amountInBase: number): void => {
-      if (type === 'income') income += amountInBase
-      else if (type === 'expense') expense += Math.abs(amountInBase)
+    let income = sumas?.income ?? 0
+    let expense = sumas?.expense ?? 0
+    for (const item of projected) {
+      if (item.type === 'income') income += item.amountInBase
+      else if (item.type === 'expense') expense += Math.abs(item.amountInBase)
       // Lo reembolsado deja de ser gasto, no pasa a ser ingreso.
-      else if (type === 'refund') expense -= amountInBase
+      else if (item.type === 'refund') expense -= item.amountInBase
     }
-
-    for (const row of rows) add(row.type, row.amountInBase)
-    for (const item of projected) add(item.type, item.amountInBase)
-
     return { income, expense, net: income - expense }
-  }, [rows, projected])
+  }, [sumas, projected])
 
   /** Saldo que quedaría en cada cuenta si se cumple todo lo programado del rango. */
   const projectedDeltas = useMemo(() => {
@@ -417,8 +434,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         tone: totals.net >= 0 ? 'positive' : 'negative'
       },
       {
+        // Los que hay, no los que se han traído: la lista carga de doscientos
+        // en doscientos y aquí decía siempre «200».
         label: 'Movimientos',
-        value: String(rows.length + projected.length),
+        value: String((sumas?.count ?? 0) + projected.length),
         tone: 'neutral'
       }
     ]
@@ -454,10 +473,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      * rango entero, porque entonces el gasto de esos días futuros también está
      * sumado arriba.
      */
-    const fechas = [...rows, ...projected].map((item) => item.date).sort()
-    const inicio = filter.from ?? fechas[0]
-    const finRango = filter.to ?? fechas[fechas.length - 1]
-    const fin = showingProjected ? finRango : finRango > today() ? today() : finRango
+    // Sin rango elegido —«Todo»— los extremos los da la propia consulta, que ha
+    // mirado todo: sacarlos de la lista cargada acortaba el periodo al trozo
+    // que cupiera y disparaba la media.
+    const ultimaPrevista = projected.length ? projected[projected.length - 1].date : null
+    const inicio = filter.from ?? sumas?.firstDate ?? null
+    const finRango = filter.to ?? (showingProjected ? ultimaPrevista : null) ?? sumas?.lastDate ?? null
+    const fin = !finRango ? null : showingProjected ? finRango : finRango > today() ? today() : finRango
     if (inicio && fin && totals.expense > 0) {
       const dias = Math.max(1, daysBetween(inicio, fin) + 1)
       lista.push({
@@ -467,32 +489,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       })
     }
 
-    /*
-     * El día que más se fue. Solo de lo real: un día que no ha llegado no es un
-     * día en que se haya gastado nada.
-     *
-     * Se suma como arriba —lo devuelto descuenta— para que un gasto grande ya
-     * reembolsado no se lleve el título.
-     */
-    const porDia = new Map<string, number>()
-    for (const row of rows) {
-      if (row.type === 'expense') porDia.set(row.date, (porDia.get(row.date) ?? 0) + Math.abs(row.amountInBase))
-      else if (row.type === 'refund') porDia.set(row.date, (porDia.get(row.date) ?? 0) - row.amountInBase)
-    }
-    let peor: { fecha: string; total: number } | null = null
-    for (const [fecha, total] of porDia) {
-      if (total > 0 && (!peor || total > peor.total)) peor = { fecha, total }
-    }
-    if (peor) {
-      lista.push({
-        label: `Día de más gasto · ${formatShortDay(peor.fecha)}`,
-        value: formatMoney(-peor.total, settings.baseCurrency),
-        tone: 'negative'
-      })
-    }
-
     return lista
-  }, [totals, rows, projected, showingProjected, settings.baseCurrency, filter.from, filter.to])
+  }, [totals, sumas, projected, showingProjected, settings.baseCurrency, filter.from, filter.to])
 
   /** Las cuentas que se están quedando cortas, cada una con su propio suelo. */
   const runningLow = accounts.filter(
