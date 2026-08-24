@@ -35,20 +35,13 @@ function hasBreakdown(row: CategoryTotal): boolean {
   return row.notes.length > 1 || row.notes[0].note !== 'Sin nota'
 }
 
-/**
- * Cómo se llama el periodo con el que se compara cada pastilla.
- *
- * Dos formas porque la frase cambia de preposición: «que el mes pasado» y «que a
- * estas alturas del mes pasado». Pegando un «de» delante del primero salía «de
- * el mes pasado», y con los que van en plural haría falta «de los». Se escriben
- * las dos y no se contraen a mano.
- */
-const CONTRA: Partial<Record<RangoId, { suelto: string; deEse: string }>> = {
-  month: { suelto: 'el mes pasado', deEse: 'del mes pasado' },
-  prev: { suelto: 'el mes anterior', deEse: 'del mes anterior' },
-  quarter: { suelto: 'los tres meses de antes', deEse: 'de los tres meses de antes' },
-  year: { suelto: 'el año pasado', deEse: 'del año pasado' },
-  custom: { suelto: 'los mismos días de antes', deEse: 'de los mismos días de antes' }
+/** Cómo se llama el periodo con el que se compara cada pastilla. */
+const CONTRA: Partial<Record<RangoId, string>> = {
+  month: 'el mes pasado',
+  prev: 'el mes anterior',
+  quarter: 'los tres meses de antes',
+  year: 'el año pasado',
+  custom: 'los mismos días de antes'
 }
 
 const MESES_LARGOS = new Intl.DateTimeFormat('es-ES', { month: 'long' })
@@ -115,10 +108,7 @@ function Cambio({
    * Al pasar por encima, la cuenta entera.
    *
    * Un porcentaje suelto no dice contra qué se mide, y aquí la base cambia con
-   * la pastilla: «este mes» se compara con lo que llevabas el mes pasado a
-   * estas alturas, y «mes pasado» con el mes entero anterior. Dos bases
-   * distintas pueden dar el mismo tanto por ciento con las mismas cifras
-   * delante, y eso, sin poder mirar los números, parece un error.
+   * la pastilla. Con los números delante no hay que fiarse de nada.
    */
   const explicacion = `${formatMoney(ahora, currency)} ahora · ${formatMoney(antes, currency)} entre el ${formatDate(desde)} y el ${formatDate(hasta)}`
 
@@ -197,7 +187,7 @@ export function ReportsView(): ReactNode {
   }, [period, span, customFrom, customTo])
   // Con qué se compara y hasta dónde. «Todo» no tiene un antes.
   const comparacion = useMemo(() => comparacionDe(period, range), [period, range])
-  const contra = CONTRA[period] ?? { suelto: 'antes', deEse: 'de antes' }
+  const contra = CONTRA[period] ?? 'antes'
   const currency = settings.baseCurrency
 
   useEffect(() => {
@@ -348,9 +338,7 @@ export function ReportsView(): ReactNode {
                   <span className={tonoDe(total - totalAntes, kind)}>
                     {formatMoney(total - totalAntes, currency, { sign: true })}
                   </span>
-                  <span>
-                    que {comparacion.enCurso ? `a estas alturas ${contra.deEse}` : contra.suelto}
-                  </span>
+                  <span>que {contra}</span>
                 </div>
               )}
             </div>
@@ -521,7 +509,7 @@ export function ReportsView(): ReactNode {
                   que no has gastado no la lee nadie. */}
               {desaparecidas.length > 0 && (
                 <p className="small muted" style={{ margin: '12px 0 0' }}>
-                  {comparacion?.enCurso ? 'Todavía sin gasto' : 'Sin gasto'} en{' '}
+                  Sin gasto en{' '}
                   {desaparecidas.slice(0, 3).map((item, indice) => (
                     <Fragment key={item.categoryId ?? `x${indice}`}>
                       {indice > 0 && ', '}

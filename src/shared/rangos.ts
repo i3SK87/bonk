@@ -69,17 +69,22 @@ export function rangoDe(id: RangoId, hoy = today()): { from: string; to: string 
 }
 
 /**
- * Con qué se compara un periodo, y hasta dónde.
+ * Con qué se compara un periodo: con el anterior, entero.
  *
- * La comparación honesta de un mes en curso no es contra el mes pasado entero.
- * Hoy es 24: comparar veinticuatro días contra treinta y uno diría que gastas
- * menos, y lo diría todos los meses hasta el día 28. Es la misma mentira que
- * repartir el gasto entre días que no han pasado.
+ * Valor contra valor y no fecha contra fecha. Lo que has gastado este mes se
+ * mide contra lo que gastaste el mes pasado, punto: si «Padre» ingresó 350 € en
+ * julio y 350 € en agosto, la comparación tiene que decir «igual» y no otra
+ * cosa.
  *
- * Así que cuando el periodo sigue abierto, el anterior se recorta a los mismos
- * días: del 1 al 24 de agosto contra del 1 al 24 de julio. Cuando ya está
- * cerrado se compara entero, que es lo que uno quiere decir con «contra el mes
- * pasado» aunque junio tenga treinta días y julio treinta y uno.
+ * Hubo una versión que recortaba el mes anterior al día de hoy —del 1 al 24 de
+ * agosto contra del 1 al 24 de julio— para que un mes a medias no pareciera
+ * siempre más barato. Cuadraba en aritmética y no cuadraba al leerla: el mismo
+ * importe en dos meses salía con una flecha del 75 %, y explicar por qué no era
+ * un error costaba más que el dato.
+ *
+ * La contrapartida es sabida: a primeros de mes casi todo sale por debajo,
+ * porque el mes lleva dos días. Por eso la pantalla dice siempre contra qué
+ * compara.
  *
  * Cuál es «el anterior» lo decide la pastilla y no la aritmética: «este año» va
  * de enero a este mes, y su comparación son esos mismos meses del año pasado, no
@@ -89,14 +94,11 @@ export function rangoDe(id: RangoId, hoy = today()): { from: string; to: string 
 export interface Comparacion {
   from: string
   to: string
-  /** El periodo de ahora sigue abierto, así que el de antes va recortado. */
-  enCurso: boolean
 }
 
 export function comparacionDe(
   id: RangoId,
-  rango: { from: string; to: string },
-  hoy = today()
+  rango: { from: string; to: string }
 ): Comparacion | null {
   // «Todo» abarca lo que hay: no hay un antes con el que medirlo.
   if (id === 'all') return null
@@ -130,12 +132,5 @@ export function comparacionDe(
     }
   }
 
-  // Lo que aún no ha pasado no se compara con nada.
-  const enCurso = rango.to > hoy
-  if (enCurso) {
-    const transcurridos = daysBetween(rango.from, hoy < rango.from ? rango.from : hoy)
-    to = addDays(from, transcurridos)
-  }
-
-  return { from, to, enCurso }
+  return { from, to }
 }

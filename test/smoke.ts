@@ -221,26 +221,31 @@ try {
    * contra treinta y uno diría que gastas menos, y lo diría todos los meses
    * hasta el día 28.
    */
+  /*
+   * Con qué se compara cada periodo: con el anterior, entero.
+   *
+   * Valor contra valor y no fecha contra fecha. Hubo una versión que recortaba
+   * el mes anterior al día de hoy, para que un mes a medias no pareciera siempre
+   * más barato; cuadraba en aritmética y no cuadraba al leerla, porque el mismo
+   * importe en dos meses salía con una flecha del setenta y cinco por ciento.
+   */
   section('Con qué se compara un periodo')
-  const compMes = comparacionDe('month', rangoDe('month', enAgosto)!, enAgosto)!
+  const compMes = comparacionDe('month', rangoDe('month', enAgosto)!)!
   equal('el mes en curso se compara con el mes pasado', compMes.from, '2026-07-01')
-  equal('recortado a los mismos días transcurridos', compMes.to, '2026-07-24')
-  check('y se sabe que va recortado', compMes.enCurso === true)
+  equal('entero, aunque agosto vaya por el día 24', compMes.to, '2026-07-31')
 
-  // El último día del mes ya no recorta nada: han pasado los treinta y uno.
-  const finDeMes = comparacionDe('month', rangoDe('month', '2026-08-31')!, '2026-08-31')!
-  equal('el último día del mes se compara con el mes entero', finDeMes.to, '2026-07-31')
-  check('y ya no va recortado', finDeMes.enCurso === false)
+  // El día del mes en que se mire da igual: la base es siempre el mes entero.
+  const aPrimeros = comparacionDe('month', rangoDe('month', '2026-08-02')!)!
+  equal('a primeros de mes, la misma base', aPrimeros.from, '2026-07-01')
+  equal('y el mismo final', aPrimeros.to, '2026-07-31')
 
-  // Un mes cerrado va entero contra el anterior, aunque midan distinto.
-  const compAnterior = comparacionDe('prev', rangoDe('prev', enAgosto)!, enAgosto)!
+  const compAnterior = comparacionDe('prev', rangoDe('prev', enAgosto)!)!
   equal('el mes pasado se compara con el de antes', compAnterior.from, '2026-06-01')
-  equal('entero, aunque junio tenga un día menos', compAnterior.to, '2026-06-30')
-  check('sin recortar, que ya está cerrado', compAnterior.enCurso === false)
+  equal('también entero, aunque junio tenga un día menos', compAnterior.to, '2026-06-30')
 
-  const compTrim = comparacionDe('quarter', rangoDe('quarter', enAgosto)!, enAgosto)!
+  const compTrim = comparacionDe('quarter', rangoDe('quarter', enAgosto)!)!
   equal('tres meses se comparan con los tres de antes', compTrim.from, '2026-03-01')
-  equal('recortados igual', compTrim.to, '2026-05-24')
+  equal('hasta el final del tercero', compTrim.to, '2026-05-31')
 
   /*
    * «Este año» es el caso que no sale de restar días.
@@ -249,17 +254,16 @@ try {
    * diciembre del año pasado, que no significa nada. Lo que se quiere son esos
    * mismos meses del año anterior.
    */
-  const compAnio = comparacionDe('year', rangoDe('year', enAgosto)!, enAgosto)!
+  const compAnio = comparacionDe('year', rangoDe('year', enAgosto)!)!
   equal('este año se compara con el año pasado', compAnio.from, '2025-01-01')
-  equal('por los mismos días', compAnio.to, '2025-08-24')
+  equal('por los mismos meses', compAnio.to, '2025-08-31')
 
   // A mano: la misma cantidad de días, pegada justo por detrás.
-  const compMano = comparacionDe('custom', { from: '2026-08-10', to: '2026-08-19' }, enAgosto)!
+  const compMano = comparacionDe('custom', { from: '2026-08-10', to: '2026-08-19' })!
   equal('un rango a mano se compara con los días de justo antes', compMano.from, '2026-07-31')
   equal('y acaba la víspera del suyo', compMano.to, '2026-08-09')
-  check('cerrado, no se recorta', compMano.enCurso === false)
 
-  equal('«Todo» no tiene con qué compararse', comparacionDe('all', { from: '2026-01-01', to: enAgosto }, enAgosto), null)
+  equal('«Todo» no tiene con qué compararse', comparacionDe('all', { from: '2026-01-01', to: enAgosto }), null)
 
   section('Cuentas y saldos')
   const cash = accounts.saveAccount({
