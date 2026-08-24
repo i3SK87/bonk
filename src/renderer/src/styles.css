@@ -1188,13 +1188,18 @@ p { margin: 0; }
   background: var(--bg-sunken);
 }
 
-/* Lo que aún no ha pasado se ve apagado y con el borde punteado: está ahí para
-   que lo veas venir, no para que lo cuentes como hecho. */
+/*
+ * Lo que aún no ha pasado se ve apagado: está ahí para que lo veas venir, no
+ * para que lo cuentes como hecho.
+ *
+ * Apagado y nada más. Llevó además el borde de rayas, y con el filtro de
+ * programadas puesto —cuando media lista son previsiones— aquello era una
+ * pantalla llena de recuadros de puntos. El medio tono ya dice que no ha pasado,
+ * y lo dice sin dibujar nada.
+ */
 .tx-row.projected {
   opacity: 0.5;
   cursor: default;
-  border-style: dashed;
-  border-color: var(--border);
 }
 
 .tx-row.projected:hover {
@@ -2496,6 +2501,75 @@ button.list-row:focus-visible {
 /* Quien pide menos movimiento no quiere una cifra escapándosele por la
    izquierda mientras la lee: no desfila sola. Arrastrarla sigue funcionando,
    que eso lo pide él. De ahí que la parada viva en el bucle y no aquí. */
+
+/*
+ * El menú del clic derecho.
+ *
+ * Por encima de todo lo demás —también de los velos de los formularios, que van
+ * en el cien— porque se abre sobre lo que ya hay en pantalla. Ancho mínimo para
+ * que tres opciones de largos distintos no dibujen un escalón.
+ */
+.menu-contextual {
+  position: fixed;
+  z-index: 300;
+  min-width: 194px;
+  padding: 5px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  animation: menu-contextual 0.1s ease both;
+}
+
+/* Corto y sin desplazamiento: sale donde has pulsado y ahí tiene que estar ya. */
+@keyframes menu-contextual {
+  from { opacity: 0; transform: scale(0.97); }
+}
+
+.menu-contextual-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: calc(var(--radius) - 4px);
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-contextual-opcion svg { flex: none; color: var(--fg-muted); }
+
+.menu-contextual-opcion:hover,
+.menu-contextual-opcion:focus-visible {
+  background: var(--bg-sunken);
+  outline: none;
+}
+
+/*
+ * Borrar, en rojo y con una raya por encima.
+ *
+ * Va la última y separada porque es la única que no se deshace: entre corregir
+ * un importe y borrar el apunte no debería haber un milímetro de distancia.
+ */
+.menu-contextual-opcion.peligrosa {
+  margin-top: 5px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px);
+  color: var(--negative);
+}
+
+.menu-contextual-opcion.peligrosa svg { color: var(--negative); }
+
+.menu-contextual-opcion.peligrosa:hover,
+.menu-contextual-opcion.peligrosa:focus-visible {
+  background: color-mix(in srgb, var(--negative) 14%, transparent);
+}
 
 /* ---------- Calculadora de Movimientos ---------- */
 

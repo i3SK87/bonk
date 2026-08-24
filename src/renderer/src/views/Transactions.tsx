@@ -5,6 +5,8 @@ import { Icon } from '../components/Icon'
 import { DateInput } from '../components/DateInput'
 import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
+import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
+import { ImporteRapido } from '../components/ImporteRapido'
 import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
@@ -121,6 +123,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [loading, setLoading] = useState(true)
   const [selection, setSelection] = useState<number[]>([])
   const [editing, setEditing] = useState<TransactionView | null>(null)
+  /** El menú del clic derecho: qué fila y en qué punto de la ventana. */
+  const [menu, setMenu] = useState<{ row: TransactionView; x: number; y: number } | null>(null)
+  const [cambiandoImporte, setCambiandoImporte] = useState<TransactionView | null>(null)
+  const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
+  const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
 
   useEffect(() => {
@@ -499,6 +506,36 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           ? 'positive'
           : 'neutral'
 
+  /*
+   * Lo que ofrece el menú de una fila.
+   *
+   * Las tres cosas que se hacen a diario sobre un apunte ya registrado. La ficha
+   * completa sigue a un clic izquierdo: esto es el atajo, no su sustituto.
+   *
+   * Devolver solo sale en los gastos: un reembolso se registra contra el gasto
+   * que devuelve el dinero, y ni un ingreso ni un traspaso ni otra devolución
+   * tienen nada que devolver.
+   */
+  const opcionesDe = (row: TransactionView): OpcionMenu[] => {
+    const lista: OpcionMenu[] = [
+      { etiqueta: 'Editar importe', icono: 'edit', onElegir: () => setCambiandoImporte(row) }
+    ]
+    if (row.type === 'expense') {
+      lista.push({
+        etiqueta: 'Registrar reembolso',
+        icono: 'refund',
+        onElegir: () => setDevolviendo(row)
+      })
+    }
+    lista.push({
+      etiqueta: 'Eliminar',
+      icono: 'trash',
+      peligrosa: true,
+      onElegir: () => setBorrando(row)
+    })
+    return lista
+  }
+
   return (
     <>
       <div className="card">
@@ -855,6 +892,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         }
                         active={family !== undefined && family === hoveredFamily}
                         onFamily={setHoveredFamily}
+                        onMenu={(x, y) => setMenu({ row, x, y })}
                         nested={nested}
                         lastChild={last}
                       />
@@ -893,6 +931,37 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       </div>
 
       {editing && <TransactionForm existing={editing} onClose={() => setEditing(null)} />}
+
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={opcionesDe(menu.row)}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {cambiandoImporte && (
+        <ImporteRapido row={cambiandoImporte} onClose={() => setCambiandoImporte(null)} />
+      )}
+
+      {devolviendo && (
+        <TransactionForm refundFor={devolviendo} onClose={() => setDevolviendo(null)} />
+      )}
+
+      {borrando && (
+        <Confirm
+          title="Eliminar movimiento"
+          message="El movimiento y sus adjuntos se borrarán definitivamente."
+          confirmLabel="Eliminar"
+          destructive
+          onCancel={() => setBorrando(null)}
+          onConfirm={async () => {
+            await run(() => api.transactions.remove(borrando.id), 'Movimiento eliminado')
+            setBorrando(null)
+          }}
+        />
+      )}
 
       {confirmBulk && (
         <Confirm
@@ -939,14 +1008,17 @@ function ProjectedRow({
       title={`Programado para el ${formatDate(row.date)}`}
     >
       <Avatar
-        icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'repeat')}
+        icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'calendar')}
         color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
       />
       <div className="tx-main">
         <div className="tx-title">{title}</div>
         <div className="tx-sub">
+          {/* El mismo calendario que el botón que las trae a la lista: la
+              marca de la fila y el mando que la enciende hablan de lo mismo, y
+              con dos dibujos distintos no se ve que están relacionados. */}
           <span className="pill">
-            <Icon name="repeat" size={11} />
+            <Icon name="calendar" size={11} />
             Programado
           </span>
           {detail && <span className="truncate">{detail}</span>}
@@ -990,6 +1062,7 @@ function TransactionRow({
   linkedTo,
   active,
   onFamily,
+  onMenu,
   nested,
   lastChild
 }: {
@@ -1004,6 +1077,8 @@ function TransactionRow({
   /** La familia está señalada ahora mismo (el ratón está sobre alguno de sus miembros). */
   active?: boolean
   onFamily?: (family: number | null) => void
+  /** Clic derecho: dónde se ha pulsado, para sacar el menú ahí mismo. */
+  onMenu?: (x: number, y: number) => void
   /** La devolución cuelga del gasto que tiene justo encima. */
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
@@ -1048,6 +1123,13 @@ function TransactionRow({
       onMouseEnter={() => family !== undefined && onFamily?.(family)}
       onMouseLeave={() => family !== undefined && onFamily?.(null)}
       onClick={(event) => onActivate?.(event.ctrlKey || event.metaKey || event.shiftKey)}
+      onContextMenu={(event) => {
+        if (!onMenu) return
+        // Fuera el menú de Chromium, que aquí no pinta nada: no hay texto que
+        // copiar ni imagen que guardar, y taparía el propio.
+        event.preventDefault()
+        onMenu(event.clientX, event.clientY)
+      }}
       onKeyDown={(event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
