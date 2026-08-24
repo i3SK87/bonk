@@ -27,6 +27,14 @@ export interface Dato {
   value: string
   /** Verde, rojo o del color del texto. */
   tone?: 'positive' | 'negative' | 'neutral'
+  /**
+   * Cuánto ha cambiado, ya montado por quien la manda.
+   *
+   * Llega hecho y no como dos números porque la insignia de Informes sabe cosas
+   * que aquí no pintan —contra qué periodo se mide, si subir es bueno o malo— y
+   * la cinta no tiene por qué enterarse de nada de eso para pasearla.
+   */
+  cambio?: ReactNode
 }
 
 interface Props {
@@ -70,6 +78,7 @@ function Tramo({
         <div className="teletipo-dato" key={`${dato.label}-${indice}`}>
           <span className="teletipo-label">{dato.label}</span>
           <span className={`teletipo-valor amount ${dato.tone ?? 'neutral'}`}>{dato.value}</span>
+          {dato.cambio}
         </div>
       ))}
     </div>

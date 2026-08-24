@@ -648,36 +648,10 @@ p { margin: 0; }
   line-height: 11px;
 }
 
-/*
- * En la tarjeta, pegada a su cifra.
- *
- * Aquí no hay columna que cuadrar —cada tarjeta va por su cuenta—, así que el
- * hueco fijo solo servía para dejar aire de más entre el número y su flecha, y
- * de un ancho distinto según lo que midiera el porcentaje.
- */
-.stat-fila .cambio {
+/* En la cinta va pegada a su cifra: no hay columna que cuadrar y la separación
+   ya la pone el hueco entre los trozos de cada dato. */
+.teletipo-dato .cambio {
   min-width: 0;
-  margin-left: 10px;
-}
-
-/* La cifra grande de una tarjeta y su cambio, en la misma línea. */
-.stat-fila {
-  display: flex;
-  align-items: baseline;
-  gap: 0;
-}
-
-.stat-fila .value {
-  min-width: 0;
-}
-
-.stat .delta {
-  font-size: 12px;
-  margin-top: 6px;
-  color: var(--fg-muted);
-  display: flex;
-  align-items: center;
-  gap: 5px;
 }
 
 .amount {
@@ -697,10 +671,8 @@ p { margin: 0; }
  * como color global: la cifra del patrimonio en la barra lateral ya tiene el
  * suyo propio y no hay que pisárselo.
  */
-.cambio.positive,
-.stat .delta .positive { color: var(--positive); }
-.cambio.negative,
-.stat .delta .negative { color: var(--negative); }
+.cambio.positive { color: var(--positive); }
+.cambio.negative { color: var(--negative); }
 .amount.neutral { color: var(--fg-muted); }
 
 /* ---------- Botones ---------- */

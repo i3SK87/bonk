@@ -6,6 +6,7 @@ import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
 import { DateInput } from '../components/DateInput'
+import { Teletipo, type Dato } from '../components/Teletipo'
 import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
@@ -72,44 +73,20 @@ function periodoCorto(desde: string, hasta: string): string {
  * es verde, pero en los ingresos es justo al revés. Sin esa vuelta, un mes en el
  * que has cobrado menos saldría en verde por ser un número más pequeño.
  */
+/**
+ * «Frente a el mes pasado» no lo dice nadie: en castellano a + el es al.
+ *
+ * Solo se contrae cuando el nombre del periodo empieza por el artículo. «Los
+ * tres meses de antes» y «los mismos días de antes» van en plural y se quedan
+ * como están.
+ */
+function frenteA(contra: string): string {
+  return contra.startsWith('el ') ? `Frente al ${contra.slice(3)}` : `Frente a ${contra}`
+}
+
 function tonoDe(delta: number, kind: CategoryKind): string {
   if (delta === 0) return 'muted'
   return delta > 0 === (kind === 'expense') ? 'negative' : 'positive'
-}
-
-/**
- * El cambio de una cifra de cabecera, con el mismo lenguaje que la tabla.
- *
- * Triángulo y porcentaje, y el rótulo de al pasar con las dos cifras crudas. Lo
- * de arriba llevaba euros y lo de abajo porcentajes: dos formas de decir lo
- * mismo en la misma pantalla, y al mirar de reojo no se sabía cuál era cuál.
- *
- * El recuento de movimientos también se colorea, aunque tener más apuntes no sea
- * bueno ni malo por sí solo. Dejarlo gris entre dos coloreados pedía una
- * explicación que no cabe en una tarjeta, y en una pantalla de gastos más
- * apuntes acompañan a más gasto casi siempre.
- */
-function Delta({
-  ahora,
-  antes,
-  kind,
-  contra,
-  formatea
-}: {
-  ahora: number
-  antes: number
-  kind: CategoryKind
-  contra: string
-  formatea: (valor: number) => string
-}): ReactNode {
-  return (
-    <Cambio
-      ahora={ahora}
-      antes={antes}
-      kind={kind}
-      pista={`${formatea(ahora)} ahora · ${formatea(antes)} ${contra}`}
-    />
-  )
 }
 
 /**
@@ -289,6 +266,81 @@ export function ReportsView(): ReactNode {
     return Math.round(total / days)
   })()
 
+  /*
+   * Lo que desfila por la cinta.
+   *
+   * Las tres primeras son las que llevaban las tarjetas. Las otras dos salen de
+   * lo que ya está calculado —no se le pregunta nada nuevo a los datos— y están
+   * porque tres cifras dando vueltas se ven raras: un teletipo necesita algo
+   * que contar.
+   *
+   * No va en un `useMemo`: el bucle de la cinta no depende de esta lista sino
+   * de cuántas cifras tiene, así que volver a construirla en cada dibujo no
+   * reinicia nada. Memorizarla obligaría a listar media pantalla de
+   * dependencias para no ganar nada.
+   */
+  const euros = (valor: number): string => formatMoney(valor, currency)
+  const insignia = (
+    ahora: number,
+    valorAntes: number,
+    formatea: (valor: number) => string
+  ): ReactNode =>
+    comparacion ? (
+      <Cambio
+        ahora={ahora}
+        antes={valorAntes}
+        kind={kind}
+        pista={`${formatea(ahora)} ahora · ${formatea(valorAntes)} ${contra}`}
+      />
+    ) : undefined
+
+  // Lo que cuesta un movimiento de media, que no es lo mismo que lo que cuesta
+  // un día: un día con ocho compras y otro con una valen igual aquí.
+  const porMovimiento = movements > 0 ? Math.round(total / movements) : 0
+  const porMovimientoAntes = movimientosAntes > 0 ? Math.round(totalAntes / movimientosAntes) : 0
+
+  const cifras: Dato[] = [
+    {
+      label: kind === 'expense' ? 'Gasto total' : 'Ingreso total',
+      value: euros(total),
+      tone: kind === 'expense' ? 'negative' : 'positive',
+      cambio: insignia(total, totalAntes, euros)
+    },
+    {
+      label: 'Movimientos',
+      value: String(movements),
+      cambio: insignia(movements, movimientosAntes, String)
+    },
+    {
+      label: 'Media diaria',
+      value: euros(dailyAverage),
+      cambio: insignia(dailyAverage, mediaAntes, euros)
+    },
+    {
+      label: 'Por movimiento',
+      value: euros(porMovimiento),
+      cambio: insignia(porMovimiento, porMovimientoAntes, euros)
+    }
+  ]
+
+  /*
+   * La diferencia en euros, que es la que se le quitó a la insignia.
+   *
+   * En la tabla estorbaba: una cifra en euros dentro de una columna de
+   * porcentajes canta, y allí lo que se comparan son categorías entre sí. Aquí
+   * hay sitio de sobra y es el número que de verdad se busca —«¿cuánto más he
+   * gastado este mes?»—, que un porcentaje solo no responde.
+   */
+  if (comparacion) {
+    const diferencia = total - totalAntes
+    const tono = tonoDe(diferencia, kind)
+    cifras.push({
+      label: frenteA(contra),
+      value: formatMoney(diferencia, currency, { sign: true }),
+      tone: tono === 'muted' ? 'neutral' : (tono as 'positive' | 'negative')
+    })
+  }
+
   return (
     <>
       <div className="card">
@@ -363,57 +415,7 @@ export function ReportsView(): ReactNode {
         <Loading />
       ) : (
         <>
-          <div className="grid cols-3">
-            <div className="card stat">
-              <div className="label">{kind === 'expense' ? 'Gasto total' : 'Ingreso total'}</div>
-              {/* El cambio a la derecha de la cifra y en su misma línea: es
-                   una anotación sobre ella, no un renglón aparte. */}
-              <div className="stat-fila">
-                <div className={`value amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
-                  {formatMoney(total, currency)}
-                </div>
-                {comparacion && (
-                  <Delta
-                    ahora={total}
-                    antes={totalAntes}
-                    kind={kind}
-                    contra={contra}
-                    formatea={(valor) => formatMoney(valor, currency)}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="card stat">
-              <div className="label">Movimientos</div>
-              <div className="stat-fila">
-                <div className="value">{movements}</div>
-                {comparacion && (
-                  <Delta
-                    ahora={movements}
-                    antes={movimientosAntes}
-                    kind={kind}
-                    contra={contra}
-                    formatea={(valor) => String(valor)}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="card stat">
-              <div className="label">Media diaria</div>
-              <div className="stat-fila">
-                <div className="value">{formatMoney(dailyAverage, currency)}</div>
-                {comparacion && (
-                  <Delta
-                    ahora={dailyAverage}
-                    antes={mediaAntes}
-                    kind={kind}
-                    contra={contra}
-                    formatea={(valor) => formatMoney(valor, currency)}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+          <Teletipo datos={cifras} />
 
           <div className="card">
             <div className="card-header">
