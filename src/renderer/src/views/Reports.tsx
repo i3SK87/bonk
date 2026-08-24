@@ -135,7 +135,14 @@ export function ReportsView(): ReactNode {
             como lo que son, el periodo y qué hacer con él.
           */}
           <div className="row tight">
-            <span className="small muted">
+            {/*
+              Sangrado como el de un control, que es lo que tiene al lado.
+              Un texto pelado empieza en el canto de su caja y todo lo demás de
+              esta barra —pastillas y campos de fecha— empieza pasado su relleno:
+              al bajar de línea, el rótulo quedaba once píxeles a la izquierda de
+              todo lo que tenía encima y debajo.
+            */}
+            <span className="small muted" style={{ paddingLeft: 11 }}>
               {formatDate(range.from)} – {formatDate(range.to)}
             </span>
             <button
