@@ -311,32 +311,46 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         </>
       }
     >
-      {/* Los dos cortos a la par, y el ancho debajo: la misma gramática que
-          Cuentas y que Nuevo movimiento. Antes iban los tres apilados a todo lo
-          ancho, con el contador de cuotas perdido en su renglón. */}
+      {/*
+        Cada cajón del ancho de lo que va a llevar dentro, no del hueco que tiene.
+        Las tres cifras de aquí son cortas —dos dígitos las cuotas, tres o cuatro
+        los importes— y a todo lo ancho quedaban tres cajas enormes con un número
+        pequeño perdido en el canto.
+        Van holgados por encima de lo que se espera: el tope del campo de cuotas
+        es 99, pero en los importes cabe un dígito más del que nadie va a
+        escribir, que acotar de menos sería recortar el número de otro.
+        Los dos cortos siguen a la par, como en Cuentas: el hueco que le sobra a
+        cada cajón lo ocupa su propia ayuda debajo, así que la celda no queda
+        vacía y el diálogo se ahorra un renglón.
+      */}
       <div className="grid cols-2">
         <Field label="Cuotas pagadas" hint="Número de cuotas pagadas.">
           {/* Noventa y nueve cuotas son más de ocho años pagando: de sobra. */}
-          <NumberInput value={paidCount} onChange={setPaidCount} min={0} max={99} />
+          <div style={{ maxWidth: 74 }}>
+            <NumberInput value={paidCount} onChange={setPaidCount} min={0} max={99} />
+          </div>
         </Field>
 
+        {/* Compactos, como el aviso de saldo de Cuentas: aquí no hay una cifra
+            que presida el formulario. Son dos correcciones que casi siempre se
+            dejan en cero, y a veintiséis píxeles se llevaban toda la atención. */}
         <Field
           label="Última cuota"
           hint={`Solo si es distinta de ${formatMoney(debt.installment, debt.currency)}.`}
         >
-          <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} compact />
+          <div style={{ maxWidth: 130 }}>
+            <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} compact />
+          </div>
         </Field>
       </div>
 
-      {/* Compactos los dos, como el aviso de saldo de Cuentas: aquí no hay una
-          cifra que presida el formulario. Los dos son correcciones que casi
-          siempre se dejan en cero, y a veintiséis píxeles se llevaban toda la
-          atención y media pantalla de alto. */}
       <Field
         label="Total de la deuda"
         hint="Solo si lleva intereses o entrada; si no, sale de las cuotas."
       >
-        <AmountInput value={total} currency={debt.currency} onChange={setTotal} compact />
+        <div style={{ maxWidth: 160 }}>
+          <AmountInput value={total} currency={debt.currency} onChange={setTotal} compact />
+        </div>
       </Field>
     </Modal>
   )
