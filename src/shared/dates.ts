@@ -9,7 +9,7 @@ export function parseISO(iso: string): Date {
   return new Date(y, (m ?? 1) - 1, d ?? 1)
 }
 
-export function toISO(date: Date): string {
+function toISO(date: Date): string {
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const d = String(date.getDate()).padStart(2, '0')
@@ -37,7 +37,7 @@ export function addMonths(iso: string, months: number): string {
   return toISO(d)
 }
 
-export function addYears(iso: string, years: number): string {
+function addYears(iso: string, years: number): string {
   return addMonths(iso, years * 12)
 }
 

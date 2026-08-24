@@ -940,7 +940,7 @@ function ProjectedRow({
   )
 }
 
-export function TransactionRow({
+function TransactionRow({
   row,
   selected,
   onActivate,

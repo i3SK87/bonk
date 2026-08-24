@@ -252,7 +252,7 @@ export function MonthlyBars({
   )
 }
 
-export function ChartLegend({ items }: { items: Array<{ label: string; color: string }> }): ReactNode {
+function ChartLegend({ items }: { items: Array<{ label: string; color: string }> }): ReactNode {
   return (
     <div className="row tight" style={{ justifyContent: 'center', marginTop: 6 }}>
       {items.map((item) => (

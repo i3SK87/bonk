@@ -127,7 +127,7 @@ export function getScheduled(id: number): ScheduledView | null {
   return rows.length ? toView(rows[0]) : null
 }
 
-export interface ScheduledInput {
+interface ScheduledInput {
   id?: number
   name?: string | null
   type: TxType
@@ -348,7 +348,7 @@ function settleExhausted(id: number, date: string): void {
     .run(date, id)
 }
 
-export interface DebtSummary {
+interface DebtSummary {
   /** Cuotas registradas de esta programación. */
   count: number
   /** Suma de todas ellas, en unidades menores de la divisa de la cuenta. */
@@ -636,7 +636,7 @@ function post(row: Scheduled, date: string, consumed = date): void {
  * así que si la app lleva meses cerrada recupera todo lo pendiente de una vez.
  */
 /** Lo que dejó el repaso: cuántas entraron y cuáles no pudieron, con su motivo. */
-export interface PostDueResult {
+interface PostDueResult {
   created: number
   failed: Array<{ id: number; title: string; reason: string }>
 }

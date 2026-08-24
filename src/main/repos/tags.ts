@@ -5,7 +5,7 @@ export function listTags(): Tag[] {
   return getDb().prepare('SELECT id, name, color FROM tags ORDER BY name COLLATE NOCASE').all() as unknown as Tag[]
 }
 
-export function saveTag(input: { id?: number; name: string; color: string }): Tag {
+function saveTag(input: { id?: number; name: string; color: string }): Tag {
   const db = getDb()
   const name = input.name.trim()
   if (!name) throw new Error('La etiqueta necesita un nombre')

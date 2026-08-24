@@ -34,7 +34,7 @@ export function updateSettings(patch: Partial<Settings>): Settings {
   return getSettings()
 }
 
-export function listRates(): Rate[] {
+function listRates(): Rate[] {
   const rows = getDb().prepare('SELECT code, rate, updated_at FROM rates ORDER BY code').all() as unknown as Array<{
     code: string
     rate: number

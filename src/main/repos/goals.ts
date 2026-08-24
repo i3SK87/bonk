@@ -49,7 +49,7 @@ export function getGoal(id: number): Goal | null {
   return row ? mapGoal(row) : null
 }
 
-export interface GoalInput {
+interface GoalInput {
   id?: number
   name: string
   accountId: number
@@ -183,7 +183,7 @@ function monthlyPace(accountId: number, reference: string): number {
  *
  * Se recorta por orden de fecha: el plan más cercano conserva lo suyo.
  */
-export function reconcileReserves(): void {
+function reconcileReserves(): void {
   const accounts = new Map(listAccountsWithBalance().map((account) => [account.id, account]))
   const remaining = new Map<number, number>()
 
@@ -241,7 +241,7 @@ export function markGoalReached(id: number): void {
 }
 
 /** Y vuelta a empezar cuando el hito se deshace. */
-export function clearGoalReached(id: number): void {
+function clearGoalReached(id: number): void {
   getDb().prepare('UPDATE goals SET reached_notified = 0 WHERE id = ?').run(id)
 }
 

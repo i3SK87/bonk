@@ -194,7 +194,7 @@ function parseType(value: string, amountText: string): TxType {
   return amountText.trim().startsWith('-') ? 'expense' : 'income'
 }
 
-export interface ImportPreview {
+interface ImportPreview {
   delimiter: string
   headers: string[]
   rows: string[][]
@@ -219,7 +219,7 @@ export function previewCsv(sourcePath: string, sampleSize = 8): ImportPreview {
   }
 }
 
-export interface ImportResult {
+interface ImportResult {
   imported: number
   skipped: number
   /** Filas que ya estaban apuntadas y no se han vuelto a meter. */
@@ -292,7 +292,7 @@ function huellasExistentes(fechas: Set<string>): Map<string, number> {
  * Importa movimientos. Por defecto crea las cuentas y categorías que falten
  * para no perder filas por el camino.
  */
-export interface ImportOptions {
+interface ImportOptions {
   createMissing?: boolean
   defaultAccountId?: number
   /**

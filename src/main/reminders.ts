@@ -130,7 +130,7 @@ function sweepStrayShortcut(): void {
  * el aviso vaya dentro de un resumen: lo que no se puede es avisar dos veces
  * de lo mismo.
  */
-export function checkReminders(icon: string, onClick: () => void): number {
+function checkReminders(icon: string, onClick: () => void): number {
   if (!getSettings().remindersEnabled || !Notification.isSupported()) return 0
 
   const target = addDays(today(), 1)

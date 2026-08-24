@@ -13,7 +13,7 @@ import type { AccountWithBalance, Category, Settings } from '@shared/types'
 
 const api = window.bonk
 
-export interface Toast {
+interface Toast {
   id: number
   message: string
   tone: 'info' | 'success' | 'error'

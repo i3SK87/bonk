@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { resolve } from 'node:path'
 
 /** Bandera que reciben tanto el arranque de Windows como quien la escriba a mano. */
-export const HIDDEN_FLAG = '--hidden'
+const HIDDEN_FLAG = '--hidden'
 
 /** La aplicación se ha lanzado para quedarse en la bandeja, sin abrir ventana. */
 export function startedHidden(): boolean {

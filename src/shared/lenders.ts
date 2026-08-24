@@ -25,7 +25,7 @@ const LOGO_KLARNA =
  * a Internet, y un icono que no carga es peor que no tener icono. Son los de cada
  * marca, recortados a 32 px, que es como se ven en la etiqueta.
  */
-export interface Lender {
+interface Lender {
   id: string
   name: string
   /** El logotipo, ya listo para un <img src>. */

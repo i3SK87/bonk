@@ -431,7 +431,7 @@ export function SchedulesView(): ReactNode {
  * programación con una categoría de deuda, y montar allí un segundo formulario
  * con los mismos campos sería tener dos sitios donde arreglar el mismo fallo.
  */
-export interface ScheduleModalProps {
+interface ScheduleModalProps {
   schedule: ScheduledView | null
   /** El resto de programadas, para poder colgar una devolución de su gasto. */
   siblings: ScheduledView[]

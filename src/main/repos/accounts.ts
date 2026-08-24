@@ -161,7 +161,7 @@ export function netWorth(): number {
     .reduce((sum, account) => sum + account.balanceInBase, 0)
 }
 
-export interface AccountInput {
+interface AccountInput {
   id?: number
   name: string
   type: AccountType
@@ -289,7 +289,7 @@ export function deleteAccount(id: number): void {
  * historia, no solo el saldo de hoy: apuntar un gasto con fecha antigua puede
  * dejarla en descubierto en mitad del recorrido aunque hoy cuadre.
  */
-export function lowestBalance(accountId: number): { amount: number; date: string | null } {
+function lowestBalance(accountId: number): { amount: number; date: string | null } {
   const account = getAccount(accountId)
   if (!account) return { amount: 0, date: null }
 

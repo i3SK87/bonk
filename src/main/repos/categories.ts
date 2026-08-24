@@ -40,12 +40,12 @@ export function listCategories(includeArchived = false): Category[] {
   return rows.sort((a, b) => (a.kind === b.kind ? byName.compare(a.name, b.name) : a.kind < b.kind ? 1 : -1))
 }
 
-export function getCategory(id: number): Category | null {
+function getCategory(id: number): Category | null {
   const row = getDb().prepare('SELECT * FROM categories WHERE id = ?').get(id) as unknown as CategoryRow | undefined
   return row ? mapCategory(row) : null
 }
 
-export interface CategoryInput {
+interface CategoryInput {
   id?: number
   name: string
   kind: CategoryKind

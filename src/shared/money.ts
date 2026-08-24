@@ -21,7 +21,7 @@ export function currencyDecimals(code: string): number {
   return decimals
 }
 
-export function minorFactor(code: string): number {
+function minorFactor(code: string): number {
   return 10 ** currencyDecimals(code)
 }
 

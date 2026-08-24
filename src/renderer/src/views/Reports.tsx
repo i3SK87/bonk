@@ -4,7 +4,8 @@ import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
-import { today, daysBetween, formatDate } from '@shared/dates'
+import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
+import { DateInput } from '../components/DateInput'
 import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
@@ -15,10 +16,14 @@ const api = window.bonk
  *
  * Aquí «Este año» llegaba a fin de año mientras allí llegaba a fin de mes, y de
  * esa diferencia salía que la media diaria del mismo periodo dijera 45,84 € en
- * una pantalla y 59,21 € en la otra. Uno de más: «Año pasado», que Movimientos
- * no enseña porque allí se pide con el rango personalizado.
+ * una pantalla y 59,21 € en la otra.
+ *
+ * Uno de más: «Año pasado». Con «Personalizado» se puede pedir escribiendo dos
+ * fechas, pero comparar un año con el anterior es de lo que más se hace en una
+ * pantalla de informes, y cambiar un botón por cuatro clics y teclear no es
+ * ganar nada. Se quedan los dos.
  */
-const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all']
+const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all', 'custom']
 
 /**
  * Una categoría se puede abrir cuando tiene desglose y al menos dos entradas,
@@ -39,6 +44,9 @@ export function ReportsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
+  // Arrancan en el mes en curso: es de donde vienes al pulsar «Personalizado».
+  const [customFrom, setCustomFrom] = useState(() => startOfMonth(today()))
+  const [customTo, setCustomTo] = useState(() => endOfMonth(today()))
 
   useEffect(() => {
     api.reports.span().then(setSpan).catch(fail('el histórico'))
@@ -52,13 +60,18 @@ export function ReportsView(): ReactNode {
     })
   }
 
-  // El rango de «Todo» va del primer movimiento al último. Mientras no ha
-  // llegado se enseña el día de hoy, que es un rango vacío y no una fecha rara.
-  const range = useMemo(
-    // «Todo» no se calcula: se pregunta a los datos hasta dónde llegan.
-    () => (span && period === 'all' ? span : (rangoDe(period) ?? { from: today(), to: today() })),
-    [period, span]
-  )
+  /*
+   * Los dos que no salen de la fecha de hoy.
+   *
+   * «Todo» va del primer movimiento al último, así que se le pregunta a los
+   * datos; mientras la respuesta no ha llegado se enseña el día de hoy, que es
+   * un rango vacío y no una fecha rara. «Personalizado» lo escribes tú.
+   */
+  const range = useMemo(() => {
+    if (period === 'custom') return { from: customFrom, to: customTo }
+    if (period === 'all') return span ?? { from: today(), to: today() }
+    return rangoDe(period) ?? { from: today(), to: today() }
+  }, [period, span, customFrom, customTo])
   const currency = settings.baseCurrency
 
   useEffect(() => {
@@ -130,6 +143,18 @@ export function ReportsView(): ReactNode {
             Exportar
           </button>
         </div>
+
+        {period === 'custom' && (
+          <div className="card-body row" style={{ paddingTop: 0 }}>
+            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+              <DateInput value={customFrom} onChange={setCustomFrom} />
+            </div>
+            <span className="muted">hasta</span>
+            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+              <DateInput value={customTo} onChange={setCustomTo} />
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
