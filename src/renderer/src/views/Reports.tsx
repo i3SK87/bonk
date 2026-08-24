@@ -51,47 +51,47 @@ const CONTRA: Partial<Record<RangoId, { suelto: string; deEse: string }>> = {
 }
 
 /**
- * Cuánto de más o de menos, y si eso es bueno o malo.
+ * Si esa diferencia es buena o mala.
  *
- * El color no lo decide el signo sino lo que significa: gastar más es rojo y
- * gastar menos es verde, pero en los ingresos es justo al revés. Sin esa vuelta,
- * un mes en el que has cobrado menos saldría en verde por ser un número más
- * pequeño.
- *
- * Sin nada antes no hay resta que hacer: se dice que es nuevo, que es más
- * información que un «+100 %» contra cero.
+ * No lo decide el signo sino lo que significa: gastar más es rojo y gastar menos
+ * es verde, pero en los ingresos es justo al revés. Sin esa vuelta, un mes en el
+ * que has cobrado menos saldría en verde por ser un número más pequeño.
  */
-function Diferencia({
+function tonoDe(delta: number, kind: CategoryKind): string {
+  if (delta === 0) return 'muted'
+  return delta > 0 === (kind === 'expense') ? 'negative' : 'positive'
+}
+
+/**
+ * Cuánto ha cambiado una categoría, en pequeño y debajo de su importe.
+ *
+ * Tuvo una columna para ella sola con los euros y el porcentaje, y era demasiado:
+ * ensanchaba la tabla y competía con las cifras que se venían a mirar. Aquí es
+ * una anotación al pie del número, que es lo que es. Los euros de la diferencia
+ * se quedan arriba, en la tarjeta del total, donde hay sitio y donde importan.
+ *
+ * Sin nada antes no hay resta que hacer, y decir «nuevo» informa más que un
+ * «+100 %» contra cero.
+ */
+function Cambio({
   ahora,
   antes,
-  kind,
-  currency
+  kind
 }: {
   ahora: number
   antes: number
   kind: CategoryKind
-  currency: string
 }): ReactNode {
-  if (antes === 0 && ahora === 0) return <span className="muted">—</span>
-  if (antes === 0) return <span className="muted">nuevo</span>
-  if (ahora === 0) return <span className="positive">todo</span>
+  if (antes === 0) return <span className="cambio muted">nuevo</span>
 
   const delta = ahora - antes
-  if (delta === 0) return <span className="muted">igual</span>
-
-  const subeMalo = kind === 'expense'
-  const tono = delta > 0 === subeMalo ? 'negative' : 'positive'
   const porcentaje = Math.round((delta / antes) * 100)
+  // Por debajo del uno por ciento no ha cambiado nada que merezca decirse.
+  if (porcentaje === 0) return <span className="cambio muted">igual</span>
 
   return (
-    <span className={tono}>
-      {formatMoney(delta, currency, { sign: true })}
-      {/* El mismo menos que el del importe —el largo, no el guion del teclado—,
-          que uno al lado del otro se nota. */}
-      <span className="muted" style={{ marginLeft: 6 }}>
-        {porcentaje > 0 ? '+' : '−'}
-        {Math.abs(porcentaje)}%
-      </span>
+    <span className={`cambio ${tonoDe(delta, kind)}`}>
+      {delta > 0 ? '▲' : '▼'} {Math.abs(porcentaje)}%
     </span>
   )
 }
@@ -162,33 +162,24 @@ export function ReportsView(): ReactNode {
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
 
-  /*
-   * Las dos listas en una.
-   *
-   * Se mezclan por categoría porque las dos caras interesan: lo que ha subido y
-   * lo que ha dejado de aparecer. Una categoría en la que este periodo no has
-   * gastado nada es la bajada más grande que hay, y saliéndose de la tabla no se
-   * vería. Entra con cero y su fila lo cuenta.
-   */
+  /** Cada categoría de este periodo con lo que llevaba en el anterior al lado. */
   const filas = useMemo(() => {
     const previos = new Map(antes.map((item) => [item.categoryId, item.total]))
-    const juntas = categories.map((item) => ({
-      row: item,
-      antes: previos.get(item.categoryId) ?? 0,
-      soloAntes: false
-    }))
-    if (comparacion) {
-      const ahora = new Set(categories.map((item) => item.categoryId))
-      for (const item of antes) {
-        if (ahora.has(item.categoryId)) continue
-        juntas.push({
-          row: { ...item, total: 0, count: 0, percent: 0, notes: [] },
-          antes: item.total,
-          soloAntes: true
-        })
-      }
-    }
-    return juntas
+    return categories.map((item) => ({ row: item, antes: previos.get(item.categoryId) ?? 0 }))
+  }, [categories, antes])
+
+  /*
+   * En lo que antes gastabas y ahora no.
+   *
+   * Estuvieron dentro de la tabla, con un cero y su comparación, y sobraban:
+   * añadían filas a una lista que va de lo que has gastado este periodo. Pero la
+   * información es buena —dejar de gastar en algo es la bajada más grande que
+   * hay—, así que van debajo en un renglón, que es el sitio de una nota al pie.
+   */
+  const desaparecidas = useMemo(() => {
+    if (!comparacion) return []
+    const ahora = new Set(categories.map((item) => item.categoryId))
+    return antes.filter((item) => !ahora.has(item.categoryId)).sort((a, b) => b.total - a.total)
   }, [categories, antes, comparacion])
   // La barra de cada fila se mide contra la categoría más grande, no contra el
   // total: si se midiera contra el total, todas saldrían diminutas.
@@ -294,7 +285,9 @@ export function ReportsView(): ReactNode {
               </div>
               {comparacion && (
                 <div className="delta">
-                  <Diferencia ahora={total} antes={totalAntes} kind={kind} currency={currency} />
+                  <span className={tonoDe(total - totalAntes, kind)}>
+                    {formatMoney(total - totalAntes, currency, { sign: true })}
+                  </span>
                   <span>
                     que {comparacion.enCurso ? `a estas alturas ${contra.deEse}` : contra.suelto}
                   </span>
@@ -338,12 +331,11 @@ export function ReportsView(): ReactNode {
                       <th>Categoría</th>
                       <th className="num">Movimientos</th>
                       <th className="num">Porcentaje</th>
-                      {comparacion && <th className="num">Antes</th>}
                       <th className="num">Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filas.map(({ row, antes: gastoAntes, soloAntes }) => {
+                    {filas.map(({ row, antes: gastoAntes }) => {
                       const key = row.categoryId ?? 'none'
                       const openable = hasBreakdown(row)
                       const open = expanded.has(row.categoryId ?? -1)
@@ -387,18 +379,11 @@ export function ReportsView(): ReactNode {
                             </td>
                             <td className="num muted">{row.count}</td>
                             <td className="num muted">{row.percent.toFixed(1)}%</td>
-                            {comparacion && (
-                              <td className="num">
-                                <Diferencia
-                                  ahora={row.total}
-                                  antes={gastoAntes}
-                                  kind={kind}
-                                  currency={currency}
-                                />
-                              </td>
-                            )}
-                            <td className={`num amount${soloAntes ? ' muted' : ''}`}>
+                            <td className="num amount">
                               {formatMoney(row.total, currency)}
+                              {comparacion && (
+                                <Cambio ahora={row.total} antes={gastoAntes} kind={kind} />
+                              )}
                             </td>
                           </tr>
 
@@ -420,9 +405,6 @@ export function ReportsView(): ReactNode {
                                 </td>
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
-                                {/* El desglose por título no se compara: sería
-                                    comparar textos escritos a mano. */}
-                                {comparacion && <td />}
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
                               </tr>
                             ))}
@@ -431,6 +413,22 @@ export function ReportsView(): ReactNode {
                     })}
                   </tbody>
                 </table>
+              )}
+
+              {/* Al pie y en pequeño: es una nota sobre la tabla, no una fila
+                  más de ella. Solo las tres mayores, que la lista entera de lo
+                  que no has gastado no la lee nadie. */}
+              {desaparecidas.length > 0 && (
+                <p className="small muted" style={{ margin: '12px 0 0' }}>
+                  {comparacion?.enCurso ? 'Todavía sin gasto' : 'Sin gasto'} en{' '}
+                  {desaparecidas.slice(0, 3).map((item, indice) => (
+                    <Fragment key={item.categoryId ?? `x${indice}`}>
+                      {indice > 0 && ', '}
+                      {item.name} ({formatMoney(item.total, currency)})
+                    </Fragment>
+                  ))}
+                  {desaparecidas.length > 3 && ` y ${desaparecidas.length - 3} más`}.
+                </p>
               )}
             </div>
           </div>

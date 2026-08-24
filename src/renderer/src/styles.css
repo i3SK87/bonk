@@ -616,6 +616,24 @@ p { margin: 0; }
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * El cambio de una categoría respecto al periodo anterior, bajo su importe.
+ *
+ * En su propio renglón, más pequeño y con la flecha delante. Tuvo una columna
+ * para él solo y era demasiado: ensanchaba la tabla y competía con las cifras
+ * que se venían a mirar. Aquí se ve al pasar y no estorba al leer.
+ */
+.cambio {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin-top: 2px;
+  /* Sin el ancho de cifra del importe de arriba: aquí no hay columnas que
+     cuadrar y las flechas quedaban separadas del número. */
+  font-variant-numeric: normal;
+}
+
 .stat .delta {
   font-size: 12px;
   margin-top: 6px;
