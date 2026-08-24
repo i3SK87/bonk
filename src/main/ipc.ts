@@ -142,7 +142,9 @@ export function registerIpc(
   handle('scheduled:save', (input) => scheduled.saveScheduled(input))
   handle('scheduled:delete', (id: number) => scheduled.deleteScheduled(id))
   handle('scheduled:setActive', (id: number, active: boolean) => scheduled.setScheduledActive(id, active))
-  handle('scheduled:resume', (id: number) => scheduled.resumeScheduled(id))
+  handle('scheduled:resume', (id: number, endDate: string | null) =>
+    scheduled.resumeScheduled(id, endDate)
+  )
   // Finalizar a mano no espera al repaso de media hora: la enhorabuena sale en
   // el mismo gesto, y de paso el aviso de Windows.
   handle('scheduled:finish', (id: number) => {

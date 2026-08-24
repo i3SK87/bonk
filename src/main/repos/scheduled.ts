@@ -1,5 +1,5 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
-import { today, nextOccurrence } from '@shared/dates'
+import { today, nextOccurrence, formatDate } from '@shared/dates'
 import { saveTransaction } from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
@@ -310,14 +310,30 @@ export function finishScheduled(id: number, date = today()): void {
  * cuotas por delante. Si el plan tenía un final concreto, se le pone desde su
  * ficha; lo que ya se pagó no se toca.
  */
-export function resumeScheduled(id: number): void {
+export function resumeScheduled(id: number, endDate: string | null = null): void {
+  const fila = getScheduled(id)
+  if (!fila) throw new Error('La programación ya no existe')
+
+  /*
+   * La fecha nueva tiene que dejar sitio a algo.
+   *
+   * Con una anterior a la próxima cuota, el plan nace agotado: el primer repaso
+   * la vuelve a sellar y el botón parece que no ha hecho nada. Mejor decirlo
+   * aquí que dejar que se deshaga solo a los cinco minutos.
+   */
+  if (endDate && endDate < fila.nextDate) {
+    throw new Error(
+      `La fecha de fin no puede ser anterior a la próxima cuota, que es el ${formatDate(fila.nextDate)}.`
+    )
+  }
+
   getDb()
     .prepare(
       `UPDATE scheduled
-          SET active = 1, end_date = NULL, settled_at = NULL, settled_notified = 0
+          SET active = 1, end_date = ?, settled_at = NULL, settled_notified = 0
         WHERE id = ?`
     )
-    .run(id)
+    .run(bind(endDate || null), id)
 }
 
 /**

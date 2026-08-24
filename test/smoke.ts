@@ -656,6 +656,34 @@ try {
    * primer repaso, que volvía a sellarla por agotada. Un botón que se deshace
    * solo a los cinco minutos no es un botón.
    */
+  /*
+   * Reanudar con fecha nueva.
+   *
+   * Sin ella, una deuda se queda sin plan que medir: pasa de «3 de 4 cuotas» a
+   * «3 pagadas, sin total conocido». Se puede seguir dejando vacía —una
+   * suscripción no tiene final—, pero ahora se pregunta.
+   */
+  const conFinal = addMonths(day, 6)
+  scheduled.resumeScheduled(recurring.id, conFinal)
+  equal('reanudar acepta una fecha de fin nueva', scheduled.getScheduled(recurring.id)!.endDate, conFinal)
+  equal('y le quita el sello igual', scheduled.getScheduled(recurring.id)!.settledAt, null)
+  check(
+    'con final, vuelve a proyectarse hasta ahí',
+    scheduled.projectUpcoming(day, addMonths(day, 12)).filter((p) => p.scheduledId === recurring.id).length > 0
+  )
+
+  // Una fecha anterior a la próxima cuota dejaría el plan agotado al nacer: el
+  // primer repaso lo volvería a sellar y el botón parecería no hacer nada.
+  scheduled.finishScheduled(recurring.id, day)
+  let rechazo = ''
+  try {
+    scheduled.resumeScheduled(recurring.id, addMonths(day, -6))
+  } catch (error) {
+    rechazo = (error as Error).message
+  }
+  check('rechaza una fecha anterior a la próxima cuota', rechazo.includes('anterior a la próxima cuota'), rechazo)
+  check('y no la reanuda a medias', scheduled.getScheduled(recurring.id)!.settledAt === day)
+
   scheduled.resumeScheduled(recurring.id)
   const reanudada = scheduled.getScheduled(recurring.id)!
   check('reanudar la enciende', reanudada.active === true)

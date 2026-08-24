@@ -84,7 +84,8 @@ const api = {
     save: (input: unknown) => call<ScheduledView>('scheduled:save', input),
     remove: (id: number) => call<void>('scheduled:delete', id),
     setActive: (id: number, active: boolean) => call<void>('scheduled:setActive', id, active),
-    resume: (id: number) => call<void>('scheduled:resume', id),
+    resume: (id: number, endDate: string | null = null) =>
+      call<void>('scheduled:resume', id, endDate),
     finish: (id: number) => call<Settlement[]>('scheduled:finish', id),
     postNow: (id: number) => call<void>('scheduled:postNow', id),
     postDue: () => call<number>('scheduled:postDue'),

@@ -53,6 +53,62 @@ function refundOptionLabel(row: ScheduledView): string {
 /** Una programación con el sello puesto: la fecha de terminada está, seguro. */
 type Finalizada = ScheduledView & { settledAt: string }
 
+/**
+ * Reanudar preguntando hasta cuándo.
+ *
+ * Antes solo confirmaba y la dejaba sin fecha de fin, y eso descuadraba las
+ * deudas: sin final no hay plan que medir, así que el Kindle pasaba de «3/4
+ * cuotas» a «3 pagadas, sin total conocido». Se avisaba en el texto, pero
+ * avisar de que vas a perder un dato no es lo mismo que dejarte conservarlo.
+ *
+ * Vacía sigue valiendo, que es lo que quiere una suscripción: se reanuda y
+ * sigue hasta que la pares.
+ */
+function ResumeModal({
+  schedule,
+  onClose,
+  onResume
+}: {
+  schedule: ScheduledView
+  onClose: () => void
+  onResume: (endDate: string | null) => Promise<void>
+}): ReactNode {
+  const [endDate, setEndDate] = useState('')
+
+  return (
+    <Modal
+      title="Reanudar"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={() => onResume(endDate || null)}>
+            Reanudar
+          </button>
+        </>
+      }
+    >
+      <p className="small muted" style={{ marginTop: 0 }}>
+        «{titleOf(schedule)}» volverá a generar movimientos desde el{' '}
+        {formatDate(schedule.nextDate)}. Lo ya registrado no se toca.
+      </p>
+
+      <Field
+        label="Termina el"
+        hint={
+          schedule.isDebt
+            ? 'Sin fecha no se pueden contar las cuotas que quedan.'
+            : 'Déjala vacía si no tiene final.'
+        }
+      >
+        <DateInput value={endDate} onChange={setEndDate} clearable />
+      </Field>
+    </Modal>
+  )
+}
+
 export function SchedulesView(): ReactNode {
   const { revision, run, toast, fail } = useStore()
   const [rows, setRows] = useState<ScheduledView[]>([])
@@ -330,17 +386,15 @@ export function SchedulesView(): ReactNode {
       )}
 
       {resuming && (
-        <Confirm
-          title="Reanudar"
-          message={
-            `«${titleOf(resuming)}» volverá a generar movimientos y se quedará sin fecha de fin. ` +
-            'Si tenía un final, vuelve a ponérselo desde su ficha. Lo ya registrado no se toca.'
-          }
-          confirmLabel="Reanudar"
-          onCancel={() => setResuming(null)}
-          onConfirm={async () => {
-            await run(() => api.scheduled.resume(resuming.id), 'Programación reanudada')
-            setResuming(null)
+        <ResumeModal
+          schedule={resuming}
+          onClose={() => setResuming(null)}
+          onResume={async (endDate) => {
+            const hecho = await run(
+              () => api.scheduled.resume(resuming.id, endDate),
+              'Programación reanudada'
+            )
+            if (hecho !== null) setResuming(null)
           }}
         />
       )}
