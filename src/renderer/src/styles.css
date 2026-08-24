@@ -2222,6 +2222,16 @@ button.list-row:focus-visible {
   /* Sin esto, la cinta se estira a lo que mida el contenido y arrastra el ancho
      de la pantalla entera. */
   position: relative;
+  /* Se puede coger y llevar a un lado o a otro para buscar una cifra. */
+  cursor: grab;
+  user-select: none;
+  /* Lo horizontal es nuestro, lo vertical sigue siendo de la página: arrastrar
+     aquí no puede dejarte sin poder pasar la lista. */
+  touch-action: pan-y;
+}
+
+.teletipo:active {
+  cursor: grabbing;
 }
 
 /* Se desvanece por los dos lados, que es lo que hace que las cifras parezcan
@@ -2248,12 +2258,9 @@ button.list-row:focus-visible {
 .teletipo-cinta {
   display: flex;
   width: max-content;
-  animation: desfilar linear infinite;
-}
-
-/* Para leer una cifra que está pasando sin tener que esperar a la vuelta. */
-.teletipo:hover .teletipo-cinta {
-  animation-play-state: paused;
+  /* La mueve JavaScript, fotograma a fotograma. Una animación de CSS no se
+     puede reanudar donde tú la has dejado al arrastrarla. */
+  will-change: transform;
 }
 
 .teletipo-tramo {
@@ -2295,22 +2302,9 @@ button.list-row:focus-visible {
   letter-spacing: -0.02em;
 }
 
-/* Un cuarto de cuatro copias es exactamente una copia: ahí la segunda está
-   donde arrancó la primera y el reinicio no se ve. */
-@keyframes desfilar {
-  from { transform: translateX(0); }
-  to { transform: translateX(-25%); }
-}
-
-/* Quieto y a mano: quien pide menos movimiento no quiere una cifra que se le
-   escapa por la izquierda mientras la lee. */
-@media (prefers-reduced-motion: reduce) {
-  .teletipo { overflow-x: auto; }
-  .teletipo-cinta { animation: none; }
-  /* Una sola copia: repetida cuatro veces y quieta, se leería cuatro veces. */
-  .teletipo-tramo + .teletipo-tramo { display: none; }
-  .teletipo::before, .teletipo::after { display: none; }
-}
+/* Quien pide menos movimiento no quiere una cifra escapándosele por la
+   izquierda mientras la lee: no desfila sola. Arrastrarla sigue funcionando,
+   que eso lo pide él. De ahí que la parada viva en el bucle y no aquí. */
 
 /* ---------- Calculadora de Movimientos ---------- */
 
