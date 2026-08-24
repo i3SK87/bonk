@@ -103,89 +103,48 @@ function Delta({
   contra: string
   formatea: (valor: number) => string
 }): ReactNode {
-  const pista = `${formatea(ahora)} ahora · ${formatea(antes)} ${contra}`
-
-  // Sin nada antes no hay porcentaje, igual que en la tabla.
-  if (antes === 0) {
-    return (
-      <div className="delta" title={pista}>
-        <span className={tonoDe(ahora, kind)}>nuevo</span>
-        <span>que {contra}</span>
-      </div>
-    )
-  }
-
-  const delta = ahora - antes
-  const porcentaje = Math.round((delta / antes) * 100)
-  if (porcentaje === 0) {
-    return (
-      <div className="delta" title={pista}>
-        <span className="muted">igual</span>
-        <span>que {contra}</span>
-      </div>
-    )
-  }
-
   return (
-    <div className="delta" title={pista}>
-      <span className={tonoDe(delta, kind)}>
-        {delta > 0 ? '▲' : '▼'} {Math.abs(porcentaje)}%
-      </span>
-      <span>que {contra}</span>
-    </div>
+    <Cambio
+      ahora={ahora}
+      antes={antes}
+      kind={kind}
+      pista={`${formatea(ahora)} ahora · ${formatea(antes)} ${contra}`}
+    />
   )
 }
 
 /**
- * Cuánto ha cambiado una categoría, en pequeño y debajo de su importe.
+ * Cuánto ha cambiado una cifra, a la derecha de ella y en pequeño.
  *
- * Tuvo una columna para ella sola con los euros y el porcentaje, y era demasiado:
- * ensanchaba la tabla y competía con las cifras que se venían a mirar. Aquí es
- * una anotación al pie del número, que es lo que es. Los euros de la diferencia
- * se quedan arriba, en la tarjeta del total, donde hay sitio y donde importan.
+ * La misma insignia para las tarjetas de arriba y para las filas de la tabla:
+ * un triángulo, un porcentaje y su color. Sin coletilla debajo, porque contra
+ * qué se compara ya lo dice una vez la cabecera y repetirlo en cada línea es
+ * llenar la pantalla de la misma frase.
  *
- * Sin nada antes no hay resta que hacer, y decir «nuevo» informa más que un
- * «+100 %» contra cero.
+ * Los dos casos que no son un porcentaje se dicen con un signo y no con una
+ * palabra: «=» cuando no ha cambiado y «-» cuando no hay con qué comparar. Una
+ * palabra al lado de una cifra pesa más que la cifra.
  */
 function Cambio({
   ahora,
   antes,
   kind,
-  currency,
-  desde,
-  hasta
+  pista
 }: {
   ahora: number
   antes: number
   kind: CategoryKind
-  currency: string
-  desde: string
-  hasta: string
+  /** Las dos cifras crudas, para el rótulo de al pasar por encima. */
+  pista: string
 }): ReactNode {
-  /*
-   * Al pasar por encima, la cuenta entera.
-   *
-   * Un porcentaje suelto no dice contra qué se mide, y aquí la base cambia con
-   * la pastilla. Con los números delante no hay que fiarse de nada.
-   */
-  const explicacion = `${formatMoney(ahora, currency)} ahora · ${formatMoney(antes, currency)} entre el ${formatDate(desde)} y el ${formatDate(hasta)}`
-
   /*
    * Sin nada antes no hay porcentaje: dividir entre cero no da un número, y un
    * «+100 %» diría que se ha doblado cuando no había nada que doblar.
-   *
-   * Se dice «nuevo», que ahora sí es verdad: desde que la comparación es contra
-   * el periodo anterior entero, cero significa que en ese periodo no hubo nada
-   * de esta categoría. Cuando el anterior se recortaba al día de hoy podía haber
-   * cero por el recorte y mucho en el mes entero, y entonces la palabra mentía.
-   *
-   * Va como palabra y no como importe a propósito: una cifra en euros en una
-   * columna de porcentajes canta, y el euro exacto está en el rótulo de al pasar.
    */
   if (antes === 0) {
     return (
-      <span className={`cambio ${tonoDe(ahora, kind)}`} title={explicacion}>
-        nuevo
+      <span className="cambio muted" title={pista}>
+        -
       </span>
     )
   }
@@ -195,14 +154,14 @@ function Cambio({
   // Por debajo del uno por ciento no ha cambiado nada que merezca decirse.
   if (porcentaje === 0) {
     return (
-      <span className="cambio muted" title={explicacion}>
-        igual
+      <span className="cambio muted" title={pista}>
+        =
       </span>
     )
   }
 
   return (
-    <span className={`cambio ${tonoDe(delta, kind)}`} title={explicacion}>
+    <span className={`cambio ${tonoDe(delta, kind)}`} title={pista}>
       {delta > 0 ? '▲' : '▼'} {Math.abs(porcentaje)}%
     </span>
   )
@@ -410,44 +369,52 @@ export function ReportsView(): ReactNode {
           <div className="grid cols-3">
             <div className="card stat">
               <div className="label">{kind === 'expense' ? 'Gasto total' : 'Ingreso total'}</div>
-              <div className={`value amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
-                {formatMoney(total, currency)}
+              {/* El cambio a la derecha de la cifra y en su misma línea: es
+                   una anotación sobre ella, no un renglón aparte. */}
+              <div className="stat-fila">
+                <div className={`value amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
+                  {formatMoney(total, currency)}
+                </div>
+                {comparacion && (
+                  <Delta
+                    ahora={total}
+                    antes={totalAntes}
+                    kind={kind}
+                    contra={contra}
+                    formatea={(valor) => formatMoney(valor, currency)}
+                  />
+                )}
               </div>
-              {comparacion && (
-                <Delta
-                  ahora={total}
-                  antes={totalAntes}
-                  kind={kind}
-                  contra={contra}
-                  formatea={(valor) => formatMoney(valor, currency)}
-                />
-              )}
             </div>
             <div className="card stat">
               <div className="label">Movimientos</div>
-              <div className="value">{movements}</div>
-              {comparacion && (
-                <Delta
-                  ahora={movements}
-                  antes={movimientosAntes}
-                  kind={kind}
-                  contra={contra}
-                  formatea={(valor) => String(valor)}
-                />
-              )}
+              <div className="stat-fila">
+                <div className="value">{movements}</div>
+                {comparacion && (
+                  <Delta
+                    ahora={movements}
+                    antes={movimientosAntes}
+                    kind={kind}
+                    contra={contra}
+                    formatea={(valor) => String(valor)}
+                  />
+                )}
+              </div>
             </div>
             <div className="card stat">
               <div className="label">Media diaria</div>
-              <div className="value">{formatMoney(dailyAverage, currency)}</div>
-              {comparacion && (
-                <Delta
-                  ahora={dailyAverage}
-                  antes={mediaAntes}
-                  kind={kind}
-                  contra={contra}
-                  formatea={(valor) => formatMoney(valor, currency)}
-                />
-              )}
+              <div className="stat-fila">
+                <div className="value">{formatMoney(dailyAverage, currency)}</div>
+                {comparacion && (
+                  <Delta
+                    ahora={dailyAverage}
+                    antes={mediaAntes}
+                    kind={kind}
+                    contra={contra}
+                    formatea={(valor) => formatMoney(valor, currency)}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
@@ -567,9 +534,7 @@ export function ReportsView(): ReactNode {
                                   ahora={row.total}
                                   antes={gastoAntes}
                                   kind={kind}
-                                  currency={currency}
-                                  desde={comparacion.from}
-                                  hasta={comparacion.to}
+                                  pista={`${formatMoney(row.total, currency)} ahora · ${formatMoney(gastoAntes, currency)} entre el ${formatDate(comparacion.from)} y el ${formatDate(comparacion.to)}`}
                                 />
                               )}
                             </td>

@@ -624,14 +624,33 @@ p { margin: 0; }
  * que se venían a mirar. Aquí se ve al pasar y no estorba al leer.
  */
 .cambio {
-  display: block;
+  /*
+   * A la derecha de la cifra y en su misma línea.
+   *
+   * Con ancho fijo, que es lo que salva la columna: los importes van alineados
+   * a la derecha, y si la insignia midiera lo que ocupa su texto —«▲ 154%» y
+   * «=» no miden igual— cada importe acabaría en un sitio distinto. Reservando
+   * el mismo hueco a todas, los euros siguen cuadrando en vertical.
+   */
+  display: inline-block;
+  min-width: 58px;
+  margin-left: 10px;
+  text-align: right;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
-  margin-top: 2px;
-  /* Sin el ancho de cifra del importe de arriba: aquí no hay columnas que
-     cuadrar y las flechas quedaban separadas del número. */
   font-variant-numeric: normal;
+}
+
+/* La cifra grande de una tarjeta y su cambio, en la misma línea. */
+.stat-fila {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+.stat-fila .value {
+  min-width: 0;
 }
 
 .stat .delta {
@@ -2261,9 +2280,12 @@ button.list-row:focus-visible {
 }
 
 /* Aquí el cambio va en línea y no debajo: la cabecera tiene sitio de sobra. */
+/* En el resumen del mes no hay columna que cuadrar: el hueco fijo que salva la
+   alineación de la tabla aquí solo dejaría un vacío tras el importe. */
 .resumen-columna-cabecera .cambio {
   display: inline;
-  margin-top: 0;
+  min-width: 0;
+  margin-left: 0;
 }
 
 .resumen-lista {
