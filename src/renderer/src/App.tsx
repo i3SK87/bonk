@@ -4,7 +4,12 @@ import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
 import { Contencion } from './components/Contencion'
-import { Celebration, GoalCelebration } from './components/Celebration'
+import {
+  Celebration,
+  GoalCelebration,
+  MonthlySummary,
+  type ResumenMes
+} from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
@@ -14,6 +19,7 @@ import { DebtsView } from './views/Debts'
 import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
+import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import type { Settlement, GoalReached } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
@@ -55,11 +61,13 @@ const TITLES: Record<ViewId, string> = {
 }
 
 export function App(): ReactNode {
-  const { ready, accounts, settings, toast, refresh, focusedAccountId } = useStore()
+  const { ready, accounts, settings, toast, refresh, updateSettings, focusedAccountId } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [reached, setReached] = useState<GoalReached[]>([])
+  /** El resumen del mes que se acaba de cerrar, cuando toca enseñarlo. */
+  const [resumen, setResumen] = useState<ResumenMes | null>(null)
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
@@ -122,6 +130,63 @@ export function App(): ReactNode {
       window.removeEventListener('keydown', onKey)
     }
   }, [toast, refresh])
+
+  /*
+   * El resumen del mes pasado, una vez al mes.
+   *
+   * No se mira si hoy es día 1: se mira si el resumen de ese mes ya se ha visto.
+   * Así sale igual aunque el día 1 no llegaras a abrir la aplicación, y no sale
+   * dos veces por abrirla dos veces. El sello va en los ajustes y no en memoria,
+   * que si no volvería en cada arranque.
+   *
+   * Un mes sin un solo movimiento se da por visto sin enseñar nada: en una
+   * instalación recién estrenada no hay nada que resumir, y saltaría un cuadro
+   * hablando de ceros.
+   */
+  useEffect(() => {
+    if (!ready || !settings.monthlySummary) return
+
+    const mes = startOfMonth(addMonths(today(), -1))
+    if (settings.lastMonthlySummary === mes.slice(0, 7)) return
+
+    const fin = endOfMonth(mes)
+    const anterior = startOfMonth(addMonths(mes, -1))
+
+    let cancelado = false
+    Promise.all([
+      window.bonk.transactions.totals({ from: mes, to: fin }),
+      window.bonk.reports.categories(mes, fin, 'expense'),
+      window.bonk.transactions.totals({ from: anterior, to: endOfMonth(anterior) })
+    ])
+      .then(([sumas, porCategoria, sumasAntes]) => {
+        if (cancelado) return
+        if (sumas.count === 0) {
+          updateSettings({ lastMonthlySummary: mes.slice(0, 7) })
+          return
+        }
+        const mayor = porCategoria.reduce<{ name: string; total: number } | null>(
+          (mejor, item) => (!mejor || item.total > mejor.total ? { name: item.name, total: item.total } : mejor),
+          null
+        )
+        setResumen({
+          mes,
+          income: sumas.income,
+          expense: sumas.expense,
+          net: sumas.net,
+          currency: settings.baseCurrency,
+          movimientos: sumas.count,
+          mayor,
+          gastoAntes: sumasAntes.expense
+        })
+      })
+      .catch(() => {
+        // Un resumen que no se puede montar no merece un aviso de error: se
+        // vuelve a intentar al abrir la próxima vez.
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [ready, settings.monthlySummary, settings.lastMonthlySummary, settings.baseCurrency, updateSettings])
 
   const netWorth = accounts
     .filter((account) => !account.excludeFromTotal)
@@ -201,6 +266,18 @@ export function App(): ReactNode {
           </div>
         )}
       </main>
+
+      {ready && resumen && (
+        <MonthlySummary
+          resumen={resumen}
+          onClose={() => {
+            // El sello se pone al cerrarlo y no al enseñarlo: si la aplicación
+            // se va abajo con el resumen abierto, el mes que viene vuelve.
+            updateSettings({ lastMonthlySummary: resumen.mes.slice(0, 7) })
+            setResumen(null)
+          }}
+        />
+      )}
 
       {ready && composing && (
         <TransactionForm

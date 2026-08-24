@@ -77,6 +77,13 @@ export function SettingsView(): ReactNode {
             hint="Notificación de Windows con el importe y la cuenta. Hace falta que BONK esté abierta o en la bandeja."
           />
 
+          <Checkbox
+            checked={settings.monthlySummary}
+            onChange={(value) => updateSettings({ monthlySummary: value })}
+            label="Enseñarme cómo fue el mes al empezar el siguiente"
+            hint="Una sola vez por mes, la primera vez que abras."
+          />
+
 
           <div className="row">
             <div className="small muted" style={{ maxWidth: 460 }}>

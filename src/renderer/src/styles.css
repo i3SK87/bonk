@@ -2173,6 +2173,22 @@ button.list-row:focus-visible {
   to   { opacity: 1; transform: none; }
 }
 
+/*
+ * El mismo sello, sin celebrar nada.
+ *
+ * El resumen de un mes no siempre trae buenas noticias, y el verde del dinero
+ * significa algo muy concreto en esta aplicación. Cuando el mes cierra en rojo
+ * el sello se apaga: sigue presidiendo el cuadro, pero no felicita. Tampoco se
+ * pone en rojo, que eso sería una regañina y el número ya lo dice todo.
+ */
+.celebration-seal.neutra {
+  background: var(--bg-subtle, var(--bg-elevated));
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+  /* Sin el brinco: entra igual que lo que cuenta. */
+  animation: celebrate 0.4s 0.05s ease both;
+}
+
 .celebration-seal svg { width: 30px; height: 30px; }
 
 .celebration h2 { font-size: 23px; font-weight: 700; text-wrap: balance; }

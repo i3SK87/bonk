@@ -16,6 +16,11 @@ export function getSettings(): Settings {
     startWithWindows: map.get('startWithWindows') === '1',
     closeToTray: map.get('closeToTray') === '1',
     remindersEnabled: map.get('remindersEnabled') === '1',
+    // Encendido mientras no se apague a mano: preguntando por el «0» en vez de
+    // por el «1», quien ya tenía la aplicación instalada lo estrena encendido
+    // sin necesidad de una migración que le plante la clave.
+    monthlySummary: map.get('monthlySummary') !== '0',
+    lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null
   }
 }

@@ -321,6 +321,14 @@ export interface Settings {
   closeToTray: boolean
   /** Avisa por notificación de Windows el día antes de cada programación. */
   remindersEnabled: boolean
+  /** Enseña el resumen del mes pasado la primera vez que abres el mes nuevo. */
+  monthlySummary: boolean
+  /**
+   * El último mes cuyo resumen ya se ha visto, como «2026-07». Es lo que impide
+   * que salga cada vez que abres, y lo que hace que salga igual si el día 1 no
+   * llegaste a abrir la aplicación.
+   */
+  lastMonthlySummary: string | null
   lastBackupAt: string | null
 }
 

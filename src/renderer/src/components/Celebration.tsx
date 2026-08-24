@@ -138,17 +138,31 @@ function Confetti(): ReactNode {
   return <canvas ref={ref} className="confetti" aria-hidden="true" />
 }
 
-/** El sello, el papelillo y el botón: lo que comparten las dos buenas noticias. */
+/**
+ * El sello, el papelillo y el botón: la maqueta de lo que se enseña en grande.
+ *
+ * El papelillo es opcional porque no todo lo que sale así es una fiesta. Un
+ * resumen del mes es neutro, y bastantes meses será malo: sacar «has gastado
+ * trescientos euros más» con confeti chirría. Misma caja, distinto adorno.
+ */
 function Party({
   title,
   lede,
   stats,
-  onClose
+  onClose,
+  papelillo = true,
+  sello,
+  boton = 'Bien',
+  tono
 }: {
   title: string
   lede: string
   stats: Array<{ value: string; label: string }>
   onClose: () => void
+  papelillo?: boolean
+  sello?: ReactNode
+  boton?: string
+  tono?: 'buena' | 'neutra'
 }): ReactNode {
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -160,13 +174,15 @@ function Party({
 
   return (
     <div className="overlay" onClick={onClose}>
-      <Confetti />
+      {papelillo && <Confetti />}
       <div className="celebration" onClick={(event) => event.stopPropagation()}>
-        <div className="celebration-seal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
-               strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M4 12.5l5.2 5.2L20 6.9" />
-          </svg>
+        <div className={`celebration-seal${tono === 'neutra' ? ' neutra' : ''}`}>
+          {sello ?? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
+                 strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M4 12.5l5.2 5.2L20 6.9" />
+            </svg>
+          )}
         </div>
 
         <h2>{title}</h2>
@@ -182,7 +198,7 @@ function Party({
         </div>
 
         <button className="btn primary" onClick={onClose} autoFocus>
-          Bien
+          {boton}
         </button>
       </div>
     </div>
@@ -250,6 +266,90 @@ export function GoalCelebration({
           value: days == null ? '—' : days > 0 ? `${days} d` : days === 0 ? 'hoy' : `+${Math.abs(days)} d`,
           label: days == null ? 'sin fecha' : days >= 0 ? 'de adelanto' : 'de retraso'
         }
+      ]}
+      onClose={onClose}
+    />
+  )
+}
+
+/** Lo que hace falta para contar cómo fue un mes. */
+export interface ResumenMes {
+  /** El primer día del mes contado, como «2026-07-01». */
+  mes: string
+  income: number
+  expense: number
+  net: number
+  currency: string
+  movimientos: number
+  /** La categoría que más se llevó, si hubo alguna. */
+  mayor: { name: string; total: number } | null
+  /** Lo gastado el mes de antes, para decir si has subido o bajado. */
+  gastoAntes: number
+}
+
+/** «julio», y con el año si no es el de ahora. */
+function nombreDelMes(iso: string): string {
+  const nombre = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(
+    new Date(`${iso}T12:00:00`)
+  )
+  const conMayuscula = nombre.charAt(0).toUpperCase() + nombre.slice(1)
+  const anio = iso.slice(0, 4)
+  return anio === todayISO().slice(0, 4) ? conMayuscula : `${conMayuscula} de ${anio}`
+}
+
+/**
+ * Cómo fue el mes que acaba de cerrarse.
+ *
+ * Sale una vez al mes y sin papelillo. La enhorabuena de una deuda es un premio
+ * —has terminado de pagar algo— y esto es un parte: unos meses saldrán bien y
+ * otros no, y darle formato de fiesta a «has gastado trescientos euros más» no
+ * cuadra. El sello se pone verde solo cuando de verdad hay algo que celebrar:
+ * que hayas cerrado el mes en positivo.
+ *
+ * Lo que se dice arriba también sigue al dato. Sin adornar un mal mes ni
+ * regañar por él: el número ya lo dice.
+ */
+export function MonthlySummary({
+  resumen,
+  onClose
+}: {
+  resumen: ResumenMes
+  onClose: () => void
+}): ReactNode {
+  const enPositivo = resumen.net >= 0
+  const diferencia = resumen.expense - resumen.gastoAntes
+  const hayConQueComparar = resumen.gastoAntes > 0
+
+  const comparado = !hayConQueComparar
+    ? 'Es el primer mes con movimientos que se puede contar.'
+    : diferencia === 0
+      ? 'Exactamente lo mismo que el mes anterior.'
+      : `${formatMoney(Math.abs(diferencia), resumen.currency)} ${diferencia > 0 ? 'más' : 'menos'} que el mes anterior.`
+
+  const balance = enPositivo
+    ? `Cerraste en positivo por ${formatMoney(resumen.net, resumen.currency)}.`
+    : `Se fueron ${formatMoney(Math.abs(resumen.net), resumen.currency)} más de los que entraron.`
+
+  return (
+    <Party
+      title={`${nombreDelMes(resumen.mes)}, en resumen`}
+      lede={`${balance} ${comparado}`}
+      papelillo={false}
+      tono={enPositivo ? 'buena' : 'neutra'}
+      boton="Entendido"
+      sello={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
+             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+          <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+        </svg>
+      }
+      stats={[
+        { value: formatMoney(resumen.income, resumen.currency), label: 'entró' },
+        { value: formatMoney(resumen.expense, resumen.currency), label: 'salió' },
+        resumen.mayor
+          ? { value: formatMoney(resumen.mayor.total, resumen.currency), label: `en ${resumen.mayor.name}` }
+          : { value: String(resumen.movimientos), label: 'movimientos' }
       ]}
       onClose={onClose}
     />
