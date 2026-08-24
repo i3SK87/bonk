@@ -37,7 +37,7 @@ export function addMonths(iso: string, months: number): string {
   return toISO(d)
 }
 
-function addYears(iso: string, years: number): string {
+export function addYears(iso: string, years: number): string {
   return addMonths(iso, years * 12)
 }
 

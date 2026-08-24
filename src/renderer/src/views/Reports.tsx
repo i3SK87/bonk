@@ -6,7 +6,7 @@ import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
 import { DateInput } from '../components/DateInput'
-import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
+import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
@@ -34,6 +34,68 @@ function hasBreakdown(row: CategoryTotal): boolean {
   return row.notes.length > 1 || row.notes[0].note !== 'Sin nota'
 }
 
+/**
+ * Cómo se llama el periodo con el que se compara cada pastilla.
+ *
+ * Dos formas porque la frase cambia de preposición: «que el mes pasado» y «que a
+ * estas alturas del mes pasado». Pegando un «de» delante del primero salía «de
+ * el mes pasado», y con los que van en plural haría falta «de los». Se escriben
+ * las dos y no se contraen a mano.
+ */
+const CONTRA: Partial<Record<RangoId, { suelto: string; deEse: string }>> = {
+  month: { suelto: 'el mes pasado', deEse: 'del mes pasado' },
+  prev: { suelto: 'el mes anterior', deEse: 'del mes anterior' },
+  quarter: { suelto: 'los tres meses de antes', deEse: 'de los tres meses de antes' },
+  year: { suelto: 'el año pasado', deEse: 'del año pasado' },
+  custom: { suelto: 'los mismos días de antes', deEse: 'de los mismos días de antes' }
+}
+
+/**
+ * Cuánto de más o de menos, y si eso es bueno o malo.
+ *
+ * El color no lo decide el signo sino lo que significa: gastar más es rojo y
+ * gastar menos es verde, pero en los ingresos es justo al revés. Sin esa vuelta,
+ * un mes en el que has cobrado menos saldría en verde por ser un número más
+ * pequeño.
+ *
+ * Sin nada antes no hay resta que hacer: se dice que es nuevo, que es más
+ * información que un «+100 %» contra cero.
+ */
+function Diferencia({
+  ahora,
+  antes,
+  kind,
+  currency
+}: {
+  ahora: number
+  antes: number
+  kind: CategoryKind
+  currency: string
+}): ReactNode {
+  if (antes === 0 && ahora === 0) return <span className="muted">—</span>
+  if (antes === 0) return <span className="muted">nuevo</span>
+  if (ahora === 0) return <span className="positive">todo</span>
+
+  const delta = ahora - antes
+  if (delta === 0) return <span className="muted">igual</span>
+
+  const subeMalo = kind === 'expense'
+  const tono = delta > 0 === subeMalo ? 'negative' : 'positive'
+  const porcentaje = Math.round((delta / antes) * 100)
+
+  return (
+    <span className={tono}>
+      {formatMoney(delta, currency, { sign: true })}
+      {/* El mismo menos que el del importe —el largo, no el guion del teclado—,
+          que uno al lado del otro se nota. */}
+      <span className="muted" style={{ marginLeft: 6 }}>
+        {porcentaje > 0 ? '+' : '−'}
+        {Math.abs(porcentaje)}%
+      </span>
+    </span>
+  )
+}
+
 export function ReportsView(): ReactNode {
   const { settings, revision, run, toast, fail } = useStore()
   const [period, setPeriod] = useState<RangoId>('month')
@@ -43,6 +105,8 @@ export function ReportsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
+  /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
+  const [antes, setAntes] = useState<CategoryTotal[]>([])
   // Arrancan en el mes en curso: es de donde vienes al pulsar «Personalizado».
   const [customFrom, setCustomFrom] = useState(() => startOfMonth(today()))
   const [customTo, setCustomTo] = useState(() => endOfMonth(today()))
@@ -71,6 +135,9 @@ export function ReportsView(): ReactNode {
     if (period === 'all') return span ?? { from: today(), to: today() }
     return rangoDe(period) ?? { from: today(), to: today() }
   }, [period, span, customFrom, customTo])
+  // Con qué se compara y hasta dónde. «Todo» no tiene un antes.
+  const comparacion = useMemo(() => comparacionDe(period, range), [period, range])
+  const contra = CONTRA[period] ?? { suelto: 'antes', deEse: 'de antes' }
   const currency = settings.baseCurrency
 
   useEffect(() => {
@@ -78,16 +145,51 @@ export function ReportsView(): ReactNode {
     Promise.all([
       api.reports.categories(range.from, range.to, kind),
       api.reports.monthly(12),
+      // El de antes se pide igual: es la misma consulta con otras fechas.
+      comparacion
+        ? api.reports.categories(comparacion.from, comparacion.to, kind)
+        : Promise.resolve([] as CategoryTotal[]),
     ])
-      .then(([nextCategories, nextMonthly]) => {
+      .then(([nextCategories, nextMonthly, nextAntes]) => {
         setCategories(nextCategories)
         setMonthly(nextMonthly)
+        setAntes(nextAntes)
       })
       .catch(fail('los informes'))
       .finally(() => setLoading(false))
-  }, [range, kind, revision])
+  }, [range, kind, comparacion, revision])
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
+  const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
+
+  /*
+   * Las dos listas en una.
+   *
+   * Se mezclan por categoría porque las dos caras interesan: lo que ha subido y
+   * lo que ha dejado de aparecer. Una categoría en la que este periodo no has
+   * gastado nada es la bajada más grande que hay, y saliéndose de la tabla no se
+   * vería. Entra con cero y su fila lo cuenta.
+   */
+  const filas = useMemo(() => {
+    const previos = new Map(antes.map((item) => [item.categoryId, item.total]))
+    const juntas = categories.map((item) => ({
+      row: item,
+      antes: previos.get(item.categoryId) ?? 0,
+      soloAntes: false
+    }))
+    if (comparacion) {
+      const ahora = new Set(categories.map((item) => item.categoryId))
+      for (const item of antes) {
+        if (ahora.has(item.categoryId)) continue
+        juntas.push({
+          row: { ...item, total: 0, count: 0, percent: 0, notes: [] },
+          antes: item.total,
+          soloAntes: true
+        })
+      }
+    }
+    return juntas
+  }, [categories, antes, comparacion])
   // La barra de cada fila se mide contra la categoría más grande, no contra el
   // total: si se midiera contra el total, todas saldrían diminutas.
   const widest = Math.max(1, ...categories.map((item) => item.total))
@@ -190,6 +292,14 @@ export function ReportsView(): ReactNode {
               <div className={`value amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
                 {formatMoney(total, currency)}
               </div>
+              {comparacion && (
+                <div className="delta">
+                  <Diferencia ahora={total} antes={totalAntes} kind={kind} currency={currency} />
+                  <span>
+                    que {comparacion.enCurso ? `a estas alturas ${contra.deEse}` : contra.suelto}
+                  </span>
+                </div>
+              )}
             </div>
             <div className="card stat">
               <div className="label">Movimientos</div>
@@ -228,11 +338,12 @@ export function ReportsView(): ReactNode {
                       <th>Categoría</th>
                       <th className="num">Movimientos</th>
                       <th className="num">Porcentaje</th>
+                      {comparacion && <th className="num">Antes</th>}
                       <th className="num">Total</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {categories.map((row) => {
+                    {filas.map(({ row, antes: gastoAntes, soloAntes }) => {
                       const key = row.categoryId ?? 'none'
                       const openable = hasBreakdown(row)
                       const open = expanded.has(row.categoryId ?? -1)
@@ -276,7 +387,19 @@ export function ReportsView(): ReactNode {
                             </td>
                             <td className="num muted">{row.count}</td>
                             <td className="num muted">{row.percent.toFixed(1)}%</td>
-                            <td className="num amount">{formatMoney(row.total, currency)}</td>
+                            {comparacion && (
+                              <td className="num">
+                                <Diferencia
+                                  ahora={row.total}
+                                  antes={gastoAntes}
+                                  kind={kind}
+                                  currency={currency}
+                                />
+                              </td>
+                            )}
+                            <td className={`num amount${soloAntes ? ' muted' : ''}`}>
+                              {formatMoney(row.total, currency)}
+                            </td>
                           </tr>
 
                           {open &&
@@ -297,6 +420,9 @@ export function ReportsView(): ReactNode {
                                 </td>
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
+                                {/* El desglose por título no se compara: sería
+                                    comparar textos escritos a mano. */}
+                                {comparacion && <td />}
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
                               </tr>
                             ))}
