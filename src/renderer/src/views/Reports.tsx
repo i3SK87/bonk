@@ -143,7 +143,7 @@ function Cambio({
    */
   if (antes === 0) {
     return (
-      <span className="cambio muted" title={pista}>
+      <span className="cambio signo muted" title={pista}>
         -
       </span>
     )
@@ -154,7 +154,7 @@ function Cambio({
   // Por debajo del uno por ciento no ha cambiado nada que merezca decirse.
   if (porcentaje === 0) {
     return (
-      <span className="cambio muted" title={pista}>
+      <span className="cambio signo muted" title={pista}>
         =
       </span>
     )
@@ -459,6 +459,13 @@ export function ReportsView(): ReactNode {
                       <th className="num">Movimientos</th>
                       <th className="num">Porcentaje</th>
                       <th className="num">Total</th>
+                      {/* Solo si hay con qué comparar: «Todo» no tiene un antes
+                          y una columna entera vacía no la quiere nadie. */}
+                      {comparacion && (
+                        <th className="balance" title={`Comparado con ${contra}`}>
+                          Balance
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
@@ -527,17 +534,17 @@ export function ReportsView(): ReactNode {
                             </td>
                             <td className="num muted">{row.count}</td>
                             <td className="num muted">{row.percent.toFixed(1)}%</td>
-                            <td className="num amount">
-                              {formatMoney(row.total, currency)}
-                              {comparacion && (
+                            <td className="num amount">{formatMoney(row.total, currency)}</td>
+                            {comparacion && (
+                              <td className="balance">
                                 <Cambio
                                   ahora={row.total}
                                   antes={gastoAntes}
                                   kind={kind}
                                   pista={`${formatMoney(row.total, currency)} ahora · ${formatMoney(gastoAntes, currency)} entre el ${formatDate(comparacion.from)} y el ${formatDate(comparacion.to)}`}
                                 />
-                              )}
-                            </td>
+                              </td>
+                            )}
                           </tr>
 
                           {open &&
@@ -559,6 +566,9 @@ export function ReportsView(): ReactNode {
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
+                                {/* El desglose por concepto no se compara: no
+                                    hay un «antes» suyo que consultar. */}
+                                {comparacion && <td />}
                               </tr>
                             ))}
                         </Fragment>

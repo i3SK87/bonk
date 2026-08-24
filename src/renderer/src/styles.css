@@ -617,30 +617,44 @@ p { margin: 0; }
 }
 
 /*
- * El cambio de una categoría respecto al periodo anterior, bajo su importe.
+ * Cuánto ha cambiado una cifra: una flecha, un porcentaje y su color.
  *
- * En su propio renglón, más pequeño y con la flecha delante. Tuvo una columna
- * para él solo y era demasiado: ensanchaba la tabla y competía con las cifras
- * que se venían a mirar. Aquí se ve al pasar y no estorba al leer.
+ * Va con ancho fijo, y de ahí sale la alineación: «▲ 154%» y «=» no miden lo
+ * mismo, así que sin un hueco reservado cada insignia empezaría en un sitio
+ * distinto. Con todas del mismo ancho y alineadas a la derecha, los dígitos
+ * caen unos debajo de otros y el símbolo de porcentaje forma su propia columna.
  */
 .cambio {
-  /*
-   * A la derecha de la cifra y en su misma línea.
-   *
-   * Con ancho fijo, que es lo que salva la columna: los importes van alineados
-   * a la derecha, y si la insignia midiera lo que ocupa su texto —«▲ 154%» y
-   * «=» no miden igual— cada importe acabaría en un sitio distinto. Reservando
-   * el mismo hueco a todas, los euros siguen cuadrando en vertical.
-   */
   display: inline-block;
   min-width: 58px;
-  margin-left: 10px;
   text-align: right;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.01em;
   font-variant-numeric: normal;
 }
+
+/*
+ * Un signo suelto se centra en su hueco, y va más gordo.
+ *
+ * «=» y «-» no son cifras: no tienen dígitos que cuadrar con los de arriba, y
+ * alineados a la derecha como los porcentajes se quedaban pegados al borde y
+ * colgando de la nada. Centrados se leen como lo que son, la marca de que ahí
+ * no hay nada que comparar.
+ *
+ * Un poco mayores y más gruesos porque son dos rayas finas contra un triángulo
+ * relleno y tres cifras: al mismo cuerpo que un porcentaje casi no se ven.
+ */
+.cambio.signo {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  /* Atado, que un cuerpo mayor no le levante el alto a la fila. */
+  line-height: 11px;
+}
+
+/* Separada de la cifra, que en la tarjeta no hay columna que las aparte. */
+.stat-fila .cambio { margin-left: 10px; }
 
 /* La cifra grande de una tarjeta y su cambio, en la misma línea. */
 .stat-fila {
@@ -1712,6 +1726,21 @@ p { margin: 0; }
    es la que marca dónde acaba una y empieza la siguiente. */
 .table.breakdown td { border-bottom: none; }
 
+/*
+ * La columna del balance, centrada.
+ *
+ * Las otras tres son cifras y van a la derecha, que es como se cuadran unas con
+ * otras. Esta no es una cifra que sumar sino una marca junto a cada importe, y
+ * pegada al borde derecho se quedaba lejos de lo que califica. La insignia
+ * mantiene su ancho fijo dentro, así que los porcentajes siguen alineados entre
+ * ellos aunque el bloque entero vaya al centro.
+ */
+.table.breakdown td.balance,
+.table.breakdown th.balance {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 /* La columna del nombre carga con la barra de reparto, así que se lleva el ancho. */
 .table.breakdown td:first-child,
 .table.breakdown th:first-child {
@@ -2279,13 +2308,11 @@ button.list-row:focus-visible {
   font-weight: 680;
 }
 
-/* Aquí el cambio va en línea y no debajo: la cabecera tiene sitio de sobra. */
 /* En el resumen del mes no hay columna que cuadrar: el hueco fijo que salva la
    alineación de la tabla aquí solo dejaría un vacío tras el importe. */
 .resumen-columna-cabecera .cambio {
   display: inline;
   min-width: 0;
-  margin-left: 0;
 }
 
 .resumen-lista {
