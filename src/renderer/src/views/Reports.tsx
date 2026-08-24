@@ -126,21 +126,31 @@ export function ReportsView(): ReactNode {
             ))}
           </div>
           <div className="spacer" />
-          <span className="small muted">
-            {formatDate(range.from)} – {formatDate(range.to)}
-          </span>
-          <button
-            className="btn small"
-            onClick={async () => {
-              const result = await run(() =>
-                api.csv.exportTransactions({ from: range.from, to: range.to })
-              )
-              if (result) toast(`${result.count} movimientos exportados`, 'success')
-            }}
-          >
-            <Icon name="download" size={15} />
-            Exportar
-          </button>
+
+          {/*
+            Las fechas y el botón, en el mismo grupo.
+            Sueltos, al estrecharse la ventana bajaba solo el botón y las fechas
+            se quedaban arriba pegadas al canto derecho, con un hueco enorme por
+            medio: parecían de otra fila. Juntos bajan a la vez y siguen leyéndose
+            como lo que son, el periodo y qué hacer con él.
+          */}
+          <div className="row tight">
+            <span className="small muted">
+              {formatDate(range.from)} – {formatDate(range.to)}
+            </span>
+            <button
+              className="btn small"
+              onClick={async () => {
+                const result = await run(() =>
+                  api.csv.exportTransactions({ from: range.from, to: range.to })
+                )
+                if (result) toast(`${result.count} movimientos exportados`, 'success')
+              }}
+            >
+              <Icon name="download" size={15} />
+              Exportar
+            </button>
+          </div>
 
           {/*
             Las fechas van dentro de la cabecera y no en una tira aparte debajo.
