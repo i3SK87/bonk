@@ -311,31 +311,32 @@ function AdjustModal({ debt, onClose }: { debt: DebtProgress; onClose: () => voi
         </>
       }
     >
-      <Field label="Cuotas pagadas" hint="Número de cuotas pagadas.">
-        {/* Noventa y nueve cuotas son más de ocho años pagando: de sobra. Y con
-            el mismo ancho que los contadores de repetición, que son hermanos. */}
-        <NumberInput
-          value={paidCount}
-          onChange={setPaidCount}
-          min={0}
-          max={99}
-          style={{ width: 74 }}
-        />
-      </Field>
+      {/* Los dos cortos a la par, y el ancho debajo: la misma gramática que
+          Cuentas y que Nuevo movimiento. Antes iban los tres apilados a todo lo
+          ancho, con el contador de cuotas perdido en su renglón. */}
+      <div className="grid cols-2">
+        <Field label="Cuotas pagadas" hint="Número de cuotas pagadas.">
+          {/* Noventa y nueve cuotas son más de ocho años pagando: de sobra. */}
+          <NumberInput value={paidCount} onChange={setPaidCount} min={0} max={99} />
+        </Field>
 
-      <Field
-        label="Última cuota"
-        hint={`Solo si es distinta de ${formatMoney(debt.installment, debt.currency)}.`}
-      >
-        <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} />
-      </Field>
+        <Field
+          label="Última cuota"
+          hint={`Solo si es distinta de ${formatMoney(debt.installment, debt.currency)}.`}
+        >
+          <AmountInput value={lastAmount} currency={debt.currency} onChange={setLastAmount} compact />
+        </Field>
+      </div>
 
-
+      {/* Compactos los dos, como el aviso de saldo de Cuentas: aquí no hay una
+          cifra que presida el formulario. Los dos son correcciones que casi
+          siempre se dejan en cero, y a veintiséis píxeles se llevaban toda la
+          atención y media pantalla de alto. */}
       <Field
         label="Total de la deuda"
         hint="Solo si lleva intereses o entrada; si no, sale de las cuotas."
       >
-        <AmountInput value={total} currency={debt.currency} onChange={setTotal} />
+        <AmountInput value={total} currency={debt.currency} onChange={setTotal} compact />
       </Field>
     </Modal>
   )
