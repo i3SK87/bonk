@@ -2276,9 +2276,18 @@ button.list-row:focus-visible {
   white-space: nowrap;
 }
 
-/* La barrita entre cifras, como el teletipo de verdad. */
-.teletipo-dato + .teletipo-dato::before,
-.teletipo-tramo + .teletipo-tramo .teletipo-dato:first-child::before {
+/*
+ * La barrita entre cifras, como el teletipo de verdad.
+ *
+ * En todas, también en la primera de cada copia. Antes se la saltaba —era la
+ * primera de la fila y no tenía nada delante— y eso dejaba la copia que sirve
+ * para medir la vuelta diez píxeles más corta que las otras tres: al cerrar el
+ * bucle, todo lo que venía detrás aparecía descolocado. Ese era el saltito.
+ *
+ * En una cinta sin principio ni final tampoco hay una «primera» cifra que
+ * merezca ir sin su barra, así que además queda mejor.
+ */
+.teletipo-dato::before {
   content: '';
   align-self: center;
   width: 1px;

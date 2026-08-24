@@ -95,7 +95,10 @@ export function Teletipo({ datos, segundosPorDato = 6 }: Props): ReactNode {
     if (!tramo) return
 
     const medir = (): void => {
-      anchoCopia.current = tramo.offsetWidth
+      // Con decimales, no `offsetWidth`, que redondea a entero. Media décima de
+      // error por vuelta no se ve, pero es error que se paga en cada bucle y no
+      // cuesta nada evitarlo.
+      anchoCopia.current = tramo.getBoundingClientRect().width
     }
     medir()
     // Las cifras cambian de ancho cuando cambian los importes, y la ventana al
@@ -113,7 +116,13 @@ export function Teletipo({ datos, segundosPorDato = 6 }: Props): ReactNode {
 
     let ultimo = performance.now()
     let fotograma = requestAnimationFrame(function paso(ahora: number): void {
-      const segundos = (ahora - ultimo) / 1000
+      /*
+       * Con tope. Mientras la ventana está minimizada o detrás de otra, el
+       * navegador deja de dar fotogramas; al volver, el salto desde el último
+       * sería de minutos y la cinta pegaría un tirón enorme antes de seguir a su
+       * ritmo. Con el tope, volver del segundo plano es un fotograma más.
+       */
+      const segundos = Math.min((ahora - ultimo) / 1000, 0.05)
       ultimo = ahora
 
       const parada = encima.current || arrastre.current != null || quieta.matches
