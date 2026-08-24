@@ -490,6 +490,24 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         now,
         id
       )
+
+      /*
+       * Corregir la categoría de un recibo la corrige también en su programación.
+       *
+       * Un movimiento que ha salido de una programada arrastra su categoría, así
+       * que cambiarla solo aquí duraba hasta el mes siguiente: el recibo volvía a
+       * entrar con la equivocada y había que corregirlo otra vez, sin saber que
+       * la que había que tocar era la ficha de Programados.
+       *
+       * Solo cuando de verdad cambia, y solo la categoría: la fecha y el importe
+       * de un mes concreto son suyos y no dicen nada de los que vienen.
+       */
+      if (previous?.scheduledId && previous.categoryId !== categoryId) {
+        db.prepare('UPDATE scheduled SET category_id = ? WHERE id = ?').run(
+          bind(categoryId),
+          previous.scheduledId
+        )
+      }
     } else {
       const result = db
         .prepare(

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './Icon'
 import { useStore } from '../lib/store'
 import { addDays, addMonths, parseISO, startOfMonth, today } from '@shared/dates'
@@ -152,8 +153,23 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
         <Icon name="calendar" size={16} />
       </button>
 
-      {abierto && (
-        <div className="calendario">
+      {/*
+        Al centro de la pantalla y fuera del árbol del formulario.
+        Colgaba del campo, y dentro de un formulario eso lo dejaba pegado al
+        borde, tapando lo de debajo y a veces cortado. Sale por un portal a la
+        raíz porque el velo de los formularios lleva desenfoque, y un desenfoque
+        hace que lo de dentro se posicione contra él en vez de contra la ventana.
+      */}
+      {abierto &&
+        createPortal(
+          <div
+            className="calendario-velo"
+            onMouseDown={(event) => {
+              // Solo el velo: pulsar dentro del calendario no lo cierra.
+              if (event.target === event.currentTarget) setAbierto(false)
+            }}
+          >
+            <div className="calendario">
           <div className="calendario-mes">
             <button
               type="button"
@@ -222,8 +238,14 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
                 Sin fecha
               </button>
             )}
+              <div className="spacer" />
+              <button type="button" className="btn small ghost" onClick={() => setAbierto(false)}>
+                Cerrar
+              </button>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

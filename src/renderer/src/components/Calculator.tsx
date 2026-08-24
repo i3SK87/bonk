@@ -18,6 +18,20 @@ const KEYS = [
   ['0', ',', '%', '+']
 ]
 
+/**
+ * El resultado, escrito como se vuelve a poder teclear.
+ *
+ * Con coma decimal y sin separador de millares: la propia calculadora lee
+ * «1.234,56», pero al encadenar es más limpio que lo que quede escrito sea un
+ * número pelado y no algo con puntos que luego hay que interpretar otra vez.
+ */
+function comoTexto(valor: number): string {
+  // Diez decimales de tope: los que sobran son basura de la coma flotante, no
+  // cifras. Y sin ceros de relleno al final, que estorban para seguir tecleando.
+  const texto = valor.toFixed(10).replace(/0+$/, '').replace(/\.$/, '')
+  return texto.replace('.', ',')
+}
+
 export function CalculatorButton({ currency }: { currency: string }): ReactNode {
   const { toast } = useStore()
   const [open, setOpen] = useState(false)
@@ -62,9 +76,27 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
           maximumFractionDigits: 10
         }).format(result)
 
+  /**
+   * Deja el resultado escrito en el hueco de la cuenta.
+   *
+   * Es lo que hace que se pueda encadenar: resuelto «10+5», el 15 se queda ahí
+   * y escribir «×2» sigue desde él, como en cualquier calculadora. Antes había
+   * que tener la cuenta entera en la cabeza y teclearla de una vez.
+   */
+  function resolver(): boolean {
+    if (result == null) return false
+    const texto = comoTexto(result)
+    // Ya resuelto: no hay nada que hacer, y así Enter puede pasar a copiar.
+    if (texto === expr.trim()) return false
+    setExpr(texto)
+    inputRef.current?.focus()
+    return true
+  }
+
   function press(key: string): void {
     if (key === 'C') setExpr('')
     else if (key === '←') setExpr((current) => current.slice(0, -1))
+    else if (key === '=') resolver()
     else setExpr((current) => current + key)
     inputRef.current?.focus()
   }
@@ -113,7 +145,12 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
             spellCheck={false}
             onChange={(event) => setExpr(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') copy()
+              // Primero resuelve y luego copia, que es el orden en que se usa:
+              // una calculadora de verdad no te copia nada a medio sumar.
+              if (event.key === 'Enter' || event.key === '=') {
+                event.preventDefault()
+                if (!resolver()) copy()
+              }
             }}
           />
 
@@ -143,10 +180,20 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
                 {key}
               </button>
             ))}
+            {/* A lo ancho y abajo: es la tecla que más se pulsa y la que cierra
+                la cuenta, así que no compite con las cifras por el sitio. */}
+            <button
+              type="button"
+              className="calc-key igual"
+              onClick={() => press('=')}
+              disabled={result == null}
+            >
+              =
+            </button>
           </div>
 
           <div className="small subtle" style={{ marginTop: 8 }}>
-            Se puede teclear directamente. Enter copia el resultado.
+            Se puede teclear directamente. Enter resuelve, y otra vez copia.
           </div>
         </div>
       )}

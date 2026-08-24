@@ -787,6 +787,68 @@ try {
   )
   scheduled.finishScheduled(recurring.id, day)
 
+  /*
+   * Corregir la categoría de un recibo la corrige en su programación.
+   *
+   * Duraba hasta el mes siguiente: el recibo volvía a entrar con la equivocada
+   * porque la que manda es la de la ficha de Programados, y eso no lo dice
+   * ninguna pantalla.
+   */
+  section('La categoría corregida viaja a la programación')
+  const otra = categories.saveCategory({
+    name: 'Categoría corregida', kind: 'expense', icon: 'tag', color: '#FF9F0A'
+  })
+  const conRecibo = scheduled.saveScheduled({
+    type: 'expense', accountId: bank.id, categoryId: food.id, note: 'Recibo mal clasificado',
+    amount: 1900, freq: 'monthly', interval: 1, nextDate: day, autoPost: true
+  })
+  scheduled.postDue(day)
+  const recibo = transactions
+    .listTransactions({ search: 'Recibo mal clasificado', limit: 5 })
+    .find((row) => row.scheduledId === conRecibo.id)!
+  equal('el recibo nace con la categoría de su programación', recibo.categoryId, food.id)
+
+  transactions.saveTransaction({
+    id: recibo.id,
+    type: recibo.type,
+    date: recibo.date,
+    accountId: recibo.accountId,
+    categoryId: otra.id,
+    amount: recibo.amount,
+    note: recibo.note
+  })
+  equal('corregirla en el movimiento la corrige', transactions.getTransaction(recibo.id)!.categoryId, otra.id)
+  equal(
+    'y también en la programación, para el mes que viene',
+    scheduled.getScheduled(conRecibo.id)!.categoryId,
+    otra.id
+  )
+
+  // Cambiar cualquier otra cosa no toca la programación: el importe de un mes
+  // concreto es suyo y no dice nada de los que vienen.
+  transactions.saveTransaction({
+    id: recibo.id,
+    type: recibo.type,
+    date: recibo.date,
+    accountId: recibo.accountId,
+    categoryId: otra.id,
+    amount: 2500,
+    note: 'Recibo mal clasificado'
+  })
+  equal('cambiar el importe no toca la cuota de la programación', scheduled.getScheduled(conRecibo.id)!.amount, 1900)
+
+  // Y un movimiento sinPrograma no tiene programación que corregir.
+  const sinPrograma = transactions.saveTransaction({
+    type: 'expense', date: day, accountId: bank.id, categoryId: food.id, amount: 300, note: 'Suelto'
+  })
+  transactions.saveTransaction({ ...sinPrograma, categoryId: otra.id })
+  equal('un movimiento sin programación no arrastra nada', transactions.getTransaction(sinPrograma.id)!.categoryId, otra.id)
+
+  transactions.deleteTransaction(recibo.id)
+  transactions.deleteTransaction(sinPrograma.id)
+  scheduled.deleteScheduled(conRecibo.id)
+  categories.deleteCategory(otra.id)
+
   section('Una deuda desde su primer gasto')
   // Lo que hace el formulario de un movimiento cuando se marca «se repite»:
   // guarda el gasto y monta la programación con los mismos datos, con la

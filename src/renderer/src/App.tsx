@@ -8,6 +8,7 @@ import {
   Celebration,
   GoalCelebration,
   MonthlySummary,
+  type LineaResumen,
   type ResumenMes
 } from './components/Celebration'
 import { TransactionsView } from './views/Transactions'
@@ -20,7 +21,7 @@ import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
-import type { Settlement, GoalReached } from '@shared/types'
+import type { CategoryTotal, Settlement, GoalReached } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -144,7 +145,7 @@ export function App(): ReactNode {
    * hablando de ceros.
    */
   useEffect(() => {
-    if (!ready || !settings.monthlySummary) return
+    if (!ready) return
 
     const mes = startOfMonth(addMonths(today(), -1))
     if (settings.lastMonthlySummary === mes.slice(0, 7)) return
@@ -156,27 +157,41 @@ export function App(): ReactNode {
     Promise.all([
       window.bonk.transactions.totals({ from: mes, to: fin }),
       window.bonk.reports.categories(mes, fin, 'expense'),
-      window.bonk.transactions.totals({ from: anterior, to: endOfMonth(anterior) })
+      window.bonk.reports.categories(mes, fin, 'income'),
+      window.bonk.transactions.totals({ from: anterior, to: endOfMonth(anterior) }),
+      // Lo que queda por pagar es de hoy, no del mes contado: una deuda no se
+      // cierra a final de mes, se cierra cuando se acaba.
+      window.bonk.scheduled.debts()
     ])
-      .then(([sumas, porCategoria, sumasAntes]) => {
+      .then(([sumas, gastos, ingresos, sumasAntes, deudas]) => {
         if (cancelado) return
         if (sumas.count === 0) {
           updateSettings({ lastMonthlySummary: mes.slice(0, 7) })
           return
         }
-        const mayor = porCategoria.reduce<{ name: string; total: number } | null>(
-          (mejor, item) => (!mejor || item.total > mejor.total ? { name: item.name, total: item.total } : mejor),
-          null
-        )
+        // Cinco de cada, de mayor a menor: más no se leen de un vistazo.
+        const cinco = (lista: CategoryTotal[]): LineaResumen[] =>
+          [...lista]
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 5)
+            .map((item) => ({
+              name: item.name,
+              total: item.total,
+              icon: item.icon,
+              color: item.color
+            }))
+
         setResumen({
           mes,
-          income: sumas.income,
-          expense: sumas.expense,
-          net: sumas.net,
+          ingresos: sumas.income,
+          gastos: sumas.expense,
+          balance: sumas.net,
           currency: settings.baseCurrency,
-          movimientos: sumas.count,
-          mayor,
-          gastoAntes: sumasAntes.expense
+          deudaRestante: deudas.reduce((suma, deuda) => suma + Math.max(0, deuda.left ?? 0), 0),
+          gastosAntes: sumasAntes.expense,
+          ingresosAntes: sumasAntes.income,
+          porGasto: cinco(gastos),
+          porIngreso: cinco(ingresos)
         })
       })
       .catch(() => {
@@ -186,7 +201,7 @@ export function App(): ReactNode {
     return () => {
       cancelado = true
     }
-  }, [ready, settings.monthlySummary, settings.lastMonthlySummary, settings.baseCurrency, updateSettings])
+  }, [ready, settings.lastMonthlySummary, settings.baseCurrency, updateSettings])
 
   const netWorth = accounts
     .filter((account) => !account.excludeFromTotal)

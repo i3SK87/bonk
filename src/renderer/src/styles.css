@@ -650,6 +650,20 @@ p { margin: 0; }
 
 .amount.positive { color: var(--positive); }
 .amount.negative { color: var(--negative); }
+
+/*
+ * El verde y el rojo fuera de una cifra con formato de dinero.
+ *
+ * Los llevaba solo `.amount`, así que la comparación de Informes —que no es un
+ * importe sino una flecha con su porcentaje— salía en el gris de al lado. Se
+ * anotan aquí los sitios que también los quieren, en vez de soltar `.positive`
+ * como color global: la cifra del patrimonio en la barra lateral ya tiene el
+ * suyo propio y no hay que pisárselo.
+ */
+.cambio.positive,
+.stat .delta .positive { color: var(--positive); }
+.cambio.negative,
+.stat .delta .negative { color: var(--negative); }
 .amount.neutral { color: var(--fg-muted); }
 
 /* ---------- Botones ---------- */
@@ -2199,6 +2213,116 @@ button.list-row:focus-visible {
   max-width: 32ch;
 }
 
+/*
+ * El cuadro ancho: el resumen del mes lleva dos listas de cinco categorías, y
+ * eso no cabe en la caja estrecha de una enhorabuena. El texto deja de ir
+ * centrado en cuanto hay listas: una lista centrada no se lee.
+ */
+.celebration.ancha {
+  max-width: 720px;
+  width: 100%;
+  padding: 28px 30px 22px;
+}
+
+.resumen-columnas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  width: 100%;
+  margin: 20px 0 6px;
+  text-align: left;
+}
+
+@container (max-width: 620px) {
+  .resumen-columnas { grid-template-columns: minmax(0, 1fr); }
+}
+
+.resumen-columna-cabecera {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.resumen-columna-cabecera .label {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.resumen-columna-cabecera strong {
+  margin-left: auto;
+  font-size: 17px;
+  font-weight: 680;
+}
+
+/* Aquí el cambio va en línea y no debajo: la cabecera tiene sitio de sobra. */
+.resumen-columna-cabecera .cambio {
+  display: inline;
+  margin-top: 0;
+}
+
+.resumen-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.resumen-lista li {
+  display: grid;
+  /* El avatar, el nombre que se estira, y el importe a la derecha. La barra
+     ocupa toda la anchura por debajo. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.resumen-nombre {
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resumen-lista .amount {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.resumen-barra {
+  grid-column: 1 / -1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.resumen-barra > div {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.resumen-deuda {
+  width: 100%;
+  margin: 6px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--fg-muted);
+}
+
+.resumen-deuda strong {
+  color: var(--negative);
+  font-variant-numeric: tabular-nums;
+}
+
 .celebration-stats {
   display: flex;
   width: 100%;
@@ -2390,6 +2514,18 @@ button.list-row:focus-visible {
   cursor: pointer;
 }
 
+/* A lo ancho de las cuatro columnas: es la que cierra la cuenta. */
+.calc-key.igual {
+  grid-column: 1 / -1;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-size: 16px;
+}
+
+.calc-key.igual:disabled { opacity: 0.45; cursor: default; }
+.calc-key.igual:hover:not(:disabled) { filter: brightness(1.08); }
+
 .calc-key:hover { background: var(--bg-sunken); }
 .calc-key:active { transform: scale(0.96); }
 
@@ -2549,12 +2685,27 @@ button.list-row:focus-visible {
   color: var(--fg);
 }
 
+/*
+ * El velo del calendario, por encima de todo.
+ *
+ * Más alto que el de los formularios porque casi siempre se abre dentro de uno:
+ * elegir la fecha de un movimiento es lo más normal del mundo, y el calendario
+ * tiene que quedar por delante de la ficha, no debajo.
+ */
+.calendario-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(8, 10, 14, 0.35);
+  animation: fade 0.12s ease;
+}
+
 .calendario {
-  position: absolute;
-  z-index: 40;
-  top: calc(100% + 6px);
-  left: 0;
-  width: 268px;
+  width: 300px;
+  max-width: 100%;
   padding: 10px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-lg);
@@ -2577,10 +2728,28 @@ button.list-row:focus-visible {
   letter-spacing: 0.05em;
 }
 
+/* El nombre de una categoría en Informes: lleva a su ficha sin salir de aquí.
+   Se pinta como texto normal y solo se subraya al pasar, que una tabla llena de
+   enlaces azules no se lee. */
+.nombre-categoria {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nombre-categoria:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .calendario-rejilla {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 
 .calendario-dia-semana {
@@ -2592,13 +2761,15 @@ button.list-row:focus-visible {
 }
 
 .calendario-dia {
-  padding: 6px 0;
+  /* Más alto que antes: colgando del campo el sitio era el que era, y en un
+     cuadro para él solo no hay razón para pedirle puntería a nadie. */
+  padding: 9px 0;
   border: 0;
   border-radius: 8px;
   background: none;
   color: var(--fg);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
@@ -2626,6 +2797,7 @@ button.list-row:focus-visible {
 
 .calendario-pie {
   display: flex;
+  align-items: center;
   gap: 6px;
   margin-top: 8px;
   padding-top: 8px;

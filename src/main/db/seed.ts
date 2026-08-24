@@ -58,7 +58,6 @@ export function seedDefaults(db: DatabaseSync): void {
     theme: 'system',
     palette: 'grafito',
     startOfWeek: 'monday',
-    monthlySummary: '1',
     lastMonthlySummary: '',
     lastBackupAt: ''
   }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Avatar } from './ui'
 import { formatMoney } from '@shared/money'
 import { today as todayISO } from '@shared/dates'
 import type { Settlement, GoalReached } from '@shared/types'
@@ -139,7 +140,109 @@ function Confetti(): ReactNode {
 }
 
 /**
- * El sello, el papelillo y el botón: la maqueta de lo que se enseña en grande.
+/**
+ * Estrellas para el resumen del mes, en vez de papelillo.
+ *
+ * El papelillo estalla hacia arriba y cae: es una fiesta. Estas suben despacio y
+ * se apagan, que acompaña sin celebrar nada en concreto —el mes puede haber ido
+ * bien o mal y el cuadro sale igual—. Giran mientras suben y parpadean un poco,
+ * lo justo para que no parezcan puntos quietos.
+ */
+function Estrellas(): ReactNode {
+  const ref = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = ref.current
+    const ctx = canvas?.getContext('2d')
+    if (!canvas || !ctx) return
+
+    const rect = canvas.getBoundingClientRect()
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = Math.round(rect.width * dpr)
+    canvas.height = Math.round(rect.height * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    /** Una estrella de cinco puntas, dibujada desde su centro. */
+    const punta = (x: number, y: number, radio: number, giro: number): void => {
+      ctx.beginPath()
+      for (let i = 0; i < 10; i++) {
+        // Alternando radio grande y pequeño salen las cinco puntas.
+        const r = i % 2 === 0 ? radio : radio * 0.42
+        const angulo = giro + (i * Math.PI) / 5 - Math.PI / 2
+        const px = x + Math.cos(angulo) * r
+        const py = y + Math.sin(angulo) * r
+        if (i === 0) ctx.moveTo(px, py)
+        else ctx.lineTo(px, py)
+      }
+      ctx.closePath()
+      ctx.fill()
+    }
+
+    const cuantas = 46
+    const piezas = Array.from({ length: cuantas }, () => ({
+      x: Math.random() * rect.width,
+      // Empiezan repartidas por debajo del borde, para que entren escalonadas.
+      y: rect.height + Math.random() * rect.height * 0.9,
+      vy: -(34 + Math.random() * 58),
+      vx: (Math.random() - 0.5) * 24,
+      radio: 3 + Math.random() * 6,
+      giro: Math.random() * Math.PI,
+      vueltas: (Math.random() - 0.5) * 1.5,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      // Cada una parpadea a su ritmo: todas a la vez parecería un fallo.
+      fase: Math.random() * Math.PI * 2,
+      ritmo: 1.6 + Math.random() * 2.2
+    }))
+
+    // Con el movimiento reducido se quedan puestas, sin subir ni parpadear.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      for (const e of piezas) {
+        ctx.globalAlpha = 0.5
+        ctx.fillStyle = e.color
+        punta(e.x, e.y - rect.height * 0.55, e.radio, e.giro)
+      }
+      return
+    }
+
+    let frame = 0
+    let last = performance.now()
+    let vivido = 0
+
+    const tick = (now: number): void => {
+      const dt = Math.min(0.032, (now - last) / 1000)
+      last = now
+      vivido += dt
+      ctx.clearRect(0, 0, rect.width, rect.height)
+
+      // Se apagan a la vez al final, que si no se quedarían dando vueltas.
+      const apagado = Math.max(0, 1 - Math.max(0, vivido - 3.4) / 1.4)
+      if (apagado <= 0) return
+
+      for (const e of piezas) {
+        e.y += e.vy * dt
+        e.x += e.vx * dt
+        e.giro += e.vueltas * dt
+        // La que se sale por arriba vuelve por abajo mientras dure la entrada.
+        if (e.y < -20) e.y = rect.height + 20
+
+        const brillo = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(vivido * e.ritmo + e.fase))
+        ctx.globalAlpha = brillo * apagado
+        ctx.fillStyle = e.color
+        punta(e.x, e.y, e.radio, e.giro)
+      }
+
+      frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  return <canvas ref={ref} className="confetti" aria-hidden="true" />
+}
+
+/**
+ * El sello, el adorno y el botón: la maqueta de lo que se enseña en grande.
  *
  * El papelillo es opcional porque no todo lo que sale así es una fiesta. Un
  * resumen del mes es neutro, y bastantes meses será malo: sacar «has gastado
@@ -149,20 +252,26 @@ function Party({
   title,
   lede,
   stats,
+  children,
   onClose,
-  papelillo = true,
+  adorno = 'papelillo',
   sello,
   boton = 'Bien',
-  tono
+  tono,
+  ancha
 }: {
   title: string
   lede: string
-  stats: Array<{ value: string; label: string }>
+  /** Las tres cifras en fila; o nada, si lo que se cuenta va en `children`. */
+  stats?: Array<{ value: string; label: string }>
+  children?: ReactNode
   onClose: () => void
-  papelillo?: boolean
+  adorno?: 'papelillo' | 'estrellas' | null
   sello?: ReactNode
   boton?: string
   tono?: 'buena' | 'neutra'
+  /** A lo ancho, para lo que no cabe en la caja estrecha de una enhorabuena. */
+  ancha?: boolean
 }): ReactNode {
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
@@ -174,8 +283,12 @@ function Party({
 
   return (
     <div className="overlay" onClick={onClose}>
-      {papelillo && <Confetti />}
-      <div className="celebration" onClick={(event) => event.stopPropagation()}>
+      {adorno === 'papelillo' && <Confetti />}
+      {adorno === 'estrellas' && <Estrellas />}
+      <div
+        className={`celebration${ancha ? ' ancha' : ''}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className={`celebration-seal${tono === 'neutra' ? ' neutra' : ''}`}>
           {sello ?? (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
@@ -188,14 +301,18 @@ function Party({
         <h2>{title}</h2>
         <p className="celebration-lede">{lede}</p>
 
-        <div className="celebration-stats">
-          {stats.map((stat) => (
-            <div key={stat.label}>
-              <b>{stat.value}</b>
-              <span>{stat.label}</span>
-            </div>
-          ))}
-        </div>
+        {stats && stats.length > 0 && (
+          <div className="celebration-stats">
+            {stats.map((stat) => (
+              <div key={stat.label}>
+                <b>{stat.value}</b>
+                <span>{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {children}
 
         <button className="btn primary" onClick={onClose} autoFocus>
           {boton}
@@ -272,22 +389,34 @@ export function GoalCelebration({
   )
 }
 
-/** Lo que hace falta para contar cómo fue un mes. */
+
+/** Una categoría dentro del resumen del mes. */
+export interface LineaResumen {
+  name: string
+  total: number
+  icon: string
+  color: string
+}
+
+/** Cómo fue un mes, con todo lo que hace falta para contarlo. */
 export interface ResumenMes {
   /** El primer día del mes contado, como «2026-07-01». */
   mes: string
-  income: number
-  expense: number
-  net: number
+  ingresos: number
+  gastos: number
+  balance: number
   currency: string
-  movimientos: number
-  /** La categoría que más se llevó, si hubo alguna. */
-  mayor: { name: string; total: number } | null
-  /** Lo gastado el mes de antes, para decir si has subido o bajado. */
-  gastoAntes: number
+  /** Lo que queda por pagar de las deudas a plazos, a día de hoy. */
+  deudaRestante: number
+  /** Lo mismo el mes de antes, para decir si has subido o bajado. */
+  gastosAntes: number
+  ingresosAntes: number
+  /** Hasta cinco de cada, de mayor a menor. */
+  porGasto: LineaResumen[]
+  porIngreso: LineaResumen[]
 }
 
-/** «julio», y con el año si no es el de ahora. */
+/** «Julio», y con el año si no es el de ahora. */
 function nombreDelMes(iso: string): string {
   const nombre = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(
     new Date(`${iso}T12:00:00`)
@@ -298,16 +427,77 @@ function nombreDelMes(iso: string): string {
 }
 
 /**
+ * Una columna del resumen: gastos o ingresos, con sus cinco mayores.
+ *
+ * La barra mide contra la mayor de su propia columna y no contra el total: si se
+ * midiera contra el total, cinco categorías repartidas saldrían todas planas y
+ * no se vería cuál pesa.
+ */
+function Columna({
+  titulo,
+  total,
+  antes,
+  lineas,
+  currency,
+  kind
+}: {
+  titulo: string
+  total: number
+  antes: number
+  lineas: LineaResumen[]
+  currency: string
+  kind: 'expense' | 'income'
+}): ReactNode {
+  const mayor = Math.max(1, ...lineas.map((l) => l.total))
+  const delta = total - antes
+  // Gastar más es malo; ingresar más es bueno. El color sigue al significado.
+  const tono = delta === 0 ? 'muted' : delta > 0 === (kind === 'expense') ? 'negative' : 'positive'
+
+  return (
+    <div className="resumen-columna">
+      <div className="resumen-columna-cabecera">
+        <span className="label">{titulo}</span>
+        <strong className={`amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
+          {formatMoney(total, currency)}
+        </strong>
+        {antes > 0 && delta !== 0 && (
+          <span className={`cambio ${tono}`}>
+            {delta > 0 ? '▲' : '▼'} {Math.abs(Math.round((delta / antes) * 100))}%
+          </span>
+        )}
+      </div>
+
+      {lineas.length === 0 ? (
+        <p className="small muted" style={{ margin: 0 }}>
+          Nada este mes.
+        </p>
+      ) : (
+        <ul className="resumen-lista">
+          {lineas.map((linea) => (
+            <li key={linea.name}>
+              <Avatar icon={linea.icon} color={linea.color} size="small" />
+              <span className="resumen-nombre">{linea.name}</span>
+              <span className="amount">{formatMoney(linea.total, currency)}</span>
+              <div className="resumen-barra">
+                <div style={{ width: `${(linea.total / mayor) * 100}%`, background: linea.color }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/**
  * Cómo fue el mes que acaba de cerrarse.
  *
- * Sale una vez al mes y sin papelillo. La enhorabuena de una deuda es un premio
- * —has terminado de pagar algo— y esto es un parte: unos meses saldrán bien y
- * otros no, y darle formato de fiesta a «has gastado trescientos euros más» no
- * cuadra. El sello se pone verde solo cuando de verdad hay algo que celebrar:
- * que hayas cerrado el mes en positivo.
+ * Sale una vez al mes, y a lo ancho: lo que se cuenta son dos listas de cinco
+ * categorías, y eso no cabe en la caja estrecha de una enhorabuena.
  *
- * Lo que se dice arriba también sigue al dato. Sin adornar un mal mes ni
- * regañar por él: el número ya lo dice.
+ * Lleva estrellas en vez de papelillo. El papelillo es de la deuda saldada, que
+ * es un premio; esto es un parte, y unos meses saldrán bien y otros no. Las
+ * estrellas hacen la entrada bonita sin celebrar nada en concreto.
  */
 export function MonthlySummary({
   resumen,
@@ -316,25 +506,18 @@ export function MonthlySummary({
   resumen: ResumenMes
   onClose: () => void
 }): ReactNode {
-  const enPositivo = resumen.net >= 0
-  const diferencia = resumen.expense - resumen.gastoAntes
-  const hayConQueComparar = resumen.gastoAntes > 0
-
-  const comparado = !hayConQueComparar
-    ? 'Es el primer mes con movimientos que se puede contar.'
-    : diferencia === 0
-      ? 'Exactamente lo mismo que el mes anterior.'
-      : `${formatMoney(Math.abs(diferencia), resumen.currency)} ${diferencia > 0 ? 'más' : 'menos'} que el mes anterior.`
-
-  const balance = enPositivo
-    ? `Cerraste en positivo por ${formatMoney(resumen.net, resumen.currency)}.`
-    : `Se fueron ${formatMoney(Math.abs(resumen.net), resumen.currency)} más de los que entraron.`
+  const enPositivo = resumen.balance >= 0
 
   return (
     <Party
+      ancha
       title={`${nombreDelMes(resumen.mes)}, en resumen`}
-      lede={`${balance} ${comparado}`}
-      papelillo={false}
+      lede={
+        enPositivo
+          ? `Balance positivo de ${formatMoney(resumen.balance, resumen.currency)}.`
+          : `Balance negativo de ${formatMoney(Math.abs(resumen.balance), resumen.currency)}.`
+      }
+      adorno="estrellas"
       tono={enPositivo ? 'buena' : 'neutra'}
       boton="Entendido"
       sello={
@@ -344,14 +527,32 @@ export function MonthlySummary({
           <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
         </svg>
       }
-      stats={[
-        { value: formatMoney(resumen.income, resumen.currency), label: 'entró' },
-        { value: formatMoney(resumen.expense, resumen.currency), label: 'salió' },
-        resumen.mayor
-          ? { value: formatMoney(resumen.mayor.total, resumen.currency), label: `en ${resumen.mayor.name}` }
-          : { value: String(resumen.movimientos), label: 'movimientos' }
-      ]}
       onClose={onClose}
-    />
+    >
+      <div className="resumen-columnas">
+        <Columna
+          titulo="Gastos"
+          total={resumen.gastos}
+          antes={resumen.gastosAntes}
+          lineas={resumen.porGasto}
+          currency={resumen.currency}
+          kind="expense"
+        />
+        <Columna
+          titulo="Ingresos"
+          total={resumen.ingresos}
+          antes={resumen.ingresosAntes}
+          lineas={resumen.porIngreso}
+          currency={resumen.currency}
+          kind="income"
+        />
+      </div>
+
+      {resumen.deudaRestante > 0 && (
+        <p className="resumen-deuda">
+          Deuda restante: <strong>{formatMoney(resumen.deudaRestante, resumen.currency)}</strong>
+        </p>
+      )}
+    </Party>
   )
 }
