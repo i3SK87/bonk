@@ -23,6 +23,7 @@ import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
 import { addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
+import { rangoDe, NOMBRES_DE_RANGO, type RangoId } from '../src/shared/rangos'
 
 let passed = 0
 let failed = 0
@@ -166,6 +167,52 @@ try {
   section('Fechas')
   equal('suma meses recortando al último día', addMonths('2026-01-31', 1), '2026-02-28')
   equal('el mes siguiente de una programada mensual', nextOccurrence('2026-08-18', 'monthly', 1), '2026-09-18')
+  /*
+   * Los periodos de las pastillas, que estaban escritos dos veces.
+   *
+   * Movimientos e Informes tenían cada uno su propia versión y no decían lo
+   * mismo: «Este año» llegaba a fin de mes en una pantalla y a fin de año en la
+   * otra, y de ahí salió que la media diaria del mismo periodo diera 45,84 €
+   * contra 59,21 €. Ahora sale de `rangoDe`, y estas comprobaciones son las que
+   * impiden que vuelvan a separarse.
+   *
+   * Se les pasa el día a mano: probar periodos contra el reloj daría resultados
+   * distintos según el mes en que se ejecuten.
+   */
+  section('Periodos de las pastillas')
+  const enAgosto = '2026-08-24'
+  equal('este mes empieza el 1', rangoDe('month', enAgosto)!.from, '2026-08-01')
+  equal('y acaba el último día del mes', rangoDe('month', enAgosto)!.to, '2026-08-31')
+  equal('el mes pasado va entero', rangoDe('prev', enAgosto)!.from, '2026-07-01')
+  equal('de punta a punta', rangoDe('prev', enAgosto)!.to, '2026-07-31')
+  equal('tres meses son este y los dos de antes', rangoDe('quarter', enAgosto)!.from, '2026-06-01')
+  equal('hasta el fin del actual', rangoDe('quarter', enAgosto)!.to, '2026-08-31')
+
+  // La que se separaba: hasta el fin del mes en curso, nunca del año.
+  equal('este año empieza en enero', rangoDe('year', enAgosto)!.from, '2026-01-01')
+  equal(
+    'y acaba al final del mes en curso, no del año',
+    rangoDe('year', enAgosto)!.to,
+    '2026-08-31'
+  )
+
+  equal('el año pasado va entero', rangoDe('prevYear', enAgosto)!.from, '2025-01-01')
+  equal('hasta diciembre', rangoDe('prevYear', enAgosto)!.to, '2025-12-31')
+
+  // «Todo» y «Personalizado» no tienen fechas propias a propósito: cada pantalla
+  // decide qué hacer con ellos, y devolver `null` obliga a decidirlo.
+  equal('«Todo» no trae fechas', rangoDe('all', enAgosto), null)
+  equal('«Personalizado» tampoco', rangoDe('custom', enAgosto), null)
+
+  // En diciembre, «este año» sí llega a fin de año: es el mismo día del mes.
+  equal('en diciembre, este año llega a fin de año', rangoDe('year', '2026-12-05')!.to, '2026-12-31')
+  // Y en enero, el mes pasado es diciembre del año anterior.
+  equal('en enero, el mes pasado es del año anterior', rangoDe('prev', '2026-01-10')!.from, '2025-12-01')
+  equal('tres meses en enero cruzan el año', rangoDe('quarter', '2026-01-10')!.from, '2025-11-01')
+
+  const PERIODOS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all', 'custom']
+  check('todos los periodos tienen nombre', PERIODOS.every((id) => NOMBRES_DE_RANGO[id].length > 0))
+
   section('Cuentas y saldos')
   const cash = accounts.saveAccount({
     name: 'Cartera',

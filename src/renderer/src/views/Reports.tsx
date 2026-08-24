@@ -4,51 +4,21 @@ import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
-import {
-  today,
-  startOfMonth,
-  endOfMonth,
-  addMonths,
-  startOfYear,
-  endOfYear,
-  daysBetween,
-  formatDate
-} from '@shared/dates'
+import { today, daysBetween, formatDate } from '@shared/dates'
+import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
 import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
 
-type PeriodId = 'month' | 'prev' | 'quarter' | 'year' | 'prevYear' | 'all'
-
-const PERIODS: Array<{ id: PeriodId; label: string }> = [
-  { id: 'month', label: 'Este mes' },
-  { id: 'prev', label: 'Mes pasado' },
-  { id: 'quarter', label: '3 meses' },
-  { id: 'year', label: 'Este año' },
-  { id: 'prevYear', label: 'Año pasado' },
-  { id: 'all', label: 'Todo' }
-]
-
-/** «Todo» no cabe aquí: su rango no se calcula, se pregunta a los datos. */
-function rangeFor(id: Exclude<PeriodId, 'all'>): { from: string; to: string } {
-  const now = today()
-  switch (id) {
-    case 'month':
-      return { from: startOfMonth(now), to: endOfMonth(now) }
-    case 'prev': {
-      const previous = addMonths(now, -1)
-      return { from: startOfMonth(previous), to: endOfMonth(previous) }
-    }
-    case 'quarter':
-      return { from: startOfMonth(addMonths(now, -2)), to: endOfMonth(now) }
-    case 'year':
-      return { from: startOfYear(now), to: endOfYear(now) }
-    case 'prevYear': {
-      const lastYear = `${Number(now.slice(0, 4)) - 1}-06-15`
-      return { from: startOfYear(lastYear), to: endOfYear(lastYear) }
-    }
-  }
-}
+/*
+ * Los mismos periodos que en Movimientos, y calculados por la misma función.
+ *
+ * Aquí «Este año» llegaba a fin de año mientras allí llegaba a fin de mes, y de
+ * esa diferencia salía que la media diaria del mismo periodo dijera 45,84 € en
+ * una pantalla y 59,21 € en la otra. Uno de más: «Año pasado», que Movimientos
+ * no enseña porque allí se pide con el rango personalizado.
+ */
+const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all']
 
 /**
  * Una categoría se puede abrir cuando tiene desglose y al menos dos entradas,
@@ -62,7 +32,7 @@ function hasBreakdown(row: CategoryTotal): boolean {
 
 export function ReportsView(): ReactNode {
   const { settings, revision, run, toast, fail } = useStore()
-  const [period, setPeriod] = useState<PeriodId>('month')
+  const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
@@ -85,7 +55,8 @@ export function ReportsView(): ReactNode {
   // El rango de «Todo» va del primer movimiento al último. Mientras no ha
   // llegado se enseña el día de hoy, que es un rango vacío y no una fecha rara.
   const range = useMemo(
-    () => (period === 'all' ? (span ?? { from: today(), to: today() }) : rangeFor(period)),
+    // «Todo» no se calcula: se pregunta a los datos hasta dónde llegan.
+    () => (span && period === 'all' ? span : (rangoDe(period) ?? { from: today(), to: today() })),
     [period, span]
   )
   const currency = settings.baseCurrency
@@ -132,13 +103,13 @@ export function ReportsView(): ReactNode {
       <div className="card">
         <div className="card-header" style={{ flexWrap: 'wrap' }}>
           <div className="row tight">
-            {PERIODS.map((item) => (
+            {PERIODS.map((id) => (
               <button
-                key={item.id}
-                className={`btn small${period === item.id ? ' primary' : ' ghost'}`}
-                onClick={() => setPeriod(item.id)}
+                key={id}
+                className={`btn small${period === id ? ' primary' : ' ghost'}`}
+                onClick={() => setPeriod(id)}
               >
-                {item.label}
+                {NOMBRES_DE_RANGO[id]}
               </button>
             ))}
           </div>

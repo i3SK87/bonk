@@ -9,7 +9,8 @@ import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
-import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
+import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
+import { today, startOfMonth, endOfMonth, addMonths, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
 import type {
   FilterTotals,
   ProjectedTransaction,
@@ -20,33 +21,8 @@ import type {
 
 const api = window.bonk
 
-type RangeId = 'month' | 'prev' | 'quarter' | 'year' | 'all' | 'custom'
-
-const RANGES: Array<{ id: RangeId; label: string }> = [
-  { id: 'month', label: 'Este mes' },
-  { id: 'prev', label: 'Mes pasado' },
-  { id: 'quarter', label: 'Últimos 3 meses' },
-  { id: 'year', label: 'Este año' },
-  { id: 'all', label: 'Todo' }
-]
-
-function rangeFor(id: RangeId): { from?: string; to?: string } {
-  const now = today()
-  switch (id) {
-    case 'month':
-      return { from: startOfMonth(now), to: endOfMonth(now) }
-    case 'prev': {
-      const previous = addMonths(now, -1)
-      return { from: startOfMonth(previous), to: endOfMonth(previous) }
-    }
-    case 'quarter':
-      return { from: startOfMonth(addMonths(now, -2)), to: endOfMonth(now) }
-    case 'year':
-      return { from: startOfYear(now), to: endOfMonth(now) }
-    default:
-      return {}
-  }
-}
+/** Los que se enseñan aquí. «Todo» se queda sin fechas: sin tope por ningún lado. */
+const RANGES: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all']
 
 /**
  * Coloca cada devolución justo debajo del gasto al que apunta. Solo dentro del
@@ -106,7 +82,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     setFocusedAccountId
   } = useStore()
 
-  const [range, setRange] = useState<RangeId>('month')
+  const [range, setRange] = useState<RangoId>('month')
   const [customFrom, setCustomFrom] = useState(startOfMonth(today()))
   const [customTo, setCustomTo] = useState(endOfMonth(today()))
   const [search, setSearch] = useState('')
@@ -153,7 +129,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }, [search])
 
   const filter = useMemo<TransactionFilter>(() => {
-    const dates = range === 'custom' ? { from: customFrom, to: customTo } : rangeFor(range)
+    const dates = range === 'custom' ? { from: customFrom, to: customTo } : (rangoDe(range) ?? {})
     return {
       ...dates,
       search: settledSearch.trim() || undefined,
@@ -561,13 +537,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       <div className="card">
         <div className="card-header" style={{ flexWrap: 'wrap' }}>
           <div className="row tight">
-            {RANGES.map((option) => (
+            {RANGES.map((id) => (
               <button
-                key={option.id}
-                className={`btn small${range === option.id ? ' primary' : ' ghost'}`}
-                onClick={() => setRange(option.id)}
+                key={id}
+                className={`btn small${range === id ? ' primary' : ' ghost'}`}
+                onClick={() => setRange(id)}
               >
-                {option.label}
+                {NOMBRES_DE_RANGO[id]}
               </button>
             ))}
             <button
