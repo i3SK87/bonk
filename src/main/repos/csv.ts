@@ -222,9 +222,70 @@ export function previewCsv(sourcePath: string, sampleSize = 8): ImportPreview {
 export interface ImportResult {
   imported: number
   skipped: number
+  /** Filas que ya estaban apuntadas y no se han vuelto a meter. */
+  duplicates: number
   createdAccounts: string[]
   createdCategories: string[]
   errors: string[]
+}
+
+/**
+ * Lo que hace que dos apuntes sean el mismo: el día, la cuenta, el tipo, el
+ * importe y el título. No entra la categoría, que se puede haber cambiado a
+ * mano después de importar y aun así seguir siendo el mismo movimiento.
+ */
+function huella(date: string, accountId: number, type: string, amount: number, note: string | null): string {
+  return [date, accountId, type, amount, (note ?? '').trim().toLowerCase()].join('|')
+}
+
+/**
+ * Cuántas veces está ya apuntado cada movimiento, por su huella.
+ *
+ * Se cuenta en vez de marcar, y esa es toda la gracia: dos cafés iguales el
+ * mismo día son dos cafés, no un error. Si el archivo trae dos y en la
+ * aplicación hay dos, se saltan los dos; si trae dos y solo hay uno, entra uno.
+ * Así reimportar el extracto entero del mes no duplica nada y un archivo nuevo
+ * con repeticiones de verdad tampoco pierde ninguna.
+ *
+ * Solo se miran los días que trae el archivo: no hace falta recorrer años para
+ * comparar contra un extracto de un mes.
+ */
+/** Los días que toca el archivo, para no comparar contra la base entera. */
+function fechasDelArchivo(lines: string[], delimiter: string, headers: string[]): Set<string> {
+  const columna = headers.indexOf('date')
+  const fechas = new Set<string>()
+  if (columna < 0) return fechas
+  for (const line of lines.slice(1)) {
+    const fecha = parseDate(splitCsvLine(line, delimiter)[columna] ?? '')
+    if (fecha) fechas.add(fecha)
+  }
+  return fechas
+}
+
+function huellasExistentes(fechas: Set<string>): Map<string, number> {
+  const cuenta = new Map<string, number>()
+  if (fechas.size === 0) return cuenta
+
+  const marcas = [...fechas].map(() => '?').join(',')
+  const filas = getDb()
+    .prepare(
+      `SELECT date, account_id, type, amount, note
+         FROM transactions
+        WHERE date IN (${marcas})`
+    )
+    .all(...fechas) as unknown as Array<{
+    date: string
+    account_id: number
+    type: string
+    amount: number
+    note: string | null
+  }>
+
+  for (const fila of filas) {
+    const clave = huella(fila.date, fila.account_id, fila.type, fila.amount, fila.note)
+    cuenta.set(clave, (cuenta.get(clave) ?? 0) + 1)
+  }
+  return cuenta
 }
 
 /**
@@ -234,6 +295,11 @@ export interface ImportResult {
 export interface ImportOptions {
   createMissing?: boolean
   defaultAccountId?: number
+  /**
+   * Mete también lo que ya estuviera apuntado. Apagado por defecto: lo normal
+   * al volver a importar un extracto es no querer el mes por duplicado.
+   */
+  allowDuplicates?: boolean
   /**
    * Sinónimos para los nombres que no se parecen literalmente pero significan lo
    * mismo ("Cerdito" es la "Hucha" de siempre). Van del nombre del archivo al
@@ -258,10 +324,20 @@ export function importCsv(sourcePath: string, options: ImportOptions = {}): Impo
   const result: ImportResult = {
     imported: 0,
     skipped: 0,
+    duplicates: 0,
     createdAccounts: [],
     createdCategories: [],
     errors: []
   }
+
+  /*
+   * Las huellas de lo que ya hay se toman una sola vez, antes de escribir nada.
+   * Si se consultara sobre la marcha, la primera fila importada se contaría a
+   * sí misma como duplicado de la segunda idéntica del mismo archivo.
+   */
+  const yaApuntados = options.allowDuplicates
+    ? new Map<string, number>()
+    : huellasExistentes(fechasDelArchivo(lines, delimiter, headers))
 
   const baseCurrency = getSettings().baseCurrency
   const accounts = new Map(listAccounts(true).map((account) => [nameKey(account.name), account]))
@@ -401,6 +477,18 @@ export function importCsv(sourcePath: string, options: ImportOptions = {}): Impo
           if (received != null && received !== 0) amountTo = Math.abs(received)
         }
 
+        const nota = record.note?.trim() || null
+        // ¿Estaba ya? Se gasta una de las copias apuntadas y esta fila se salta.
+        // Al descontar, un archivo con dos filas iguales contra una sola ya
+        // apuntada mete la segunda: la que falta.
+        const clave = huella(date, account.id, type, Math.abs(amount), nota)
+        const pendientes = yaApuntados.get(clave) ?? 0
+        if (pendientes > 0) {
+          yaApuntados.set(clave, pendientes - 1)
+          result.duplicates++
+          return
+        }
+
         saveTransaction({
           type,
           date,
@@ -411,7 +499,7 @@ export function importCsv(sourcePath: string, options: ImportOptions = {}): Impo
           amountTo,
           categoryId,
           amount: Math.abs(amount),
-          note: record.note?.trim() || null,
+          note: nota,
           place: record.place?.trim() || null
         })
         result.imported++

@@ -37,7 +37,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   }, [category])
 
   async function save(): Promise<void> {
-    if (!name.trim()) return setError('La categoría necesita un nombre')
+    if (!name.trim()) return setError('La categoría necesita un título')
     const saved = await onSave({
       id: category?.id,
       name: name.trim(),

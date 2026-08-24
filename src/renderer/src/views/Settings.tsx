@@ -263,10 +263,13 @@ function ImportModal({
 }): ReactNode {
   const { toast } = useStore()
   const [createMissing, setCreateMissing] = useState(true)
+  // Apagado: reimportar el extracto del mes no debería duplicarlo entero.
+  const [allowDuplicates, setAllowDuplicates] = useState(false)
   const [importing, setImporting] = useState(false)
   const [result, setResult] = useState<{
     imported: number
     skipped: number
+    duplicates: number
     createdAccounts: string[]
     createdCategories: string[]
     errors: string[]
@@ -275,7 +278,7 @@ function ImportModal({
   async function start(): Promise<void> {
     setImporting(true)
     try {
-      setResult(await api.csv.importFile(source.path, { createMissing }))
+      setResult(await api.csv.importFile(source.path, { createMissing, allowDuplicates }))
     } catch (error) {
       toast((error as Error).message, 'error')
     } finally {
@@ -311,6 +314,13 @@ function ImportModal({
             <strong>{result.imported}</strong> movimientos importados
             {result.skipped > 0 && `, ${result.skipped} descartados`}.
           </p>
+          {result.duplicates > 0 && (
+            <p className="small muted">
+              {result.duplicates === 1
+                ? 'Una fila ya estaba apuntada y no se ha repetido.'
+                : `${result.duplicates} filas ya estaban apuntadas y no se han repetido.`}
+            </p>
+          )}
           {result.createdAccounts.length > 0 && (
             <p className="small muted">Cuentas creadas: {result.createdAccounts.join(', ')}</p>
           )}
@@ -361,12 +371,20 @@ function ImportModal({
             </table>
           </div>
 
-          <Checkbox
-            checked={createMissing}
-            onChange={setCreateMissing}
-            label="Crear cuentas y categorías que no existan"
-            hint="Desactivado, esas filas se descartan."
-          />
+          <div className="casillas">
+            <Checkbox
+              checked={createMissing}
+              onChange={setCreateMissing}
+              label="Crear cuentas y categorías que no existan"
+              hint="Desactivado, esas filas se descartan."
+            />
+            <Checkbox
+              checked={allowDuplicates}
+              onChange={setAllowDuplicates}
+              label="Importar lo que ya esté apuntado"
+              hint="Normalmente no: reimportar un extracto duplicaría el mes."
+            />
+          </div>
         </>
       )}
     </Modal>

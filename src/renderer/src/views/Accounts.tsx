@@ -204,7 +204,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
   }, [account])
 
   async function save(): Promise<void> {
-    if (!name.trim()) return setError('La cuenta necesita un nombre')
+    if (!name.trim()) return setError('La cuenta necesita un título')
     const saved = await onSave({
       id: account?.id,
       name: name.trim(),

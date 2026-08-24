@@ -1045,6 +1045,88 @@ try {
   equal('con su texto entero', porConcepto[0]?.note, 'Compra del súper')
 
   /*
+   * Reimportar el mismo archivo no duplica nada.
+   *
+   * Bajar el extracto del mes y volver a pasarlo dejaba el mes entero por
+   * duplicado, sin decir una palabra. Ahora se comparan huellas —día, cuenta,
+   * tipo, importe y título— contra lo que ya hay.
+   *
+   * Y se cuentan, no se marcan: dos cafés iguales el mismo día son dos cafés.
+   * Ese es el caso que separa una detección útil de una que borra datos buenos.
+   */
+  section('Importar dos veces no duplica')
+  const dosVecesPath = join(dir, 'dos-veces.csv')
+  writeFileSync(
+    dosVecesPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Concepto',
+     '2026-08-10;Gasto;Cartera;Alimentación;-5,00;Extracto uno',
+     '2026-08-10;Gasto;Cartera;Alimentación;-7,00;Extracto dos'].join('\r\n'),
+    'utf8'
+  )
+  const primera = csv.importCsv(dosVecesPath)
+  equal('la primera vez entran las dos', primera.imported, 2)
+  equal('y ninguna es duplicada', primera.duplicates, 0)
+
+  const segunda = csv.importCsv(dosVecesPath)
+  equal('la segunda no entra ninguna', segunda.imported, 0)
+  equal('y las dos se marcan como ya apuntadas', segunda.duplicates, 2)
+  equal(
+    'en la base sigue habiendo una de cada',
+    transactions.listTransactions({ search: 'Extracto uno' }).length,
+    1
+  )
+
+  // Repetidos de verdad: dos cafés iguales el mismo día son dos cafés.
+  const cafesPath = join(dir, 'cafes.csv')
+  writeFileSync(
+    cafesPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Concepto',
+     '2026-08-11;Gasto;Cartera;Alimentación;-1,50;Café',
+     '2026-08-11;Gasto;Cartera;Alimentación;-1,50;Café'].join('\r\n'),
+    'utf8'
+  )
+  equal('dos filas idénticas nuevas entran las dos', csv.importCsv(cafesPath).imported, 2)
+  equal(
+    'y quedan las dos apuntadas',
+    transactions.listTransactions({ search: 'Café' }).filter((t) => t.date === '2026-08-11').length,
+    2
+  )
+  const otroCafe = csv.importCsv(cafesPath)
+  equal('reimportarlas no añade ninguna', otroCafe.imported, 0)
+  equal('y las cuenta como las dos que ya estaban', otroCafe.duplicates, 2)
+
+  // Un archivo con tres contra dos ya apuntadas mete solo la que falta.
+  const tresCafesPath = join(dir, 'tres-cafes.csv')
+  writeFileSync(
+    tresCafesPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Concepto',
+     '2026-08-11;Gasto;Cartera;Alimentación;-1,50;Café',
+     '2026-08-11;Gasto;Cartera;Alimentación;-1,50;Café',
+     '2026-08-11;Gasto;Cartera;Alimentación;-1,50;Café'].join('\r\n'),
+    'utf8'
+  )
+  const tercero = csv.importCsv(tresCafesPath)
+  equal('de tres iguales con dos ya apuntadas, entra una', tercero.imported, 1)
+  equal('y las otras dos se saltan', tercero.duplicates, 2)
+
+  // Y si de verdad lo quieres repetido, se puede pedir.
+  const forzado = csv.importCsv(dosVecesPath, { allowDuplicates: true })
+  equal('pidiéndolo, entra igualmente', forzado.imported, 2)
+  equal('y entonces no cuenta duplicados', forzado.duplicates, 0)
+
+  // Cambiar el importe lo convierte en otro movimiento, no en un duplicado.
+  const distintoPath = join(dir, 'distinto.csv')
+  writeFileSync(
+    distintoPath,
+    ['Fecha;Tipo;Cuenta;Categoría;Importe;Concepto',
+     '2026-08-10;Gasto;Cartera;Alimentación;-5,01;Extracto uno'].join('\r\n'),
+    'utf8'
+  )
+  const distinto = csv.importCsv(distintoPath)
+  equal('un céntimo de diferencia ya no es el mismo apunte', distinto.imported, 1)
+  equal('y no se marca como duplicado', distinto.duplicates, 0)
+
+  /*
    * La vista previa: lo que se enseña antes de importar nada.
    *
    * Detrás de un diálogo de Windows en la aplicación, así que aquí es donde se

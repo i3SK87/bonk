@@ -61,7 +61,7 @@ export function saveCategory(input: CategoryInput): Category {
   // La regla la sostiene quien guarda, no solo quien teclea: el formulario ya
   // la pedía, pero una categoría sin nombre es una fila que la lista no sabe
   // enseñar, y esas son las que acaban rompiendo una pantalla entera.
-  if (!input.name?.trim()) throw new Error('La categoría necesita un nombre')
+  if (!input.name?.trim()) throw new Error('La categoría necesita un título')
 
   const db = getDb()
   if (input.id) {

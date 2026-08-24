@@ -116,10 +116,15 @@ const api = {
         path: string
         preview: { delimiter: string; headers: string[]; rows: string[][]; total: number }
       } | null>('csv:pick'),
-    importFile: (path: string, options: { createMissing?: boolean; defaultAccountId?: number } = {}) =>
+    importFile: (
+      path: string,
+      options: { createMissing?: boolean; defaultAccountId?: number; allowDuplicates?: boolean } = {}
+    ) =>
       call<{
         imported: number
         skipped: number
+        /** Filas que ya estaban apuntadas y no se han vuelto a meter. */
+        duplicates: number
         createdAccounts: string[]
         createdCategories: string[]
         errors: string[]

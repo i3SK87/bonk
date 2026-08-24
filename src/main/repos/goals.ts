@@ -62,7 +62,7 @@ export interface GoalInput {
 }
 
 export function saveGoal(input: GoalInput): Goal {
-  if (!input.name.trim()) throw new Error('El hito necesita un nombre')
+  if (!input.name.trim()) throw new Error('El plan necesita un título')
   if (!Number.isInteger(input.targetAmount) || input.targetAmount <= 0) {
     throw new Error('La cantidad a juntar tiene que ser mayor que cero')
   }
