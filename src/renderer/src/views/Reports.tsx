@@ -113,15 +113,21 @@ function Cambio({
   const explicacion = `${formatMoney(ahora, currency)} ahora · ${formatMoney(antes, currency)} entre el ${formatDate(desde)} y el ${formatDate(hasta)}`
 
   /*
-   * Sin nada antes no hay porcentaje: dividir entre cero no da un número. Se
-   * dice cuánto ha subido en euros, que además es más honrado que «nuevo»: una
-   * categoría puede tener cero en el trozo comparado y mucho el mes entero, y
-   * llamarla nueva sería mentir.
+   * Sin nada antes no hay porcentaje: dividir entre cero no da un número, y un
+   * «+100 %» diría que se ha doblado cuando no había nada que doblar.
+   *
+   * Se dice «nuevo», que ahora sí es verdad: desde que la comparación es contra
+   * el periodo anterior entero, cero significa que en ese periodo no hubo nada
+   * de esta categoría. Cuando el anterior se recortaba al día de hoy podía haber
+   * cero por el recorte y mucho en el mes entero, y entonces la palabra mentía.
+   *
+   * Va como palabra y no como importe a propósito: una cifra en euros en una
+   * columna de porcentajes canta, y el euro exacto está en el rótulo de al pasar.
    */
   if (antes === 0) {
     return (
       <span className={`cambio ${tonoDe(ahora, kind)}`} title={explicacion}>
-        ▲ {formatMoney(ahora, currency)}
+        nuevo
       </span>
     )
   }
