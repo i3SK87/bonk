@@ -22,7 +22,7 @@ import type {
 const api = window.bonk
 
 /** Los que se enseñan aquí. «Todo» se queda sin fechas: sin tope por ningún lado. */
-const RANGES: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all']
+const RANGES: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all', 'custom']
 
 /**
  * Coloca cada devolución justo debajo del gasto al que apunta. Solo dentro del
@@ -546,12 +546,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 {NOMBRES_DE_RANGO[id]}
               </button>
             ))}
-            <button
-              className={`btn small${range === 'custom' ? ' primary' : ' ghost'}`}
-              onClick={() => setRange('custom')}
-            >
-              Personalizado
-            </button>
           </div>
 
           <div className="spacer" />
@@ -630,22 +624,28 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             <div className="divider vertical" />
             <CalculatorButton currency={settings.baseCurrency} />
           </div>
+
+          {/*
+            Las fechas van dentro de la cabecera y no en una tira aparte debajo.
+            La cabecera dibuja una raya cuando algo la sigue, y esa raya partía
+            en dos lo que es un solo mando: eliges el periodo y, si es a mano, lo
+            escribes. Ocupando toda la línea bajan solas.
+          */}
+          {range === 'custom' && (
+            <div className="row" style={{ flexBasis: '100%', marginTop: 4 }}>
+              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+                <DateInput value={customFrom} onChange={setCustomFrom} />
+              </div>
+              <span className="muted">hasta</span>
+              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
+                <DateInput value={customTo} onChange={setCustomTo} />
+              </div>
+            </div>
+          )}
         </div>
 
-        {range === 'custom' && (
-          <div className="card-body row" style={{ paddingBottom: 0 }}>
-            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-              <DateInput value={customFrom} onChange={setCustomFrom} />
-            </div>
-            <span className="muted">hasta</span>
-            <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-              <DateInput value={customTo} onChange={setCustomTo} />
-            </div>
-          </div>
-        )}
-
         {showFilters && (
-          <div className="card-body col" style={{ gap: 14, borderTop: '1px solid var(--border)' }}>
+          <div className="card-body col" style={{ gap: 14 }}>
             <div>
               <div className="small muted" style={{ marginBottom: 6 }}>
                 Tipo
