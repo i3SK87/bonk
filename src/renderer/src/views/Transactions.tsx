@@ -6,6 +6,7 @@ import { DateInput } from '../components/DateInput'
 import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { CalculatorButton } from '../components/Calculator'
+import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
 import { today, startOfMonth, endOfMonth, addMonths, startOfYear, formatDate, formatDayHeading } from '@shared/dates'
@@ -389,6 +390,58 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       ? 'Patrimonio previsto'
       : 'Patrimonio'
 
+  /*
+   * Lo que desfila por el teletipo.
+   *
+   * Las tres primeras son las que estaban en las tarjetas. Las otras dos salen
+   * de la misma lista que ya se tiene delante —no se pregunta nada nuevo— y
+   * están porque tres cifras sueltas dando vueltas se veían raras: un teletipo
+   * necesita algo que contar.
+   */
+  const cifras = useMemo<Dato[]>(() => {
+    const sufijo = showingProjected ? 'previstos' : 'del periodo'
+    const lista: Dato[] = [
+      {
+        label: `Ingresos ${sufijo}`,
+        value: formatMoney(totals.income, settings.baseCurrency),
+        tone: 'positive'
+      },
+      {
+        label: `Gastos ${sufijo}`,
+        value: formatMoney(totals.expense, settings.baseCurrency),
+        tone: 'negative'
+      },
+      {
+        label: showingProjected ? 'Balance previsto' : 'Balance',
+        value: formatMoney(totals.net, settings.baseCurrency, { sign: true }),
+        tone: totals.net >= 0 ? 'positive' : 'negative'
+      },
+      {
+        label: 'Movimientos',
+        value: String(rows.length + projected.length),
+        tone: 'neutral'
+      }
+    ]
+
+    // El gasto más gordo de los que se están viendo. Solo de los reales: uno
+    // previsto todavía no ha costado nada.
+    let mayor: TransactionView | null = null
+    for (const row of rows) {
+      if (row.type !== 'expense') continue
+      if (!mayor || Math.abs(row.amountInBase) > Math.abs(mayor.amountInBase)) mayor = row
+    }
+    if (mayor) {
+      const nombre = mayor.note || mayor.categoryName
+      lista.push({
+        label: nombre ? `Mayor gasto · ${nombre}` : 'Mayor gasto',
+        value: formatMoney(-Math.abs(mayor.amountInBase), settings.baseCurrency),
+        tone: 'negative'
+      })
+    }
+
+    return lista
+  }, [totals, rows, projected, showingProjected, settings.baseCurrency])
+
   /** Las cuentas que se están quedando cortas, cada una con su propio suelo. */
   const runningLow = accounts.filter(
     (account) => account.lowBalanceThreshold > 0 && account.balance < account.lowBalanceThreshold
@@ -651,22 +704,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         )}
       </div>
 
-      <div className="grid cols-3">
-        <div className="card stat">
-          <div className="label">Ingresos {showingProjected ? `previstos` : `del periodo`}</div>
-          <div className="value amount positive">{formatMoney(totals.income, settings.baseCurrency)}</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Gastos {showingProjected ? `previstos` : `del periodo`}</div>
-          <div className="value amount negative">{formatMoney(totals.expense, settings.baseCurrency)}</div>
-        </div>
-        <div className="card stat">
-          <div className="label">Balance {showingProjected ? `previsto` : ``}</div>
-          <div className={`value amount ${totals.net >= 0 ? 'positive' : 'negative'}`}>
-            {formatMoney(totals.net, settings.baseCurrency, { sign: true })}
-          </div>
-        </div>
-      </div>
+      <Teletipo datos={cifras} />
 
       {selection.length > 0 && (
         <div className="card card-body row" style={{ position: 'sticky', top: 66, zIndex: 15 }}>

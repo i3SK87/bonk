@@ -2209,6 +2209,109 @@ button.list-row:focus-visible {
   .celebration, .celebration-seal { animation: none; }
 }
 
+/* ---------- Teletipo ---------- */
+
+/* Los totales del periodo, en una línea en vez de en tres tarjetas: la lista de
+   movimientos recupera los setenta y pico píxeles que se llevaban. */
+.teletipo {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  /* Sin esto, la cinta se estira a lo que mida el contenido y arrastra el ancho
+     de la pantalla entera. */
+  position: relative;
+}
+
+/* Se desvanece por los dos lados, que es lo que hace que las cifras parezcan
+   entrar y salir en vez de aparecer cortadas contra el borde. */
+.teletipo::before,
+.teletipo::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  z-index: 1;
+  pointer-events: none;
+}
+.teletipo::before {
+  left: 0;
+  background: linear-gradient(to right, var(--bg-elevated), transparent);
+}
+.teletipo::after {
+  right: 0;
+  background: linear-gradient(to left, var(--bg-elevated), transparent);
+}
+
+.teletipo-cinta {
+  display: flex;
+  width: max-content;
+  animation: desfilar linear infinite;
+}
+
+/* Para leer una cifra que está pasando sin tener que esperar a la vuelta. */
+.teletipo:hover .teletipo-cinta {
+  animation-play-state: paused;
+}
+
+.teletipo-tramo {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.teletipo-dato {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 11px 26px;
+  white-space: nowrap;
+}
+
+/* La barrita entre cifras, como el teletipo de verdad. */
+.teletipo-dato + .teletipo-dato::before,
+.teletipo-tramo + .teletipo-tramo .teletipo-dato:first-child::before {
+  content: '';
+  align-self: center;
+  width: 1px;
+  height: 15px;
+  margin-right: 26px;
+  margin-left: -26px;
+  background: var(--border);
+}
+
+.teletipo-label {
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.teletipo-valor {
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+}
+
+/* Un cuarto de cuatro copias es exactamente una copia: ahí la segunda está
+   donde arrancó la primera y el reinicio no se ve. */
+@keyframes desfilar {
+  from { transform: translateX(0); }
+  to { transform: translateX(-25%); }
+}
+
+/* Quieto y a mano: quien pide menos movimiento no quiere una cifra que se le
+   escapa por la izquierda mientras la lee. */
+@media (prefers-reduced-motion: reduce) {
+  .teletipo { overflow-x: auto; }
+  .teletipo-cinta { animation: none; }
+  /* Una sola copia: repetida cuatro veces y quieta, se leería cuatro veces. */
+  .teletipo-tramo + .teletipo-tramo { display: none; }
+  .teletipo::before, .teletipo::after { display: none; }
+}
+
 /* ---------- Calculadora de Movimientos ---------- */
 
 .calc-expr {
