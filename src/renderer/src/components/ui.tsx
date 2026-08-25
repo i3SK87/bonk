@@ -13,9 +13,16 @@ interface ModalProps {
   children: ReactNode
   footer?: ReactNode
   wide?: boolean
+  /**
+   * Va encima de otro diálogo.
+   *
+   * Más estrecho y con el velo más suave: lo de debajo tiene que seguir
+   * reconociéndose, que es la ficha a la que este cuadro está respondiendo.
+   */
+  sobre?: boolean
 }
 
-export function Modal({ title, onClose, children, footer, wide }: ModalProps): ReactNode {
+export function Modal({ title, onClose, children, footer, wide, sobre }: ModalProps): ReactNode {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
   const origin = useRef({ x: 0, y: 0 })
@@ -26,7 +33,12 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps): R
     const node = dialog.current
     if (!node) return []
     const selector = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
-    return [...node.querySelectorAll<HTMLElement>(selector)].filter((el) => el.offsetParent !== null)
+    return [...node.querySelectorAll<HTMLElement>(selector)].filter(
+      // La cabecera no cuenta para el foco de entrada: su primer botón es el de
+      // cerrar, y abrir un diálogo con el aspa señalada es abrirlo enseñando la
+      // salida. El foco tiene que caer en lo primero que hay que contestar.
+      (el) => el.offsetParent !== null && !el.closest('.modal-header')
+    )
   }
 
   useEffect(() => {
@@ -44,6 +56,17 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps): R
        * lo que llevabas escrito.
        */
       if (document.querySelector('.calendario-velo')) return
+      /*
+       * Con otro diálogo por encima, Escape es del de arriba.
+       *
+       * Los dos escuchan en la ventana y los dos se enterarían: cerrar el
+       * cuadrito de la repetición no puede llevarse por delante la ficha entera
+       * con lo que llevabas escrito. Se mira quién es el último velo montado en
+       * vez de fiarlo a que uno pare el evento antes que el otro, que depende
+       * del orden en que se montaron.
+       */
+      const velos = document.querySelectorAll('.overlay')
+      if (velos.length > 1 && velos[velos.length - 1] !== dialog.current?.parentElement) return
       onClose()
     }
     window.addEventListener('keydown', onKey)
@@ -88,14 +111,14 @@ export function Modal({ title, onClose, children, footer, wide }: ModalProps): R
 
   return createPortal(
     <div
-      className={`overlay${moved ? ' moved' : ''}${dragging ? ' dragging' : ''}`}
+      className={`overlay${sobre ? ' sobre' : ''}${moved ? ' moved' : ''}${dragging ? ' dragging' : ''}`}
       // Una vez apartado el diálogo, un clic fuera ya no lo cierra: se supone
       // que se ha movido para mirar el fondo con calma.
       onMouseDown={(event) => !moved && event.target === event.currentTarget && onClose()}
     >
       <div
         ref={dialog}
-        className={`modal${wide ? ' wide' : ''}`}
+        className={`modal${wide ? ' wide' : ''}${sobre ? ' sobre' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

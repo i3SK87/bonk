@@ -1219,6 +1219,18 @@ p { margin: 0; }
   opacity: 1;
 }
 
+/*
+ * Con su menú abierto, la fila se queda encendida.
+ *
+ * El menú sale bajo el puntero y tapa parte de la lista; sin esto, en cuanto el
+ * ratón se mueve hacia una opción la fila se apaga y ya no se sabe sobre cuál
+ * se pulsó —y las opciones son «editar», «cambiar» y «eliminar», que conviene
+ * saber a qué se le están haciendo—.
+ */
+.tx-row.marcada {
+  background: var(--bg-sunken);
+}
+
 .tx-row.selected {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
@@ -1556,6 +1568,45 @@ p { margin: 0; }
 }
 
 .modal.wide { width: min(760px, 100%); }
+
+/*
+ * El cuadro que sale encima de otro.
+ *
+ * Estrecho, que solo lleva una o dos preguntas y a 560 px se quedaría medio
+ * vacío. El velo, más suave que el de un diálogo suelto: debajo no hay una
+ * pantalla cualquiera, está la ficha a la que este cuadro está contestando, y
+ * conviene seguir viéndola.
+ */
+.modal.sobre { width: min(420px, 100%); }
+
+.overlay.sobre {
+  background: rgba(8, 10, 14, 0.3);
+  backdrop-filter: blur(1.5px);
+}
+
+/*
+ * Lo elegido en el cuadro, resumido bajo la opción que lo abrió.
+ *
+ * Sin esta línea el cuadro sería un sitio de paso: se contesta una vez y lo
+ * decidido desaparece de la ficha. Aquí queda a la vista, y con la puerta para
+ * volver a entrar sin desmarcar nada.
+ */
+.resumen-eleccion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 7px;
+  padding: 5px 6px 5px 11px;
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.resumen-eleccion > span {
+  flex: 1;
+  min-width: 0;
+}
 
 .modal-header {
   display: flex;

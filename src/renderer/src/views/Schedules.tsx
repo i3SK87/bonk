@@ -17,8 +17,8 @@ import {
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
-import { LENDERS } from '@shared/lenders'
 import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
+import { DetallesRepeticion, ResumenRepeticion } from '../components/DetallesRepeticion'
 import { DateInput } from '../components/DateInput'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
@@ -498,6 +498,17 @@ export function ScheduleModal({
    * que renombrar nada.
    */
   const [esDeuda, setEsDeuda] = useState(schedule?.isDebt ?? deudaPorDefecto ?? false)
+  /*
+   * Quién la cobra se pregunta en un cuadro aparte, al marcarla como deuda.
+   *
+   * Dentro de la ficha el desplegable salía a media pantalla de distancia de la
+   * casilla que lo hacía aparecer, así que marcar la casilla no parecía tener
+   * ningún efecto y el dato se quedaba sin poner. Aquí sale delante y no hay
+   * forma de no verlo.
+   */
+  const [pidiendoPrestamista, setPidiendoPrestamista] = useState<'marcando' | 'cambiando' | null>(
+    null,
+  )
 
   /**
    * Apartar lo mismo cada mes para el mismo plan es una decisión que se toma una
@@ -681,22 +692,6 @@ export function ScheduleModal({
           )}
         </div>
 
-        {/* Quién cobra se ve luego como etiqueta en Deudas, que es donde se busca:
-            «el PC» son dos años de cuotas, y lo que se recuerda es que las cobra
-            Aplázame. Opcional, que no todas las deudas son de una financiera. */}
-        {esDeuda && (
-          <Field label="Quién la cobra">
-            <select className="select" value={lender} onChange={(e) => setLender(e.target.value)}>
-              <option value="">Sin especificar</option>
-              {LENDERS.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
-
         {/* Como en un traspaso suelto: sin elegir plan, el dinero entra como ahorro
             libre; con uno elegido, cada vez que la programada pase sube su reserva. */}
         {hucha && (
@@ -773,15 +768,46 @@ export function ScheduleModal({
               repetir lo que ya dijo. Editando sí sale, que ahí se puede cambiar
               de idea. */}
           {type !== 'transfer' && type !== 'refund' && !(deudaPorDefecto && !schedule) && (
-            <Checkbox
-              checked={esDeuda}
-              onChange={setEsDeuda}
-              label="Es una deuda a plazos"
-              hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
-            />
+            <div className="col" style={{ gap: 6 }}>
+              <Checkbox
+                checked={esDeuda}
+                onChange={(marcada) => {
+                  setEsDeuda(marcada)
+                  // Solo al marcarla: desmarcándola no hay nada que concretar.
+                  if (marcada) setPidiendoPrestamista('marcando')
+                }}
+                label="Es una deuda a plazos"
+                hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
+              />
+              {esDeuda && (
+                <ResumenRepeticion
+                  campos={['prestamista']}
+                  valores={{ freq, interval, endDate, lender }}
+                  onCambiar={() => setPidiendoPrestamista('cambiando')}
+                />
+              )}
+            </div>
           )}
         </div>
       </Modal>
+
+      {pidiendoPrestamista && (
+        <DetallesRepeticion
+          titulo="Deuda a plazos"
+          campos={['prestamista']}
+          valores={{ freq, interval, endDate, lender }}
+          onCancelar={() => {
+            // Cancelar deshace lo que abrió el cuadro: si venía de marcar la
+            // casilla, la casilla se desmarca; si venía del «Cambiar», no.
+            if (pidiendoPrestamista === 'marcando') setEsDeuda(false)
+            setPidiendoPrestamista(null)
+          }}
+          onGuardar={(nuevos) => {
+            setLender(nuevos.lender)
+            setPidiendoPrestamista(null)
+          }}
+        />
+      )}
 
       {confirmDelete && (
         <Confirm

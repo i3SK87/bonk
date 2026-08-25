@@ -924,6 +924,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         active={family !== undefined && family === hoveredFamily}
                         onFamily={setHoveredFamily}
                         onMenu={(x, y) => setMenu({ row, x, y })}
+                        marcada={menu?.row.id === row.id}
                         nested={nested}
                         lastChild={last}
                       />
@@ -1098,6 +1099,7 @@ function TransactionRow({
   active,
   onFamily,
   onMenu,
+  marcada,
   nested,
   lastChild
 }: {
@@ -1114,6 +1116,8 @@ function TransactionRow({
   onFamily?: (family: number | null) => void
   /** Clic derecho: dónde se ha pulsado, para sacar el menú ahí mismo. */
   onMenu?: (x: number, y: number) => void
+  /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
+  marcada?: boolean
   /** La devolución cuelga del gasto que tiene justo encima. */
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
@@ -1143,6 +1147,7 @@ function TransactionRow({
       className={[
         'tx-row',
         selected ? 'selected' : '',
+        marcada ? 'marcada' : '',
         // Anidada ya se ve colgando: la marca del canto sobraría.
         family !== undefined && !nested ? 'linked' : '',
         active ? 'linked-active' : '',

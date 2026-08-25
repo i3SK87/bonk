@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Modal, Field, AmountInput, Avatar, Segmented, Confirm, NumberInput } from './ui'
+import { Modal, Field, AmountInput, Avatar, Segmented, Confirm } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
 import { useStore } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
 import { today, formatDate, nextOccurrence } from '@shared/dates'
 import { formatMoney } from '@shared/money'
-import { FRECUENCIAS } from '../lib/frecuencias'
-import { LENDERS } from '@shared/lenders'
+import {
+  DetallesRepeticion,
+  ResumenRepeticion,
+  type CampoRepeticion
+} from './DetallesRepeticion'
 import type { Attachment, Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
@@ -72,6 +75,19 @@ export function TransactionForm({
   const [comportamiento, setComportamiento] = useState<'suelto' | 'repite' | 'deuda'>('suelto')
   const repite = comportamiento !== 'suelto'
   const esDeuda = comportamiento === 'deuda'
+  /*
+   * El cuadro con los detalles de la elección, y a qué se vuelve si se cancela.
+   *
+   * Marcar «Se repite» sin decir cada cuánto no es una respuesta a medias: es
+   * una respuesta que la ficha se inventaría por ti. Así que la elección abre
+   * el cuadro, y cancelarlo deshace la elección.
+   */
+  const [detalles, setDetalles] = useState<'repite' | 'deuda' | null>(null)
+  const [comportamientoAnterior, setComportamientoAnterior] = useState<
+    'suelto' | 'repite' | 'deuda'
+  >('suelto')
+  const camposDe = (cual: 'repite' | 'deuda'): CampoRepeticion[] =>
+    cual === 'deuda' ? ['repeticion', 'fin', 'prestamista'] : ['repeticion', 'fin']
   const [freq, setFreq] = useState<Frequency>('monthly')
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
@@ -403,7 +419,17 @@ export function TransactionForm({
           <Field>
             <Segmented
               value={comportamiento}
-              onChange={setComportamiento}
+              onChange={(elegido) => {
+                if (elegido === 'suelto') {
+                  setComportamiento('suelto')
+                  return
+                }
+                // Volviendo a pulsar la que ya está puesta se reabre el cuadro:
+                // es la otra forma de llegar a él, además del «Cambiar».
+                setComportamientoAnterior(comportamiento)
+                setComportamiento(elegido)
+                setDetalles(elegido)
+              }}
               options={
                 type === 'expense'
                   ? [
@@ -417,6 +443,16 @@ export function TransactionForm({
                     ]
               }
             />
+            {repite && (
+              <ResumenRepeticion
+                campos={camposDe(comportamiento === 'deuda' ? 'deuda' : 'repite')}
+                valores={{ freq, interval, endDate, lender }}
+                onCambiar={() => {
+                  setComportamientoAnterior(comportamiento)
+                  setDetalles(comportamiento === 'deuda' ? 'deuda' : 'repite')
+                }}
+              />
+            )}
           </Field>
         )}
 
@@ -587,63 +623,6 @@ export function TransactionForm({
           </Field>
         )}
 
-        {!existing && !refundFor && (
-          <>
-            {repite && (
-              <div className="grid cols-2" style={{ marginTop: 10 }}>
-                <Field label="Repetición">
-                  <div className="row tight">
-                    <NumberInput
-                      value={interval}
-                      onChange={setInterval}
-                      min={1}
-                      max={99}
-                      style={{ width: 74 }}
-                    />
-                    <select
-                      className="select"
-                      value={freq}
-                      onChange={(event) => setFreq(event.target.value as Frequency)}
-                    >
-                      {FRECUENCIAS.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {interval === 1 ? item.singular : item.plural}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </Field>
-
-                <Field
-                  label="Termina el"
-                  hint={esDeuda ? 'La fecha de la última cuota.' : 'Déjalo vacío si no tiene fin.'}
-                >
-                  <DateInput value={endDate} onChange={setEndDate} clearable />
-                </Field>
-              </div>
-            )}
-
-            {/* Quién cobra solo se pregunta en una deuda: en la compra del súper
-                no hay financiera que valga. */}
-            {esDeuda && (
-              <Field label="Quién la cobra">
-                <select
-                  className="select"
-                  value={lender}
-                  onChange={(event) => setLender(event.target.value)}
-                >
-                  <option value="">Sin especificar</option>
-                  {LENDERS.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            )}
-          </>
-        )}
-
 
         {/* Solo lo devuelto: el botón de registrar una devolución vive arriba, en
             el cuarto botón de la botonera. Sin nada devuelto no hay nada que ver. */}
@@ -735,6 +714,25 @@ export function TransactionForm({
 
         {error && <div className="field-error">{error}</div>}
       </Modal>
+
+      {detalles && (
+        <DetallesRepeticion
+          titulo={detalles === 'deuda' ? 'Deuda a plazos' : 'Se repite'}
+          campos={camposDe(detalles)}
+          valores={{ freq, interval, endDate, lender }}
+          onCancelar={() => {
+            setComportamiento(comportamientoAnterior)
+            setDetalles(null)
+          }}
+          onGuardar={(nuevos) => {
+            setFreq(nuevos.freq)
+            setInterval(nuevos.interval)
+            setEndDate(nuevos.endDate)
+            setLender(nuevos.lender)
+            setDetalles(null)
+          }}
+        />
+      )}
 
       {creatingCategory && (
         <CategoryModal
