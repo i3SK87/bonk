@@ -1,5 +1,6 @@
 import { ipcMain, dialog, shell, app, BrowserWindow } from 'electron'
 import { basename } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { getDataDir, dbPath, makeBackup } from './db'
 import * as settings from './repos/settings'
 import * as accounts from './repos/accounts'
@@ -10,6 +11,7 @@ import * as scheduled from './repos/scheduled'
 import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
+import { construirInformeHtml } from './repos/informe'
 import { applyAutoLaunch } from './autostart'
 import {
   sendTestNotification,
@@ -223,6 +225,65 @@ export function registerIpc(
     const count = csv.exportCsv(result.filePath, filter)
     return { path: result.filePath, count }
   })
+  // — Informe en PDF —
+  /*
+   * Se imprime desde una ventana oculta.
+   *
+   * Electron ya trae `printToPDF`, así que el informe se escribe como una
+   * página web normal y el propio motor la pagina. La alternativa era una
+   * librería que compone PDF a mano, y en esta máquina no hay con qué compilar
+   * nada nativo —ni falta, para un documento de tablas y texto—.
+   *
+   * La ventana va sin preload y sin integración de Node: solo tiene que pintar
+   * un HTML que hemos escrito nosotros y morirse.
+   */
+  handle('report:exportPdf', async (filter: TransactionFilter) => {
+    const window = getWindow()
+    if (!window) throw new Error('No hay ventana activa')
+    const hoy = new Date().toISOString().slice(0, 10)
+    const desde = filter.from ?? hoy
+    const hasta = filter.to ?? hoy
+    const result = await dialog.showSaveDialog(window, {
+      title: 'Exportar el informe',
+      defaultPath: `movimientos-${desde}_${hasta}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    })
+    if (result.canceled || !result.filePath) return null
+
+    const filas = transactions.listTransactions({ ...filter, limit: 1_000_000 })
+    const sumas = transactions.totalsForFilter(filter)
+    const html = construirInformeHtml(filas, {
+      from: desde,
+      to: hasta,
+      currency: settings.getSettings().baseCurrency,
+      ingresos: sumas.income,
+      gastos: sumas.expense,
+      balance: sumas.net,
+      generado: hoy
+    })
+
+    const impresora = new BrowserWindow({
+      show: false,
+      webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true }
+    })
+    try {
+      // Por `data:` y no por un archivo temporal: no deja nada que limpiar, y
+      // un informe de mil filas sigue cabiendo de sobra en una URL.
+      await impresora.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+      const pdf = await impresora.webContents.printToPDF({
+        pageSize: 'A4',
+        printBackground: true,
+        // A cero: los márgenes los pone la propia hoja con `@page`, para tenerlos
+        // en un solo sitio y no repartidos entre el CSS y esta llamada.
+        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+      })
+      writeFileSync(result.filePath, pdf)
+    } finally {
+      impresora.destroy()
+    }
+    return { path: result.filePath, count: filas.length }
+  })
+
   handle('csv:pick', async () => {
     const window = getWindow()
     if (!window) throw new Error('No hay ventana activa')

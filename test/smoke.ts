@@ -17,6 +17,7 @@ import * as reports from '../src/main/repos/reports'
 import * as settings from '../src/main/repos/settings'
 import * as tags from '../src/main/repos/tags'
 import * as csv from '../src/main/repos/csv'
+import { construirInformeHtml, escaparHtml } from '../src/main/repos/informe'
 import type { DebtProgress } from '../src/shared/types'
 import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
@@ -642,6 +643,78 @@ try {
 
   // Se deshace para no arrastrar el descuadre al resto de comprobaciones.
   transactions.deleteTransactions(orphanRefunds.map((row) => row.id))
+
+  section('La cuota sabe que es una cuota')
+  /*
+   * El movimiento tiene que llevar la marca de deuda de su programada.
+   *
+   * La lista la usa para no ofrecer «Registrar reembolso» en una cuota: devolver
+   * un gasto es que alguien te reponga ese dinero, y una cuota es dinero que sale
+   * y no vuelve. Sin la marca no hay forma de distinguirla de un gasto suelto.
+   */
+  const cuotaDeuda = scheduled.saveScheduled({
+    type: 'expense',
+    name: 'Cuota del portátil',
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 5000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, -1),
+    autoPost: true,
+    isDebt: true
+  })
+  scheduled.postDue(day)
+  const cuotas = transactions
+    .listTransactions({ limit: 500 })
+    .filter((row) => row.scheduledId === cuotaDeuda.id)
+  check('la cuota generada se marca como deuda', cuotas.length > 0 && cuotas.every((row) => row.isDebt), `${cuotas.length} cuotas`)
+  const sueltos = transactions
+    .listTransactions({ limit: 500 })
+    .filter((row) => row.scheduledId == null)
+  check('y un movimiento suelto no', sueltos.length > 0 && sueltos.every((row) => !row.isDebt))
+  transactions.deleteTransactions(cuotas.map((row) => row.id))
+  scheduled.deleteScheduled(cuotaDeuda.id)
+
+  section('El informe en PDF')
+  const paraInforme = transactions.listTransactions({ limit: 40 })
+  const sumasInforme = transactions.totalsForFilter({})
+  const informe = construirInformeHtml(paraInforme, {
+    from: startOfMonth(day),
+    to: endOfMonth(day),
+    currency: 'EUR',
+    ingresos: sumasInforme.income,
+    gastos: sumasInforme.expense,
+    balance: sumasInforme.net,
+    generado: day
+  })
+  check('sale una página entera', informe.startsWith('<!doctype html>') && informe.trimEnd().endsWith('</html>'))
+  check('con una fila por movimiento', (informe.match(/<td class="tipo">/g) ?? []).length === paraInforme.length, `${paraInforme.length} movimientos`)
+  check('los totales van en la cabecera', informe.includes('Ingresos') && informe.includes('Gastos') && informe.includes('Balance'))
+  check('y la cabecera de la tabla se repite en cada hoja', informe.includes('display: table-header-group'))
+  // Las notas las escribe quien sea: un menor que en una nota no puede abrir una
+  // etiqueta dentro del documento.
+  const conVeneno = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 100,
+    note: '<script>alert(1)</script> & "comillas"'
+  })
+  const conNota = construirInformeHtml(
+    transactions.listTransactions({ limit: 500 }).filter((row) => row.id === conVeneno.id),
+    { from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 100, balance: -100, generado: day }
+  )
+  check('una nota con etiquetas no se cuela en el documento', !conNota.includes('<script>alert'))
+  check('pero su texto sí sale', conNota.includes('&lt;script&gt;alert(1)&lt;/script&gt;'))
+  equal('y las comillas y el ampersand van escapados', escaparHtml('a & "b" <c>'), 'a &amp; &quot;b&quot; &lt;c&gt;')
+  transactions.deleteTransactions([conVeneno.id])
+  // Un periodo sin nada no saca una tabla vacía y muda.
+  const sinNada = construirInformeHtml([], {
+    from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 0, balance: 0, generado: day
+  })
+  check('un periodo vacío lo dice', sinNada.includes('No hay ningún movimiento en este periodo'))
 
   section('Programadas')
   const recurring = scheduled.saveScheduled({

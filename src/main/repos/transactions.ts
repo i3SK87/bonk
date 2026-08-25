@@ -45,6 +45,7 @@ interface TxViewRow extends TxRow {
   category_icon: string | null
   category_color: string | null
   attachment_count: number
+  is_debt: number | null
 }
 
 function mapTransaction(row: TxRow): Transaction {
@@ -119,11 +120,13 @@ const VIEW_SELECT = `
          c.name     AS category_name,
          c.icon     AS category_icon,
          c.color    AS category_color,
+         s.is_debt  AS is_debt,
          (SELECT COUNT(*) FROM attachments x WHERE x.transaction_id = t.id) AS attachment_count
     FROM transactions t
     JOIN accounts a        ON a.id = t.account_id
     LEFT JOIN accounts d   ON d.id = t.to_account_id
     LEFT JOIN categories c ON c.id = t.category_id
+    LEFT JOIN scheduled s  ON s.id = t.scheduled_id
 `
 
 /** Traduce el filtro de la interfaz a una cláusula WHERE con parámetros posicionales. */
@@ -249,7 +252,8 @@ function toView(
     categoryColor: row.category_color,
     tags: tags.get(row.id) ?? [],
     attachmentCount: Number(row.attachment_count ?? 0),
-    amountInBase: amountInBase(row, rates, base)
+    amountInBase: amountInBase(row, rates, base),
+    isDebt: row.is_debt === 1
   }
 }
 

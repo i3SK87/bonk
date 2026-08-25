@@ -367,20 +367,15 @@ export function ReportsView(): ReactNode {
           */}
           <div className="row tight">
             {/*
-              Sangrado como el de un control, que es lo que tiene al lado.
-              Un texto pelado empieza en el canto de su caja y todo lo demás de
-              esta barra —pastillas y campos de fecha— empieza pasado su relleno:
-              al bajar de línea, el rótulo quedaba once píxeles a la izquierda de
-              todo lo que tenía encima y debajo.
+              El periodo no se repite aquí: los campos de fecha que hay al lado
+              ya lo dicen, y con las mismas cifras. Era un rótulo que solo
+              confirmaba lo que ya se estaba leyendo.
             */}
-            <span className="small muted" style={{ paddingLeft: 11 }}>
-              {formatDate(range.from)} – {formatDate(range.to)}
-            </span>
             <button
               className="btn small"
               onClick={async () => {
                 const result = await run(() =>
-                  api.csv.exportTransactions({ from: range.from, to: range.to })
+                  api.informe.exportPdf({ from: range.from, to: range.to })
                 )
                 if (result) toast(`${result.count} movimientos exportados`, 'success')
               }}

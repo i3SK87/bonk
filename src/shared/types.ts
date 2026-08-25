@@ -122,6 +122,13 @@ export interface TransactionView extends Transaction {
   refundedTotal: number
   /** Efecto sobre el patrimonio total, convertido a la divisa base. */
   amountInBase: number
+  /**
+   * Es una cuota de una deuda a plazos, porque la programada que lo creó lo es.
+   *
+   * Viene de la programada y no del movimiento: la marca vive en el plan, que es
+   * quien sabe que esto se paga a plazos. Un movimiento suelto nunca lo es.
+   */
+  isDebt: boolean
 }
 
 export interface TransactionInput {

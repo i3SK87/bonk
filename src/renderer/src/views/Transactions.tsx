@@ -522,7 +522,15 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         onElegir: () => setCambiandoCategoria(row)
       })
     }
-    if (row.type === 'expense') {
+    /*
+     * Una cuota de una deuda a plazos no se reembolsa.
+     *
+     * Devolver un gasto es que alguien te pone de vuelta ese dinero; una cuota
+     * es dinero que sale y no vuelve, y apuntarle un reembolso descuadraría lo
+     * que la pestaña Deudas da por pagado. Si una cuota se cobró mal, se corrige
+     * o se borra, que para eso están las otras dos opciones.
+     */
+    if (row.type === 'expense' && !row.isDebt) {
       lista.push({
         etiqueta: 'Registrar reembolso',
         icono: 'refund',

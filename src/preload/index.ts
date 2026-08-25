@@ -109,6 +109,11 @@ const api = {
     data: (id: number) => call<string | null>('attachments:data', id),
     open: (id: number) => call<string>('attachments:open', id)
   },
+  informe: {
+    /** El informe del periodo en PDF. `null` si se cancela el diálogo. */
+    exportPdf: (filter: TransactionFilter = {}) =>
+      call<{ path: string; count: number } | null>('report:exportPdf', filter)
+  },
   csv: {
     exportTransactions: (filter: TransactionFilter = {}) =>
       call<{ path: string; count: number } | null>('csv:export', filter),
