@@ -53,9 +53,6 @@ function Widget(): React.ReactNode {
     const raiz = document.documentElement
     raiz.setAttribute('data-theme', esOscuro(settings.theme) ? 'dark' : 'light')
     raiz.setAttribute('data-palette', settings.palette)
-    // Con el acrílico de Windows detrás, la tarjeta no dibuja fondo ni sombra.
-    if (settings.widgetBlur) raiz.setAttribute('data-esmerilado', '')
-    else raiz.removeAttribute('data-esmerilado')
   }, [settings])
 
   /*
@@ -191,23 +188,37 @@ function Widget(): React.ReactNode {
       onDoubleClick={() => api.widget.open()}
       title="Arrastra para moverlo · doble clic para abrir BONK"
     >
-      <div className="widget-rotulo">
-        {unica ? (
-          <>
-            <Avatar icon={unica.icon} color={unica.color} size="small" />
-            <span className="nombre truncate">{unica.name}</span>
-          </>
-        ) : (
-          'Patrimonio'
-        )}
-      </div>
-      <div
-        className={`widget-total amount ${
-          patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
-        }`}
-      >
-        {formatMoney(patrimonio, divisa)}
-      </div>
+{/*
+        Con una sola cuenta, todo en un renglón.
+        
+        El icono, el nombre y la cifra caben de sobra a lo ancho, y en dos líneas
+        la tarjeta quedaba con un hueco vacío a la derecha del nombre. Con varias
+        no cabe: ahí el total manda solo y las cuentas van debajo.
+      */}
+      {unica ? (
+        <div className="widget-unica">
+          <Avatar icon={unica.icon} color={unica.color} size="small" />
+          <span className="nombre truncate">{unica.name}</span>
+          <span
+            className={`widget-total amount ${
+              patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
+            }`}
+          >
+            {formatMoney(patrimonio, divisa)}
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="widget-rotulo">Patrimonio</div>
+          <div
+            className={`widget-total amount ${
+              patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
+            }`}
+          >
+            {formatMoney(patrimonio, divisa)}
+          </div>
+        </>
+      )}
 
       {!unica && visibles.length > 0 && (
         <div className="widget-cuentas">

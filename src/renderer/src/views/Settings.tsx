@@ -204,9 +204,20 @@ export function SettingsView(): ReactNode {
                 </div>
               </Field>
 
+              {/*
+                Opacidad y no transparencia.
+                
+                El mando enseñaba el porcentaje de transparencia mientras el
+                tirador iba por la opacidad, así que la cifra y el relleno decían
+                cosas contrarias: al 92 % de opacidad, el tirador casi a tope y el
+                rótulo diciendo «8 %». Ahora la cifra es la del tirador: a la
+                izquierda menos, a la derecha más, y del todo a la derecha es
+                opaco. No baja del veinte porque por debajo no se ve ni se puede
+                agarrar.
+              */}
               <Field
-                label={`Transparencia · ${Math.round((1 - settings.widgetOpacity) * 100)}%`}
-                hint="Del todo transparente no se puede ni agarrar, así que no baja de ahí."
+                label={`Opacidad · ${Math.round(settings.widgetOpacity * 100)}%`}
+                hint="A la izquierda se ve más el escritorio; a la derecha, más la tarjeta."
               >
                 <input
                   type="range"
@@ -220,13 +231,6 @@ export function SettingsView(): ReactNode {
                   }
                 />
               </Field>
-
-              <Checkbox
-                checked={settings.widgetBlur}
-                onChange={(value) => updateSettings({ widgetBlur: value })}
-                label="Fondo esmerilado"
-                hint="El acrílico de Windows 11: desenfoca lo que hay detrás. Al cambiarlo, el widget parpadea una vez."
-              />
 
               <Checkbox
                 checked={settings.widgetOnTop}

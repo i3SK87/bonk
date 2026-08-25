@@ -23,14 +23,6 @@ const ALTO_MINIMO = 96
 const MARGEN = 18
 
 let widget: BrowserWindow | null = null
-/**
- * Con qué se creó la ventana.
- *
- * El esmerilado no se puede encender en caliente: es una opción del constructor
- * —y además riñe con la transparencia—, así que al cambiarlo hay que volver a
- * crear la ventana. Se recuerda con qué se hizo para saber cuándo hace falta.
- */
-let esmeriladaAlCrearla = false
 /** Al arrastrarlo se guarda la posición, pero no en cada píxel: eso son cientos
  *  de escrituras por segundo. Se espera a que pare. */
 let guardadoPendiente: NodeJS.Timeout | null = null
@@ -142,23 +134,20 @@ export function createWidget(isDev: boolean): void {
   if (widgetWindow()) return
 
   /*
-   * O transparente, o esmerilada: las dos a la vez no.
+   * Transparente: la ventana desaparece y solo se ve la tarjeta redondeada que
+   * pinta la página, con su sombra.
    *
-   * Transparente, la ventana desaparece y solo se ve la tarjeta redondeada que
-   * pinta la página, con su sombra. Esmerilada, la ventana es la tarjeta: la
-   * rellena Windows con su acrílico y le redondea las esquinas él mismo, que es
-   * lo que hacen sus propios paneles.
+   * Se probó el acrílico de Windows —`backgroundMaterial`— y quedaba peor: como
+   * lo rellena el sistema en la ventana entera, la tarjeta deja de ser una
+   * tarjeta y pasa a ser el rectángulo de la ventana. El cristal traslúcido de
+   * aquí se ve mejor sobre un escritorio y no obliga a rehacer la ventana.
    */
-  const esmerilada = getSettings().widgetBlur
-  esmeriladaAlCrearla = esmerilada
-
   widget = new BrowserWindow({
     width: ANCHO,
     height: ALTO_MINIMO,
     show: false,
     frame: false,
-    transparent: !esmerilada,
-    ...(esmerilada ? { backgroundMaterial: 'acrylic' as const, roundedCorners: true } : {}),
+    transparent: true,
     resizable: false,
     // Ni en la barra de tareas ni en Alt+Tab: no es una ventana a la que se
     // vuelva, es algo que está ahí puesto.
@@ -217,9 +206,6 @@ export function sincronizarWidget(isDev: boolean): void {
     destroyWidget()
     return
   }
-  // Cambiar el esmerilado obliga a rehacerla: es del constructor y no se puede
-  // encender sobre la marcha.
-  if (widgetWindow() && esmeriladaAlCrearla !== getSettings().widgetBlur) destroyWidget()
   if (widgetWindow()) colocarWidget()
   else createWidget(isDev)
 }

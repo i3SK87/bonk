@@ -46,7 +46,6 @@ export function getSettings(): Settings {
     // siguen leyéndose sin acercarse.
     widgetOpacity: numero(map.get('widgetOpacity'), 0.92),
     widgetOnTop: map.get('widgetOnTop') === '1',
-    widgetBlur: map.get('widgetBlur') === '1',
     widgetAccountIds: ids(map.get('widgetAccountIds')),
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null
