@@ -2279,6 +2279,26 @@ textarea::placeholder {
   color: var(--fg-subtle);
 }
 
+/*
+ * Los mandos de una fila: sin recuadro, y del revés al señalarlos.
+ *
+ * Con borde competían con el importe que tienen justo al lado y la fila parecía
+ * llevar dos cosas que gritan. Sin él quedan como lo que son —dibujos que solo
+ * se usan cuando hace falta—, pero entonces el resalte de siempre no vale: pinta
+ * el fondo hundido y la fila entera ya está de ese color al pasar por encima, así
+ * que fondo contra fondo no se ve nada.
+ *
+ * Del revés sí se ve: el dibujo toma el color del fondo y el fondo el del texto.
+ * Es el mismo recurso que el de las etiquetas de la fila, llevado hasta el final
+ * porque aquí no hay texto que leer, hay un blanco al que apuntar.
+ */
+.list-row .btn.ghost.icon:hover,
+.list-row .btn.ghost.icon:focus-visible {
+  background: var(--fg);
+  color: var(--bg);
+  outline: none;
+}
+
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover { background: var(--bg-sunken); }
 

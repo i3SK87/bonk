@@ -17,7 +17,6 @@ import type {
   TransactionFilter,
   TransactionInput,
   TransactionView,
-  Settlement,
   FilterTotals
 } from '@shared/types'
 
@@ -86,7 +85,6 @@ const api = {
     setActive: (id: number, active: boolean) => call<void>('scheduled:setActive', id, active),
     resume: (id: number, endDate: string | null = null) =>
       call<void>('scheduled:resume', id, endDate),
-    finish: (id: number) => call<Settlement[]>('scheduled:finish', id),
     postNow: (id: number) => call<void>('scheduled:postNow', id),
     /** Paga de una vez lo que falte de una deuda y la da por saldada. */
     settleDebt: (id: number) => call<{ amount: number }>('scheduled:settleDebt', id),

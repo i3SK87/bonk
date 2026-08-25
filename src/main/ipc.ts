@@ -147,12 +147,6 @@ export function registerIpc(
   handle('scheduled:resume', (id: number, endDate: string | null) =>
     scheduled.resumeScheduled(id, endDate)
   )
-  // Finalizar a mano no espera al repaso de media hora: la enhorabuena sale en
-  // el mismo gesto, y de paso el aviso de Windows.
-  handle('scheduled:finish', (id: number) => {
-    scheduled.finishScheduled(id)
-    celebrate()
-  })
   // Registrar a mano tampoco espera al repaso: si esa era la última cuota, la
   // deuda queda saldada en ese mismo clic y hay que decirlo ahí, no media hora
   // después. Es justo el momento en que se está mirando.

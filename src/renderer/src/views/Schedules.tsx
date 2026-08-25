@@ -117,7 +117,6 @@ export function SchedulesView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ScheduledView | null>(null)
   const [creating, setCreating] = useState(false)
-  const [finishing, setFinishing] = useState<ScheduledView | null>(null)
   const [resuming, setResuming] = useState<ScheduledView | null>(null)
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
   /*
@@ -164,21 +163,6 @@ export function SchedulesView(): ReactNode {
         etiqueta: 'Registrar reembolso',
         icono: 'refund',
         onElegir: () => setDevolviendo(row)
-      })
-    }
-    /*
-     * Finalizar no es pagar.
-     *
-     * Solo le pone fecha de fin: es para la deuda que se acabó fuera de la
-     * aplicación o que dejó de cobrarse. Estaba en la fila, con su banderita, al
-     * lado del botón de registrar la cuota, y ahí se leía como el remate de la
-     * deuda; el remate es pagarla, que es lo que ahora ocupa ese sitio.
-     */
-    if (row.isDebt && row.active) {
-      lista.push({
-        etiqueta: 'Finalizar sin pagar',
-        icono: 'finish',
-        onElegir: () => setFinishing(row)
       })
     }
     lista.push({
@@ -355,7 +339,7 @@ export function SchedulesView(): ReactNode {
                     las mismas dos operaciones y no pueden llamarse de dos
                     maneras según por dónde se entre. */}
                 <button
-                  className="btn small"
+                  className="btn ghost icon"
                   title={row.isDebt ? 'Pagar cuota actual' : 'Registrar ahora sin esperar a la fecha'}
                   onClick={async (event) => {
                     event.stopPropagation()
@@ -363,7 +347,7 @@ export function SchedulesView(): ReactNode {
                     toast('Movimiento registrado', 'success')
                   }}
                 >
-                  <Icon name="check" size={15} />
+                  <Icon name="check" size={16} />
                 </button>
                 {row.isDebt && row.active && (pendientes.get(row.id)?.left ?? 0) > 0 ? (
                   <button
@@ -480,22 +464,6 @@ export function SchedulesView(): ReactNode {
               `${titleOf(saldando)} pagada del todo`
             )
             setSaldando(null)
-          }}
-        />
-      )}
-
-      {finishing && (
-        <Confirm
-          title="Finalizar la cuota"
-          message={
-            `«${titleOf(finishing)}» dejará de generar ` +
-            'movimientos y se le pondrá fecha de fin hoy. Los pagos ya registrados se quedan como están.'
-          }
-          confirmLabel="Finalizar"
-          onCancel={() => setFinishing(null)}
-          onConfirm={async () => {
-            await run(() => api.scheduled.finish(finishing.id), 'Cuota finalizada')
-            setFinishing(null)
           }}
         />
       )}
