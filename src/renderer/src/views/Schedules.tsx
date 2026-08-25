@@ -23,7 +23,7 @@ import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteProgramado, FechasProgramadas } from '../components/ProgramadaRapida'
 import { DateInput } from '../components/DateInput'
 import { formatDate, relativeDays, today } from '@shared/dates'
-import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
+import type { DebtProgress, Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -112,7 +112,7 @@ function ResumeModal({
 }
 
 export function SchedulesView(): ReactNode {
-  const { revision, run, toast, fail } = useStore()
+  const { revision, run, toast, fail, settings } = useStore()
   const [rows, setRows] = useState<ScheduledView[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ScheduledView | null>(null)
@@ -132,6 +132,21 @@ export function SchedulesView(): ReactNode {
   const [cambiandoFechas, setCambiandoFechas] = useState<ScheduledView | null>(null)
   const [devolviendo, setDevolviendo] = useState<ScheduledView | null>(null)
   const [borrando, setBorrando] = useState<ScheduledView | null>(null)
+  const [saldando, setSaldando] = useState<ScheduledView | null>(null)
+  /*
+   * Cuánto queda de cada deuda, para poder decirlo antes de cobrarlo.
+   *
+   * Es la misma cuenta que echa la pestaña Deudas, y se le pregunta a ella: dos
+   * sitios calculando lo que falta acabarían diciendo cifras distintas.
+   */
+  const [pendientes, setPendientes] = useState<Map<number, DebtProgress>>(new Map())
+
+  useEffect(() => {
+    api.scheduled
+      .debts()
+      .then((lista) => setPendientes(new Map(lista.map((item) => [item.scheduledId, item]))))
+      .catch(() => undefined)
+  }, [revision])
 
   const opcionesDe = (row: ScheduledView): OpcionMenu[] => {
     const lista: OpcionMenu[] = [
@@ -149,6 +164,21 @@ export function SchedulesView(): ReactNode {
         etiqueta: 'Registrar reembolso',
         icono: 'refund',
         onElegir: () => setDevolviendo(row)
+      })
+    }
+    /*
+     * Finalizar no es pagar.
+     *
+     * Solo le pone fecha de fin: es para la deuda que se acabó fuera de la
+     * aplicación o que dejó de cobrarse. Estaba en la fila, con su banderita, al
+     * lado del botón de registrar la cuota, y ahí se leía como el remate de la
+     * deuda; el remate es pagarla, que es lo que ahora ocupa ese sitio.
+     */
+    if (row.isDebt && row.active) {
+      lista.push({
+        etiqueta: 'Finalizar sin pagar',
+        icono: 'finish',
+        onElegir: () => setFinishing(row)
       })
     }
     lista.push({
@@ -321,9 +351,12 @@ export function SchedulesView(): ReactNode {
 
                 {/* Los mandos de la fila hacen lo suyo y ahí se quedan: sin frenar
                     el clic, cada uno abriría además la ficha por detrás. */}
+                {/* Las mismas palabras y los mismos dibujos que en Deudas: son
+                    las mismas dos operaciones y no pueden llamarse de dos
+                    maneras según por dónde se entre. */}
                 <button
                   className="btn small"
-                  title="Registrar ahora sin esperar a la fecha"
+                  title={row.isDebt ? 'Pagar cuota actual' : 'Registrar ahora sin esperar a la fecha'}
                   onClick={async (event) => {
                     event.stopPropagation()
                     await run(() => api.scheduled.postNow(row.id))
@@ -332,16 +365,16 @@ export function SchedulesView(): ReactNode {
                 >
                   <Icon name="check" size={15} />
                 </button>
-                {row.isDebt && row.active ? (
+                {row.isDebt && row.active && (pendientes.get(row.id)?.left ?? 0) > 0 ? (
                   <button
                     className="btn ghost icon"
-                    title="Finalizar: la deuda queda saldada y no se generan más cuotas"
+                    title="Pagar todo ahora"
                     onClick={(event) => {
                       event.stopPropagation()
-                      setFinishing(row)
+                      setSaldando(row)
                     }}
                   >
-                    <Icon name="finish" size={16} />
+                    <Icon name="invest" size={16} />
                   </button>
                 ) : (
                   <button
@@ -416,6 +449,39 @@ export function SchedulesView(): ReactNode {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Palabra por palabra el de Deudas: si preguntaran cosas distintas antes
+          de hacer lo mismo, una de las dos estaría mintiendo. */}
+      {saldando && (
+        <Confirm
+          title="Pagar toda la deuda"
+          confirmLabel={`Pagar ${formatMoney(pendientes.get(saldando.id)?.left ?? 0, settings.baseCurrency)}`}
+          message={
+            <>
+              Se apunta un pago de{' '}
+              <strong>
+                {formatMoney(pendientes.get(saldando.id)?.left ?? 0, settings.baseCurrency)}
+              </strong>{' '}
+              en {saldando.accountName}, con fecha de hoy, y «{titleOf(saldando)}» pasa a pagadas.
+              {(pendientes.get(saldando.id)?.leftCount ?? 0) > 1 && (
+                <>
+                  {' '}
+                  Las {pendientes.get(saldando.id)?.leftCount} cuotas que quedaban dejan de
+                  generarse.
+                </>
+              )}
+            </>
+          }
+          onCancel={() => setSaldando(null)}
+          onConfirm={async () => {
+            await run(
+              () => api.scheduled.settleDebt(saldando.id),
+              `${titleOf(saldando)} pagada del todo`
+            )
+            setSaldando(null)
+          }}
+        />
       )}
 
       {finishing && (
