@@ -241,7 +241,7 @@ export function SchedulesView(): ReactNode {
                   </div>
                   <div className="small muted truncate">
                     {row.type === 'refund' && (
-                      <span className="pill" style={{ marginRight: 6 }}>
+                      <span className="pill reembolso" style={{ marginRight: 6 }}>
                         Reembolso
                       </span>
                     )}
@@ -337,7 +337,7 @@ export function SchedulesView(): ReactNode {
                 </div>
                 <div className="small muted truncate">
                   {row.type === 'refund' && (
-                    <span className="pill" style={{ marginRight: 6 }}>
+                    <span className="pill reembolso" style={{ marginRight: 6 }}>
                       Reembolso
                     </span>
                   )}

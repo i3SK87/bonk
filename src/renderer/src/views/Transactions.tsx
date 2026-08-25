@@ -1250,7 +1250,7 @@ function TransactionRow({
       <div className="tx-main">
         <div className="tx-title">{title}</div>
         <div className="tx-sub">
-          {row.type === 'refund' && <span className="pill">Reembolso</span>}
+          {row.type === 'refund' && <span className="pill reembolso">Reembolso</span>}
           {detail && <span className="tx-note">{detail}</span>}
           {detail && muestraCuenta && <span>·</span>}
           {muestraCuenta && <span>{row.accountName}</span>}

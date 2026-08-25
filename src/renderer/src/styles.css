@@ -1534,6 +1534,14 @@ p { margin: 0; }
   white-space: nowrap;
 }
 
+/* Un reembolso es dinero que vuelve, y así se dice en su importe: la etiqueta
+   se pone del mismo verde para que la fila entera cuente lo mismo. Solo el
+   texto —el fondo se queda en el gris de todas, que un relleno de color en cada
+   devolución convertiría la lista en un semáforo. */
+.pill.reembolso {
+  color: var(--positive);
+}
+
 /* La etiqueta se pinta sobre el mismo gris hundido que usa el resalte, así que
    al pasar por encima desaparecía: fondo contra fondo. Bajo el ratón se le da la
    vuelta —el gris pasa al color de la tarjeta— y vuelve a leerse. */
@@ -1557,6 +1565,17 @@ p { margin: 0; }
 .tarjeta-clicable:hover .pill.tag {
   background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
   color: var(--tag-color, var(--fg-muted));
+}
+
+/* El verde del reembolso también sobrevive al resalte: solo cambia su fondo, que
+   es lo que hacía falta para que siguiera leyéndose. */
+.tx-row:hover .pill.reembolso,
+.tx-row.linked-active .pill.reembolso,
+.list-row:hover .pill.reembolso,
+.card.flush .list-row.linked-active .pill.reembolso,
+.list-row.clickable:hover .pill.reembolso,
+.tarjeta-clicable:hover .pill.reembolso {
+  color: var(--positive);
 }
 
 .pill.tag {
