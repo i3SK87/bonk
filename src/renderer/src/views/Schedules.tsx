@@ -247,7 +247,6 @@ export function SchedulesView(): ReactNode {
                 className={[
                   'list-row',
                   'clickable',
-                  'con-menu',
                   row.active ? '' : 'paused',
                   // La anidada ya se ve colgando: la marca del canto sobraría.
                   family !== undefined && !nested ? 'linked' : '',

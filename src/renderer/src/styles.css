@@ -681,14 +681,21 @@ p { margin: 0; }
  * dígitos cuadraban entre ellos, pero un signo suelto quedaba descolgado a un
  * lado de la masa del porcentaje de arriba; centradas, todas comparten eje.
  */
+/*
+ * Del tamaño de la cifra a la que acompaña, no más pequeña.
+ *
+ * Iba en once y sus vecinas en catorce, y en una fila de números todos iguales
+ * la única encogida se lee como una nota al pie: «▼ 1730,66 €» no es una nota al
+ * pie, es la mitad de lo que se viene a mirar en esa tabla.
+ */
 .cambio {
   display: inline-block;
   min-width: 58px;
   text-align: center;
-  font-size: 11px;
+  font-size: inherit;
   font-weight: 600;
   letter-spacing: 0.01em;
-  font-variant-numeric: normal;
+  font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -698,16 +705,16 @@ p { margin: 0; }
  * cuerpo que un porcentaje casi no se ven.
  */
 .cambio.signo {
-  font-size: 14px;
   font-weight: 800;
-  /* Atado, que un cuerpo mayor no le levante el alto a la fila. */
-  line-height: 11px;
 }
 
 /* En la cinta va pegada a su cifra: no hay columna que cuadrar y la separación
    ya la pone el hueco entre los trozos de cada dato. */
+/* En la cinta va pegada a su cifra: no hay columna que cuadrar, y del mismo
+   cuerpo que ella por lo mismo que en la tabla. */
 .teletipo-dato .cambio {
   min-width: 0;
+  font-size: 15px;
 }
 
 .amount {
@@ -1919,6 +1926,16 @@ p { margin: 0; }
  * mantiene su ancho fijo dentro, así que los porcentajes siguen alineados entre
  * ellos aunque el bloque entero vaya al centro.
  */
+/*
+ * Las cifras van centradas en su columna, no pegadas al canto derecho.
+ *
+ * Se pierde que las unidades caigan unas debajo de otras, que es lo que deja
+ * comparar de un vistazo cuál es mayor; a cambio cada cifra queda bajo su
+ * rótulo, que con columnas estrechas y rótulos largos —«MOVIMIENTOS» sobre un
+ * «3»— era lo que costaba seguir.
+ */
+.table.breakdown td.num,
+.table.breakdown th.num,
 .table.breakdown td.balance,
 .table.breakdown th.balance {
   text-align: center;
@@ -3231,37 +3248,4 @@ button.list-row:focus-visible {
 .cuota:last-child {
   border-top-right-radius: var(--radius-pill);
   border-bottom-right-radius: var(--radius-pill);
-}
-
-/* ---------- El cursor de «aquí hay un menú» ---------- */
-
-/*
- * `context-menu` es un cursor estándar —la flecha con el menú al lado— y lo
- * dibuja el propio Windows con el tema que tenga puesto el usuario, así que no
- * hay ninguna imagen que mantener ni nada que se descuadre en pantallas de mucha
- * densidad.
- *
- * A cambio se pierde la manita, y estas filas también se pulsan con el
- * izquierdo. Es el trato: se cambia la señal de «esto se puede pulsar» —que la
- * fila ya da encendiéndose al pasar por encima— por la de «aquí hay más de lo
- * que se ve».
- *
- * Va en su propia clase y no en la de la fila porque no todas las listas tienen
- * menú: Cuentas, Categorías y Planes comparten el mismo aspecto y no esconden
- * nada. Y va al final de la hoja y con el nombre de cada fila delante porque
- * cada una trae su propio `cursor: pointer`, que sin esto ganaría por orden.
- */
-.tx-row.con-menu,
-.list-row.con-menu,
-.list-row.clickable.con-menu,
-.tarjeta-clicable.con-menu,
-.table.breakdown tbody tr.con-menu {
-  cursor: context-menu;
-}
-
-/* Los botones de dentro de la fila siguen siendo botones: ahí el clic derecho no
-   hace nada distinto y la manita es lo que toca. */
-.con-menu .btn,
-.con-menu button {
-  cursor: pointer;
 }

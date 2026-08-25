@@ -587,14 +587,9 @@ export function ReportsView(): ReactNode {
                       return (
                         <Fragment key={key}>
                           <tr
-                            className={
-                              `${openable ? 'expandable' : ''}${
-                                // «Sin categoría» no tiene ficha que abrir, así
-                                // que tampoco tiene menú ni cursor que lo diga.
-                                row.categoryId != null ? ' con-menu' : ''
-                              }${menu?.categoria.id === row.categoryId ? ' marcada' : ''}`.trim() ||
-                              undefined
-                            }
+                            className={`${openable ? 'expandable' : ''}${
+                              menu?.categoria.id === row.categoryId ? ' marcada' : ''
+                            }`.trim() || undefined}
                             onContextMenu={(event) => {
                               // «Sin categoría» no es una categoría: es el cajón
                               // de los que no tienen ninguna, y no hay ficha que

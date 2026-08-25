@@ -297,7 +297,7 @@ function DebtCard({
   // pelearse, que la barra de cuotas es dibujo.
   return (
     <div
-      className={`tarjeta-clicable${onMenu ? ' con-menu' : ''}${marcada ? ' marcada' : ''}`}
+      className={`tarjeta-clicable${marcada ? ' marcada' : ''}`}
       role="button"
       onClick={onAdjust}
       onContextMenu={(event) => {
