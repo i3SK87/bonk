@@ -113,9 +113,37 @@ npm run pack    # solo la carpeta sin empaquetar, en release/win-unpacked
 ```
 
 En el equipo de desarrollo la aplicación se abre arrancando el motor de Electron
-sobre la propia carpeta del proyecto, no desde una copia instalada: el Control
-inteligente de aplicaciones de Windows decide por reputación, y cada compilación
-es un ejecutable nuevo sin ninguna, así que una arranca y la siguiente no.
+sobre la propia carpeta del proyecto, no desde una copia instalada.
+
+### El Control inteligente de aplicaciones lo bloquea
+
+Si la aplicación deja de arrancar sin haber tocado nada, o `npm run dist` falla
+con un `spawn UNKNOWN` que va y viene, no es del código: es el **Control
+inteligente de aplicaciones** de Windows 11 (*Smart App Control*).
+
+Es una lista blanca por firma y reputación, no un antivirus. El `electron.exe`
+que trae npm viene sin firmar, y cada compilación propia es un ejecutable nuevo
+con reputación cero, así que los bloquea. Y como consulta a la nube en cada
+intento, unas veces deja y otras no: de ahí que la misma orden funcione una vez
+y a la siguiente no.
+
+Se comprueba en el registro de sucesos:
+
+```powershell
+Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 40 |
+  Where-Object Id -in 3077,3033 | Select-Object TimeCreated, Message
+```
+
+No admite exclusiones: ni excluir la carpeta, ni «desbloquear» el archivo en sus
+propiedades —eso es otra cosa—, ni renombrarlo, ni firmarlo con un certificado
+propio. Solo se quita de dos maneras: firmando con un certificado de verdad, o
+apagándolo en Seguridad de Windows ▸ Control de aplicaciones y explorador. **Se
+apaga una sola vez: para volver a encenderlo hay que reinstalar Windows.**
+
+Con él apagado, lo que sigue cubriendo el equipo es Defender con su protección en
+tiempo real y en la nube, SmartScreen, la integridad de memoria, el control de
+cuentas y el cortafuegos. Conviene confirmar que SmartScreen quedó activo, porque
+mientras el Control inteligente está encendido se queda supeditado a él.
 
 El historial de versiones está en [CHANGELOG.md](CHANGELOG.md).
 
