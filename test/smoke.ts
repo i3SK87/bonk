@@ -71,13 +71,6 @@ try {
   settings.updateSettings({ palette: 'sepia' })
   equal('la paleta elegida se guarda', settings.getSettings().palette, 'sepia')
   settings.updateSettings({ palette: 'grafito' })
-  // Las previsiones cambian las cifras de cabecera, así que se entra a mano.
-  check('las programadas previstas vienen apagadas', settings.getSettings().showScheduledInList === false)
-  settings.setSetting('showScheduledInList', '')
-  check(
-    'y siguen apagadas si el ajuste no está guardado',
-    settings.getSettings().showScheduledInList === false
-  )
 
   check('no arranca con Windows sin pedirlo', settings.getSettings().startWithWindows === false)
   check('el aspa cierra, salvo que se pida lo contrario', settings.getSettings().closeToTray === false)

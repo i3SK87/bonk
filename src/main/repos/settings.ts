@@ -9,7 +9,6 @@ export function getSettings(): Settings {
   const map = new Map(rows.map((r) => [r.key, r.value]))
   return {
     baseCurrency: map.get('baseCurrency') || 'EUR',
-    showScheduledInList: map.get('showScheduledInList') === '1',
     theme: (map.get('theme') as ThemeMode) || 'system',
     palette: (map.get('palette') as Palette) || 'grafito',
     startOfWeek: map.get('startOfWeek') === 'sunday' ? 'sunday' : 'monday',

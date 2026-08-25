@@ -46,28 +46,6 @@ const CONTRA: Partial<Record<RangoId, string>> = {
   custom: 'los mismos días de antes'
 }
 
-const MESES_LARGOS = new Intl.DateTimeFormat('es-ES', { month: 'long' })
-
-/**
- * Un periodo escrito como se dice en alto: «al 1–24 de julio».
- *
- * Dos fechas completas —«del 01/07/2026 al 24/07/2026»— son exactas y no las lee
- * nadie de pasada. Casi siempre los dos extremos caen en el mismo mes, y ahí
- * basta con nombrarlo una vez.
- */
-function periodoCorto(desde: string, hasta: string): string {
-  const mes = (iso: string): string => MESES_LARGOS.format(new Date(`${iso}T12:00:00`))
-  const dia = (iso: string): number => Number(iso.slice(8, 10))
-
-  if (desde.slice(0, 7) === hasta.slice(0, 7)) {
-    // El mes entero se nombra por su nombre, sin recitar del 1 al 31.
-    const ultimo = endOfMonth(desde)
-    if (desde.endsWith('-01') && hasta === ultimo) return `a ${mes(desde)}`
-    return `al ${dia(desde)}–${dia(hasta)} de ${mes(desde)}`
-  }
-  return `al ${formatDate(desde)} – ${formatDate(hasta)}`
-}
-
 /**
  * Si esa diferencia es buena o mala.
  *
@@ -109,7 +87,7 @@ function Cambio({
   kind,
   pista,
   unidad = 'porcentaje',
-  currency
+  formatea
 }: {
   ahora: number
   antes: number
@@ -124,8 +102,15 @@ function Cambio({
    * lo mismo, y mirando solo el porcentaje las categorías pequeñas parecen el
    * problema. Ninguna de las dos sobra, así que se elige.
    */
-  unidad?: 'porcentaje' | 'euros'
-  currency?: string
+  unidad?: 'porcentaje' | 'valor'
+  /**
+   * Cómo se escribe la diferencia cuando no va en porcentaje.
+   *
+   * Lo pone quien llama porque no todas las cifras son dinero: la diferencia de
+   * «Gasto total» son euros y la de «Movimientos» son movimientos, y un «▲ 3 €»
+   * donde han entrado tres apuntes más sería mentira.
+   */
+  formatea?: (valor: number) => string
 }): ReactNode {
   const delta = ahora - antes
 
@@ -138,15 +123,15 @@ function Cambio({
     )
   }
 
-  if (unidad === 'euros') {
+  if (unidad === 'valor') {
     /*
-     * En euros no hay división, así que tampoco hay caso imposible: una
+     * En valor absoluto no hay división, así que tampoco hay caso imposible: una
      * categoría que antes no existía ha subido justo lo que vale ahora, y eso
      * es una diferencia perfectamente decible.
      */
     return (
       <span className={`cambio ${tonoDe(delta, kind)}`} title={pista}>
-        {delta > 0 ? '▲' : '▼'} {formatMoney(Math.abs(delta), currency ?? 'EUR')}
+        {delta > 0 ? '▲' : '▼'} {(formatea ?? String)(Math.abs(delta))}
       </span>
     )
   }
@@ -204,14 +189,18 @@ export function ReportsView(): ReactNode {
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
   /*
-   * En qué se mide la columna Balance.
+   * En qué se miden las diferencias: la columna Balance y la cinta de arriba.
    *
-   * No se guarda en los ajustes: es cómo se está mirando la tabla ahora mismo,
-   * y se cambia varias veces en la misma sesión —el porcentaje para ver qué se
-   * ha disparado, los euros para ver qué cuesta eso—. Un ajuste que se toca cada
-   * dos minutos no es un ajuste.
+   * Las dos comparan contra el mismo periodo, así que no pueden medirlo cada una
+   * a su manera. El porcentaje enseña qué se ha disparado y el valor enseña
+   * cuánto es eso —de dinero en las cifras de dinero, de movimientos en el
+   * recuento—, y ninguna de las dos sobra.
+   *
+   * No se guarda en los ajustes: es cómo se está mirando esto ahora mismo, y se
+   * cambia varias veces en la misma sesión. Un ajuste que se toca cada dos
+   * minutos no es un ajuste.
    */
-  const [balanceEn, setBalanceEn] = useState<'porcentaje' | 'euros'>('porcentaje')
+  const [balanceEn, setBalanceEn] = useState<'porcentaje' | 'valor'>('porcentaje')
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
@@ -396,6 +385,8 @@ export function ReportsView(): ReactNode {
         ahora={ahora}
         antes={valorAntes}
         kind={kind}
+        unidad={balanceEn}
+        formatea={formatea}
         pista={`${formatea(ahora)} ahora · ${formatea(valorAntes)} ${contra}`}
       />
     ) : undefined
@@ -529,20 +520,20 @@ export function ReportsView(): ReactNode {
                 trozo del anterior. Una categoría con lo mismo en los dos meses
                 enteros puede llevar flecha, y sin esta línea parece un error.
               */}
+              {/* En qué se lee la diferencia, aquí y en la cinta de arriba: las
+                  dos comparan contra lo mismo, así que no pueden medirla cada una
+                  a su manera. Contra qué se compara lo dice el rótulo de la
+                  columna al pasar por encima; escrito además aquí al lado era la
+                  misma frase dos veces en la misma tarjeta. */}
               {comparacion && (
-                <>
-                  <span className="small muted">
-                    ▲▼ frente {periodoCorto(comparacion.from, comparacion.to)}
-                  </span>
-                  <Segmented
-                    value={balanceEn}
-                    onChange={setBalanceEn}
-                    options={[
-                      { value: 'porcentaje', label: '%' },
-                      { value: 'euros', label: currencySymbol(currency) }
-                    ]}
-                  />
-                </>
+                <Segmented
+                  value={balanceEn}
+                  onChange={setBalanceEn}
+                  options={[
+                    { value: 'porcentaje', label: '%' },
+                    { value: 'valor', label: currencySymbol(currency) }
+                  ]}
+                />
               )}
               <div className="spacer" />
               <Segmented
@@ -642,7 +633,7 @@ export function ReportsView(): ReactNode {
                                   antes={gastoAntes}
                                   kind={kind}
                                   unidad={balanceEn}
-                                  currency={currency}
+                                  formatea={euros}
                                   pista={`${formatMoney(row.total, currency)} ahora · ${formatMoney(gastoAntes, currency)} entre el ${formatDate(comparacion.from)} y el ${formatDate(comparacion.to)}`}
                                 />
                               </td>

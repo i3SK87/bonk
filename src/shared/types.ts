@@ -318,7 +318,6 @@ export interface Settings {
   baseCurrency: string
 
   /** Enseña las repeticiones futuras de las programadas dentro de la lista de movimientos. */
-  showScheduledInList: boolean
   theme: ThemeMode
   palette: Palette
   startOfWeek: 'monday' | 'sunday'

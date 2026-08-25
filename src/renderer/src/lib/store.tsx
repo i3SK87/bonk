@@ -10,7 +10,9 @@ import {
 } from 'react'
 import { pushNotificationIcons } from './notificationIcons'
 import { recordarTema } from './tema'
-import type { AccountWithBalance, Category, Settings } from '@shared/types'
+import { today, startOfMonth, endOfMonth } from '@shared/dates'
+import type { AccountWithBalance, Category, Settings, TxType } from '@shared/types'
+import type { RangoId } from '@shared/rangos'
 
 const api = window.bonk
 
@@ -18,6 +20,48 @@ interface Toast {
   id: number
   message: string
   tone: 'info' | 'success' | 'error'
+}
+
+/**
+ * Cómo se está mirando la lista de movimientos ahora mismo.
+ *
+ * Vive aquí y no dentro de la pantalla porque la pantalla se desmonta al cambiar
+ * de pestaña: volvías de Informes y la lista había olvidado el periodo, las
+ * cuentas y lo que estabas buscando. Y vive en memoria y no en los ajustes
+ * porque un filtro no es una preferencia: al cerrar la aplicación se va, y la
+ * próxima vez se abre limpia. El de programados estaba en los ajustes y seguía
+ * puesto días después sin que nadie lo hubiera vuelto a pedir.
+ */
+export interface FiltrosMovimientos {
+  range: RangoId
+  customFrom: string
+  customTo: string
+  search: string
+  types: TxType[]
+  /**
+   * `null` es «todavía nadie ha tocado esto», y entonces se elige la cuenta
+   * principal. Una lista vacía es «ninguna», que es una respuesta distinta y la
+   * lista la respeta enseñándose vacía.
+   */
+  accountIds: number[] | null
+  categoryIds: number[]
+  uncategorized: boolean
+  /** Añadir a la lista las programadas que aún no han pasado. */
+  programados: boolean
+}
+
+function filtrosIniciales(): FiltrosMovimientos {
+  return {
+    range: 'month',
+    customFrom: startOfMonth(today()),
+    customTo: endOfMonth(today()),
+    search: '',
+    types: [],
+    accountIds: null,
+    categoryIds: [],
+    uncategorized: false,
+    programados: false
+  }
 }
 
 interface StoreValue {
@@ -36,6 +80,9 @@ interface StoreValue {
    */
   focusedAccountId: number | null
   setFocusedAccountId: (id: number | null) => void
+  filtros: FiltrosMovimientos
+  /** Cambia lo que se le diga y deja el resto como estaba. */
+  ponFiltros: (patch: Partial<FiltrosMovimientos>) => void
   refresh: () => Promise<void>
   refreshCatalogues: () => Promise<void>
   updateSettings: (patch: Partial<Settings>) => Promise<void>
@@ -55,7 +102,6 @@ const StoreContext = createContext<StoreValue | null>(null)
 
 const FALLBACK_SETTINGS: Settings = {
   baseCurrency: 'EUR',
-  showScheduledInList: false,
   theme: 'system',
   palette: 'grafito',
   startOfWeek: 'monday',
@@ -73,6 +119,11 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
   const [categories, setCategories] = useState<Category[]>([])
   const [revision, setRevision] = useState(0)
   const [focusedAccountId, setFocusedAccountId] = useState<number | null>(null)
+  const [filtros, setFiltros] = useState<FiltrosMovimientos>(filtrosIniciales)
+
+  const ponFiltros = useCallback((patch: Partial<FiltrosMovimientos>) => {
+    setFiltros((actual) => ({ ...actual, ...patch }))
+  }, [])
   const [toasts, setToasts] = useState<Toast[]>([])
   const toastId = useRef(0)
 
@@ -209,6 +260,8 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
       revision,
       focusedAccountId,
       setFocusedAccountId,
+      filtros,
+      ponFiltros,
       refresh,
       refreshCatalogues,
       updateSettings,
@@ -225,6 +278,8 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
       categories,
       revision,
       focusedAccountId,
+      filtros,
+      ponFiltros,
       refresh,
       refreshCatalogues,
       updateSettings,

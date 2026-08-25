@@ -14,7 +14,7 @@ import { AccionCabecera } from '../components/ui'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
 import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
-import { today, startOfMonth, endOfMonth, addMonths, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
+import { today, addMonths, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
 import type {
   FilterTotals,
   ProjectedTransaction,
@@ -81,25 +81,47 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     revision,
     run,
     toast,
-    updateSettings,
+    filtros,
+    ponFiltros,
     refresh,
     fail,
     setFocusedAccountId
   } = useStore()
 
-  const [range, setRange] = useState<RangoId>('month')
-  const [customFrom, setCustomFrom] = useState(startOfMonth(today()))
-  const [customTo, setCustomTo] = useState(endOfMonth(today()))
-  const [search, setSearch] = useState('')
+  /*
+   * Los filtros no son de esta pantalla, son de la sesión.
+   *
+   * Estaban aquí dentro y esta pantalla se desmonta al cambiar de pestaña: dabas
+   * una vuelta por Informes y al volver la lista había olvidado el periodo, las
+   * cuentas y lo que estabas buscando. Ahora viven en el almacén, que dura lo
+   * que dura la ventana y muere con ella.
+   */
+  const { range, customFrom, customTo, search, types, categoryIds, uncategorized } = filtros
+  const setRange = (value: RangoId): void => ponFiltros({ range: value })
+  const setCustomFrom = (value: string): void => ponFiltros({ customFrom: value })
+  const setCustomTo = (value: string): void => ponFiltros({ customTo: value })
+  const setSearch = (value: string): void => ponFiltros({ search: value })
+  const setTypes = (value: TxType[]): void => ponFiltros({ types: value })
+  const setCategoryIds = (value: number[]): void => ponFiltros({ categoryIds: value })
+  const setUncategorized = (value: boolean): void => ponFiltros({ uncategorized: value })
+
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
-  const [settledSearch, setSettledSearch] = useState('')
-  const [types, setTypes] = useState<TxType[]>([])
+  const [settledSearch, setSettledSearch] = useState(filtros.search)
+
   /**
    * La cuenta principal viene elegida: es la que se mira al abrir, y con ella
    * la cifra grande dice lo que hay ahí y no el total repartido entre huchas.
    * Se quita pulsándola, y entonces vuelve el patrimonio de todas.
+   *
+   * Solo la primera vez: `null` es que nadie ha tocado el filtro todavía. Una
+   * lista vacía es «ninguna cuenta», y eso sí se respeta —si no, volver de otra
+   * pestaña te devolvería la principal que acababas de quitar—.
    */
-  const [accountIds, setAccountIds] = useState<number[]>(accounts[0] ? [accounts[0].id] : [])
+  const accountIds = filtros.accountIds ?? (accounts[0] ? [accounts[0].id] : [])
+  const setAccountIds = (value: number[]): void => ponFiltros({ accountIds: value })
+  useEffect(() => {
+    if (filtros.accountIds == null && accounts[0]) ponFiltros({ accountIds: [accounts[0].id] })
+  }, [filtros.accountIds, accounts, ponFiltros])
 
   /*
    * Con una sola cuenta a la vista, un movimiento nuevo nace en ella.
@@ -112,9 +134,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     setFocusedAccountId(accountIds.length === 1 ? accountIds[0] : null)
     return () => setFocusedAccountId(null)
   }, [accountIds, setFocusedAccountId])
-  const [categoryIds, setCategoryIds] = useState<number[]>([])
-  /** «Sin categoría» no es una categoría: es la falta de ella, y se filtra aparte. */
-  const [uncategorized, setUncategorized] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
   const [rows, setRows] = useState<TransactionView[]>([])
@@ -182,7 +201,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * está mirando lo que viene, se busca también en ello.
    */
   const canProject =
-    settings.showScheduledInList &&
+    filtros.programados &&
     categoryIds.length === 0 &&
     !uncategorized &&
     (!filter.to || filter.to >= today())
@@ -332,10 +351,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
-    setTypes([])
-    setAccountIds([])
-    setCategoryIds([])
-    setUncategorized(false)
+    ponFiltros({ types: [], accountIds: [], categoryIds: [], uncategorized: false })
   }
 
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
@@ -714,10 +730,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             {/* Después de los filtros: no filtra nada, añade a la lista lo que
                 todavía no ha pasado. */}
             <button
-              className={`btn small${settings.showScheduledInList ? ' primary' : ''}`}
-              onClick={() => updateSettings({ showScheduledInList: !settings.showScheduledInList })}
+              className={`btn small${filtros.programados ? ' primary' : ''}`}
+              onClick={() => ponFiltros({ programados: !filtros.programados })}
               title={
-                settings.showScheduledInList
+                filtros.programados
                   ? 'Ocultar lo que está por venir y volver a las cifras reales'
                   : 'Ver las programadas que quedan por llegar y su efecto en los totales'
               }
@@ -821,7 +837,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                     llevan categoría por definición. */}
                 <button
                   className={`btn small${uncategorized ? ' primary' : ''}`}
-                  onClick={() => setUncategorized((value) => !value)}
+                  onClick={() => setUncategorized(!uncategorized)}
                   title="Los movimientos que se quedaron sin categoría"
                 >
                   Sin categoría
