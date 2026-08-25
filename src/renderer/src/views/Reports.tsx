@@ -443,7 +443,7 @@ export function ReportsView(): ReactNode {
               }}
             >
               <Icon name="download" size={15} />
-              Exportar
+              Exportar PDF
             </button>
           </div>
 
