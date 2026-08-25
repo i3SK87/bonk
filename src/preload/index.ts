@@ -65,6 +65,8 @@ const api = {
     removeMany: (ids: number[]) => call<number>('tx:deleteMany', ids),
     setCategory: (ids: number[], categoryId: number | null) =>
       call<number>('tx:bulkCategory', ids, categoryId),
+    /** Recoloca los movimientos de un día: los ids en el orden que han de quedar. */
+    reorder: (ids: number[]) => call<number>('tx:reorder', ids),
     duplicate: (id: number) => call<TransactionView>('tx:duplicate', id),
     refundsFor: (id: number) => call<TransactionView[]>('tx:refundsFor', id),
     refundCandidates: (date: string, excludeId?: number, linkedId?: number) =>

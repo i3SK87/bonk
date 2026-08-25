@@ -943,6 +943,81 @@ try {
   scheduled.deleteScheduled(plan.id)
   scheduled.deleteScheduled(sinFin.id)
 
+  section('Recolocar movimientos dentro de su día')
+  /*
+   * El orden de una jornada lo decide quien la mira.
+   *
+   * La lista ordena por fecha, hora e id, y dentro de un mismo día eso deja el
+   * orden en manos de cuándo se apuntó cada cosa: apuntas la cena y luego te
+   * acuerdas del taxi de antes, y el taxi queda encima.
+   */
+  const diaSuelto = addDays(day, -3)
+  const unoDelDia = (nota: string, importe: number): number =>
+    transactions.saveTransaction({
+      type: 'expense',
+      date: diaSuelto,
+      accountId: bank.id,
+      categoryId: food.id,
+      amount: importe,
+      note: nota
+    }).id
+  const elprimero = unoDelDia('Primero', 100)
+  const elsegundo = unoDelDia('Segundo', 200)
+  const eltercero = unoDelDia('Tercero', 300)
+
+  const delDia = (): string[] =>
+    transactions
+      .listTransactions({ from: diaSuelto, to: diaSuelto, limit: 50 })
+      .map((row) => row.note ?? '')
+
+  equal('sin tocar nada, manda el orden de apuntado', delDia().join(','), 'Tercero,Segundo,Primero')
+
+  transactions.reorderTransactions([elprimero, eltercero, elsegundo])
+  equal('recolocarlos los deja en ese orden', delDia().join(','), 'Primero,Tercero,Segundo')
+
+  // El orden aguanta a que se toque un movimiento.
+  transactions.saveTransaction({
+    id: eltercero,
+    type: 'expense',
+    date: diaSuelto,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 350,
+    note: 'Tercero'
+  })
+  equal('y aguanta a que se edite uno', delDia().join(','), 'Primero,Tercero,Segundo')
+
+  transactions.reorderTransactions([elsegundo, elprimero, eltercero])
+  equal('se puede volver a cambiar', delDia().join(','), 'Segundo,Primero,Tercero')
+
+  // Uno nuevo entra arriba: nace con orden cero y la fecha lo pone el elprimero de
+  // su día solo si nadie ha tocado el orden. Con el día ya ordenado, se queda
+  // debajo de los que llevan número, que es lo esperable: no se ha dicho dónde va.
+  const recienLlegado = unoDelDia('Nuevo', 400)
+  check('uno nuevo no se cuela por delante de lo ya ordenado', delDia().indexOf('Nuevo') === 3, delDia().join(','))
+  transactions.reorderTransactions([recienLlegado, elsegundo, elprimero, eltercero])
+  equal('y se puede subir', delDia()[0], 'Nuevo')
+
+  // Mezclar días no vale: el orden es de la jornada.
+  const deOtroDia = transactions.saveTransaction({
+    type: 'expense',
+    date: addDays(diaSuelto, -1),
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 500,
+    note: 'De otro día'
+  })
+  let mezclaDias = ''
+  try {
+    transactions.reorderTransactions([elprimero, deOtroDia.id])
+  } catch (error) {
+    mezclaDias = (error as Error).message
+  }
+  check('no se recolocan movimientos de días distintos', /su día/i.test(mezclaDias), mezclaDias)
+  equal('y el día no se queda a medias', delDia().join(','), 'Nuevo,Segundo,Primero,Tercero')
+
+  transactions.deleteTransactions([elprimero, elsegundo, eltercero, recienLlegado, deOtroDia.id])
+
   section('El informe en PDF')
   const paraInforme = transactions.listTransactions({ limit: 40 })
   const sumasInforme = transactions.totalsForFilter({})

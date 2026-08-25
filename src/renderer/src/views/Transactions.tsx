@@ -152,6 +152,51 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [importando, setImportando] = useState<OrigenCsv | null>(null)
+  /*
+   * Recolocar un movimiento dentro de su día.
+   *
+   * La lista ordena por fecha y luego por cuándo se apuntó, que no tiene nada
+   * que ver con el orden en que pasaron las cosas: apuntas la cena y luego te
+   * acuerdas del taxi de antes, y el taxi queda encima.
+   *
+   * Solo dentro del día: la fecha de un movimiento es un dato suyo, no una
+   * posición en una lista, y arrastrarlo a otro día sería cambiarle la fecha sin
+   * decirlo.
+   */
+  const [arrastrado, setArrastrado] = useState<number | null>(null)
+  const [destino, setDestino] = useState<number | null>(null)
+
+  /**
+   * Deja el día en el orden en que ha quedado tras soltar.
+   *
+   * Se trabaja por bloques y no por filas: un gasto y sus devoluciones son una
+   * sola cosa en la lista —cuelgan de él— y moverlo tiene que llevárselas
+   * consigo, o se quedarían colgando de quien no es.
+   */
+  async function soltarEn(reales: TransactionView[], sobreId: number): Promise<void> {
+    const movido = arrastrado
+    setArrastrado(null)
+    setDestino(null)
+    if (movido == null || movido === sobreId) return
+
+    const bloques: TransactionView[][] = []
+    for (const { row, nested } of nestRefunds(reales)) {
+      if (nested && bloques.length > 0) bloques[bloques.length - 1].push(row)
+      else bloques.push([row])
+    }
+
+    const desde = bloques.findIndex((bloque) => bloque[0].id === movido)
+    const hasta = bloques.findIndex((bloque) => bloque.some((fila) => fila.id === sobreId))
+    if (desde < 0 || hasta < 0 || desde === hasta) return
+
+    const orden = [...bloques]
+    const [suyo] = orden.splice(desde, 1)
+    orden.splice(hasta, 0, suyo)
+    await run(
+      () => api.transactions.reorder(orden.flat().map((fila) => fila.id)),
+      'Orden del día actualizado'
+    )
+  }
   const [confirmBulk, setConfirmBulk] = useState(false)
 
   useEffect(() => {
@@ -955,6 +1000,17 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         onFamily={setHoveredFamily}
                         onMenu={(x, y) => setMenu({ row, x, y })}
                         marcada={menu?.row.id === row.id}
+                        // Una devolución no se recoloca: va donde vaya su gasto.
+                        arrastrable={!nested}
+                        arrastrando={arrastrado === row.id}
+                        destino={destino === row.id}
+                        onArrastrar={() => setArrastrado(row.id)}
+                        onEncima={() => arrastrado != null && setDestino(row.id)}
+                        onSoltar={() => soltarEn(items.real, row.id)}
+                        onFinArrastre={() => {
+                          setArrastrado(null)
+                          setDestino(null)
+                        }}
                         nested={nested}
                         lastChild={last}
                       />
@@ -1174,6 +1230,13 @@ function TransactionRow({
   onFamily,
   onMenu,
   marcada,
+  arrastrable,
+  arrastrando,
+  destino,
+  onArrastrar,
+  onEncima,
+  onSoltar,
+  onFinArrastre,
   nested,
   lastChild
 }: {
@@ -1192,6 +1255,16 @@ function TransactionRow({
   onMenu?: (x: number, y: number) => void
   /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
   marcada?: boolean
+  /** Se puede recolocar dentro de su día. */
+  arrastrable?: boolean
+  /** Es la que se está arrastrando ahora mismo. */
+  arrastrando?: boolean
+  /** El puntero está encima de ella con algo agarrado: aquí caería. */
+  destino?: boolean
+  onArrastrar?: () => void
+  onEncima?: () => void
+  onSoltar?: () => void
+  onFinArrastre?: () => void
   /** La devolución cuelga del gasto que tiene justo encima. */
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
@@ -1222,6 +1295,8 @@ function TransactionRow({
         'tx-row',
         selected ? 'selected' : '',
         marcada ? 'marcada' : '',
+        arrastrando ? 'arrastrando' : '',
+        destino ? 'destino' : '',
         // Anidada ya se ve colgando: la marca del canto sobraría.
         family !== undefined && !nested ? 'linked' : '',
         active ? 'linked-active' : '',
@@ -1234,6 +1309,31 @@ function TransactionRow({
       tabIndex={0}
       aria-pressed={selected}
       title={linkTitle}
+      /*
+       * Se arrastra con el arrastre del navegador y no a mano.
+       *
+       * Lo trae hecho: la imagen que sigue al puntero, el que suelta encima de
+       * quien toca y el cancelar con Escape. A mano habría que escribir las tres
+       * cosas y ninguna quedaría mejor.
+       */
+      draggable={arrastrable}
+      onDragStart={(event) => {
+        // Hace falta poner algo o el navegador cancela el arrastre.
+        event.dataTransfer.setData('text/plain', String(row.id))
+        event.dataTransfer.effectAllowed = 'move'
+        onArrastrar?.()
+      }}
+      onDragOver={(event) => {
+        // Sin esto no se puede soltar: por defecto nada acepta lo que se arrastra.
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'move'
+        onEncima?.()
+      }}
+      onDrop={(event) => {
+        event.preventDefault()
+        onSoltar?.()
+      }}
+      onDragEnd={() => onFinArrastre?.()}
       onMouseEnter={() => family !== undefined && onFamily?.(family)}
       onMouseLeave={() => family !== undefined && onFamily?.(null)}
       onClick={(event) => onActivate?.(event.ctrlKey || event.metaKey || event.shiftKey)}

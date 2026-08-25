@@ -309,13 +309,58 @@ function toView(
   }
 }
 
+/**
+ * Recoloca un movimiento dentro de su día.
+ *
+ * Se le pasan los ids del día en el orden que tienen que quedar, de arriba
+ * abajo, y se les reparte un número descendente: la lista ordena por
+ * `sort_order` de mayor a menor, así que el primero de la lista se lleva el
+ * número más alto.
+ *
+ * Se numeran todos los del día y no solo el que se ha movido, porque el orden es
+ * de la fila entera: tocar uno solo lo dejaría empatado con sus vecinos y el
+ * desempate volvería a ser la hora, que es de lo que se estaba huyendo.
+ *
+ * Los huecos van de diez en diez por si algún día hace falta colar uno en medio
+ * sin volver a numerar el día.
+ *
+ * Todo en una transacción: media reordenación deja el día en un orden que nadie
+ * ha pedido.
+ */
+export function reorderTransactions(ids: number[]): number {
+  if (ids.length === 0) return 0
+  return atomic(() => {
+    const db = getDb()
+    /*
+     * Que sean todos del mismo día.
+     *
+     * El orden solo tiene sentido dentro de una jornada: numerar movimientos de
+     * días distintos no cambiaría nada —la fecha manda primero— y aceptarlo en
+     * silencio escondería un fallo de quien llama.
+     */
+    const marcas = ids.map(() => '?').join(',')
+    const dias = db
+      .prepare(`SELECT DISTINCT date FROM transactions WHERE id IN (${marcas})`)
+      .all(...ids) as unknown as Array<{ date: string }>
+    if (dias.length > 1) throw new Error('Un movimiento solo se puede recolocar dentro de su día')
+
+    const actualizar = db.prepare('UPDATE transactions SET sort_order = ? WHERE id = ?')
+    ids.forEach((id, indice) => actualizar.run((ids.length - indice) * 10, id))
+    return ids.length
+  })
+}
+
 export function listTransactions(filter: TransactionFilter = {}): TransactionView[] {
   const { sql, params } = buildWhere(filter)
   const limit = filter.limit ?? 500
   const offset = filter.offset ?? 0
 
   const rows = getDb()
-    .prepare(`${VIEW_SELECT} ${sql} ORDER BY t.date DESC, t.time DESC, t.id DESC LIMIT ? OFFSET ?`)
+    .prepare(
+      `${VIEW_SELECT} ${sql}
+        ORDER BY t.date DESC, t.sort_order DESC, t.time DESC, t.id DESC
+        LIMIT ? OFFSET ?`
+    )
     .all(...params, limit, offset) as unknown as TxViewRow[]
 
   const tags = tagsForTransactions(rows.map((row) => row.id))

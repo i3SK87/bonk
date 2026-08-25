@@ -181,6 +181,7 @@ export function registerIpc(
   handle('tx:bulkCategory', (ids: number[], categoryId: number | null) =>
     transactions.bulkSetCategory(ids, categoryId)
   )
+  handle('tx:reorder', (ids: number[]) => transactions.reorderTransactions(ids))
   handle('tx:duplicate', (id: number) => transactions.duplicateTransaction(id))
   handle('tx:refundsFor', (id: number) => transactions.listRefundsFor(id))
   handle('tx:refundCandidates', (date: string, excludeId?: number, linkedId?: number) =>

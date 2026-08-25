@@ -3520,3 +3520,21 @@ button.list-row:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+
+/* ---------- Recolocar movimientos dentro de su día ---------- */
+
+/*
+ * La fila que se está arrastrando se queda como una sombra de sí misma: el
+ * navegador ya lleva su copia pegada al puntero, así que dejarla igual en su
+ * sitio hacía parecer que había dos.
+ */
+.tx-row.arrastrando {
+  opacity: 0.35;
+}
+
+/* Y donde va a caer, una raya del color de acento en el canto de arriba. Una
+   raya y no un recuadro: lo que se elige es un hueco entre dos filas, no una
+   fila. */
+.tx-row.destino {
+  box-shadow: inset 0 2px 0 var(--accent);
+}

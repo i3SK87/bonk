@@ -582,5 +582,20 @@ export const MIGRATIONS: string[] = [
   // otro sitio no hace falta para nada. Se borran.
   `
   DELETE FROM settings WHERE key IN ('lockEnabled', 'lockPin', 'lockDelaySeconds');
+  `,
+
+  // v26 — el orden a mano dentro de un día.
+  //
+  // La lista ordena por fecha, hora e id, y dentro de un mismo día eso deja el
+  // orden en manos de en qué momento se apuntó cada cosa, que no tiene nada que
+  // ver con el orden en que pasaron: apuntas la cena y luego te acuerdas del
+  // taxi de antes, y el taxi queda encima.
+  //
+  // `sort_order` es lo que manda cuando alguien lo ha dicho. Arranca a cero en
+  // todos los movimientos, así que mientras nadie arrastre nada el desempate
+  // sigue siendo la hora y el id, exactamente como hasta ahora.
+  `
+  ALTER TABLE transactions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+  CREATE INDEX idx_tx_orden ON transactions(date, sort_order);
   `
 ]
