@@ -111,7 +111,7 @@ const FALLBACK_SETTINGS: Settings = {
   balanceEn: 'porcentaje',
   widgetVisible: true,
   widgetAnchor: 'bottomRight',
-  widgetOpacity: 0.92,
+  widgetOpacity: 0.6,
   widgetOnTop: false,
   widgetGris: false,
   widgetAcrilico: false,
