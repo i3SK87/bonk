@@ -5,3 +5,6 @@ dist/
 *.log
 .vite/
 *.tsbuildinfo
+
+# Restos de lanzar la aplicación a mano desde una consola.
+salida-*.txt
