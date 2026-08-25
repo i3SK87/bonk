@@ -23,6 +23,14 @@ const ALTO_MINIMO = 96
 const MARGEN = 18
 
 let widget: BrowserWindow | null = null
+/**
+ * Con qué se creó la ventana.
+ *
+ * El esmerilado no se puede encender en caliente: es una opción del constructor
+ * —y además riñe con la transparencia—, así que al cambiarlo hay que volver a
+ * crear la ventana. Se recuerda con qué se hizo para saber cuándo hace falta.
+ */
+let esmeriladaAlCrearla = false
 /** Al arrastrarlo se guarda la posición, pero no en cada píxel: eso son cientos
  *  de escrituras por segundo. Se espera a que pare. */
 let guardadoPendiente: NodeJS.Timeout | null = null
@@ -84,19 +92,29 @@ function dentroDeLaPantalla(x: number, y: number, alto: number): { x: number; y:
   }
 }
 
+/*
+ * Todo se mide y se coloca por el contenido, nunca por el marco.
+ *
+ * Aunque la ventana no tenga marco, Windows le guarda unos píxeles alrededor y
+ * `getBounds` los cuenta: leer de ahí un alto y volver a escribirlo con
+ * `setBounds` le sumaba ocho a la ventana en cada vuelta, así que cada arrastre
+ * la estiraba un poco más. `getContentBounds` y `setContentBounds` hablan de lo
+ * mismo que mide la página, y así lo que se lee y lo que se escribe cuadran.
+ */
+
 /** Coloca, estira y pone la transparencia y la capa según los ajustes. */
 export function colocarWidget(alto?: number): void {
   const win = widgetWindow()
   if (!win) return
   const settings = getSettings()
-  const altura = Math.max(ALTO_MINIMO, Math.round(alto ?? win.getBounds().height))
+  const altura = Math.max(ALTO_MINIMO, Math.round(alto ?? win.getContentBounds().height))
 
   const sitio =
     settings.widgetAnchor === 'libre'
       ? dentroDeLaPantalla(settings.widgetX, settings.widgetY, altura)
       : sitioDe(settings.widgetAnchor, altura)
 
-  win.setBounds({ ...sitio, width: ANCHO, height: altura })
+  win.setContentBounds({ ...sitio, width: ANCHO, height: altura })
   win.setOpacity(Math.min(1, Math.max(0.2, settings.widgetOpacity)))
   /*
    * `screen-saver` y no `normal`: por encima de las ventanas normales hay más
@@ -110,9 +128,9 @@ export function colocarWidget(alto?: number): void {
 export function moverWidget(x: number, y: number): void {
   const win = widgetWindow()
   if (!win) return
-  const { height } = win.getBounds()
+  const { height } = win.getContentBounds()
   const sitio = dentroDeLaPantalla(Math.round(x), Math.round(y), height)
-  win.setBounds({ ...sitio, width: ANCHO, height })
+  win.setContentBounds({ ...sitio, width: ANCHO, height })
 
   if (guardadoPendiente) clearTimeout(guardadoPendiente)
   guardadoPendiente = setTimeout(() => {
@@ -123,12 +141,24 @@ export function moverWidget(x: number, y: number): void {
 export function createWidget(isDev: boolean): void {
   if (widgetWindow()) return
 
+  /*
+   * O transparente, o esmerilada: las dos a la vez no.
+   *
+   * Transparente, la ventana desaparece y solo se ve la tarjeta redondeada que
+   * pinta la página, con su sombra. Esmerilada, la ventana es la tarjeta: la
+   * rellena Windows con su acrílico y le redondea las esquinas él mismo, que es
+   * lo que hacen sus propios paneles.
+   */
+  const esmerilada = getSettings().widgetBlur
+  esmeriladaAlCrearla = esmerilada
+
   widget = new BrowserWindow({
     width: ANCHO,
     height: ALTO_MINIMO,
     show: false,
     frame: false,
-    transparent: true,
+    transparent: !esmerilada,
+    ...(esmerilada ? { backgroundMaterial: 'acrylic' as const, roundedCorners: true } : {}),
     resizable: false,
     // Ni en la barra de tareas ni en Alt+Tab: no es una ventana a la que se
     // vuelva, es algo que está ahí puesto.
@@ -183,10 +213,13 @@ export function destroyWidget(): void {
 
 /** Lo enciende o lo apaga según lo que digan los ajustes ahora mismo. */
 export function sincronizarWidget(isDev: boolean): void {
-  if (getSettings().widgetVisible) {
-    if (widgetWindow()) colocarWidget()
-    else createWidget(isDev)
-  } else {
+  if (!getSettings().widgetVisible) {
     destroyWidget()
+    return
   }
+  // Cambiar el esmerilado obliga a rehacerla: es del constructor y no se puede
+  // encender sobre la marcha.
+  if (widgetWindow() && esmeriladaAlCrearla !== getSettings().widgetBlur) destroyWidget()
+  if (widgetWindow()) colocarWidget()
+  else createWidget(isDev)
 }

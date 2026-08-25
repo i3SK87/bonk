@@ -222,6 +222,13 @@ export function SettingsView(): ReactNode {
               </Field>
 
               <Checkbox
+                checked={settings.widgetBlur}
+                onChange={(value) => updateSettings({ widgetBlur: value })}
+                label="Fondo esmerilado"
+                hint="El acrílico de Windows 11: desenfoca lo que hay detrás. Al cambiarlo, el widget parpadea una vez."
+              />
+
+              <Checkbox
                 checked={settings.widgetOnTop}
                 onChange={(value) => updateSettings({ widgetOnTop: value })}
                 label="Por delante de las ventanas"

@@ -53,6 +53,9 @@ function Widget(): React.ReactNode {
     const raiz = document.documentElement
     raiz.setAttribute('data-theme', esOscuro(settings.theme) ? 'dark' : 'light')
     raiz.setAttribute('data-palette', settings.palette)
+    // Con el acrílico de Windows detrás, la tarjeta no dibuja fondo ni sombra.
+    if (settings.widgetBlur) raiz.setAttribute('data-esmerilado', '')
+    else raiz.removeAttribute('data-esmerilado')
   }, [settings])
 
   /*
@@ -65,8 +68,24 @@ function Widget(): React.ReactNode {
   useEffect(() => {
     const nodo = caja.current
     if (!nodo) return
+    /*
+     * La tarjeta con sus márgenes, y no el documento.
+     *
+     * `scrollHeight` parecía lo suyo y es una trampa: nunca baja del alto de la
+     * ventana, así que la medida arrastraba lo que ya medía la ventana y esta
+     * solo podía crecer. Quitando una cuenta se quedaba con el hueco de la que
+     * ya no estaba, y un arrastre le sumaba unos píxeles cada vez.
+     *
+     * La tarjeta sí se mide sola, pero `getBoundingClientRect` no cuenta sus
+     * márgenes —los diez píxeles de aire que necesita la sombra—, así que se le
+     * suman a mano.
+     */
     const medir = (): void => {
-      api.widget.resize(Math.ceil(nodo.getBoundingClientRect().height)).catch(() => undefined)
+      const caja = nodo.getBoundingClientRect()
+      const estilo = getComputedStyle(nodo)
+      const alto =
+        caja.height + parseFloat(estilo.marginTop || '0') + parseFloat(estilo.marginBottom || '0')
+      api.widget.resize(Math.ceil(alto)).catch(() => undefined)
     }
     medir()
     const observador = new ResizeObserver(medir)
@@ -87,11 +106,28 @@ function Widget(): React.ReactNode {
 
   const empezarArrastre = async (evento: React.PointerEvent<HTMLDivElement>): Promise<void> => {
     if (evento.button !== 0) return
+    /*
+     * El elemento se guarda antes de esperar.
+     *
+     * React reutiliza el objeto del evento en cuanto el manejador devuelve, y
+     * `currentTarget` se queda a nulo: tras el `await` reventaba al pedir la
+     * captura del puntero. Sin captura, el arrastre se paraba en cuanto el ratón
+     * salía de la ventana, que moviendo algo de doscientos píxeles es siempre.
+     */
+    const tarjeta = evento.currentTarget
+    const puntero = evento.pointerId
+    const pantalla = { x: evento.screenX, y: evento.screenY }
+
     const marco = await api.widget.bounds()
     if (!marco) return
     // Dónde se agarró la tarjeta, para que no dé un salto al primer movimiento.
-    arrastre.current = { x: evento.screenX - marco.x, y: evento.screenY - marco.y }
-    evento.currentTarget.setPointerCapture(evento.pointerId)
+    arrastre.current = { x: pantalla.x - marco.x, y: pantalla.y - marco.y }
+    try {
+      tarjeta.setPointerCapture(puntero)
+    } catch {
+      // El puntero ya se ha soltado: el arrastre fue tan corto que terminó antes
+      // de que llegara la respuesta. No hay nada que capturar ni nada que hacer.
+    }
   }
 
   const seguirArrastre = (evento: React.PointerEvent<HTMLDivElement>): void => {
@@ -103,7 +139,9 @@ function Widget(): React.ReactNode {
   const soltarArrastre = (evento: React.PointerEvent<HTMLDivElement>): void => {
     if (!arrastre.current) return
     arrastre.current = null
-    evento.currentTarget.releasePointerCapture(evento.pointerId)
+    if (evento.currentTarget.hasPointerCapture(evento.pointerId)) {
+      evento.currentTarget.releasePointerCapture(evento.pointerId)
+    }
   }
 
   if (!settings) return null
@@ -129,6 +167,19 @@ function Widget(): React.ReactNode {
     .filter((cuenta) => !cuenta.excludeFromTotal)
     .reduce((suma, cuenta) => suma + cuenta.balanceInBase, 0)
 
+  /*
+   * Con una sola cuenta, la cifra no se dice dos veces.
+   *
+   * El patrimonio y su saldo son el mismo número, y repetirlo con una raya en
+   * medio hace pensar que son dos cosas distintas. Se pone su nombre al lado del
+   * rótulo y se queda una sola cifra.
+   *
+   * Solo cuando de verdad coinciden: enseñando una cuenta de tres, el total no es
+   * su saldo y las dos cifras cuentan cosas distintas.
+   */
+  const unica =
+    visibles.length === 1 && visibles[0].balanceInBase === patrimonio ? visibles[0] : null
+
   return (
     <div
       ref={caja}
@@ -140,7 +191,16 @@ function Widget(): React.ReactNode {
       onDoubleClick={() => api.widget.open()}
       title="Arrastra para moverlo · doble clic para abrir BONK"
     >
-      <div className="widget-rotulo">Patrimonio</div>
+      <div className="widget-rotulo">
+        {unica ? (
+          <>
+            <Avatar icon={unica.icon} color={unica.color} size="small" />
+            <span className="nombre truncate">{unica.name}</span>
+          </>
+        ) : (
+          'Patrimonio'
+        )}
+      </div>
       <div
         className={`widget-total amount ${
           patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
@@ -149,7 +209,7 @@ function Widget(): React.ReactNode {
         {formatMoney(patrimonio, divisa)}
       </div>
 
-      {visibles.length > 0 && (
+      {!unica && visibles.length > 0 && (
         <div className="widget-cuentas">
           {visibles.map((cuenta) => (
             <div key={cuenta.id} className="widget-cuenta">

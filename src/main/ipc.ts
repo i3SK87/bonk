@@ -377,7 +377,9 @@ export function registerIpc(
    * ni doble clic para abrir la aplicación ni menú del botón derecho.
    */
   handle('widget:move', (x: number, y: number) => moverWidget(x, y))
-  handle('widget:bounds', () => widgetWindow()?.getBounds() ?? null)
+  // Los del contenido: es lo que la página conoce como su ventana, y con los
+  // del marco el agarre del arrastre salía desplazado.
+  handle('widget:bounds', () => widgetWindow()?.getContentBounds() ?? null)
   /** Lo que mide su contenido: la ventana se estira a lo que haya que enseñar. */
   handle('widget:resize', (height: number) => colocarWidget(height))
   handle('widget:open', () => notifications.onClick())

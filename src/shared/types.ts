@@ -375,6 +375,16 @@ export interface Settings {
   widgetOpacity: number
   /** Por delante de todas las ventanas. Apagado se queda en el orden normal. */
   widgetOnTop: boolean
+  /**
+   * Fondo esmerilado, del de Windows 11.
+   *
+   * Lo desenfoca el sistema, no la página: en una ventana transparente el
+   * `backdrop-filter` del navegador no tiene nada detrás que desenfocar —el
+   * escritorio no entra en la página—, así que se pide a Windows con
+   * `backgroundMaterial`. Eso obliga a que la ventana no sea transparente, así
+   * que encenderlo y apagarlo la vuelve a crear.
+   */
+  widgetBlur: boolean
   /** Qué cuentas salen. Vacío es todas, que es como empieza. */
   widgetAccountIds: number[]
   lastMonthlySummary: string | null

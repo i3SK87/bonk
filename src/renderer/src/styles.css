@@ -3287,29 +3287,46 @@ button.list-row:focus-visible {
 /* ---------- El widget del escritorio ---------- */
 
 /*
+ * El documento del widget no se pinta: se ve el escritorio.
+ *
+ * Va aquí y no en su HTML porque esta hoja entra después que el `<style>` de la
+ * cabecera y le ganaba: el `background` del cuerpo la dejaba opaca y la ventana
+ * entera salía como un recuadro sobre el fondo de pantalla. Con el atributo en la
+ * raíz gana esta regla, que es la que tiene que ganar.
+ *
+ * Y sin alto forzado: la ventana se estira a lo que mida el contenido, así que el
+ * contenido no puede estirarse a lo que mida la ventana.
+ */
+:root[data-widget],
+:root[data-widget] body,
+:root[data-widget] #root {
+  height: auto;
+  background: transparent;
+  overflow: hidden;
+}
+
+/*
  * La tarjeta que se ve sobre el fondo de pantalla.
  *
- * Lleva su propio color de fondo y no el de la aplicación: aquí no hay ventana
- * detrás, hay lo que tenga el usuario puesto de escritorio, y sobre una foto
- * clara un gris translúcido no sostiene el texto. El desenfoque hace el resto:
- * separa la tarjeta de lo que haya debajo sin taparlo del todo.
+ * Lleva su propio color y no el de la aplicación: aquí no hay ventana detrás,
+ * hay lo que el usuario tenga de escritorio, y sobre una foto clara un gris
+ * translúcido no sostiene el texto.
  *
  * El aire de fuera es para la sombra: la ventana no tiene la del sistema —en una
- * transparente sale un recuadro gris alrededor de nada— así que se dibuja aquí,
+ * transparente sale un recuadro gris alrededor de nada—, así que se dibuja aquí
  * y necesita sitio dentro de la ventana para caber.
  */
 .widget {
   margin: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-  backdrop-filter: blur(18px);
+  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   color: var(--fg);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   /* Se arrastra, así que el cursor lo dice y el texto no se selecciona por el
      camino: al mover la tarjeta salía media línea en azul. */
   cursor: grab;
@@ -3320,18 +3337,47 @@ button.list-row:focus-visible {
   cursor: grabbing;
 }
 
+/*
+ * Con el esmerilado de Windows, la ventana ya es la tarjeta.
+ *
+ * El acrílico lo pinta el sistema en la ventana entera y le redondea él las
+ * esquinas, así que aquí sobran el margen, el fondo propio, el borde y la
+ * sombra: dibujarlos otra vez daría una tarjeta dentro de otra.
+ */
+:root[data-esmerilado] .widget {
+  margin: 0;
+  padding: 13px 15px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
 .widget-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 9.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--fg-subtle);
 }
 
+/* El nombre de una cuenta no es un rótulo de sección: va en su caja y en su
+   tamaño, que en versales y espaciado «CaixaBank» se lee como un cartel. */
+.widget-rotulo .nombre {
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg-muted);
+  min-width: 0;
+}
+
 .widget-total {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 /* La raya separa el total de su desglose; el hueco de arriba es mayor que el de
@@ -3339,9 +3385,9 @@ button.list-row:focus-visible {
 .widget-cuentas {
   display: flex;
   flex-direction: column;
-  gap: 7px;
-  margin-top: 11px;
-  padding-top: 11px;
+  gap: 6px;
+  margin-top: 9px;
+  padding-top: 9px;
   border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
@@ -3349,7 +3395,7 @@ button.list-row:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12.5px;
+  font-size: 12px;
 }
 
 /* El nombre se queda con lo que sobre y la cifra nunca se parte: en una tarjeta
@@ -3361,77 +3407,6 @@ button.list-row:focus-visible {
 }
 
 .widget-cuenta .amount {
-  font-size: 12.5px;
+  font-size: 12px;
   white-space: nowrap;
-}
-
-/*
- * La rejilla de las nueve esquinas.
- *
- * Es un mapa de la pantalla en pequeño: se pulsa la esquina donde se quiere el
- * widget. Cada celda es un rectángulo con las proporciones de un monitor, y la
- * elegida se enciende del color de acento.
- */
-.anclas {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  width: 132px;
-  padding: 5px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-sunken);
-  border: 1px solid var(--border);
-}
-
-.ancla {
-  aspect-ratio: 16 / 10;
-  border-radius: 3px;
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
-
-.ancla:hover {
-  background: var(--border-strong);
-}
-
-.ancla.active {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-/*
- * El deslizador.
- *
- * Con el aspecto que trae el navegador en Windows es un carril gris y un cuadro
- * gris, que en tema oscuro casi no se ve. Se le pinta el carril y el tirador con
- * los mismos colores que todo lo demás.
- */
-.deslizador {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 100%;
-  max-width: 260px;
-  height: 4px;
-  border-radius: var(--radius-pill);
-  background: var(--bg-sunken);
-  border: 1px solid var(--border);
-  cursor: pointer;
-}
-
-.deslizador::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 2px solid var(--bg-elevated);
-  box-shadow: var(--shadow-sm);
-}
-
-.deslizador:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
 }
