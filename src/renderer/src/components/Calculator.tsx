@@ -137,32 +137,38 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
 
       {open && (
         <div style={panelStyle}>
-          <input
-            ref={inputRef}
-            className="input calc-expr"
-            value={expr}
-            placeholder="33,99/4"
-            spellCheck={false}
-            onChange={(event) => setExpr(event.target.value)}
-            onKeyDown={(event) => {
-              // Primero resuelve y luego copia, que es el orden en que se usa:
-              // una calculadora de verdad no te copia nada a medio sumar.
-              if (event.key === 'Enter' || event.key === '=') {
-                event.preventDefault()
-                if (!resolver()) copy()
-              }
-            }}
-          />
-
-          <div className="calc-result">
-            <span className="calc-value amount">
-              {shown ? `${shown} ${currencySymbol(currency)}` : '—'}
-            </span>
+          {/*
+            * La cuenta y el botón de copiar, en la misma caja.
+            *
+            * El resultado tenía su propia línea debajo, repitiendo en grande lo
+            * que Enter deja escrito aquí arriba de todos modos. Una caja y una
+            * cifra: se teclea, Enter la resuelve en su sitio, y el botón se
+            * lleva lo que haya salido.
+            */}
+          <div className="calc-caja">
+            <input
+              ref={inputRef}
+              className="input calc-expr"
+              value={expr}
+              placeholder="33,99/4"
+              spellCheck={false}
+              onChange={(event) => setExpr(event.target.value)}
+              onKeyDown={(event) => {
+                // Primero resuelve y luego copia, que es el orden en que se usa:
+                // una calculadora de verdad no te copia nada a medio sumar.
+                if (event.key === 'Enter' || event.key === '=') {
+                  event.preventDefault()
+                  if (!resolver()) copy()
+                }
+              }}
+            />
             <button
-              className="btn ghost icon"
+              className="btn ghost icon calc-copiar"
               onClick={copy}
               disabled={result == null}
-              title="Copiar el resultado para pegarlo en el importe"
+              // Con la cuenta sin resolver dice cuánto va a copiar: es la única
+              // forma que queda de ver el resultado sin pulsar el igual.
+              title={result == null ? 'Copiar el resultado' : `Copiar ${shown} ${currencySymbol(currency)}`}
               aria-label="Copiar el resultado"
             >
               <Icon name="copy" size={15} />
