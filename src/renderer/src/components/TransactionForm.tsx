@@ -304,7 +304,7 @@ export function TransactionForm({
     }
 
     if (keepOpen) {
-      // "Guardar y otro": se conserva el contexto y se limpia lo que es de ese
+      // «Guardar y seguir»: se conserva el contexto y se limpia lo que es de ese
       // movimiento y no del siguiente.
       setAmount(0)
       setNote('')
@@ -347,9 +347,19 @@ export function TransactionForm({
             <button className="btn" onClick={onClose}>
               Cancelar
             </button>
+            {/* Guarda igual que el de al lado, así que va del mismo color:
+                perfilado y no relleno, que el relleno es de la acción con la que
+                se cierra la ficha. Se llamó «Guardar y otro», que no lo dice
+                nadie, y «Seguir añadiendo» se callaba lo importante —que esto
+                guarda—; quien duda de si ha guardado no pulsa. */}
             {!existing && (
-              <button className="btn" onClick={() => save(true)} disabled={saving}>
-                Guardar y otro
+              <button
+                className="btn acento"
+                onClick={() => save(true)}
+                disabled={saving}
+                title="Guarda este movimiento y deja la ficha abierta para el siguiente"
+              >
+                Guardar y seguir
               </button>
             )}
             <button className="btn primary" onClick={() => save(false)} disabled={saving}>

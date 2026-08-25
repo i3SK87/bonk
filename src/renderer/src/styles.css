@@ -800,6 +800,23 @@ p { margin: 0; }
   color: var(--negative);
 }
 
+/*
+ * La acción hermana de la principal: hace lo mismo, sin cerrar.
+ *
+ * Perfilada del color del relleno de la principal y con el texto en el tono
+ * claro del acento, que el fuerte está pensado para sostener blanco encima y
+ * como texto sobre la tarjeta se apaga. Así las dos que guardan se leen juntas
+ * y Cancelar, que es la única que no guarda, se queda aparte.
+ */
+.btn.acento {
+  border-color: var(--accent-strong);
+  color: var(--accent);
+}
+
+.btn.acento:hover {
+  background: var(--accent-soft);
+}
+
 .btn.small {
   padding: 5px 10px;
   font-size: 12.5px;
