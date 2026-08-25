@@ -3,7 +3,7 @@ import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
-import { CategoryModal } from '../components/CategoryForm'
+import { CategoriaRapida } from '../components/CategoriaRapida'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
@@ -167,7 +167,7 @@ export function ReportsView(): ReactNode {
    * de vez en cuando.
    */
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
-  const [editando, setEditando] = useState<Category | null>(null)
+  const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
@@ -245,6 +245,51 @@ export function ReportsView(): ReactNode {
     const ahora = new Set(categories.map((item) => item.categoryId))
     return antes.filter((item) => !ahora.has(item.categoryId)).sort((a, b) => b.total - a.total)
   }, [categories, antes, comparacion])
+  /*
+   * Los movimientos que se van a mudar de categoría.
+   *
+   * Se piden al abrir el cuadro y no al aceptarlo, para poder decir cuántos son
+   * antes de que se decida nada: mover cuarenta movimientos de golpe no puede
+   * ser una sorpresa. Y los mismos ids que se cuentan son los que luego se
+   * mueven, así que la cifra que se enseña no puede desmentirse después.
+   *
+   * Solo los del periodo que se está mirando, que es lo que la fila cuenta. Una
+   * categoría arrastra años de movimientos, y mover en silencio los de enero
+   * porque estabas mirando agosto es tocar datos que no tenías delante.
+   *
+   * Se piden a la lista y no se sacan del desglose porque el desglose son
+   * totales, no movimientos: no lleva ni un id. De paso entran los reembolsos,
+   * que el desglose no cuenta pero que llevan la categoría del gasto que
+   * devuelven: dejarlos atrás partiría el gasto y su devolución en dos
+   * categorías distintas.
+   */
+  const abrirMudanza = async (categoria: Category): Promise<void> => {
+    const filas = await run(() =>
+      api.transactions.list({
+        from: range.from,
+        to: range.to,
+        categoryIds: [categoria.id],
+        limit: 100000
+      })
+    )
+    if (!filas) return
+    if (filas.length === 0) {
+      toast(`${categoria.name} no tiene movimientos en este periodo`, 'error')
+      return
+    }
+    setMoviendo({ categoria, ids: filas.map((item) => item.id) })
+  }
+
+  const mover = async (hasta: number | null): Promise<void> => {
+    if (!moviendo || hasta === moviendo.categoria.id) return
+    const nombre = hasta == null ? 'Sin categoría' : catalogo.find((item) => item.id === hasta)?.name
+    const cuantos = moviendo.ids.length
+    await run(
+      () => api.transactions.setCategory(moviendo.ids, hasta),
+      `${cuantos} ${cuantos === 1 ? 'movimiento pasa' : 'movimientos pasan'} a ${nombre}`
+    )
+  }
+
   // La barra de cada fila se mide contra la categoría más grande, no contra el
   // total: si se midiera contra el total, todas saldrían diminutas.
   const widest = Math.max(1, ...categories.map((item) => item.total))
@@ -622,9 +667,10 @@ export function ReportsView(): ReactNode {
         </>
       )}
 
-      {/* Una sola opción, porque es la única que tiene sentido aquí: borrar una
-          categoría desde el informe que la está contando sería raro, y crear una
-          no se hace mirando un desglose. */}
+      {/* Una sola opción, la misma que en Movimientos: el informe es donde se
+          ve que algo está mal clasificado —una fila que no debería pesar tanto,
+          o que no debería existir— y hasta ahora había que irse a la lista,
+          buscar sus movimientos y cambiarlos de uno en uno. */}
       {menu && (
         <MenuContextual
           x={menu.x}
@@ -632,9 +678,9 @@ export function ReportsView(): ReactNode {
           opciones={
             [
               {
-                etiqueta: 'Editar categoría',
-                icono: 'edit',
-                onElegir: () => setEditando(menu.categoria)
+                etiqueta: 'Cambiar categoría',
+                icono: 'tag',
+                onElegir: () => abrirMudanza(menu.categoria)
               }
             ] satisfies OpcionMenu[]
           }
@@ -642,12 +688,15 @@ export function ReportsView(): ReactNode {
         />
       )}
 
-      {editando && (
-        <CategoryModal
-          category={editando}
-          defaultKind={editando.kind}
-          onClose={() => setEditando(null)}
-          onSave={(input) => run(() => api.categories.save(input), 'Categoría actualizada')}
+      {moviendo && (
+        <CategoriaRapida
+          kind={moviendo.categoria.kind}
+          puesta={moviendo.categoria.id}
+          contexto={`${moviendo.ids.length} ${
+            moviendo.ids.length === 1 ? 'movimiento' : 'movimientos'
+          } de ${moviendo.categoria.name}, del ${formatDate(range.from)} al ${formatDate(range.to)}.`}
+          onClose={() => setMoviendo(null)}
+          onElegir={mover}
         />
       )}
     </>

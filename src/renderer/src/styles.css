@@ -1405,6 +1405,24 @@ p { margin: 0; }
   text-overflow: ellipsis;
 }
 
+/* El título deja de ser una línea de texto suelta para poder llevar la marca
+   al lado: el nombre se queda con el hueco que sobre y la pastilla no se
+   encoge, que una pastilla recortada no se lee. */
+.tx-title-con-marca {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: visible;
+}
+
+.tx-title-con-marca > .truncate {
+  min-width: 0;
+}
+
+.tx-title-con-marca > .pill {
+  flex-shrink: 0;
+}
+
 .tx-sub {
   font-size: 12px;
   color: var(--fg-muted);

@@ -963,7 +963,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       )}
 
       {cambiandoCategoria && (
-        <CategoriaRapida row={cambiandoCategoria} onClose={() => setCambiandoCategoria(null)} />
+        <CategoriaRapida
+          kind={cambiandoCategoria.type === 'income' ? 'income' : 'expense'}
+          puesta={cambiandoCategoria.categoryId}
+          onClose={() => setCambiandoCategoria(null)}
+          // `setCategory` reescribe la categoría y nada más, así que la fecha,
+          // el importe, las etiquetas y los adjuntos ni se enteran.
+          onElegir={async (categoryId) => {
+            await run(
+              () => api.transactions.setCategory([cambiandoCategoria.id], categoryId),
+              'Categoría actualizada'
+            )
+          }}
+        />
       )}
 
       {devolviendo && (
@@ -1033,8 +1045,16 @@ function ProjectedRow({
         color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
       />
       <div className="tx-main">
-        <div className="tx-title">{title}</div>
-        <div className="tx-sub">
+        {/*
+          La marca va al lado del título y no en el subtexto.
+
+          Abajo compartía renglón con la nota y la cuenta, y con el filtro de
+          programadas puesto —cuando media lista son previsiones— había que
+          leerse el subtexto entero de cada fila para saber cuál era una previsión
+          y cuál no. Arriba, a la altura del título, se ve de un barrido.
+        */}
+        <div className="tx-title tx-title-con-marca">
+          <span className="truncate">{title}</span>
           {/* El mismo calendario que el botón que las trae a la lista: la
               marca de la fila y el mando que la enciende hablan de lo mismo, y
               con dos dibujos distintos no se ve que están relacionados. */}
@@ -1042,9 +1062,20 @@ function ProjectedRow({
             <Icon name="calendar" size={11} />
             Programado
           </span>
-          {detail && <span className="truncate">{detail}</span>}
-          {!isTransfer && <span>· {row.accountName}</span>}
         </div>
+        {/* Sin nota y siendo un traspaso no queda nada que poner debajo: el
+            renglón vacío separaba el título del siguiente por nada. */}
+        {(detail || !isTransfer) && (
+          <div className="tx-sub">
+            {detail && <span className="truncate">{detail}</span>}
+            {!isTransfer && (
+              <span>
+                {detail ? '· ' : ''}
+                {row.accountName}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {onRegister && (
