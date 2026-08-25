@@ -2222,13 +2222,21 @@ button.list-row:focus-visible {
 
 /* ---------- Deuda saldada ---------- */
 
+/*
+ * Por delante de la caja de la enhorabuena, no por detrás.
+ *
+ * Los papelillos salen del centro de la pantalla, que es justo donde está la
+ * caja: por debajo, la mitad de la tirada no se veía nunca y lo que asomaba
+ * eran los bordes. Delante no molesta —el lienzo no recoge clics— y se ve
+ * entera.
+ */
 .confetti {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 101;
+  z-index: 103;
 }
 
 .celebration {
@@ -2683,10 +2691,23 @@ button.list-row:focus-visible {
   padding-right: 38px;
 }
 
+/*
+ * Quieto al pulsarlo.
+ *
+ * Va centrado con un `translateY`, y el encogido que llevan todos los botones
+ * al pulsarlos escribe otro `transform` que se lo lleva por delante: el botón
+ * daba un salto de media altura hacia abajo y volvía. Aquí el transform es
+ * colocación, no adorno, así que no se toca.
+ */
 .calc-copiar {
   position: absolute;
   right: 4px;
   top: 50%;
+  transform: translateY(-50%);
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.calc-copiar:active {
   transform: translateY(-50%);
 }
 

@@ -197,10 +197,6 @@ export function CalculatorButton({ currency }: { currency: string }): ReactNode 
               =
             </button>
           </div>
-
-          <div className="small subtle" style={{ marginTop: 8 }}>
-            Se puede teclear directamente. Enter resuelve, y otra vez copia.
-          </div>
         </div>
       )}
     </div>
