@@ -828,6 +828,7 @@ p { margin: 0; }
   height: 32px;
 }
 
+
 /* Sin relleno pero con borde: para lo que se abre desde una barra sin ser una
    de sus acciones. El fantasma no vale —ese tampoco tiene borde y se pierde
    entre los mandos de al lado—, y el normal pesa como si fuera lo principal. */
@@ -1567,7 +1568,12 @@ p { margin: 0; }
 .list-row:hover .pill,
 .card.flush .list-row.linked-active .pill,
 .list-row.clickable:hover .pill,
-.tarjeta-clicable:hover .pill {
+.tarjeta-clicable:hover .pill,
+/* Y mientras su menú esté abierto: la fila se queda encendida aunque el ratón
+   se vaya hacia las opciones, así que sus etiquetas tienen que quedarse igual.
+   Si no, la fila seguía resaltada pero sus etiquetas volvían al gris de fondo y
+   desaparecían contra él, que es justo lo que esta regla vino a evitar. */
+.marcada .pill {
   background: var(--border-strong);
   color: var(--fg);
 }
@@ -1579,7 +1585,8 @@ p { margin: 0; }
 .list-row:hover .pill.tag,
 .card.flush .list-row.linked-active .pill.tag,
 .list-row.clickable:hover .pill.tag,
-.tarjeta-clicable:hover .pill.tag {
+.tarjeta-clicable:hover .pill.tag,
+.marcada .pill.tag {
   background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
   color: var(--tag-color, var(--fg-muted));
 }
@@ -1591,7 +1598,8 @@ p { margin: 0; }
 .list-row:hover .pill.reembolso,
 .card.flush .list-row.linked-active .pill.reembolso,
 .list-row.clickable:hover .pill.reembolso,
-.tarjeta-clicable:hover .pill.reembolso {
+.tarjeta-clicable:hover .pill.reembolso,
+.marcada .pill.reembolso {
   color: var(--positive);
 }
 
@@ -3223,4 +3231,37 @@ button.list-row:focus-visible {
 .cuota:last-child {
   border-top-right-radius: var(--radius-pill);
   border-bottom-right-radius: var(--radius-pill);
+}
+
+/* ---------- El cursor de «aquí hay un menú» ---------- */
+
+/*
+ * `context-menu` es un cursor estándar —la flecha con el menú al lado— y lo
+ * dibuja el propio Windows con el tema que tenga puesto el usuario, así que no
+ * hay ninguna imagen que mantener ni nada que se descuadre en pantallas de mucha
+ * densidad.
+ *
+ * A cambio se pierde la manita, y estas filas también se pulsan con el
+ * izquierdo. Es el trato: se cambia la señal de «esto se puede pulsar» —que la
+ * fila ya da encendiéndose al pasar por encima— por la de «aquí hay más de lo
+ * que se ve».
+ *
+ * Va en su propia clase y no en la de la fila porque no todas las listas tienen
+ * menú: Cuentas, Categorías y Planes comparten el mismo aspecto y no esconden
+ * nada. Y va al final de la hoja y con el nombre de cada fila delante porque
+ * cada una trae su propio `cursor: pointer`, que sin esto ganaría por orden.
+ */
+.tx-row.con-menu,
+.list-row.con-menu,
+.list-row.clickable.con-menu,
+.tarjeta-clicable.con-menu,
+.table.breakdown tbody tr.con-menu {
+  cursor: context-menu;
+}
+
+/* Los botones de dentro de la fila siguen siendo botones: ahí el clic derecho no
+   hace nada distinto y la manita es lo que toca. */
+.con-menu .btn,
+.con-menu button {
+  cursor: pointer;
 }

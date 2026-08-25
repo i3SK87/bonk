@@ -1220,6 +1220,8 @@ function TransactionRow({
     <div
       className={[
         'tx-row',
+        // Solo las que de verdad lo tienen: una prevista no ofrece menú.
+        onMenu ? 'con-menu' : '',
         selected ? 'selected' : '',
         marcada ? 'marcada' : '',
         // Anidada ya se ve colgando: la marca del canto sobraría.
