@@ -111,10 +111,9 @@ const FALLBACK_SETTINGS: Settings = {
   balanceEn: 'porcentaje',
   widgetVisible: true,
   widgetAnchor: 'bottomRight',
-  widgetX: 0,
-  widgetY: 0,
   widgetOpacity: 0.92,
   widgetOnTop: false,
+  widgetGris: false,
   widgetAccountIds: [],
   lastMonthlySummary: null,
   lastBackupAt: null

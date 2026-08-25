@@ -13,7 +13,7 @@
  */
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import { getSettings, updateSettings } from './repos/settings'
+import { getSettings } from './repos/settings'
 import type { WidgetAnchor } from '@shared/types'
 
 /** Lo que mide, en píxeles de escritorio. La ventana se ajusta a su contenido. */
@@ -23,9 +23,6 @@ const ALTO_MINIMO = 96
 const MARGEN = 18
 
 let widget: BrowserWindow | null = null
-/** Al arrastrarlo se guarda la posición, pero no en cada píxel: eso son cientos
- *  de escrituras por segundo. Se espera a que pare. */
-let guardadoPendiente: NodeJS.Timeout | null = null
 
 export function widgetWindow(): BrowserWindow | null {
   return widget && !widget.isDestroyed() ? widget : null
@@ -69,13 +66,14 @@ function sitioDe(anchor: WidgetAnchor, alto: number): { x: number; y: number } {
 }
 
 /**
- * Lo devuelve a la pantalla si se ha quedado fuera.
+ * Lo devuelve a la pantalla si su esquina ya no existe.
  *
  * Con dos pantallas, desenchufar la segunda deja el widget en unas coordenadas
- * que ya no existen: la ventana está viva, ocupa memoria y no se ve por ninguna
- * parte. Se comprueba al colocarlo, que es cuando puede haber cambiado.
+ * que ya no están: la ventana viva, ocupando memoria y sin verse por ninguna
+ * parte. Como las esquinas se recalculan en cada colocación, basta con no dejar
+ * que el resultado se salga.
  */
-function dentroDeLaPantalla(x: number, y: number, alto: number): { x: number; y: number } {
+function dentroDeLaPantalla(x: number, y: number): { x: number; y: number } {
   const cerca = screen.getDisplayNearestPoint({ x, y }).workArea
   const visible = 60
   return {
@@ -101,33 +99,25 @@ export function colocarWidget(alto?: number): void {
   const settings = getSettings()
   const altura = Math.max(ALTO_MINIMO, Math.round(alto ?? win.getContentBounds().height))
 
-  const sitio =
-    settings.widgetAnchor === 'libre'
-      ? dentroDeLaPantalla(settings.widgetX, settings.widgetY, altura)
-      : sitioDe(settings.widgetAnchor, altura)
+  const esquina = sitioDe(settings.widgetAnchor, altura)
+  const sitio = dentroDeLaPantalla(esquina.x, esquina.y)
 
   win.setContentBounds({ ...sitio, width: ANCHO, height: altura })
-  win.setOpacity(Math.min(1, Math.max(0.2, settings.widgetOpacity)))
+  /*
+   * La ventana, siempre opaca.
+   *
+   * Lo que se aclara es el fondo de la tarjeta, que lo pinta la página. Con
+   * `setOpacity` se desvanecía la ventana entera y con ella las cifras y los
+   * iconos: el icono blanco de una cuenta se perdía contra el escritorio mucho
+   * antes que el cristal.
+   */
+  win.setOpacity(1)
   /*
    * `screen-saver` y no `normal`: por encima de las ventanas normales hay más
    * capas —barras de tareas de terceros, superposiciones— y en la de siempre el
    * widget acababa tapado por cosas que el usuario no considera ventanas.
    */
   win.setAlwaysOnTop(settings.widgetOnTop, 'screen-saver')
-}
-
-/** Lo mueve mientras se arrastra. Guarda la posición cuando el pulso para. */
-export function moverWidget(x: number, y: number): void {
-  const win = widgetWindow()
-  if (!win) return
-  const { height } = win.getContentBounds()
-  const sitio = dentroDeLaPantalla(Math.round(x), Math.round(y), height)
-  win.setContentBounds({ ...sitio, width: ANCHO, height })
-
-  if (guardadoPendiente) clearTimeout(guardadoPendiente)
-  guardadoPendiente = setTimeout(() => {
-    updateSettings({ widgetAnchor: 'libre', widgetX: sitio.x, widgetY: sitio.y })
-  }, 400)
 }
 
 export function createWidget(isDev: boolean): void {
@@ -192,10 +182,6 @@ export function createWidget(isDev: boolean): void {
 }
 
 export function destroyWidget(): void {
-  if (guardadoPendiente) {
-    clearTimeout(guardadoPendiente)
-    guardadoPendiente = null
-  }
   widgetWindow()?.destroy()
   widget = null
 }

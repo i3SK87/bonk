@@ -12,12 +12,12 @@ export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
 /**
- * Dónde se planta el widget del escritorio.
+ * Dónde se planta el widget del escritorio: una de las nueve esquinas.
  *
- * Nueve anclas y `libre`, que es donde lo hayas dejado al arrastrarlo. Las nueve
- * se recalculan contra el área útil de la pantalla, así que sobreviven a un
- * cambio de resolución o a que aparezca una segunda pantalla; la libre no, y por
- * eso se guarda con sus coordenadas al lado.
+ * Se recalculan contra el área útil de la pantalla, así que sobreviven a un
+ * cambio de resolución o a que aparezca una segunda pantalla. No hay posición
+ * libre: se probó a arrastrarlo y no aporta nada frente a decir la esquina, y a
+ * cambio la tarjeta tenía que tragarse el ratón para poder moverse.
  */
 export type WidgetAnchor =
   | 'topLeft'
@@ -29,7 +29,6 @@ export type WidgetAnchor =
   | 'bottomLeft'
   | 'bottom'
   | 'bottomRight'
-  | 'libre'
 
 /** En qué se leen las diferencias de Informes: en porcentaje o en su unidad. */
 export type UnidadCambio = 'porcentaje' | 'valor'
@@ -368,11 +367,16 @@ export interface Settings {
   /** En pantalla o escondido. Se apaga desde su menú y se enciende en Ajustes. */
   widgetVisible: boolean
   widgetAnchor: WidgetAnchor
-  /** Solo valen con el ancla `libre`: donde lo dejaste al arrastrarlo. */
-  widgetX: number
-  widgetY: number
-  /** De 0,2 a 1. Por debajo de 0,2 no se ve y no se puede volver a agarrar. */
+  /**
+   * Cuánto se ve la tarjeta, de 0,2 a 1.
+   *
+   * Va al fondo de la tarjeta y no a la ventana: bajándole la opacidad a la
+   * ventana entera se desvanecían también las cifras y los iconos, que es lo que
+   * se viene a leer. Así el cristal se aclara y lo escrito encima no se toca.
+   */
   widgetOpacity: number
+  /** En gris: los colores de las cuentas y de las cifras se apagan. */
+  widgetGris: boolean
   /** Por delante de todas las ventanas. Apagado se queda en el orden normal. */
   widgetOnTop: boolean
   /** Qué cuentas salen. Vacío es todas, que es como empieza. */

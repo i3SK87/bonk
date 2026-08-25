@@ -43,8 +43,7 @@ const NOMBRE_DE_ANCLA: Record<WidgetAnchor, string> = {
   right: 'A la derecha',
   bottomLeft: 'Abajo a la izquierda',
   bottom: 'Abajo en el centro',
-  bottomRight: 'Abajo a la derecha',
-  libre: 'Donde lo dejaste'
+  bottomRight: 'Abajo a la derecha'
 }
 
 const api = window.bonk
@@ -187,7 +186,7 @@ export function SettingsView(): ReactNode {
 
           {settings.widgetVisible && (
             <>
-              <Field label="Dónde" hint="Arrastrándolo se coloca libre y se recuerda dónde lo dejaste.">
+              <Field label="Dónde" hint="La esquina de la pantalla donde se planta.">
                 <div className="anclas">
                   {ANCLAS.map((fila, y) =>
                     fila.map((ancla, x) => (
@@ -231,6 +230,13 @@ export function SettingsView(): ReactNode {
                   }
                 />
               </Field>
+
+              <Checkbox
+                checked={settings.widgetGris}
+                onChange={(value) => updateSettings({ widgetGris: value })}
+                label="En escala de grises"
+                hint="Apaga el color de las cuentas y de las cifras: menos ruido sobre un escritorio con dibujo."
+              />
 
               <Checkbox
                 checked={settings.widgetOnTop}

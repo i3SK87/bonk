@@ -105,6 +105,10 @@ try {
   check('y la capa', movido.widgetOnTop)
   settings.setSetting('widgetOpacity', 'nada')
   equal('un número ilegible vuelve al de fábrica', settings.getSettings().widgetOpacity, 0.92)
+  // Lo guardado como «libre» es de cuando el widget se arrastraba: vuelve a su
+  // esquina en vez de dejar la ventana en unas coordenadas que ya nadie escribe.
+  settings.setSetting('widgetAnchor', 'libre')
+  equal('un ancla libre de antes vuelve a su esquina', settings.getSettings().widgetAnchor, 'bottomRight')
   settings.updateSettings({ widgetAnchor: 'bottomRight', widgetOnTop: false })
 
   check('no arranca con Windows sin pedirlo', settings.getSettings().startWithWindows === false)

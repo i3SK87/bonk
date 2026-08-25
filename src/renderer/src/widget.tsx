@@ -8,6 +8,10 @@
  *
  * Se pinta con los mismos tokens, así que la paleta y el tema los hereda sin
  * saber nada de ellos: el atributo en la raíz y a pintar.
+ *
+ * No se arrastra. Se colocó así un tiempo y no aportaba nada frente a decir la
+ * esquina en Ajustes, y a cambio la tarjeta tenía que quedarse con el ratón para
+ * poder moverse. Lo único que se le pulsa es el doble clic, que abre BONK.
  */
 import { StrictMode, useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -71,17 +75,13 @@ function Widget(): React.ReactNode {
      * `scrollHeight` parecía lo suyo y es una trampa: nunca baja del alto de la
      * ventana, así que la medida arrastraba lo que ya medía la ventana y esta
      * solo podía crecer. Quitando una cuenta se quedaba con el hueco de la que
-     * ya no estaba, y un arrastre le sumaba unos píxeles cada vez.
-     *
-     * La tarjeta sí se mide sola, pero `getBoundingClientRect` no cuenta sus
-     * márgenes —los diez píxeles de aire que necesita la sombra—, así que se le
-     * suman a mano.
+     * ya no estaba.
      */
     const medir = (): void => {
-      const caja = nodo.getBoundingClientRect()
+      const rect = nodo.getBoundingClientRect()
       const estilo = getComputedStyle(nodo)
       const alto =
-        caja.height + parseFloat(estilo.marginTop || '0') + parseFloat(estilo.marginBottom || '0')
+        rect.height + parseFloat(estilo.marginTop || '0') + parseFloat(estilo.marginBottom || '0')
       api.widget.resize(Math.ceil(alto)).catch(() => undefined)
     }
     medir()
@@ -90,60 +90,8 @@ function Widget(): React.ReactNode {
     return () => observador.disconnect()
   }, [settings, accounts])
 
-  /*
-   * Arrastrar la tarjeta mueve la ventana.
-   *
-   * A mano y no con `-webkit-app-region: drag`, que se come todos los eventos de
-   * la zona que arrastra: con él no habría ni doble clic para abrir la
-   * aplicación ni menú del botón derecho. Se captura el puntero para que el
-   * arrastre siga aunque el ratón se salga de la ventana, que al mover algo de
-   * doscientos píxeles pasa todo el rato.
-   */
-  const arrastre = useRef<{ x: number; y: number } | null>(null)
-
-  const empezarArrastre = async (evento: React.PointerEvent<HTMLDivElement>): Promise<void> => {
-    if (evento.button !== 0) return
-    /*
-     * El elemento se guarda antes de esperar.
-     *
-     * React reutiliza el objeto del evento en cuanto el manejador devuelve, y
-     * `currentTarget` se queda a nulo: tras el `await` reventaba al pedir la
-     * captura del puntero. Sin captura, el arrastre se paraba en cuanto el ratón
-     * salía de la ventana, que moviendo algo de doscientos píxeles es siempre.
-     */
-    const tarjeta = evento.currentTarget
-    const puntero = evento.pointerId
-    const pantalla = { x: evento.screenX, y: evento.screenY }
-
-    const marco = await api.widget.bounds()
-    if (!marco) return
-    // Dónde se agarró la tarjeta, para que no dé un salto al primer movimiento.
-    arrastre.current = { x: pantalla.x - marco.x, y: pantalla.y - marco.y }
-    try {
-      tarjeta.setPointerCapture(puntero)
-    } catch {
-      // El puntero ya se ha soltado: el arrastre fue tan corto que terminó antes
-      // de que llegara la respuesta. No hay nada que capturar ni nada que hacer.
-    }
-  }
-
-  const seguirArrastre = (evento: React.PointerEvent<HTMLDivElement>): void => {
-    const agarre = arrastre.current
-    if (!agarre) return
-    api.widget.move(evento.screenX - agarre.x, evento.screenY - agarre.y).catch(() => undefined)
-  }
-
-  const soltarArrastre = (evento: React.PointerEvent<HTMLDivElement>): void => {
-    if (!arrastre.current) return
-    arrastre.current = null
-    if (evento.currentTarget.hasPointerCapture(evento.pointerId)) {
-      evento.currentTarget.releasePointerCapture(evento.pointerId)
-    }
-  }
-
   if (!settings) return null
 
-  const divisa = settings.baseCurrency
   /*
    * Las cuentas elegidas, y todas si no se ha elegido ninguna.
    *
@@ -151,91 +99,77 @@ function Widget(): React.ReactNode {
    * dice nada y el que lo estrena no ha marcado nada todavía.
    */
   const elegidas = settings.widgetAccountIds
-  const visibles = accounts.filter(
-    (cuenta) => elegidas.length === 0 || elegidas.includes(cuenta.id)
-  )
+  const visibles = accounts.filter((cuenta) => elegidas.length === 0 || elegidas.includes(cuenta.id))
+
   /*
-   * El patrimonio, con el mismo criterio que la aplicación.
+   * Con una sola cuenta se enseña su saldo, no el patrimonio.
    *
-   * Cuenta todas las que no estén apartadas del total, no solo las que se
-   * enseñan: elegir qué cuentas se ven no puede cambiar cuánto tienes.
+   * El patrimonio de una sola cuenta es un titular que no viene a cuento:
+   * eligiendo la hucha, lo que se quiere ver es lo que hay en la hucha, y salía
+   * el total de todo con el nombre de la hucha al lado. El patrimonio es una
+   * suma, así que solo sale cuando hay algo que sumar.
    */
+  const unica = visibles.length === 1 ? visibles[0] : null
+
   const patrimonio = accounts
     .filter((cuenta) => !cuenta.excludeFromTotal)
     .reduce((suma, cuenta) => suma + cuenta.balanceInBase, 0)
 
+  const cifra = unica ? unica.balance : patrimonio
+  const divisa = unica ? unica.currency : settings.baseCurrency
+  const tono = cifra > 0 ? 'positive' : cifra < 0 ? 'negative' : 'neutral'
+
   /*
-   * Con una sola cuenta, la cifra no se dice dos veces.
+   * Lo que se aclara es el fondo, no el contenido.
    *
-   * El patrimonio y su saldo son el mismo número, y repetirlo con una raya en
-   * medio hace pensar que son dos cosas distintas. Se pone su nombre al lado del
-   * rótulo y se queda una sola cifra.
-   *
-   * Solo cuando de verdad coinciden: enseñando una cuenta de tres, el total no es
-   * su saldo y las dos cifras cuentan cosas distintas.
+   * Va en línea y no en la hoja porque es un número que se mueve con un mando;
+   * el resto de la tarjeta se sigue vistiendo desde la hoja como todo lo demás.
    */
-  const unica =
-    visibles.length === 1 && visibles[0].balanceInBase === patrimonio ? visibles[0] : null
+  const alfa = Math.round(Math.min(1, Math.max(0.2, settings.widgetOpacity)) * 100)
 
   return (
     <div
       ref={caja}
-      className="widget"
-      onPointerDown={empezarArrastre}
-      onPointerMove={seguirArrastre}
-      onPointerUp={soltarArrastre}
-      onPointerCancel={soltarArrastre}
+      className={`widget${settings.widgetGris ? ' gris' : ''}`}
+      style={{ background: `color-mix(in srgb, var(--bg-elevated) ${alfa}%, transparent)` }}
       onDoubleClick={() => api.widget.open()}
-      title="Arrastra para moverlo · doble clic para abrir BONK"
+      title="Doble clic para abrir BONK"
     >
-{/*
-        Con una sola cuenta, todo en un renglón.
-        
-        El icono, el nombre y la cifra caben de sobra a lo ancho, y en dos líneas
-        la tarjeta quedaba con un hueco vacío a la derecha del nombre. Con varias
-        no cabe: ahí el total manda solo y las cuentas van debajo.
-      */}
       {unica ? (
         <div className="widget-unica">
-          <Avatar icon={unica.icon} color={unica.color} size="small" />
-          <span className="nombre truncate">{unica.name}</span>
-          <span
-            className={`widget-total amount ${
-              patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
-            }`}
-          >
-            {formatMoney(patrimonio, divisa)}
+          {/* La cifra manda y va primero; de quién es se dice después, al otro
+              lado de la raya. Es el reparto de la cabecera de Movimientos: el
+              dinero a la izquierda y la cuenta a la derecha. */}
+          <span className={`widget-total amount ${tono}`}>{formatMoney(cifra, divisa)}</span>
+          <span className="divider vertical" />
+          <span className="widget-suya">
+            <Avatar icon={unica.icon} color={unica.color} size="small" />
+            <span className="nombre truncate">{unica.name}</span>
           </span>
         </div>
       ) : (
         <>
           <div className="widget-rotulo">Patrimonio</div>
-          <div
-            className={`widget-total amount ${
-              patrimonio > 0 ? 'positive' : patrimonio < 0 ? 'negative' : ''
-            }`}
-          >
-            {formatMoney(patrimonio, divisa)}
-          </div>
-        </>
-      )}
+          <div className={`widget-total amount ${tono}`}>{formatMoney(cifra, divisa)}</div>
 
-      {!unica && visibles.length > 0 && (
-        <div className="widget-cuentas">
-          {visibles.map((cuenta) => (
-            <div key={cuenta.id} className="widget-cuenta">
-              <Avatar icon={cuenta.icon} color={cuenta.color} size="small" />
-              <span className="truncate">{cuenta.name}</span>
-              <span
-                className={`amount ${
-                  cuenta.balance > 0 ? 'positive' : cuenta.balance < 0 ? 'negative' : 'neutral'
-                }`}
-              >
-                {formatMoney(cuenta.balance, cuenta.currency)}
-              </span>
+          {visibles.length > 0 && (
+            <div className="widget-cuentas">
+              {visibles.map((cuenta) => (
+                <div key={cuenta.id} className="widget-cuenta">
+                  <Avatar icon={cuenta.icon} color={cuenta.color} size="small" />
+                  <span className="truncate">{cuenta.name}</span>
+                  <span
+                    className={`amount ${
+                      cuenta.balance > 0 ? 'positive' : cuenta.balance < 0 ? 'negative' : 'neutral'
+                    }`}
+                  >
+                    {formatMoney(cuenta.balance, cuenta.currency)}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

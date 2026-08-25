@@ -12,7 +12,7 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { construirInformeHtml } from './repos/informe'
-import { widgetWindow, moverWidget, colocarWidget } from './widget'
+import { widgetWindow, colocarWidget } from './widget'
 import { applyAutoLaunch } from './autostart'
 import {
   sendTestNotification,
@@ -59,8 +59,6 @@ const SOLO_LEEN = new Set([
   'csv:pick',
   'db:info',
   'db:openFolder',
-  'widget:move',
-  'widget:bounds',
   'widget:resize',
   'widget:open'
 ])
@@ -370,16 +368,6 @@ export function registerIpc(
   handle('csv:import', (path: string, options) => csv.importCsv(path, options))
 
   // — El widget del escritorio —
-  /*
-   * Se arrastra desde la ventana: el navegador manda dónde está el puntero y
-   * aquí se traduce a la posición de la ventana. `-webkit-app-region: drag` lo
-   * haría solo, pero se come todos los clics de esa zona y entonces no habría
-   * ni doble clic para abrir la aplicación ni menú del botón derecho.
-   */
-  handle('widget:move', (x: number, y: number) => moverWidget(x, y))
-  // Los del contenido: es lo que la página conoce como su ventana, y con los
-  // del marco el agarre del arrastre salía desplazado.
-  handle('widget:bounds', () => widgetWindow()?.getContentBounds() ?? null)
   /** Lo que mide su contenido: la ventana se estira a lo que haya que enseñar. */
   handle('widget:resize', (height: number) => colocarWidget(height))
   handle('widget:open', () => notifications.onClick())

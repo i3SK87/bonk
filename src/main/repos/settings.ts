@@ -39,13 +39,16 @@ export function getSettings(): Settings {
     remindersEnabled: map.get('remindersEnabled') === '1',
     balanceEn: (map.get('balanceEn') as Settings['balanceEn']) || 'porcentaje',
     widgetVisible: map.get('widgetVisible') !== '0',
-    widgetAnchor: (map.get('widgetAnchor') as WidgetAnchor) || 'bottomRight',
-    widgetX: numero(map.get('widgetX'), 0),
-    widgetY: numero(map.get('widgetY'), 0),
+    // Lo guardado como `libre` es de cuando se arrastraba: vuelve a su esquina.
+    widgetAnchor:
+      !map.get('widgetAnchor') || map.get('widgetAnchor') === 'libre'
+        ? 'bottomRight'
+        : (map.get('widgetAnchor') as WidgetAnchor),
     // Ni transparente del todo ni opaco: se ve el escritorio detrás y las cifras
     // siguen leyéndose sin acercarse.
     widgetOpacity: numero(map.get('widgetOpacity'), 0.92),
     widgetOnTop: map.get('widgetOnTop') === '1',
+    widgetGris: map.get('widgetGris') === '1',
     widgetAccountIds: ids(map.get('widgetAccountIds')),
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null

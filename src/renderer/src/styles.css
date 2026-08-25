@@ -3320,24 +3320,30 @@ button.list-row:focus-visible {
   margin: 10px;
   padding: 12px 14px;
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--bg-elevated) 90%, transparent);
-  /* El cristal: el fondo translúcido y este desenfoque son lo que hace que la
-     tarjeta se apoye sobre el escritorio en vez de estar pegada encima. */
-  backdrop-filter: blur(18px);
+  /* El fondo lo pone la ventana en línea: es lo que mueve el mando de opacidad,
+     y solo el fondo, que las cifras y los iconos tienen que seguir leyéndose. */
   border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   color: var(--fg);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1px;
-  /* Se arrastra, así que el cursor lo dice y el texto no se selecciona por el
-     camino: al mover la tarjeta salía media línea en azul. */
-  cursor: grab;
+  /* Solo se le hace doble clic: nada de seleccionar el texto por el camino. */
+  cursor: default;
   user-select: none;
 }
 
-.widget:active {
-  cursor: grabbing;
+/*
+ * En gris.
+ *
+ * Sobre un escritorio con color propio, los avatares de las cuentas y el verde y
+ * el rojo de las cifras son mucho ruido para lo que es un cartel de una línea. El
+ * filtro cae sobre la tarjeta entera y no sobre cada trozo, que si no habría que
+ * acordarse de apagar cada color nuevo que se añada.
+ */
+.widget.gris {
+  filter: grayscale(1);
 }
 
 /*
@@ -3351,6 +3357,7 @@ button.list-row:focus-visible {
 .widget-rotulo {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   font-size: 9.5px;
   font-weight: 700;
@@ -3359,20 +3366,42 @@ button.list-row:focus-visible {
   color: var(--fg-subtle);
 }
 
-/* Una sola cuenta cabe en un renglón: el icono, su nombre y la cifra, que se va
-   al canto derecho porque es lo que se viene a mirar. */
+/*
+ * Una sola cuenta cabe en un renglón.
+ *
+ * La cifra a la izquierda y de quién es a la derecha, con una raya en medio: el
+ * mismo reparto que la cabecera de Movimientos, donde el patrimonio va a un lado
+ * y las cuentas al otro. Así lo primero que se lee es el dinero, que es a lo que
+ * se mira, y el nombre queda de apostilla.
+ */
 .widget-unica {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 9px;
 }
 
-.widget-unica .nombre {
-  flex: 1;
+/* La raya no se estira ni se encoge, y respira un poco más que en una barra de
+   botones: aquí separa dos cosas y no dos grupos de mandos. */
+.widget-unica > .divider.vertical {
+  height: 26px;
+  margin: 0;
+}
+
+.widget-suya {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  /* Se recorta antes que la cifra, que no se parte nunca. Sin estirarse, que la
+     fila va centrada y no de canto a canto. */
+  min-width: 0;
+}
+
+.widget-suya .nombre {
   min-width: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--fg-muted);
+  color: var(--fg);
 }
 
 .widget-total {
@@ -3390,6 +3419,9 @@ button.list-row:focus-visible {
   gap: 6px;
   margin-top: 9px;
   padding-top: 9px;
+  /* A todo lo ancho: la raya separa el total de su desglose, y a medio ancho no
+     separaría nada. */
+  align-self: stretch;
   border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
 }
 
@@ -3402,11 +3434,13 @@ button.list-row:focus-visible {
 
 /* El nombre se queda con lo que sobre y la cifra nunca se parte: en una tarjeta
    de doscientos y pico píxeles, un saldo cortado no vale para nada. */
+/* En blanco y no en gris: sobre un escritorio, el tono apagado que vale dentro
+   de la aplicación se pierde contra cualquier fondo con dibujo. */
 .widget-cuenta > .truncate {
   flex: 1;
   min-width: 0;
   font-weight: 600;
-  color: var(--fg-muted);
+  color: var(--fg);
 }
 
 .widget-cuenta .amount {

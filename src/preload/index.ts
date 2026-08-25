@@ -115,9 +115,6 @@ const api = {
       call<{ path: string; count: number } | null>('report:exportPdf', filter)
   },
   widget: {
-    /** Mueve la ventana a esa esquina de la pantalla mientras se arrastra. */
-    move: (x: number, y: number) => call<void>('widget:move', x, y),
-    bounds: () => call<{ x: number; y: number; width: number; height: number } | null>('widget:bounds'),
     /** Estira la ventana a lo que mida su contenido. */
     resize: (height: number) => call<void>('widget:resize', height),
     /** Trae la ventana principal al frente. */
