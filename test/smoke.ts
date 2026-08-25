@@ -724,6 +724,74 @@ try {
   transactions.deleteTransactions(cuotas.map((row) => row.id))
   scheduled.deleteScheduled(cuotaDeuda.id)
 
+  section('Retocar una programada sin abrir su ficha')
+  /*
+   * Los cuadros rápidos del clic derecho mandan la programada entera con un solo
+   * campo cambiado. Es cómodo y es donde puede colarse un fallo: si al guardar se
+   * perdiera algo por el camino —la cuenta, el ritmo, si estaba en pausa—, se
+   * perdería en silencio y solo se notaría un mes después.
+   */
+  const planStreaming = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Streaming',
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 999,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    endDate: addMonths(day, 10),
+    autoPost: false,
+    remind: true
+  })
+  scheduled.setScheduledActive(planStreaming.id, false)
+  const comoEstaba = scheduled.getScheduled(planStreaming.id)!
+
+  // — Solo el importe —
+  scheduled.saveScheduled({ ...comoEstaba, amount: 1299 })
+  const traImporte = scheduled.getScheduled(planStreaming.id)!
+  equal('el importe cambia', traImporte.amount, 1299)
+  equal('la cuenta se queda', traImporte.accountId, comoEstaba.accountId)
+  equal('la categoría también', traImporte.categoryId, comoEstaba.categoryId)
+  equal('el ritmo no se toca', traImporte.freq, comoEstaba.freq)
+  equal('ni la próxima fecha', traImporte.nextDate, comoEstaba.nextDate)
+  equal('ni la de fin', traImporte.endDate, comoEstaba.endDate)
+  equal('ni el registro automático', traImporte.autoPost, comoEstaba.autoPost)
+  equal('ni el aviso', traImporte.remind, comoEstaba.remind)
+  check('y la pausa sigue puesta', !traImporte.active)
+
+  // — Solo las fechas —
+  const nuevaProxima = addMonths(day, 2)
+  scheduled.saveScheduled({ ...traImporte, nextDate: nuevaProxima, endDate: null })
+  const traFechas = scheduled.getScheduled(planStreaming.id)!
+  equal('la próxima fecha cambia', traFechas.nextDate, nuevaProxima)
+  equal('y el fin se puede quitar', traFechas.endDate, null)
+  equal('el importe de antes sigue', traFechas.amount, 1299)
+  equal('y el título también', traFechas.note, 'Streaming')
+
+  // — La devolución programada cuelga de su gasto —
+  const laDevolucion = scheduled.saveScheduled({
+    type: 'refund',
+    note: 'La mitad',
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 650,
+    freq: traFechas.freq,
+    interval: traFechas.interval,
+    nextDate: traFechas.nextDate,
+    refundForScheduledId: planStreaming.id,
+    autoPost: true
+  })
+  equal('la devolución queda enlazada a su gasto', laDevolucion.refundForScheduledId, planStreaming.id)
+  equal('y hereda el ritmo del gasto', laDevolucion.freq, traFechas.freq)
+  equal('y su misma próxima fecha', laDevolucion.nextDate, traFechas.nextDate)
+  // Una devolución no puede colgar de sí misma: la capa de datos lo corta.
+  const suya = scheduled.saveScheduled({ ...laDevolucion, refundForScheduledId: laDevolucion.id })
+  equal('y no puede colgar de sí misma', suya.refundForScheduledId, null)
+
+  scheduled.deleteScheduled(laDevolucion.id)
+  scheduled.deleteScheduled(planStreaming.id)
+
   section('Pagar una deuda desde su pantalla')
   /*
    * Las dos operaciones del clic derecho en Deudas.

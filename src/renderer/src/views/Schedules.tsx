@@ -19,6 +19,8 @@ import { formatMoney } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
 import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
 import { DetallesRepeticion, ResumenRepeticion } from '../components/DetallesRepeticion'
+import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
+import { ImporteProgramado, FechasProgramadas } from '../components/ProgramadaRapida'
 import { DateInput } from '../components/DateInput'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
@@ -118,6 +120,45 @@ export function SchedulesView(): ReactNode {
   const [finishing, setFinishing] = useState<ScheduledView | null>(null)
   const [resuming, setResuming] = useState<ScheduledView | null>(null)
   const [hoveredFamily, setHoveredFamily] = useState<number | null>(null)
+  /*
+   * El clic derecho, con lo que de verdad se le hace a una programación.
+   *
+   * La fila entera ya abre la ficha, y para cambiar el precio de una suscripción
+   * había que recorrerla entera buscando el campo. Aquí están los dos retoques
+   * que se hacen a menudo, colgarle una devolución, y borrarla.
+   */
+  const [menu, setMenu] = useState<{ row: ScheduledView; x: number; y: number } | null>(null)
+  const [cambiandoImporte, setCambiandoImporte] = useState<ScheduledView | null>(null)
+  const [cambiandoFechas, setCambiandoFechas] = useState<ScheduledView | null>(null)
+  const [devolviendo, setDevolviendo] = useState<ScheduledView | null>(null)
+  const [borrando, setBorrando] = useState<ScheduledView | null>(null)
+
+  const opcionesDe = (row: ScheduledView): OpcionMenu[] => {
+    const lista: OpcionMenu[] = [
+      { etiqueta: 'Editar importe', icono: 'edit', onElegir: () => setCambiandoImporte(row) },
+      { etiqueta: 'Editar fechas', icono: 'calendar', onElegir: () => setCambiandoFechas(row) }
+    ]
+    /*
+     * Solo un gasto puede tener quien le devuelva.
+     *
+     * Y no una devolución: la devolución de una devolución no es nada. Sobre una
+     * terminada tampoco, que lo que se le colgara no llegaría a pasar nunca.
+     */
+    if (row.type === 'expense' && row.settledAt == null) {
+      lista.push({
+        etiqueta: 'Registrar reembolso',
+        icono: 'refund',
+        onElegir: () => setDevolviendo(row)
+      })
+    }
+    lista.push({
+      etiqueta: 'Eliminar',
+      icono: 'trash',
+      peligrosa: true,
+      onElegir: () => setBorrando(row)
+    })
+    return lista
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -212,11 +253,16 @@ export function SchedulesView(): ReactNode {
                   active ? 'linked-active' : '',
                   nested ? 'nested' : '',
                   nested && !last ? 'nested-continues' : '',
+                  menu?.row.id === row.id ? 'marcada' : '',
                 ]
                   .filter(Boolean)
                   .join(' ')}
                 role="button"
                 onClick={() => setEditing(row)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setMenu({ row, x: event.clientX, y: event.clientY })
+                }}
                 onMouseEnter={() => family !== undefined && setHoveredFamily(family)}
                 onMouseLeave={() => family !== undefined && setHoveredFamily(null)}
               >
@@ -402,6 +448,50 @@ export function SchedulesView(): ReactNode {
         />
       )}
 
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={opcionesDe(menu.row)}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {cambiandoImporte && (
+        <ImporteProgramado row={cambiandoImporte} onClose={() => setCambiandoImporte(null)} />
+      )}
+
+      {cambiandoFechas && (
+        <FechasProgramadas row={cambiandoFechas} onClose={() => setCambiandoFechas(null)} />
+      )}
+
+      {/* La devolución nace enlazada a su gasto y con su mismo ritmo: la ficha
+          sale rellena y solo queda poner cuánto devuelven. */}
+      {devolviendo && (
+        <ScheduleModal
+          schedule={null}
+          siblings={rows}
+          devolucionDe={devolviendo}
+          titulo="Reembolso programado"
+          onClose={() => setDevolviendo(null)}
+          onSave={(input) => run(() => api.scheduled.save(input), 'Reembolso programado')}
+        />
+      )}
+
+      {borrando && (
+        <Confirm
+          title="Eliminar programación"
+          message="Los movimientos ya generados se conservan; solo deja de repetirse en el futuro."
+          confirmLabel="Eliminar"
+          destructive
+          onCancel={() => setBorrando(null)}
+          onConfirm={async () => {
+            await run(() => api.scheduled.remove(borrando.id), 'Programación eliminada')
+            setBorrando(null)
+          }}
+        />
+      )}
+
       {(creating || editing) && (
         <ScheduleModal
           schedule={editing}
@@ -447,6 +537,14 @@ interface ScheduleModalProps {
   soloGasto?: boolean
   /** Nace ya marcada como deuda: es como la crea la pestaña Deudas. */
   deudaPorDefecto?: boolean
+  /**
+   * Nace como la devolución de esta otra programada.
+   *
+   * Hereda su cuenta, su categoría y su ritmo: la parte del alquiler que devuelve
+   * el otro llega a la misma cuenta y el mismo mes que sale el recibo. Se puede
+   * cambiar todo, pero de partida es lo que va a ser casi siempre.
+   */
+  devolucionDe?: ScheduledView | null
   /** Cómo se titula. Desde Deudas esto no es «una programación», es una deuda. */
   titulo?: string
   onClose: () => void
@@ -460,6 +558,7 @@ export function ScheduleModal({
   defaultCategoryId,
   soloGasto,
   deudaPorDefecto,
+  devolucionDe,
   titulo,
   onClose,
   onSave,
@@ -467,19 +566,21 @@ export function ScheduleModal({
 }: ScheduleModalProps): ReactNode {
   const { accounts, categories, settings } = useStore()
   const preferredAccountId = usePreferredAccountId()
-  const [type, setType] = useState<TxType>(schedule?.type ?? 'expense')
+  const [type, setType] = useState<TxType>(schedule?.type ?? (devolucionDe ? 'refund' : 'expense'))
   const [amount, setAmount] = useState(schedule?.amount ?? 0)
-  const [accountId, setAccountId] = useState(schedule?.accountId ?? preferredAccountId)
+  const [accountId, setAccountId] = useState(
+    schedule?.accountId ?? devolucionDe?.accountId ?? preferredAccountId
+  )
   const [toAccountId, setToAccountId] = useState<number | null>(schedule?.toAccountId ?? null)
   const [goalId, setGoalId] = useState<number | null>(schedule?.goalId ?? null)
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [categoryId, setCategoryId] = useState<number | null>(
-    schedule?.categoryId ?? defaultCategoryId ?? null,
+    schedule?.categoryId ?? devolucionDe?.categoryId ?? defaultCategoryId ?? null,
   )
   const [lender, setLender] = useState(schedule?.lender ?? '')
-  const [freq, setFreq] = useState<Frequency>(schedule?.freq ?? 'monthly')
-  const [interval, setInterval] = useState(schedule?.interval ?? 1)
-  const [nextDate, setNextDate] = useState(schedule?.nextDate ?? today())
+  const [freq, setFreq] = useState<Frequency>(schedule?.freq ?? devolucionDe?.freq ?? 'monthly')
+  const [interval, setInterval] = useState(schedule?.interval ?? devolucionDe?.interval ?? 1)
+  const [nextDate, setNextDate] = useState(schedule?.nextDate ?? devolucionDe?.nextDate ?? today())
   const [endDate, setEndDate] = useState(schedule?.endDate ?? '')
   const [autoPost, setAutoPost] = useState(schedule?.autoPost ?? true)
   const [remind, setRemind] = useState(schedule?.remind ?? true)
@@ -488,7 +589,7 @@ export function ScheduleModal({
   // pierde al guardar sin el campo que ya no existe.
   const [note, setNote] = useState(schedule?.note || schedule?.name || '')
   const [refundForScheduledId, setRefundForScheduledId] = useState<number | null>(
-    schedule?.refundForScheduledId ?? null,
+    schedule?.refundForScheduledId ?? devolucionDe?.id ?? null,
   )
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)

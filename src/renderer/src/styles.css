@@ -2109,6 +2109,12 @@ textarea::placeholder {
 
 .card.flush .list-row:hover { background-color: var(--bg-sunken); }
 
+/* Con su menú abierto se queda encendida, igual que una fila de Movimientos: el
+   menú sale bajo el puntero y tapa la fila, y sin esto no se sabría a cuál se le
+   está diciendo que se borre. Ya lleva sus esquinas redondeadas de serie. */
+.card.flush .list-row.marcada,
+.list-row.marcada { background-color: var(--bg-sunken); }
+
 /* Y lo mismo en Programados: al pasar por encima de cualquiera de los dos se
    encienden juntos, sin banda en el canto. */
 .list-row.linked {
