@@ -2292,6 +2292,20 @@ textarea::placeholder {
  * fondo hundido sin dar el salto al blanco pleno: probado del revés del todo y
  * pesaba más que el importe que tiene al lado, que es lo que se viene a leer.
  */
+/*
+ * Y juntos, que son un par.
+ *
+ * La fila reparte los mismos doce píxeles entre todo lo que lleva —el dibujo, el
+ * texto, el importe, los mandos—, y esa separación es la que dice «esto es otra
+ * cosa». Entre los dos botones no es otra cosa: son los dos mandos de la misma
+ * fila, y con el hueco de todos parecían pertenecer cada uno a algo distinto.
+ * Antes no se notaba porque el primero llevaba recuadro y ya se veía dónde
+ * acababa.
+ */
+.list-row .btn.icon + .btn.icon {
+  margin-left: -8px;
+}
+
 .list-row .btn.ghost.icon:hover,
 .list-row .btn.ghost.icon:focus-visible {
   background: var(--border-strong);
