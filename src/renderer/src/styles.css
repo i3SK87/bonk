@@ -811,6 +811,27 @@ p { margin: 0; }
   height: 32px;
 }
 
+/* Sin relleno pero con borde: para lo que se abre desde una barra sin ser una
+   de sus acciones. El fantasma no vale —ese tampoco tiene borde y se pierde
+   entre los mandos de al lado—, y el normal pesa como si fuera lo principal. */
+.btn.contorno {
+  background: transparent;
+  border-color: var(--border-strong);
+  color: var(--fg-muted);
+}
+
+.btn.contorno:hover {
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+/* Un punto por debajo de `small`, para lo que se usa de tarde en tarde. */
+.btn.mini {
+  padding: 4px 9px;
+  font-size: 11.5px;
+  gap: 6px;
+}
+
 /* ---------- Formularios ---------- */
 
 .field {

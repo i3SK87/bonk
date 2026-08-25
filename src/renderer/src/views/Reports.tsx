@@ -5,7 +5,7 @@ import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { MonthlyBars, NetLine } from '../components/charts'
-import { formatMoney } from '@shared/money'
+import { formatMoney, currencySymbol } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
 import { DateInput } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
@@ -95,9 +95,9 @@ function tonoDe(delta: number, kind: CategoryKind): string {
  * Cuánto ha cambiado una cifra, a la derecha de ella y en pequeño.
  *
  * La misma insignia para las tarjetas de arriba y para las filas de la tabla:
- * un triángulo, un porcentaje y su color. Sin coletilla debajo, porque contra
- * qué se compara ya lo dice una vez la cabecera y repetirlo en cada línea es
- * llenar la pantalla de la misma frase.
+ * un triángulo, una cifra y su color. Sin coletilla debajo, porque contra qué se
+ * compara ya lo dice una vez la cabecera y repetirlo en cada línea es llenar la
+ * pantalla de la misma frase.
  *
  * Los dos casos que no son un porcentaje se dicen con un signo y no con una
  * palabra: «=» cuando no ha cambiado y «-» cuando no hay con qué comparar. Una
@@ -107,14 +107,50 @@ function Cambio({
   ahora,
   antes,
   kind,
-  pista
+  pista,
+  unidad = 'porcentaje',
+  currency
 }: {
   ahora: number
   antes: number
   kind: CategoryKind
   /** Las dos cifras crudas, para el rótulo de al pasar por encima. */
   pista: string
+  /**
+   * En qué se mide la diferencia.
+   *
+   * El porcentaje dice si algo se ha disparado, y los euros dicen cuánto es eso
+   * en dinero: un 40 % más en Restaurantes y un 40 % más en Alquiler no cuestan
+   * lo mismo, y mirando solo el porcentaje las categorías pequeñas parecen el
+   * problema. Ninguna de las dos sobra, así que se elige.
+   */
+  unidad?: 'porcentaje' | 'euros'
+  currency?: string
 }): ReactNode {
+  const delta = ahora - antes
+
+  // Clavado, en cualquiera de las dos unidades.
+  if (delta === 0) {
+    return (
+      <span className="cambio signo muted" title={pista}>
+        =
+      </span>
+    )
+  }
+
+  if (unidad === 'euros') {
+    /*
+     * En euros no hay división, así que tampoco hay caso imposible: una
+     * categoría que antes no existía ha subido justo lo que vale ahora, y eso
+     * es una diferencia perfectamente decible.
+     */
+    return (
+      <span className={`cambio ${tonoDe(delta, kind)}`} title={pista}>
+        {delta > 0 ? '▲' : '▼'} {formatMoney(Math.abs(delta), currency ?? 'EUR')}
+      </span>
+    )
+  }
+
   /*
    * Sin nada antes no hay porcentaje: dividir entre cero no da un número, y un
    * «+100 %» diría que se ha doblado cuando no había nada que doblar.
@@ -127,7 +163,6 @@ function Cambio({
     )
   }
 
-  const delta = ahora - antes
   const porcentaje = Math.round((delta / antes) * 100)
   // Por debajo del uno por ciento no ha cambiado nada que merezca decirse.
   if (porcentaje === 0) {
@@ -168,6 +203,15 @@ export function ReportsView(): ReactNode {
    */
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
+  /*
+   * En qué se mide la columna Balance.
+   *
+   * No se guarda en los ajustes: es cómo se está mirando la tabla ahora mismo,
+   * y se cambia varias veces en la misma sesión —el porcentaje para ver qué se
+   * ha disparado, los euros para ver qué cuesta eso—. Un ajuste que se toca cada
+   * dos minutos no es un ajuste.
+   */
+  const [balanceEn, setBalanceEn] = useState<'porcentaje' | 'euros'>('porcentaje')
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
@@ -486,9 +530,19 @@ export function ReportsView(): ReactNode {
                 enteros puede llevar flecha, y sin esta línea parece un error.
               */}
               {comparacion && (
-                <span className="small muted">
-                  ▲▼ frente {periodoCorto(comparacion.from, comparacion.to)}
-                </span>
+                <>
+                  <span className="small muted">
+                    ▲▼ frente {periodoCorto(comparacion.from, comparacion.to)}
+                  </span>
+                  <Segmented
+                    value={balanceEn}
+                    onChange={setBalanceEn}
+                    options={[
+                      { value: 'porcentaje', label: '%' },
+                      { value: 'euros', label: currencySymbol(currency) }
+                    ]}
+                  />
+                </>
               )}
               <div className="spacer" />
               <Segmented
@@ -587,6 +641,8 @@ export function ReportsView(): ReactNode {
                                   ahora={row.total}
                                   antes={gastoAntes}
                                   kind={kind}
+                                  unidad={balanceEn}
+                                  currency={currency}
                                   pista={`${formatMoney(row.total, currency)} ahora · ${formatMoney(gastoAntes, currency)} entre el ${formatDate(comparacion.from)} y el ${formatDate(comparacion.to)}`}
                                 />
                               </td>

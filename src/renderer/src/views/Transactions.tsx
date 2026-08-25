@@ -8,6 +8,7 @@ import { TransactionForm } from '../components/TransactionForm'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteRapido } from '../components/ImporteRapido'
 import { CategoriaRapida } from '../components/CategoriaRapida'
+import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
@@ -80,6 +81,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     run,
     toast,
     updateSettings,
+    refresh,
     fail,
     setFocusedAccountId
   } = useStore()
@@ -129,6 +131,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [cambiandoCategoria, setCambiandoCategoria] = useState<TransactionView | null>(null)
   const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
+  const [importando, setImportando] = useState<OrigenCsv | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
 
   useEffect(() => {
@@ -707,9 +710,22 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               Programados
             </button>
 
-            {/* La última de la fila y separada: no filtra la lista, es una
-                herramienta aparte que se abre desde aquí. */}
+            {/* La última de la fila y separada: no filtra nada, trae filas de
+                fuera. Sin relleno y un punto más pequeña que las demás porque no
+                es una de las acciones de la barra: es una herramienta que se
+                abre desde aquí de tarde en tarde. */}
             <div className="divider vertical" />
+            <button
+              className="btn small mini contorno"
+              onClick={async () => {
+                const picked = await run(() => api.csv.pick())
+                if (picked) setImportando(picked)
+              }}
+              title="Traer movimientos de un extracto o de otra aplicación"
+            >
+              <Icon name="upload" size={14} />
+              Importar CSV
+            </button>
           </div>
 
           {/*
@@ -974,6 +990,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               () => api.transactions.setCategory([cambiandoCategoria.id], categoryId),
               'Categoría actualizada'
             )
+          }}
+        />
+      )}
+
+      {importando && (
+        <ImportModal
+          source={importando}
+          onClose={() => setImportando(null)}
+          onDone={async () => {
+            setImportando(null)
+            // Recarga entera: la importación puede haber creado cuentas y
+            // categorías, no solo movimientos.
+            await refresh()
           }}
         />
       )}
