@@ -11,6 +11,7 @@ import {
   type LineaResumen,
   type ResumenMes
 } from './components/Celebration'
+import { CalculadoraModal } from './components/Calculator'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
@@ -46,9 +47,21 @@ const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
-  { id: 'reports', label: 'Informes', icon: 'chart' },
-  { id: 'settings', label: 'Ajustes', icon: 'settings' }
+  { id: 'reports', label: 'Informes', icon: 'chart' }
 ]
+
+/*
+ * Ajustes va aparte del resto de la lista.
+ *
+ * Entre Informes y Ajustes se cuela la calculadora, que no es una pestaña sino
+ * un cuadro: si estuviera en `NAV` habría que inventarle una vista que no
+ * existe. Así cada uno se pinta por lo que es y quedan en el orden que se pide.
+ */
+const AJUSTES: { id: ViewId; label: string; icon: string } = {
+  id: 'settings',
+  label: 'Ajustes',
+  icon: 'settings'
+}
 
 const TITLES: Record<ViewId, string> = {
   transactions: 'Movimientos',
@@ -65,6 +78,7 @@ export function App(): ReactNode {
   const { ready, accounts, settings, toast, refresh, updateSettings, focusedAccountId } = useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
+  const [calculando, setCalculando] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [reached, setReached] = useState<GoalReached[]>([])
   /** El resumen del mes que se acaba de cerrar, cuando toca enseñarlo. */
@@ -228,6 +242,28 @@ export function App(): ReactNode {
           </button>
         ))}
 
+        {/* No lleva estado activo: abre un cuadro y la pestaña de debajo sigue
+            siendo la que estaba. Encenderla diría que has cambiado de pantalla. */}
+        <button
+          className="nav-item"
+          onClick={() => setCalculando(true)}
+          // Como las demás: plegada a iconos, el título es lo único que dice
+          // cuál es cuál.
+          title="Calculadora"
+        >
+          <Icon name="calculator" size={17} />
+          Calculadora
+        </button>
+
+        <button
+          className={`nav-item${view === AJUSTES.id ? ' active' : ''}`}
+          onClick={() => setView(AJUSTES.id)}
+          title={AJUSTES.label}
+        >
+          <Icon name={AJUSTES.icon} size={17} />
+          {AJUSTES.label}
+        </button>
+
         {/* Donde la cifra ya está en pantalla, aquí sobra: en Movimientos preside
             la lista —y allí puede estar en modo previsión, así que repetirla en su
             versión real dejaba dos cifras distintas a la vez—, y en Cuentas cierra
@@ -291,6 +327,13 @@ export function App(): ReactNode {
             updateSettings({ lastMonthlySummary: resumen.mes.slice(0, 7) })
             setResumen(null)
           }}
+        />
+      )}
+
+      {calculando && (
+        <CalculadoraModal
+          currency={settings.baseCurrency}
+          onClose={() => setCalculando(false)}
         />
       )}
 

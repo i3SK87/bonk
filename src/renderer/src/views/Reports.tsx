@@ -2,13 +2,15 @@ import { Fragment, useEffect, useMemo, useState, type KeyboardEvent, type ReactN
 import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
+import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
+import { CategoryModal } from '../components/CategoryForm'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
 import { DateInput } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
-import type { CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
+import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
 
@@ -144,13 +146,28 @@ function Cambio({
 }
 
 export function ReportsView(): ReactNode {
-  const { settings, revision, run, toast, fail } = useStore()
+  // El catálogo de categorías, con su ficha completa. Se llama así y no
+  // `categories` porque ese nombre ya lo lleva aquí el desglose del periodo,
+  // que son totales y no fichas.
+  const { settings, categories: catalogo, revision, run, toast, fail } = useStore()
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  /*
+   * Editar una categoría sin salir del informe.
+   *
+   * El informe es donde se ve que una categoría está mal puesta —el color que no
+   * distingue, el nombre que no dice nada, la que habría que archivar—, y hasta
+   * ahora había que irse a Categorías, buscarla y volver. Va por clic derecho y
+   * no por un lápiz en la fila: la fila ya se pulsa para desplegar el desglose,
+   * y un botón encima competiría con eso en todas las filas para lo que se usa
+   * de vez en cuando.
+   */
+  const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
+  const [editando, setEditando] = useState<Category | null>(null)
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
@@ -473,7 +490,18 @@ export function ReportsView(): ReactNode {
                       return (
                         <Fragment key={key}>
                           <tr
-                            className={openable ? 'expandable' : undefined}
+                            className={`${openable ? 'expandable' : ''}${
+                              menu?.categoria.id === row.categoryId ? ' marcada' : ''
+                            }`.trim() || undefined}
+                            onContextMenu={(event) => {
+                              // «Sin categoría» no es una categoría: es el cajón
+                              // de los que no tienen ninguna, y no hay ficha que
+                              // abrir.
+                              const categoria = catalogo.find((item) => item.id === row.categoryId)
+                              if (!categoria) return
+                              event.preventDefault()
+                              setMenu({ categoria, x: event.clientX, y: event.clientY })
+                            }}
                             {...(openable
                               ? {
                                   role: 'button',
@@ -592,6 +620,35 @@ export function ReportsView(): ReactNode {
 
 
         </>
+      )}
+
+      {/* Una sola opción, porque es la única que tiene sentido aquí: borrar una
+          categoría desde el informe que la está contando sería raro, y crear una
+          no se hace mirando un desglose. */}
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={
+            [
+              {
+                etiqueta: 'Editar categoría',
+                icono: 'edit',
+                onElegir: () => setEditando(menu.categoria)
+              }
+            ] satisfies OpcionMenu[]
+          }
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {editando && (
+        <CategoryModal
+          category={editando}
+          defaultKind={editando.kind}
+          onClose={() => setEditando(null)}
+          onSave={(input) => run(() => api.categories.save(input), 'Categoría actualizada')}
+        />
       )}
     </>
   )

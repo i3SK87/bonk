@@ -15,7 +15,8 @@ const PALETAS: Array<{ id: Palette; label: string; hint: string; bg: string; car
   { id: 'marea', label: 'Marea', hint: 'Verde azulado, sobrio', bg: '#0f1918', card: '#182625', accent: '#5fd8c4' },
   { id: 'sepia', label: 'Sepia', hint: 'Cálido, tono papel', bg: '#1a1714', card: '#241f1b', accent: '#e0ac5c' },
   { id: 'ciruela', label: 'Ciruela', hint: 'Vino y rosa', bg: '#1a1218', card: '#241a21', accent: '#f090c4' },
-  { id: 'heat', label: 'Heat', hint: 'Los Ángeles de noche', bg: '#0e1418', card: '#162026', accent: '#5fb0d4' }
+  { id: 'heat', label: 'Heat', hint: 'Los Ángeles de noche', bg: '#0e1418', card: '#162026', accent: '#5fb0d4' },
+  { id: 'arasaka', label: 'Arasaka', hint: 'Negro corporativo y rojo', bg: '#0b0c0e', card: '#15171b', accent: '#ff3b47' }
 ]
 
 const api = window.bonk

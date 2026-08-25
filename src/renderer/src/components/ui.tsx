@@ -20,9 +20,19 @@ interface ModalProps {
    * reconociéndose, que es la ficha a la que este cuadro está respondiendo.
    */
   sobre?: boolean
+  /** Estrecho: para lo que no llena el ancho normal, como la calculadora. */
+  estrecho?: boolean
 }
 
-export function Modal({ title, onClose, children, footer, wide, sobre }: ModalProps): ReactNode {
+export function Modal({
+  title,
+  onClose,
+  children,
+  footer,
+  wide,
+  sobre,
+  estrecho
+}: ModalProps): ReactNode {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
   const origin = useRef({ x: 0, y: 0 })
@@ -118,7 +128,7 @@ export function Modal({ title, onClose, children, footer, wide, sobre }: ModalPr
     >
       <div
         ref={dialog}
-        className={`modal${wide ? ' wide' : ''}${sobre ? ' sobre' : ''}`}
+        className={`modal${wide ? ' wide' : ''}${sobre ? ' sobre' : ''}${estrecho ? ' estrecho' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

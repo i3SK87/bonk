@@ -8,7 +8,6 @@ import { TransactionForm } from '../components/TransactionForm'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteRapido } from '../components/ImporteRapido'
 import { CategoriaRapida } from '../components/CategoriaRapida'
-import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
@@ -711,7 +710,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             {/* La última de la fila y separada: no filtra la lista, es una
                 herramienta aparte que se abre desde aquí. */}
             <div className="divider vertical" />
-            <CalculatorButton currency={settings.baseCurrency} />
           </div>
 
           {/*

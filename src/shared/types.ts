@@ -11,7 +11,7 @@ export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
-export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela' | 'heat'
+export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela' | 'heat' | 'arasaka'
 
 export interface Account {
   id: number
