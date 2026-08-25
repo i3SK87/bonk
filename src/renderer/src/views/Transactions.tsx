@@ -7,6 +7,7 @@ import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteRapido } from '../components/ImporteRapido'
+import { CategoriaRapida } from '../components/CategoriaRapida'
 import { CalculatorButton } from '../components/Calculator'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { formatMoney, parseAmount } from '@shared/money'
@@ -126,6 +127,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /** El menú del clic derecho: qué fila y en qué punto de la ventana. */
   const [menu, setMenu] = useState<{ row: TransactionView; x: number; y: number } | null>(null)
   const [cambiandoImporte, setCambiandoImporte] = useState<TransactionView | null>(null)
+  const [cambiandoCategoria, setCambiandoCategoria] = useState<TransactionView | null>(null)
   const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [confirmBulk, setConfirmBulk] = useState(false)
@@ -141,7 +143,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       ...dates,
       search: settledSearch.trim() || undefined,
       types: types.length ? types : undefined,
-      accountIds: accountIds.length ? accountIds : undefined,
+      // Una lista vacía de cuentas significa «todas» para la consulta, así que
+      // cuando no hay ninguna elegida se le pide un imposible: así devuelve nada
+      // sin tener que enseñarle a la capa de datos un caso que solo existe aquí.
+      accountIds: accountIds.length ? accountIds : [-1],
       categoryIds: categoryIds.length ? categoryIds : undefined,
       uncategorized: uncategorized || undefined,
       limit
@@ -365,6 +370,15 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   const showingProjected = projected.length > 0
   const nothingToShow = rows.length === 0 && projected.length === 0
+  /*
+   * Sin ninguna cuenta elegida no se enseña nada.
+   *
+   * Antes, quitar la última cuenta significaba «todas», y de la pastilla
+   * apagada a una lista con todo el dinero junto no hay ningún aviso: parecía
+   * que el filtro se había roto. Ahora ninguna elegida es ninguna, que es lo
+   * que dicen las pastillas, y la lista lo dice con todas las letras.
+   */
+  const sinCuenta = accountIds.length === 0
 
   /**
    * La cifra grande sigue a las cuentas que estén elegidas.
@@ -520,6 +534,15 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     const lista: OpcionMenu[] = [
       { etiqueta: 'Editar importe', icono: 'edit', onElegir: () => setCambiandoImporte(row) }
     ]
+    // Un traspaso no lleva categoría: mueve dinero de un bolsillo a otro y no
+    // es ni gasto ni ingreso, así que no hay nada que clasificar.
+    if (row.type !== 'transfer') {
+      lista.push({
+        etiqueta: 'Cambiar categoría',
+        icono: 'tag',
+        onElegir: () => setCambiandoCategoria(row)
+      })
+    }
     if (row.type === 'expense') {
       lista.push({
         etiqueta: 'Registrar reembolso',
@@ -809,7 +832,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         )}
       </div>
 
-      <Teletipo datos={cifras} />
+      {/* La cinta calla sin cuenta elegida: sus cifras hablarían de unos
+          movimientos que la lista de debajo no está enseñando. */}
+      {!sinCuenta && <Teletipo datos={cifras} />}
 
       {selection.length > 0 && (
         <div className="card card-body row" style={{ position: 'sticky', top: 66, zIndex: 15 }}>
@@ -848,7 +873,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               programadas por llegar, hay algo que enseñar. Mirando solo los
               reales, buscar «padre» con las previsiones encendidas daba «No hay
               movimientos» mientras el total de arriba ya contaba sus 200 €. */}
-          {loading && nothingToShow ? (
+          {sinCuenta ? (
+            <EmptyState
+              icon="wallet"
+              title="Ninguna cuenta elegida"
+              message="Elige una cuenta ahí arriba para ver sus movimientos. Pulsando otra vez la quitas, y puedes tener varias a la vez."
+            />
+          ) : loading && nothingToShow ? (
             <Loading />
           ) : nothingToShow ? (
             <EmptyState
@@ -943,6 +974,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
       {cambiandoImporte && (
         <ImporteRapido row={cambiandoImporte} onClose={() => setCambiandoImporte(null)} />
+      )}
+
+      {cambiandoCategoria && (
+        <CategoriaRapida row={cambiandoCategoria} onClose={() => setCambiandoCategoria(null)} />
       )}
 
       {devolviendo && (
