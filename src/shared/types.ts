@@ -11,6 +11,26 @@ export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
+/**
+ * Dónde se planta el widget del escritorio.
+ *
+ * Nueve anclas y `libre`, que es donde lo hayas dejado al arrastrarlo. Las nueve
+ * se recalculan contra el área útil de la pantalla, así que sobreviven a un
+ * cambio de resolución o a que aparezca una segunda pantalla; la libre no, y por
+ * eso se guarda con sus coordenadas al lado.
+ */
+export type WidgetAnchor =
+  | 'topLeft'
+  | 'top'
+  | 'topRight'
+  | 'left'
+  | 'center'
+  | 'right'
+  | 'bottomLeft'
+  | 'bottom'
+  | 'bottomRight'
+  | 'libre'
+
 /** En qué se leen las diferencias de Informes: en porcentaje o en su unidad. */
 export type UnidadCambio = 'porcentaje' | 'valor'
 
@@ -343,6 +363,20 @@ export interface Settings {
      * mismos datos, y quien prefiere los euros los prefiere siempre.
      */
   balanceEn: UnidadCambio
+
+  /* — El widget del escritorio — */
+  /** En pantalla o escondido. Se apaga desde su menú y se enciende en Ajustes. */
+  widgetVisible: boolean
+  widgetAnchor: WidgetAnchor
+  /** Solo valen con el ancla `libre`: donde lo dejaste al arrastrarlo. */
+  widgetX: number
+  widgetY: number
+  /** De 0,2 a 1. Por debajo de 0,2 no se ve y no se puede volver a agarrar. */
+  widgetOpacity: number
+  /** Por delante de todas las ventanas. Apagado se queda en el orden normal. */
+  widgetOnTop: boolean
+  /** Qué cuentas salen. Vacío es todas, que es como empieza. */
+  widgetAccountIds: number[]
   lastMonthlySummary: string | null
   lastBackupAt: string | null
 }

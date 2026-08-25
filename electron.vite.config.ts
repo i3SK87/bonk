@@ -30,7 +30,12 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     build: {
       rollupOptions: {
-        input: { index: resolve(__dirname, 'src/renderer/index.html') }
+        // Dos ventanas, dos entradas: la aplicación y el widget del escritorio.
+        // Comparten la hoja de estilos y el puente, no el árbol de React.
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          widget: resolve(__dirname, 'src/renderer/widget.html')
+        }
       }
     },
     resolve: {

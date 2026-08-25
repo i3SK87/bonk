@@ -3283,3 +3283,155 @@ button.list-row:focus-visible {
   border-top-right-radius: var(--radius-pill);
   border-bottom-right-radius: var(--radius-pill);
 }
+
+/* ---------- El widget del escritorio ---------- */
+
+/*
+ * La tarjeta que se ve sobre el fondo de pantalla.
+ *
+ * Lleva su propio color de fondo y no el de la aplicación: aquí no hay ventana
+ * detrás, hay lo que tenga el usuario puesto de escritorio, y sobre una foto
+ * clara un gris translúcido no sostiene el texto. El desenfoque hace el resto:
+ * separa la tarjeta de lo que haya debajo sin taparlo del todo.
+ *
+ * El aire de fuera es para la sombra: la ventana no tiene la del sistema —en una
+ * transparente sale un recuadro gris alrededor de nada— así que se dibuja aquí,
+ * y necesita sitio dentro de la ventana para caber.
+ */
+.widget {
+  margin: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  backdrop-filter: blur(18px);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Se arrastra, así que el cursor lo dice y el texto no se selecciona por el
+     camino: al mover la tarjeta salía media línea en azul. */
+  cursor: grab;
+  user-select: none;
+}
+
+.widget:active {
+  cursor: grabbing;
+}
+
+.widget-rotulo {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.widget-total {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+/* La raya separa el total de su desglose; el hueco de arriba es mayor que el de
+   abajo porque arriba cierra una cifra grande. */
+.widget-cuentas {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 11px;
+  padding-top: 11px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.widget-cuenta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+/* El nombre se queda con lo que sobre y la cifra nunca se parte: en una tarjeta
+   de doscientos y pico píxeles, un saldo cortado no vale para nada. */
+.widget-cuenta > .truncate {
+  flex: 1;
+  min-width: 0;
+  color: var(--fg-muted);
+}
+
+.widget-cuenta .amount {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+/*
+ * La rejilla de las nueve esquinas.
+ *
+ * Es un mapa de la pantalla en pequeño: se pulsa la esquina donde se quiere el
+ * widget. Cada celda es un rectángulo con las proporciones de un monitor, y la
+ * elegida se enciende del color de acento.
+ */
+.anclas {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 132px;
+  padding: 5px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+}
+
+.ancla {
+  aspect-ratio: 16 / 10;
+  border-radius: 3px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.ancla:hover {
+  background: var(--border-strong);
+}
+
+.ancla.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/*
+ * El deslizador.
+ *
+ * Con el aspecto que trae el navegador en Windows es un carril gris y un cuadro
+ * gris, que en tema oscuro casi no se ve. Se le pinta el carril y el tirador con
+ * los mismos colores que todo lo demás.
+ */
+.deslizador {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  max-width: 260px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.deslizador::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.deslizador:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

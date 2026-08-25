@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>BONK · patrimonio</title>
+    <style>
+      /*
+       * Al revés que la ventana principal: aquí el fondo es transparente y lo
+       * sigue siendo siempre.
+       *
+       * La ventana está sobre el escritorio, así que cualquier color de relleno
+       * mientras carga se vería como un recuadro puesto encima del fondo de
+       * pantalla. Lo que se pinta es la tarjeta de dentro, y hasta que esté no
+       * se ve nada, que es justo lo que se quiere.
+       */
+      html,
+      body {
+        background: transparent;
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/widget.tsx"></script>
+  </body>
+</html>

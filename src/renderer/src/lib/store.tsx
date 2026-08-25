@@ -109,6 +109,13 @@ const FALLBACK_SETTINGS: Settings = {
   closeToTray: false,
   remindersEnabled: false,
   balanceEn: 'porcentaje',
+  widgetVisible: true,
+  widgetAnchor: 'bottomRight',
+  widgetX: 0,
+  widgetY: 0,
+  widgetOpacity: 0.92,
+  widgetOnTop: false,
+  widgetAccountIds: [],
   lastMonthlySummary: null,
   lastBackupAt: null
 }

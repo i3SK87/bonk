@@ -1,9 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
-import { Field, Checkbox, Confirm, Segmented } from '../components/ui'
+import { Field, Checkbox, Confirm, Segmented, Avatar } from '../components/ui'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
-import type { Palette, ThemeMode } from '@shared/types'
+import type { Palette, ThemeMode, WidgetAnchor } from '@shared/types'
 
 /**
  * Las muestras del selector. Cada una enseña los tres tonos que definen la
@@ -20,10 +20,37 @@ const PALETAS: Array<{ id: Palette; label: string; hint: string; bg: string; car
   { id: 'arasaka', label: 'Arasaka', hint: 'Negro corporativo y rojo', bg: '#0b0c0e', card: '#15171b', accent: '#ff3b47' }
 ]
 
+
+/**
+ * Las nueve esquinas, en el orden en que se dibujan: tres filas de tres.
+ *
+ * La rejilla es el mando: se pulsa la esquina donde se quiere y ya está. Un
+ * desplegable con «arriba a la izquierda» y ocho más obliga a leer nueve
+ * frases para elegir un sitio que se señala con el dedo.
+ */
+const ANCLAS: WidgetAnchor[][] = [
+  ['topLeft', 'top', 'topRight'],
+  ['left', 'center', 'right'],
+  ['bottomLeft', 'bottom', 'bottomRight']
+]
+
+const NOMBRE_DE_ANCLA: Record<WidgetAnchor, string> = {
+  topLeft: 'Arriba a la izquierda',
+  top: 'Arriba en el centro',
+  topRight: 'Arriba a la derecha',
+  left: 'A la izquierda',
+  center: 'En el centro',
+  right: 'A la derecha',
+  bottomLeft: 'Abajo a la izquierda',
+  bottom: 'Abajo en el centro',
+  bottomRight: 'Abajo a la derecha',
+  libre: 'Donde lo dejaste'
+}
+
 const api = window.bonk
 
 export function SettingsView(): ReactNode {
-  const { settings, updateSettings, run, toast, refresh, fail } = useStore()
+  const { settings, accounts, updateSettings, run, toast, refresh, fail } = useStore()
   const [info, setInfo] = useState<{ dataDir: string; dbPath: string; version: string; electron: string; node: string } | null>(null)
   const [importing, setImporting] = useState<OrigenCsv | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
@@ -142,6 +169,109 @@ export function SettingsView(): ReactNode {
               ))}
             </div>
           </Field>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header">
+          <h2>Widget del escritorio</h2>
+          <span className="small muted">El patrimonio a la vista sin abrir la aplicación.</span>
+        </div>
+        <div className="card-body col" style={{ gap: 14 }}>
+          <Checkbox
+            checked={settings.widgetVisible}
+            onChange={(value) => updateSettings({ widgetVisible: value })}
+            label="Enseñarlo en el escritorio"
+            hint="Se arrastra para colocarlo y con doble clic abre BONK."
+          />
+
+          {settings.widgetVisible && (
+            <>
+              <Field label="Dónde" hint="Arrastrándolo se coloca libre y se recuerda dónde lo dejaste.">
+                <div className="anclas">
+                  {ANCLAS.map((fila, y) =>
+                    fila.map((ancla, x) => (
+                      <button
+                        key={`${y}-${x}`}
+                        type="button"
+                        className={`ancla${settings.widgetAnchor === ancla ? ' active' : ''}`}
+                        onClick={() => updateSettings({ widgetAnchor: ancla })}
+                        title={NOMBRE_DE_ANCLA[ancla]}
+                        aria-label={NOMBRE_DE_ANCLA[ancla]}
+                      />
+                    ))
+                  )}
+                </div>
+              </Field>
+
+              <Field
+                label={`Transparencia · ${Math.round((1 - settings.widgetOpacity) * 100)}%`}
+                hint="Del todo transparente no se puede ni agarrar, así que no baja de ahí."
+              >
+                <input
+                  type="range"
+                  className="deslizador"
+                  min={20}
+                  max={100}
+                  step={5}
+                  value={Math.round(settings.widgetOpacity * 100)}
+                  onChange={(event) =>
+                    updateSettings({ widgetOpacity: Number(event.target.value) / 100 })
+                  }
+                />
+              </Field>
+
+              <Checkbox
+                checked={settings.widgetOnTop}
+                onChange={(value) => updateSettings({ widgetOnTop: value })}
+                label="Por delante de las ventanas"
+                hint="Apagado se queda en el orden normal: se ve mientras el escritorio esté a la vista."
+              />
+
+              <Field
+                label="Qué cuentas enseña"
+                hint="Sin marcar ninguna salen todas. El patrimonio de arriba las cuenta todas igual."
+              >
+                <div className="chip-row">
+                  {accounts.map((account) => {
+                    const puesta =
+                      settings.widgetAccountIds.length === 0 ||
+                      settings.widgetAccountIds.includes(account.id)
+                    return (
+                      <button
+                        key={account.id}
+                        type="button"
+                        className={`btn small${puesta ? ' primary' : ''}`}
+                        onClick={() => {
+                          /*
+                           * La lista vacía es «todas», así que la primera vez que
+                           * se quita una hay que escribir las demás: si no,
+                           * quitar una de dos dejaría la lista vacía y volverían
+                           * a salir las dos.
+                           */
+                          const actuales =
+                            settings.widgetAccountIds.length === 0
+                              ? accounts.map((item) => item.id)
+                              : settings.widgetAccountIds
+                          const siguiente = actuales.includes(account.id)
+                            ? actuales.filter((id) => id !== account.id)
+                            : [...actuales, account.id]
+                          updateSettings({
+                            // Todas marcadas vuelve a ser «todas», que es lo que
+                            // deja el widget al día si mañana creas una cuenta.
+                            widgetAccountIds: siguiente.length === accounts.length ? [] : siguiente
+                          })
+                        }}
+                      >
+                        <Avatar icon={account.icon} color={account.color} size="small" />
+                        {account.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </Field>
+            </>
+          )}
         </div>
       </div>
 

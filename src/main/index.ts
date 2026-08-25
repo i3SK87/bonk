@@ -8,6 +8,7 @@ import { getSettings, setSetting } from './repos/settings'
 import { applyAutoLaunch, startedHidden } from './autostart'
 import { startBackgroundWork } from './reminders'
 import { registrar, registrarFallo } from './registro'
+import { createWidget, destroyWidget, sincronizarWidget, widgetWindow } from './widget'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -55,6 +56,19 @@ function createWindow(): void {
     if (quitting || !getSettings().closeToTray) return
     event.preventDefault()
     mainWindow?.hide()
+  })
+
+  /*
+   * Cerrar la ventana principal de verdad es salir, aunque el widget siga.
+   *
+   * `window-all-closed` ya no vale para eso: el widget es una ventana, así que
+   * mientras esté puesto no se cierran todas nunca y la aplicación se quedaba
+   * viva sin nada que la trajera de vuelta salvo la bandeja. Y si se ha pedido
+   * que el aspa esconda, esto no llega a pasar: ahí la ventana no se cierra.
+   */
+  mainWindow.on('closed', () => {
+    mainWindow = null
+    if (!quitting) app.quit()
   })
 
   // Cualquier enlace externo se abre en el navegador, nunca dentro de la app.
@@ -194,10 +208,15 @@ if (!app.requestSingleInstanceLock()) {
     // carpeta del proyecto se mueve, la entrada del inicio se corrige sola.
     applyAutoLaunch(getSettings().startWithWindows)
 
-    registerIpc(() => mainWindow, { icon: iconPath, onClick: showWindow })
+    registerIpc(() => mainWindow, { icon: iconPath, onClick: showWindow }, () =>
+      sincronizarWidget(isDev)
+    )
     buildMenu()
     createTray()
     createWindow()
+    // Vive mientras viva la aplicación: sale con ella y se queda aunque la
+    // ventana principal se esconda en la bandeja.
+    if (getSettings().widgetVisible) createWidget(isDev)
 
     // Después del `postDue` de arriba: lo que vencía ya está registrado, así
     // que lo que queda por avisar es de mañana en adelante. A partir de aquí, el
@@ -205,7 +224,10 @@ if (!app.requestSingleInstanceLock()) {
     startBackgroundWork(
       iconPath,
       showWindow,
-      () => mainWindow?.webContents.send('data:changed'),
+      () => {
+        mainWindow?.webContents.send('data:changed')
+        widgetWindow()?.webContents.send('data:changed')
+      },
       (reason) => mainWindow?.webContents.send('scheduled:failed', reason),
       (settlements) => mainWindow?.webContents.send('debt:settled', settlements),
       (goals) => mainWindow?.webContents.send('goal:reached', goals)
@@ -223,6 +245,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     // A partir de aquí el aspa ya no esconde: se está saliendo de verdad.
     quitting = true
+    destroyWidget()
 
     // Copia diaria automática: barata y evita disgustos.
     try {

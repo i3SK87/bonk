@@ -72,6 +72,41 @@ try {
   equal('la paleta elegida se guarda', settings.getSettings().palette, 'sepia')
   settings.updateSettings({ palette: 'grafito' })
 
+  // — El widget del escritorio —
+  /*
+   * Sus ajustes son lo único suyo que se puede probar sin abrir una ventana, y
+   * es donde puede colarse el fallo: la tabla de ajustes es de texto plano, así
+   * que la lista de cuentas y los números viajan escritos y hay que leerlos de
+   * vuelta bien.
+   */
+  const conWidget = settings.getSettings()
+  check('el widget sale puesto de fábrica', conWidget.widgetVisible)
+  equal('abajo a la derecha', conWidget.widgetAnchor, 'bottomRight')
+  equal('casi opaco', conWidget.widgetOpacity, 0.92)
+  check('y por detrás de las ventanas', conWidget.widgetOnTop === false)
+  equal('sin cuentas elegidas, que es «todas»', conWidget.widgetAccountIds.length, 0)
+
+  // Ids inventados: aquí se prueba que la lista viaja bien, no que las cuentas
+  // existan, y las de verdad todavía no se han creado a estas alturas.
+  settings.updateSettings({ widgetAccountIds: [7, 12] })
+  equal('la lista de cuentas va y vuelve', settings.getSettings().widgetAccountIds.join(','), '7,12')
+  settings.updateSettings({ widgetAccountIds: [] })
+  equal('y vaciarla la deja vacía', settings.getSettings().widgetAccountIds.length, 0)
+  // Un valor a mano o corrupto no puede tumbar la lectura de los ajustes.
+  settings.setSetting('widgetAccountIds', 'a,,7,-3,x')
+  equal('de una lista rota se salva lo que vale', settings.getSettings().widgetAccountIds.join(','), '7')
+  settings.setSetting('widgetAccountIds', '')
+  equal('y vacía es vacía', settings.getSettings().widgetAccountIds.length, 0)
+
+  settings.updateSettings({ widgetOpacity: 0.4, widgetAnchor: 'topLeft', widgetOnTop: true })
+  const movido = settings.getSettings()
+  equal('la transparencia se guarda como número', movido.widgetOpacity, 0.4)
+  equal('el ancla también', movido.widgetAnchor, 'topLeft')
+  check('y la capa', movido.widgetOnTop)
+  settings.setSetting('widgetOpacity', 'nada')
+  equal('un número ilegible vuelve al de fábrica', settings.getSettings().widgetOpacity, 0.92)
+  settings.updateSettings({ widgetAnchor: 'bottomRight', widgetOnTop: false })
+
   check('no arranca con Windows sin pedirlo', settings.getSettings().startWithWindows === false)
   check('el aspa cierra, salvo que se pida lo contrario', settings.getSettings().closeToTray === false)
   settings.updateSettings({ startWithWindows: true, closeToTray: true })

@@ -114,6 +114,15 @@ const api = {
     exportPdf: (filter: TransactionFilter = {}) =>
       call<{ path: string; count: number } | null>('report:exportPdf', filter)
   },
+  widget: {
+    /** Mueve la ventana a esa esquina de la pantalla mientras se arrastra. */
+    move: (x: number, y: number) => call<void>('widget:move', x, y),
+    bounds: () => call<{ x: number; y: number; width: number; height: number } | null>('widget:bounds'),
+    /** Estira la ventana a lo que mida su contenido. */
+    resize: (height: number) => call<void>('widget:resize', height),
+    /** Trae la ventana principal al frente. */
+    open: () => call<void>('widget:open')
+  },
   csv: {
     exportTransactions: (filter: TransactionFilter = {}) =>
       call<{ path: string; count: number } | null>('csv:export', filter),
@@ -145,7 +154,10 @@ const api = {
         | 'data:changed'
         | 'scheduled:failed'
         | 'debt:settled'
-        | 'goal:reached',
+        | 'goal:reached'
+        // Solo le llega al widget: es como se entera de que ha cambiado la
+        // paleta, el tema o qué cuentas tiene que enseñar.
+        | 'settings:changed',
       callback: (detail?: unknown) => void
     ) => {
       const listener = (_event: unknown, detail?: unknown): void => callback(detail)

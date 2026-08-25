@@ -12,6 +12,7 @@ import * as reports from './repos/reports'
 import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { construirInformeHtml } from './repos/informe'
+import { widgetWindow, moverWidget, colocarWidget } from './widget'
 import { applyAutoLaunch } from './autostart'
 import {
   sendTestNotification,
@@ -23,13 +24,74 @@ import {
 import type { TransactionFilter, CategoryKind, Settings, DebtAdjust } from '@shared/types'
 
 /**
+ * Los canales que solo preguntan.
+ *
+ * Se listan los que leen y no los que escriben a propósito: si un día se añade
+ * uno que escribe y se olvida apuntarlo, el widget se refresca de más —que no
+ * cuesta nada— en vez de quedarse contando un patrimonio viejo, que es un fallo
+ * que nadie ve hasta que se fía de la cifra.
+ */
+const SOLO_LEEN = new Set([
+  'settings:get',
+  'accounts:list',
+  'accounts:withBalance',
+  'accounts:count',
+  'categories:list',
+  'categories:count',
+  'tx:list',
+  'tx:count',
+  'tx:totals',
+  'tx:get',
+  'tx:refundsFor',
+  'tx:refundCandidates',
+  'goals:list',
+  'goals:progress',
+  'scheduled:list',
+  'scheduled:debts',
+  'scheduled:project',
+  'reports:categories',
+  'reports:monthly',
+  'reports:span',
+  'attachments:list',
+  'attachments:open',
+  'attachments:pick',
+  'attachments:data',
+  'csv:pick',
+  'db:info',
+  'db:openFolder',
+  'widget:move',
+  'widget:bounds',
+  'widget:resize',
+  'widget:open'
+])
+
+/** El aviso al widget se agrupa: guardar algo dispara varias llamadas seguidas. */
+let avisoPendiente: NodeJS.Timeout | null = null
+function avisarAlWidget(): void {
+  if (avisoPendiente) return
+  avisoPendiente = setTimeout(() => {
+    avisoPendiente = null
+    widgetWindow()?.webContents.send('data:changed')
+  }, 120)
+}
+
+/**
  * Envuelve cada manejador para que un error del proceso principal llegue a la
  * interfaz como un mensaje legible en vez de como un "Error invoking remote method".
  */
 function handle(channel: string, fn: (...args: never[]) => unknown): void {
   ipcMain.handle(channel, async (_event, ...args) => {
     try {
-      return { ok: true, data: await (fn as (...a: unknown[]) => unknown)(...args) }
+      const data = await (fn as (...a: unknown[]) => unknown)(...args)
+      /*
+       * El widget es otra ventana y no se entera de nada por su cuenta.
+       *
+       * La aplicación se refresca sola porque quien guarda es ella; el widget
+       * solo sabe lo que se le cuenta, y sin esto seguía enseñando el saldo de
+       * antes hasta el siguiente repaso de fondo, media hora después.
+       */
+      if (!SOLO_LEEN.has(channel)) avisarAlWidget()
+      return { ok: true, data }
     } catch (error) {
       return { ok: false, error: (error as Error).message ?? 'Error inesperado' }
     }
@@ -38,7 +100,9 @@ function handle(channel: string, fn: (...args: never[]) => unknown): void {
 
 export function registerIpc(
   getWindow: () => BrowserWindow | null,
-  notifications: { icon: string; onClick: () => void }
+  notifications: { icon: string; onClick: () => void },
+  /** Enciende, apaga o recoloca el widget según los ajustes de ahora mismo. */
+  refrescarWidget: () => void
 ): void {
   /**
    * Lo que haya que celebrar, en el mismo gesto que lo provoca.
@@ -64,6 +128,13 @@ export function registerIpc(
     // El arranque con Windows no vive en la base de datos sino en el registro:
     // hay que escribirlo aparte cada vez que se toca la casilla.
     if ('startWithWindows' in patch) applyAutoLaunch(next.startWithWindows)
+    /*
+     * El widget es una ventana, no un trozo de pantalla: los ajustes que le
+     * tocan hay que aplicárselos a mano. Y los demás también le llegan —la
+     * paleta y el tema los pinta él—, así que se le avisa de todos.
+     */
+    if (Object.keys(patch).some((clave) => clave.startsWith('widget'))) refrescarWidget()
+    widgetWindow()?.webContents.send('settings:changed', next)
     return next
   })
 
@@ -297,6 +368,19 @@ export function registerIpc(
     return { path: result.filePaths[0], preview: csv.previewCsv(result.filePaths[0]) }
   })
   handle('csv:import', (path: string, options) => csv.importCsv(path, options))
+
+  // — El widget del escritorio —
+  /*
+   * Se arrastra desde la ventana: el navegador manda dónde está el puntero y
+   * aquí se traduce a la posición de la ventana. `-webkit-app-region: drag` lo
+   * haría solo, pero se come todos los clics de esa zona y entonces no habría
+   * ni doble clic para abrir la aplicación ni menú del botón derecho.
+   */
+  handle('widget:move', (x: number, y: number) => moverWidget(x, y))
+  handle('widget:bounds', () => widgetWindow()?.getBounds() ?? null)
+  /** Lo que mide su contenido: la ventana se estira a lo que haya que enseñar. */
+  handle('widget:resize', (height: number) => colocarWidget(height))
+  handle('widget:open', () => notifications.onClick())
 
   // — Base de datos y mantenimiento —
   handle('db:info', () => ({
