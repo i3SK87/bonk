@@ -110,6 +110,14 @@ function refundTotalsFor(ids: number[]): Map<number, number> {
 }
 
 
+/** Cómo se llama cada tipo en la interfaz; es por donde se le busca. */
+const NOMBRE_DE_TIPO: Record<TxType, string> = {
+  expense: 'gasto',
+  income: 'ingreso',
+  transfer: 'traspaso',
+  refund: 'reembolso'
+}
+
 const VIEW_SELECT = `
   SELECT t.*,
          a.name     AS account_name,
@@ -212,6 +220,28 @@ function buildWhere(filter: TransactionFilter): { sql: string; params: Array<str
                  JOIN tags g ON g.id = tt.tag_id WHERE g.name LIKE ?)`
     ]
     params.push(needle, needle, needle, needle, needle, needle)
+
+    /*
+     * Y por el nombre del tipo: «reembolso» trae las devoluciones.
+     *
+     * En la lista, lo que dice que algo es una devolución es una etiqueta que
+     * pone «Reembolso», así que se busca como se busca cualquier otra etiqueta.
+     * El tipo se guarda en inglés, de modo que la traducción se hace aquí.
+     *
+     * Por el principio de la palabra y con tres letras mínimo: «traspaso» lleva
+     * una «a» dentro, y buscando «a» no puede salir de golpe todo lo que se ha
+     * movido entre cuentas.
+     */
+    const suena = text.toLowerCase()
+    if (suena.length >= 3) {
+      const tipos = (Object.keys(NOMBRE_DE_TIPO) as TxType[]).filter((tipo) =>
+        NOMBRE_DE_TIPO[tipo].startsWith(suena)
+      )
+      if (tipos.length > 0) {
+        parts.push(`t.type IN (${tipos.map(() => '?').join(',')})`)
+        params.push(...tipos)
+      }
+    }
 
     /*
      * Los importes se buscan por trozos, igual que los nombres.

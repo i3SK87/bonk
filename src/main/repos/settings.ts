@@ -15,6 +15,7 @@ export function getSettings(): Settings {
     startWithWindows: map.get('startWithWindows') === '1',
     closeToTray: map.get('closeToTray') === '1',
     remindersEnabled: map.get('remindersEnabled') === '1',
+    balanceEn: (map.get('balanceEn') as Settings['balanceEn']) || 'porcentaje',
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null
   }

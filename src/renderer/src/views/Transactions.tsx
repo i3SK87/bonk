@@ -711,6 +711,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 <Icon name="search" size={16} />
               </span>
             </div>
+
+            {/* Cuántos salen con lo que hay puesto. Está en la cinta de arriba,
+                pero la cinta gira: aquí se puede mirar cuando hace falta, que es
+                justo mientras se escribe en el buscador. */}
+            {!loading && (
+              <span className="small muted" style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
+                {total === 0
+                  ? 'Sin resultados'
+                  : `${total} ${total === 1 ? 'resultado' : 'resultados'}`}
+              </span>
+            )}
+
             <button
               className={`btn small${showFilters || activeFilters ? ' primary' : ''}`}
               onClick={() => setShowFilters((value) => !value)}

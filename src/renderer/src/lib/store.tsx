@@ -108,6 +108,7 @@ const FALLBACK_SETTINGS: Settings = {
   startWithWindows: false,
   closeToTray: false,
   remindersEnabled: false,
+  balanceEn: 'porcentaje',
   lastMonthlySummary: null,
   lastBackupAt: null
 }

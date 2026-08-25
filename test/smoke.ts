@@ -2227,6 +2227,63 @@ try {
     categoryIds: [conCategoria.categoryId!],
     uncategorized: true
   })
+  // — Buscar por el nombre del tipo —
+  /*
+   * «reembolso» tiene que traer las devoluciones.
+   *
+   * En la lista, lo que dice que algo es una devolución es una etiqueta que pone
+   * «Reembolso», y quien la ve la escribe en el buscador esperando que sirva.
+   */
+  const devoluciones = transactions.listTransactions({ search: 'reembolso', limit: 500 })
+  check('«reembolso» trae devoluciones', devoluciones.length > 0, `${devoluciones.length}`)
+  check(
+    'y solo lo que de verdad lo es, o lo dice en su texto',
+    devoluciones.every(
+      (row) =>
+        row.type === 'refund' ||
+        /reembolso/i.test(`${row.note ?? ''} ${row.payee ?? ''} ${row.categoryName ?? ''} ${row.accountName}`)
+    )
+  )
+  const todasLasDevoluciones = transactions.listTransactions({ types: ['refund'], limit: 500 })
+  check(
+    'las trae todas',
+    todasLasDevoluciones.every((row) => devoluciones.some((item) => item.id === row.id)),
+    `${todasLasDevoluciones.length} devoluciones`
+  )
+  check(
+    'y por el principio de la palabra basta',
+    transactions.listTransactions({ search: 'reem', limit: 500 }).length >= todasLasDevoluciones.length
+  )
+  const traspasos = transactions.listTransactions({ types: ['transfer'], limit: 500 })
+  check(
+    '«traspaso» trae los traspasos',
+    traspasos.length === 0 ||
+      transactions
+        .listTransactions({ search: 'traspaso', limit: 500 })
+        .filter((row) => row.type === 'transfer').length === traspasos.length
+  )
+  /*
+   * Con una o dos letras, el tipo no cuenta.
+   *
+   * «traspaso» lleva una «a» dentro: buscando «a» saldría de golpe todo lo que
+   * se ha movido entre cuentas, que no es lo que nadie está buscando al teclear
+   * la primera letra de algo.
+   */
+  const mudo = transactions.saveTransaction({
+    type: 'transfer',
+    date: day,
+    accountId: bank.id,
+    toAccountId: cash.id,
+    amount: 111,
+    note: 'zzz'
+  })
+  const encuentra = (texto: string): boolean =>
+    transactions.listTransactions({ search: texto, limit: 500 }).some((row) => row.id === mudo.id)
+  check('con tres letras, «tra» lo encuentra por su tipo', encuentra('tra'))
+  check('con dos no, que «tr» todavía no es una palabra', !encuentra('tr'))
+  check('y con una menos todavía', !encuentra('t'))
+  transactions.deleteTransactions([mudo.id])
+
   check(
     'junto a una categoría, suma en vez de restar',
     mezcla.length > huerfanos.length &&

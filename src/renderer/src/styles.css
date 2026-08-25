@@ -1929,9 +1929,27 @@ p { margin: 0; }
 
 /* Con su menú abierto sí, que aquí no hay franja al pasar por encima y sin esto
    no habría nada que dijera sobre qué categoría se ha pulsado. */
-.table.breakdown tbody tr.marcada,
-.table.breakdown tbody tr.marcada:hover {
+/*
+ * Las esquinas, redondeadas como todo lo demás que se enciende.
+ *
+ * El fondo de una fila de tabla lo pintan sus celdas, no la fila: puesto en el
+ * `tr` sale de canto a canto y con las esquinas en pico, que es lo único de la
+ * aplicación que se resaltaba así. Se pinta en las celdas y se redondean la
+ * primera y la última.
+ */
+.table.breakdown tbody tr.marcada > td,
+.table.breakdown tbody tr.marcada:hover > td {
   background: var(--bg-sunken);
+}
+
+.table.breakdown tbody tr.marcada > td:first-child {
+  border-top-left-radius: var(--radius-sm);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.table.breakdown tbody tr.marcada > td:last-child {
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
 }
 
 /* Sangría igual al ancho del chevrón: las categorías sin desglose no bailan. */

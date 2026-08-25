@@ -169,7 +169,7 @@ export function ReportsView(): ReactNode {
   // El catálogo de categorías, con su ficha completa. Se llama así y no
   // `categories` porque ese nombre ya lo lleva aquí el desglose del periodo,
   // que son totales y no fichas.
-  const { settings, categories: catalogo, revision, run, toast, fail } = useStore()
+  const { settings, categories: catalogo, revision, run, toast, fail, updateSettings } = useStore()
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
   const [categories, setCategories] = useState<CategoryTotal[]>([])
@@ -200,7 +200,7 @@ export function ReportsView(): ReactNode {
    * cambia varias veces en la misma sesión. Un ajuste que se toca cada dos
    * minutos no es un ajuste.
    */
-  const [balanceEn, setBalanceEn] = useState<'porcentaje' | 'valor'>('porcentaje')
+  const balanceEn = settings.balanceEn
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
@@ -528,7 +528,7 @@ export function ReportsView(): ReactNode {
               {comparacion && (
                 <Segmented
                   value={balanceEn}
-                  onChange={setBalanceEn}
+                  onChange={(value) => updateSettings({ balanceEn: value })}
                   options={[
                     { value: 'porcentaje', label: '%' },
                     { value: 'valor', label: currencySymbol(currency) }

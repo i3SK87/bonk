@@ -11,6 +11,9 @@ export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
+/** En qué se leen las diferencias de Informes: en porcentaje o en su unidad. */
+export type UnidadCambio = 'porcentaje' | 'valor'
+
 export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela' | 'heat' | 'arasaka'
 
 export interface Account {
@@ -332,6 +335,14 @@ export interface Settings {
    * que salga cada vez que abres, y lo que hace que salga igual si el día 1 no
    * llegaste a abrir la aplicación.
    */
+  /**
+     * Cómo se leen las diferencias en Informes.
+     *
+     * Se guarda, al revés que los filtros: un filtro cambia qué datos se ven y
+     * se quiere empezar limpio cada día, pero esto es en qué unidad se leen los
+     * mismos datos, y quien prefiere los euros los prefiere siempre.
+     */
+  balanceEn: UnidadCambio
   lastMonthlySummary: string | null
   lastBackupAt: string | null
 }
