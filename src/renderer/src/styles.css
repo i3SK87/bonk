@@ -2288,14 +2288,14 @@ textarea::placeholder {
  * el fondo hundido y la fila entera ya está de ese color al pasar por encima, así
  * que fondo contra fondo no se ve nada.
  *
- * Del revés sí se ve: el dibujo toma el color del fondo y el fondo el del texto.
- * Es el mismo recurso que el de las etiquetas de la fila, llevado hasta el final
- * porque aquí no hay texto que leer, hay un blanco al que apuntar.
+ * El del canto de las etiquetas de la fila, que es el gris que ya se despega del
+ * fondo hundido sin dar el salto al blanco pleno: probado del revés del todo y
+ * pesaba más que el importe que tiene al lado, que es lo que se viene a leer.
  */
 .list-row .btn.ghost.icon:hover,
 .list-row .btn.ghost.icon:focus-visible {
-  background: var(--fg);
-  color: var(--bg);
+  background: var(--border-strong);
+  color: var(--fg);
   outline: none;
 }
 
