@@ -30,8 +30,8 @@ const RANGES: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all', 'custom']
 
 /**
  * Coloca cada devolución justo debajo del gasto al que apunta. Solo dentro del
- * mismo día: mover una fila a otra fecha descuadraría el total de la jornada,
- * así que cuando el gasto es de otro día el enlace se marca en el canto y nada más.
+ * mismo día: el total de la jornada suma lo que pasó ese día, así que cuando el
+ * gasto es de otro el enlace se marca en el canto y nada más.
  */
 function nestRefunds(list: TransactionView[]): Array<{ row: TransactionView; nested: boolean; last: boolean }> {
   return nestByParent(
@@ -153,41 +153,80 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [importando, setImportando] = useState<OrigenCsv | null>(null)
   /*
-   * Recolocar un movimiento dentro de su día.
+   * Recolocar un movimiento arrastrándolo.
    *
-   * La lista ordena por fecha y luego por cuándo se apuntó, que no tiene nada
-   * que ver con el orden en que pasaron las cosas: apuntas la cena y luego te
-   * acuerdas del taxi de antes, y el taxi queda encima.
+   * Dentro de su día es solo orden: la lista ordena por fecha y luego por cuándo
+   * se apuntó, que no tiene nada que ver con el orden en que pasaron las cosas
+   * —apuntas la cena y luego te acuerdas del taxi de antes, y el taxi queda
+   * encima—.
    *
-   * Solo dentro del día: la fecha de un movimiento es un dato suyo, no una
-   * posición en una lista, y arrastrarlo a otro día sería cambiarle la fecha sin
-   * decirlo.
+   * Soltándolo en otro día se le cambia la fecha, que es lo que uno espera al
+   * mover una fila de un día a otro. Se apunta de qué día sale para saber cuál
+   * de las dos cosas es cada suelta, y el aviso de después lo dice con todas las
+   * letras: mudar un dato sin contarlo sí sería de mala educación.
    */
-  const [arrastrado, setArrastrado] = useState<number | null>(null)
+  const [arrastrado, setArrastrado] = useState<{ id: number; date: string } | null>(null)
   const [destino, setDestino] = useState<number | null>(null)
+  /** El día sobre cuya cabecera se está soltando, para marcarla. */
+  const [diaDestino, setDiaDestino] = useState<string | null>(null)
 
   /**
-   * Deja el día en el orden en que ha quedado tras soltar.
+   * Los movimientos de un día repartidos en bloques.
    *
-   * Se trabaja por bloques y no por filas: un gasto y sus devoluciones son una
-   * sola cosa en la lista —cuelgan de él— y moverlo tiene que llevárselas
-   * consigo, o se quedarían colgando de quien no es.
+   * Un gasto y sus devoluciones son una sola cosa en la lista —cuelgan de él— y
+   * moverlo tiene que llevárselas consigo, o se quedarían colgando de quien no es.
    */
-  async function soltarEn(reales: TransactionView[], sobreId: number): Promise<void> {
-    const movido = arrastrado
-    setArrastrado(null)
-    setDestino(null)
-    if (movido == null || movido === sobreId) return
-
+  function bloquesDe(reales: TransactionView[]): TransactionView[][] {
     const bloques: TransactionView[][] = []
     for (const { row, nested } of nestRefunds(reales)) {
       if (nested && bloques.length > 0) bloques[bloques.length - 1].push(row)
       else bloques.push([row])
     }
+    return bloques
+  }
 
-    const desde = bloques.findIndex((bloque) => bloque[0].id === movido)
-    const hasta = bloques.findIndex((bloque) => bloque.some((fila) => fila.id === sobreId))
-    if (desde < 0 || hasta < 0 || desde === hasta) return
+  function finDelArrastre(): void {
+    setArrastrado(null)
+    setDestino(null)
+    setDiaDestino(null)
+  }
+
+  /**
+   * Deja el día en el orden en que ha quedado tras soltar.
+   *
+   * `sobreId` es la fila sobre la que se ha soltado; sin ella, se ha soltado en
+   * la cabecera del día y el movimiento se pone el primero.
+   */
+  async function soltarEn(dia: string, reales: TransactionView[], sobreId?: number): Promise<void> {
+    const movido = arrastrado
+    finDelArrastre()
+    if (movido == null || movido.id === sobreId) return
+
+    const bloques = bloquesDe(reales)
+    const hasta =
+      sobreId == null ? 0 : bloques.findIndex((bloque) => bloque.some((fila) => fila.id === sobreId))
+    if (hasta < 0) return
+
+    /*
+     * Viene de otro día: primero se muda y luego se ordena, de una vez.
+     *
+     * El que llega no está en `reales` —esa lista es la del día de destino—, así
+     * que se cuela a mano donde se ha soltado. Sus devoluciones no viajan con él:
+     * se quedan en la fecha en que volvió el dinero, y la lista ya sabe enseñar
+     * un gasto y su devolución en días distintos.
+     */
+    if (movido.date !== dia) {
+      const orden = bloques.map((bloque) => bloque.map((fila) => fila.id))
+      orden.splice(hasta, 0, [movido.id])
+      await run(
+        () => api.transactions.moveToDay(movido.id, dia, orden.flat()),
+        `Fecha cambiada al ${formatDate(dia)}`
+      )
+      return
+    }
+
+    const desde = bloques.findIndex((bloque) => bloque[0].id === movido.id)
+    if (desde < 0 || desde === hasta) return
 
     const orden = [...bloques]
     const [suyo] = orden.splice(desde, 1)
@@ -757,17 +796,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               </span>
             </div>
 
-            {/* Cuántos salen con lo que hay puesto. Está en la cinta de arriba,
-                pero la cinta gira: aquí se puede mirar cuando hace falta, que es
-                justo mientras se escribe en el buscador. */}
-            {!loading && (
-              <span className="small muted" style={{ marginRight: 8, whiteSpace: 'nowrap' }}>
-                {total === 0
-                  ? 'Sin resultados'
-                  : `${total} ${total === 1 ? 'resultado' : 'resultados'}`}
-              </span>
-            )}
-
             <button
               className={`btn small${showFilters || activeFilters ? ' primary' : ''}`}
               onClick={() => setShowFilters((value) => !value)}
@@ -973,7 +1001,25 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               const onlyUpcoming = items.real.length === 0
               return (
                 <div key={date}>
-                  <div className="day-heading">
+                  {/* La cabecera también recibe: soltando ahí, el movimiento se
+                      muda a ese día y se pone el primero. Es la única manera de
+                      llevarlo a un día del que no se ve ninguna fila propia, y
+                      ahorra apuntar a una en concreto cuando lo único que se
+                      quiere es cambiar la fecha. */}
+                  <div
+                    className={`day-heading${diaDestino === date ? ' destino' : ''}`}
+                    onDragOver={(event) => {
+                      if (!arrastrado) return
+                      event.preventDefault()
+                      event.dataTransfer.dropEffect = 'move'
+                      setDestino(null)
+                      setDiaDestino(date)
+                    }}
+                    onDrop={(event) => {
+                      event.preventDefault()
+                      soltarEn(date, items.real)
+                    }}
+                  >
                     <span>{formatDayHeading(date)}</span>
                     <span
                       className={`day-total ${dayTotal >= 0 ? 'positive' : 'negative'} amount`}
@@ -1002,15 +1048,16 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         marcada={menu?.row.id === row.id}
                         // Una devolución no se recoloca: va donde vaya su gasto.
                         arrastrable={!nested}
-                        arrastrando={arrastrado === row.id}
+                        arrastrando={arrastrado?.id === row.id}
                         destino={destino === row.id}
-                        onArrastrar={() => setArrastrado(row.id)}
-                        onEncima={() => arrastrado != null && setDestino(row.id)}
-                        onSoltar={() => soltarEn(items.real, row.id)}
-                        onFinArrastre={() => {
-                          setArrastrado(null)
-                          setDestino(null)
+                        onArrastrar={() => setArrastrado({ id: row.id, date })}
+                        onEncima={() => {
+                          if (!arrastrado) return
+                          setDestino(row.id)
+                          setDiaDestino(null)
                         }}
+                        onSoltar={() => soltarEn(date, items.real, row.id)}
+                        onFinArrastre={finDelArrastre}
                         nested={nested}
                         lastChild={last}
                       />

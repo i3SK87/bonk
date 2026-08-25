@@ -350,6 +350,45 @@ export function reorderTransactions(ids: number[]): number {
   })
 }
 
+/**
+ * Lleva un movimiento a otro día y deja ese día en el orden que se le pasa.
+ *
+ * Es la otra mitad de `reorderTransactions`: aquella recoloca dentro de la
+ * jornada y esta cambia de jornada. Van juntas y en una sola transacción porque
+ * son un solo gesto —arrastrar la fila hasta otro día— y a medio hacer dejarían
+ * el movimiento mudado pero puesto donde no se soltó.
+ *
+ * Se mueve solo el que se arrastra. Sus devoluciones se quedan en su fecha: la
+ * fecha de una devolución es el día en que volvió el dinero, no una consecuencia
+ * de dónde esté el gasto, y arrastrarlas detrás sería cambiar en silencio datos
+ * que no se han tocado. La lista ya sabe enseñar un gasto y su devolución en
+ * días distintos.
+ */
+export function moveTransactionToDay(id: number, date: string, orden: number[]): number {
+  return atomic(() => {
+    const db = getDb()
+    const fila = db.prepare('SELECT date FROM transactions WHERE id = ?').get(id) as unknown as
+      | { date: string }
+      | undefined
+    if (!fila) throw new Error('Ese movimiento ya no existe')
+    if (fila.date !== date) {
+      db.prepare('UPDATE transactions SET date = ?, updated_at = ? WHERE id = ?').run(
+        date,
+        nowISO(),
+        id
+      )
+    }
+    /*
+     * El orden, después de la mudanza.
+     *
+     * Así cuando `reorderTransactions` comprueba que todos son del mismo día, el
+     * recién llegado ya lo es. Al revés se caía siempre: el que se acaba de
+     * soltar todavía llevaba la fecha de la que viene.
+     */
+    return orden.length > 0 ? reorderTransactions(orden) : 0
+  })
+}
+
 export function listTransactions(filter: TransactionFilter = {}): TransactionView[] {
   const { sql, params } = buildWhere(filter)
   const limit = filter.limit ?? 500
@@ -531,6 +570,25 @@ function validate(input: TransactionInput): void {
   }
 }
 
+/**
+ * El número de orden que le toca a lo que entra en un día: por encima de todo.
+ *
+ * Un movimiento recién apuntado va arriba del todo de su jornada. Es lo que uno
+ * acaba de hacer, y es donde lo busca la vista al volver de guardarlo. Antes
+ * nacían todos con un cero y el desempate lo decidía la hora: bastaba con haber
+ * recolocado el día una vez —o con que la hora viniera vacía, que es lo normal—
+ * para que el nuevo apareciera al final, debajo de lo de por la mañana.
+ *
+ * De diez en diez, como `reorderTransactions`, para que los huecos sigan
+ * cuadrando si luego se recoloca el día a mano.
+ */
+function ordenAlEntrar(date: string): number {
+  const fila = getDb()
+    .prepare('SELECT COALESCE(MAX(sort_order), 0) AS tope FROM transactions WHERE date = ?')
+    .get(date) as unknown as { tope: number }
+  return fila.tope + 10
+}
+
 export function saveTransaction(input: TransactionInput): TransactionView {
   validate(input)
   const db = getDb()
@@ -626,13 +684,30 @@ export function saveTransaction(input: TransactionInput): TransactionView {
           previous.scheduledId
         )
       }
+
+      /*
+       * Cambiarle la fecha es llegar a otro día, y quien llega se pone arriba.
+       *
+       * Su número de orden era el sitio que tenía en el día del que viene y ahí
+       * no significa nada: con el día de destino ya recolocado lo dejaba en
+       * mitad de la lista, y sin recolocar, debajo de todo. Arrastrando la fila
+       * no pasa por aquí —eso lo lleva `moveTransactionToDay`, que sí sabe dónde
+       * se ha soltado—; esto es para cuando la fecha se cambia en la ficha.
+       */
+      if (previous && previous.date !== input.date) {
+        db.prepare('UPDATE transactions SET sort_order = ? WHERE id = ?').run(
+          ordenAlEntrar(input.date),
+          id
+        )
+      }
     } else {
       const result = db
         .prepare(
           `INSERT INTO transactions
              (type, date, time, account_id, to_account_id, category_id, amount, amount_to,
-              payee, note, place, lat, lon, refund_for_id, goal_id, scheduled_id, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+              payee, note, place, lat, lon, refund_for_id, goal_id, scheduled_id, sort_order,
+              created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           input.type,
@@ -651,6 +726,7 @@ export function saveTransaction(input: TransactionInput): TransactionView {
           bind(refundForId),
           bind(goalId),
           bind(input.scheduledId),
+          ordenAlEntrar(input.date),
           now,
           now
         )

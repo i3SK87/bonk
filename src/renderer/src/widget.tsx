@@ -60,11 +60,13 @@ function Widget(): React.ReactNode {
   }, [settings])
 
   /*
-   * La ventana se estira a lo que mida la tarjeta.
+   * La ventana se estira a lo que mida la tarjeta, de alto y de ancho.
    *
    * Con una altura fija, marcar tres cuentas más dejaba la última cortada y
-   * desmarcarlas todas dejaba medio recuadro vacío. Se mide lo pintado y se le
-   * dice al proceso principal, que es el único que puede tocar la ventana.
+   * desmarcarlas todas dejaba medio recuadro vacío. Y con un ancho fijo pasaba
+   * lo propio de lado: una cuenta con cuatro cifras dejaba media tarjeta en
+   * blanco y un patrimonio largo se quedaba sin sitio. Se mide lo pintado y se
+   * le dice al proceso principal, que es el único que puede tocar la ventana.
    */
   useEffect(() => {
     const nodo = caja.current
@@ -82,7 +84,9 @@ function Widget(): React.ReactNode {
       const estilo = getComputedStyle(nodo)
       const alto =
         rect.height + parseFloat(estilo.marginTop || '0') + parseFloat(estilo.marginBottom || '0')
-      api.widget.resize(Math.ceil(alto)).catch(() => undefined)
+      const ancho =
+        rect.width + parseFloat(estilo.marginLeft || '0') + parseFloat(estilo.marginRight || '0')
+      api.widget.resize(Math.ceil(alto), Math.ceil(ancho)).catch(() => undefined)
     }
     medir()
     const observador = new ResizeObserver(medir)

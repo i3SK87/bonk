@@ -990,13 +990,38 @@ try {
   transactions.reorderTransactions([elsegundo, elprimero, eltercero])
   equal('se puede volver a cambiar', delDia().join(','), 'Segundo,Primero,Tercero')
 
-  // Uno nuevo entra arriba: nace con orden cero y la fecha lo pone el elprimero de
-  // su día solo si nadie ha tocado el orden. Con el día ya ordenado, se queda
-  // debajo de los que llevan número, que es lo esperable: no se ha dicho dónde va.
+  /*
+   * Uno nuevo entra arriba del todo, con el día recolocado a mano o sin él: nace
+   * con un número de orden por encima del mayor de su jornada. Es lo que se acaba
+   * de apuntar y es donde se le busca al volver de guardarlo.
+   */
   const recienLlegado = unoDelDia('Nuevo', 400)
-  check('uno nuevo no se cuela por delante de lo ya ordenado', delDia().indexOf('Nuevo') === 3, delDia().join(','))
+  equal('uno nuevo encabeza su día aunque estuviera recolocado', delDia()[0], 'Nuevo')
+  transactions.reorderTransactions([elsegundo, recienLlegado, elprimero, eltercero])
+  equal('y se le puede bajar', delDia()[1], 'Nuevo')
   transactions.reorderTransactions([recienLlegado, elsegundo, elprimero, eltercero])
-  equal('y se puede subir', delDia()[0], 'Nuevo')
+  equal('y volver a subir', delDia()[0], 'Nuevo')
+
+  // Y cambiarle la fecha en la ficha es llegar a otro día: también arriba.
+  const viajero = transactions.saveTransaction({
+    type: 'expense',
+    date: addDays(diaSuelto, -8),
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 600,
+    note: 'Viajero'
+  })
+  transactions.saveTransaction({
+    id: viajero.id,
+    type: 'expense',
+    date: diaSuelto,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 600,
+    note: 'Viajero'
+  })
+  equal('cambiarle la fecha lo pone arriba del día al que llega', delDia()[0], 'Viajero')
+  transactions.deleteTransactions([viajero.id])
 
   // Mezclar días no vale: el orden es de la jornada.
   const deOtroDia = transactions.saveTransaction({
@@ -1015,6 +1040,41 @@ try {
   }
   check('no se recolocan movimientos de días distintos', /su día/i.test(mezclaDias), mezclaDias)
   equal('y el día no se queda a medias', delDia().join(','), 'Nuevo,Segundo,Primero,Tercero')
+
+  /*
+   * Mudarse de día es lo otro que se puede hacer arrastrando: la fila cambia de
+   * fecha y cae en el sitio donde se ha soltado.
+   */
+  const vispera = addDays(diaSuelto, -1)
+  const deLaVispera = (): string[] =>
+    transactions
+      .listTransactions({ from: vispera, to: vispera, limit: 50 })
+      .map((row) => row.note ?? '')
+
+  transactions.moveTransactionToDay(elprimero, vispera, [elprimero, deOtroDia.id])
+  equal('el que se muda deja su día', delDia().join(','), 'Nuevo,Segundo,Tercero')
+  equal('y aparece en el de destino donde se soltó', deLaVispera().join(','), 'Primero,De otro día')
+  equal(
+    'con la fecha cambiada de verdad',
+    transactions.getTransaction(elprimero)?.date ?? '',
+    vispera
+  )
+
+  transactions.moveTransactionToDay(elprimero, diaSuelto, [recienLlegado, elprimero, elsegundo, eltercero])
+  equal('y puede volver, también a media lista', delDia().join(','), 'Nuevo,Primero,Segundo,Tercero')
+  equal('dejando el día del que sale como estaba', deLaVispera().join(','), 'De otro día')
+
+  // Mudarlo a donde ya está es reordenar y nada más.
+  transactions.moveTransactionToDay(elprimero, diaSuelto, [elprimero, recienLlegado, elsegundo, eltercero])
+  equal('mudarlo a su propio día solo lo recoloca', delDia().join(','), 'Primero,Nuevo,Segundo,Tercero')
+
+  let mudanzaFantasma = ''
+  try {
+    transactions.moveTransactionToDay(999_999, diaSuelto, [])
+  } catch (error) {
+    mudanzaFantasma = (error as Error).message
+  }
+  check('no se muda lo que no existe', /ya no existe/i.test(mudanzaFantasma), mudanzaFantasma)
 
   transactions.deleteTransactions([elprimero, elsegundo, eltercero, recienLlegado, deOtroDia.id])
 

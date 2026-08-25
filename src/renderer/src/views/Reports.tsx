@@ -273,19 +273,6 @@ export function ReportsView(): ReactNode {
   }, [categories, antes])
 
   /*
-   * En lo que antes gastabas y ahora no.
-   *
-   * Estuvieron dentro de la tabla, con un cero y su comparación, y sobraban:
-   * añadían filas a una lista que va de lo que has gastado este periodo. Pero la
-   * información es buena —dejar de gastar en algo es la bajada más grande que
-   * hay—, así que van debajo en un renglón, que es el sitio de una nota al pie.
-   */
-  const desaparecidas = useMemo(() => {
-    if (!comparacion) return []
-    const ahora = new Set(categories.map((item) => item.categoryId))
-    return antes.filter((item) => !ahora.has(item.categoryId)).sort((a, b) => b.total - a.total)
-  }, [categories, antes, comparacion])
-  /*
    * Los movimientos que se van a mudar de categoría.
    *
    * Se piden al abrir el cuadro y no al aceptarlo, para poder decir cuántos son
@@ -676,22 +663,6 @@ export function ReportsView(): ReactNode {
                     })}
                   </tbody>
                 </table>
-              )}
-
-              {/* Al pie y en pequeño: es una nota sobre la tabla, no una fila
-                  más de ella. Solo las tres mayores, que la lista entera de lo
-                  que no has gastado no la lee nadie. */}
-              {desaparecidas.length > 0 && (
-                <p className="small muted" style={{ margin: '12px 0 0' }}>
-                  Sin gasto en{' '}
-                  {desaparecidas.slice(0, 3).map((item, indice) => (
-                    <Fragment key={item.categoryId ?? `x${indice}`}>
-                      {indice > 0 && ', '}
-                      {item.name} ({formatMoney(item.total, currency)})
-                    </Fragment>
-                  ))}
-                  {desaparecidas.length > 3 && ` y ${desaparecidas.length - 3} más`}.
-                </p>
               )}
             </div>
           </div>

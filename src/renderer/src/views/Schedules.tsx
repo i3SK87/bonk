@@ -616,7 +616,6 @@ export function ScheduleModal({
   const [interval, setInterval] = useState(schedule?.interval ?? devolucionDe?.interval ?? 1)
   const [nextDate, setNextDate] = useState(schedule?.nextDate ?? devolucionDe?.nextDate ?? today())
   const [endDate, setEndDate] = useState(schedule?.endDate ?? '')
-  const [autoPost, setAutoPost] = useState(schedule?.autoPost ?? true)
   const [remind, setRemind] = useState(schedule?.remind ?? true)
   // Las programaciones de antes tenían nombre además de nota. Al abrir una de
   // esas, su nombre pasa a la nota: es lo que la lista enseñaba, y así no se
@@ -693,7 +692,15 @@ export function ScheduleModal({
       interval,
       nextDate,
       endDate: endDate || null,
-      autoPost,
+      /*
+       * Siempre automático.
+       *
+       * Tuvo su casilla y estorbaba: una programación es justamente lo que se
+       * apunta para no tener que acordarse, y dejarla en «avísame y ya la
+       * registras tú» convertía la lista en otra lista de recados. El aviso del
+       * día antes sigue siendo casilla aparte, que eso sí es cosa de cada uno.
+       */
+      autoPost: true,
       remind,
       active: schedule?.active ?? true,
       refundForScheduledId: type === 'refund' ? refundForScheduledId : null,
@@ -883,16 +890,9 @@ export function ScheduleModal({
           </Field>
         </div>
 
-        {/* Las tres casillas, a la par: son respuestas de sí o no, cortas, y en
+        {/* Las casillas, a la par: son respuestas de sí o no, cortas, y en
             columna estiraban el formulario media pantalla para nada. */}
         <div className="casillas">
-          <Checkbox
-            checked={autoPost}
-            onChange={setAutoPost}
-            label="Registrar automáticamente"
-            hint="Desactivado, solo avisa y la registras tú."
-          />
-
           <Checkbox
             checked={remind}
             onChange={setRemind}
@@ -914,7 +914,7 @@ export function ScheduleModal({
                   // Solo al marcarla: desmarcándola no hay nada que concretar.
                   if (marcada) setPidiendoPrestamista('marcando')
                 }}
-                label="Es una deuda a plazos"
+                label="Deuda a plazos"
                 hint="Sale en la pestaña Deudas, con lo pagado y lo que falta."
               />
               {esDeuda && (

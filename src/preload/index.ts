@@ -67,6 +67,9 @@ const api = {
       call<number>('tx:bulkCategory', ids, categoryId),
     /** Recoloca los movimientos de un día: los ids en el orden que han de quedar. */
     reorder: (ids: number[]) => call<number>('tx:reorder', ids),
+    /** Cambia un movimiento de día y deja el día de destino en ese orden. */
+    moveToDay: (id: number, date: string, orden: number[]) =>
+      call<number>('tx:moveToDay', id, date, orden),
     duplicate: (id: number) => call<TransactionView>('tx:duplicate', id),
     refundsFor: (id: number) => call<TransactionView[]>('tx:refundsFor', id),
     refundCandidates: (date: string, excludeId?: number, linkedId?: number) =>
@@ -117,8 +120,8 @@ const api = {
       call<{ path: string; count: number } | null>('report:exportPdf', filter)
   },
   widget: {
-    /** Estira la ventana a lo que mida su contenido. */
-    resize: (height: number) => call<void>('widget:resize', height),
+    /** Estira la ventana a lo que mida su contenido, de alto y de ancho. */
+    resize: (height: number, width: number) => call<void>('widget:resize', height, width),
     /** Trae la ventana principal al frente. */
     open: () => call<void>('widget:open')
   },

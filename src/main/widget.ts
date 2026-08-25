@@ -16,8 +16,17 @@ import { join } from 'node:path'
 import { getSettings } from './repos/settings'
 import type { WidgetAnchor } from '@shared/types'
 
-/** Lo que mide, en píxeles de escritorio. La ventana se ajusta a su contenido. */
-const ANCHO = 260
+/*
+ * Lo que mide, en píxeles de escritorio. La ventana se ajusta a su contenido,
+ * a lo alto y a lo ancho.
+ *
+ * A lo ancho iba fija en 260 y era una talla prestada: con una sola cuenta y
+ * una cifra corta sobraba media tarjeta, y un patrimonio de siete dígitos con
+ * el nombre de la cuenta al lado se quedaba sin sitio. Los topes están para que
+ * ni desaparezca ni se convierta en una barra de lado a lado.
+ */
+const ANCHO_MINIMO = 170
+const ANCHO_MAXIMO = 460
 const ALTO_MINIMO = 96
 /** Aire entre el widget y el canto de la pantalla, para que no quede pegado. */
 const MARGEN = 18
@@ -34,11 +43,11 @@ export function widgetWindow(): BrowserWindow | null {
  * El área útil y no la pantalla entera: así no se mete debajo de la barra de
  * tareas, que es donde acaba todo lo que se coloca contra los bordes de verdad.
  */
-function sitioDe(anchor: WidgetAnchor, alto: number): { x: number; y: number } {
+function sitioDe(anchor: WidgetAnchor, ancho: number, alto: number): { x: number; y: number } {
   const { workArea } = screen.getPrimaryDisplay()
   const izquierda = workArea.x + MARGEN
-  const derecha = workArea.x + workArea.width - ANCHO - MARGEN
-  const centroX = Math.round(workArea.x + (workArea.width - ANCHO) / 2)
+  const derecha = workArea.x + workArea.width - ancho - MARGEN
+  const centroX = Math.round(workArea.x + (workArea.width - ancho) / 2)
   const arriba = workArea.y + MARGEN
   const abajo = workArea.y + workArea.height - alto - MARGEN
   const centroY = Math.round(workArea.y + (workArea.height - alto) / 2)
@@ -73,11 +82,11 @@ function sitioDe(anchor: WidgetAnchor, alto: number): { x: number; y: number } {
  * parte. Como las esquinas se recalculan en cada colocación, basta con no dejar
  * que el resultado se salga.
  */
-function dentroDeLaPantalla(x: number, y: number): { x: number; y: number } {
+function dentroDeLaPantalla(x: number, y: number, ancho: number): { x: number; y: number } {
   const cerca = screen.getDisplayNearestPoint({ x, y }).workArea
   const visible = 60
   return {
-    x: Math.min(Math.max(x, cerca.x - ANCHO + visible), cerca.x + cerca.width - visible),
+    x: Math.min(Math.max(x, cerca.x - ancho + visible), cerca.x + cerca.width - visible),
     y: Math.min(Math.max(y, cerca.y), cerca.y + cerca.height - visible)
   }
 }
@@ -93,16 +102,27 @@ function dentroDeLaPantalla(x: number, y: number): { x: number; y: number } {
  */
 
 /** Coloca, estira y pone la transparencia y la capa según los ajustes. */
-export function colocarWidget(alto?: number): void {
+export function colocarWidget(alto?: number, ancho?: number): void {
   const win = widgetWindow()
   if (!win) return
   const settings = getSettings()
-  const altura = Math.max(ALTO_MINIMO, Math.round(alto ?? win.getContentBounds().height))
+  const puesto = win.getContentBounds()
+  const altura = Math.max(ALTO_MINIMO, Math.round(alto ?? puesto.height))
+  /*
+   * El ancho se recorta a los topes aquí y no en la página.
+   *
+   * La página mide lo que ocupa su contenido sin saber en qué pantalla está;
+   * decidir si eso cabe es de este lado, que es el que conoce el área útil.
+   */
+  const anchura = Math.min(
+    ANCHO_MAXIMO,
+    Math.max(ANCHO_MINIMO, Math.round(ancho ?? puesto.width))
+  )
 
-  const esquina = sitioDe(settings.widgetAnchor, altura)
-  const sitio = dentroDeLaPantalla(esquina.x, esquina.y)
+  const esquina = sitioDe(settings.widgetAnchor, anchura, altura)
+  const sitio = dentroDeLaPantalla(esquina.x, esquina.y, anchura)
 
-  win.setContentBounds({ ...sitio, width: ANCHO, height: altura })
+  win.setContentBounds({ ...sitio, width: anchura, height: altura })
   /*
    * La ventana, siempre opaca.
    *
@@ -134,7 +154,7 @@ export function createWidget(isDev: boolean): void {
    * quede escrito para no volver a intentarlo una tercera.
    */
   widget = new BrowserWindow({
-    width: ANCHO,
+    width: ANCHO_MINIMO,
     height: ALTO_MINIMO,
     show: false,
     frame: false,

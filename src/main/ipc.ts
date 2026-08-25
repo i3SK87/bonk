@@ -182,6 +182,9 @@ export function registerIpc(
     transactions.bulkSetCategory(ids, categoryId)
   )
   handle('tx:reorder', (ids: number[]) => transactions.reorderTransactions(ids))
+  handle('tx:moveToDay', (id: number, date: string, orden: number[]) =>
+    transactions.moveTransactionToDay(id, date, orden)
+  )
   handle('tx:duplicate', (id: number) => transactions.duplicateTransaction(id))
   handle('tx:refundsFor', (id: number) => transactions.listRefundsFor(id))
   handle('tx:refundCandidates', (date: string, excludeId?: number, linkedId?: number) =>
@@ -370,7 +373,7 @@ export function registerIpc(
 
   // — El widget del escritorio —
   /** Lo que mide su contenido: la ventana se estira a lo que haya que enseñar. */
-  handle('widget:resize', (height: number) => colocarWidget(height))
+  handle('widget:resize', (height: number, width: number) => colocarWidget(height, width))
   handle('widget:open', () => notifications.onClick())
 
   // — Base de datos y mantenimiento —
