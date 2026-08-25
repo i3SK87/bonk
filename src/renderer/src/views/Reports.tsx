@@ -174,7 +174,15 @@ export function ReportsView(): ReactNode {
   const [kind, setKind] = useState<CategoryKind>('expense')
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
-  const [loading, setLoading] = useState(true)
+  /*
+   * Solo se enseña el cargando la primera vez.
+   *
+   * Cualquier recarga posterior —cambiar de periodo, mover una categoría—
+   * llegaba vaciando la pantalla y volviéndola a montar, y en el camino la
+   * cabecera entera daba un salto. Los datos de antes siguen siendo válidos
+   * mientras llegan los nuevos: se quedan puestos y se cambian de golpe.
+   */
+  const [cargado, setCargado] = useState(false)
   const [expanded, setExpanded] = useState<Set<number>>(new Set())
   /*
    * Editar una categoría sin salir del informe.
@@ -238,7 +246,6 @@ export function ReportsView(): ReactNode {
   const currency = settings.baseCurrency
 
   useEffect(() => {
-    setLoading(true)
     Promise.all([
       api.reports.categories(range.from, range.to, kind),
       api.reports.monthly(12),
@@ -253,7 +260,7 @@ export function ReportsView(): ReactNode {
         setAntes(nextAntes)
       })
       .catch(fail('los informes'))
-      .finally(() => setLoading(false))
+      .finally(() => setCargado(true))
   }, [range, kind, comparacion, revision])
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
@@ -503,7 +510,7 @@ export function ReportsView(): ReactNode {
         </div>
       </div>
 
-      {loading ? (
+      {!cargado ? (
         <Loading />
       ) : (
         <>

@@ -264,8 +264,11 @@ export function SchedulesView(): ReactNode {
                     )}
                   </div>
                   <div className="small muted">
+                    {/* La espera y el día, juntos: «en 3 días» dice si corre
+                        prisa y la fecha dice cuál es, que es lo que se apunta
+                        uno. Cada una sola obliga a echar la cuenta de la otra. */}
                     {row.active
-                      ? `Próximo ${relativeDays(row.nextDate)}`
+                      ? `Próximo ${relativeDays(row.nextDate)} (${formatDate(row.nextDate)})`
                       : formatDate(row.nextDate)}
                   </div>
                 </div>

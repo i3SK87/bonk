@@ -1880,6 +1880,11 @@ p { margin: 0; }
    es la que marca dónde acaba una y empieza la siguiente. */
 .table.breakdown td { border-bottom: none; }
 
+/* Ni debajo de los rótulos: la tarjeta ya cierra su cabecera con una raya unos
+   píxeles más arriba, y dos líneas paralelas para separar lo mismo es una de
+   más. Los rótulos ya se distinguen por ser pequeños y en versales. */
+.table.breakdown th { border-bottom: none; }
+
 /*
  * La columna del balance, centrada.
  *

@@ -113,6 +113,9 @@ const FALLBACK_SETTINGS: Settings = {
   lastBackupAt: null
 }
 
+/** Ajustes que solo cambian cómo se ve algo, no lo que dicen los datos. */
+const SOLO_ASPECTO: Array<keyof Settings> = ['theme', 'palette', 'balanceEn']
+
 export function StoreProvider({ children }: { children: ReactNode }): ReactNode {
   const [ready, setReady] = useState(false)
   const [settings, setSettings] = useState<Settings>(FALLBACK_SETTINGS)
@@ -190,7 +193,20 @@ export function StoreProvider({ children }: { children: ReactNode }): ReactNode 
       try {
         const next = await api.settings.update(patch)
         setSettings(next)
-        setRevision((value) => value + 1)
+        /*
+         * Solo se invalidan los datos cuando el ajuste puede cambiarlos.
+         *
+         * `revision` es lo que hace a cada pantalla volver a preguntar, y
+         * cambiar de tema o de unidad no cambia ni un dato: Informes se
+         * recargaba entero al pulsar «%» o «€», la pantalla se quedaba en blanco
+         * un momento y volvía. La lista de los que no tocan nada es corta y
+         * equivocarse en ella solo cuesta una recarga de más, que es justo lo
+         * que se hacía siempre.
+         */
+        const soloAspecto = Object.keys(patch).every((clave) =>
+          SOLO_ASPECTO.includes(clave as keyof Settings)
+        )
+        if (!soloAspecto) setRevision((value) => value + 1)
       } catch (error) {
         toast((error as Error).message, 'error')
       }
