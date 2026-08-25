@@ -440,27 +440,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     ]
 
     /*
-     * Qué parte de lo que entró se ha quedado. Sin ingresos no hay porcentaje
-     * que sacar —sería dividir entre cero— y la cifra no sale.
-     *
-     * En rojo se le da la vuelta a la frase. «Ahorrado −145 % de los ingresos»
-     * es cierto y no lo entiende nadie; lo que dice de verdad es que se ha
-     * gastado el 245 % de lo que entró, y así se lee a la primera.
-     */
-    if (totals.income > 0) {
-      const ahorrado = Math.round((totals.net / totals.income) * 100)
-      lista.push(
-        ahorrado >= 0
-          ? { label: 'Ahorrado', value: `${ahorrado}% de los ingresos`, tone: 'positive' }
-          : {
-              label: 'Gastado',
-              value: `${Math.round((totals.expense / totals.income) * 100)}% de los ingresos`,
-              tone: 'negative'
-            }
-      )
-    }
-
-    /*
      * El ritmo de gasto, que es lo que deja comparar un mes con otro de
      * distinta longitud.
      *

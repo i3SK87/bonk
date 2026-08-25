@@ -456,6 +456,47 @@ export function TransactionForm({
           </Field>
         )}
 
+        {/*
+          * En una devolución, primero de qué gasto.
+          *
+          * De ahí salen la categoría y de dónde se descuenta, así que es la
+          * pregunta de la que dependen las demás: elegirlo al final, después de
+          * haber puesto título e importe, es hacerlo al revés. Solo los gastos
+          * del día que marque la fecha.
+          */}
+        {type === 'refund' && !refundFor && (
+          <Field
+            label="Gasto que te devuelven"
+            required
+            hint={
+              candidates.length === 0
+                ? `Ningún gasto del ${formatDate(date)} tiene nada pendiente. Cambia la fecha o hazlo desde el gasto.`
+                : 'Se descuenta de ese gasto y hereda su categoría.'
+            }
+          >
+            <select
+              className="select"
+              value={refundForId ?? ''}
+              disabled={candidates.length === 0}
+              onChange={(e) => choose(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Elige el gasto…</option>
+              {candidates.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {/* Sin nota queda la categoría: una lista de importes sueltos
+                      no dice de qué gasto se trata. */}
+                  {item.note || item.categoryName || 'Sin categoría'} ·{' '}
+                  {formatMoney(item.amount, item.accountCurrency)}
+                  {item.date !== date ? ` · ${formatDate(item.date)}` : ''}
+                  {item.refundedTotal > 0
+                    ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
+                    : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
+
         {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
             título encabeza y se lleva el foco. De una línea, que es un título y no
             un cuaderno. */}
@@ -585,41 +626,6 @@ export function TransactionForm({
                 </span>
               </button>
             </div>
-          </Field>
-        )}
-
-        {/* Lo único que hay que elegir: de ahí sale la categoría y de ahí se
-            descuenta la devolución. Solo los gastos del día que marque la fecha. */}
-        {type === 'refund' && !refundFor && (
-          <Field
-            label="Gasto que te devuelven"
-            required
-            hint={
-              candidates.length === 0
-                ? `Ningún gasto del ${formatDate(date)} tiene nada pendiente. Cambia la fecha o hazlo desde el gasto.`
-                : 'Se descuenta de ese gasto y hereda su categoría.'
-            }
-          >
-            <select
-              className="select"
-              value={refundForId ?? ''}
-              disabled={candidates.length === 0}
-              onChange={(e) => choose(e.target.value ? Number(e.target.value) : null)}
-            >
-              <option value="">Elige el gasto…</option>
-              {candidates.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {/* Sin nota queda la categoría: una lista de importes sueltos
-                      no dice de qué gasto se trata. */}
-                  {item.note || item.categoryName || 'Sin categoría'} ·{' '}
-                  {formatMoney(item.amount, item.accountCurrency)}
-                  {item.date !== date ? ` · ${formatDate(item.date)}` : ''}
-                  {item.refundedTotal > 0
-                    ? ` · quedan ${formatMoney(item.amount - item.refundedTotal, item.accountCurrency)}`
-                    : ''}
-                </option>
-              ))}
-            </select>
           </Field>
         )}
 
