@@ -3538,26 +3538,3 @@ button.list-row:focus-visible {
 .tx-row.destino {
   box-shadow: inset 0 2px 0 var(--accent);
 }
-
-/*
- * Con el acrílico de Windows, la ventana ya es la tarjeta.
- *
- * El material lo pinta el sistema en la ventana entera y le redondea él las
- * esquinas, así que aquí sobran el margen y la sombra: dibujarlos otra vez daría
- * una tarjeta dentro de otra.
- *
- * El borde se queda, pero por dentro: un borde normal se saldría de las esquinas
- * que redondea Windows y asomaría por las puntas. Puesto como sombra interior
- * sigue el contorno de la ventana, sea cual sea.
- *
- * Y el fondo de la tarjeta se conserva: es el tinte de la paleta sobre el
- * acrílico, y lo que el mando de opacidad sigue moviendo. A poca opacidad se ve
- * casi solo el desenfoque; a mucha, casi solo la tarjeta.
- */
-:root[data-acrilico] .widget {
-  margin: 0;
-  padding: 13px 15px;
-  border-radius: 0;
-  border: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border-strong) 45%, transparent);
-}

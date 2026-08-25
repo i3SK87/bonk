@@ -44,18 +44,11 @@ export function getSettings(): Settings {
       !map.get('widgetAnchor') || map.get('widgetAnchor') === 'libre'
         ? 'bottomRight'
         : (map.get('widgetAnchor') as WidgetAnchor),
-    /*
-     * Sesenta por ciento, que es donde el cristal se nota.
-     *
-     * Es el mismo número que usan los temas «Blur» de Catppuccin para Zed
-     * —`#1e1e2e99`, alfa 153 de 255—, y no es casualidad: por encima del ochenta
-     * el tinte tapa lo que hay detrás y la tarjeta parece opaca, con acrílico o
-     * sin él. Las cifras se siguen leyendo de sobra, que van en negrita.
-     */
-    widgetOpacity: numero(map.get('widgetOpacity'), 0.6),
+    // Ni transparente del todo ni opaco: se ve el escritorio detrás y las cifras
+    // siguen leyéndose sin acercarse.
+    widgetOpacity: numero(map.get('widgetOpacity'), 0.92),
     widgetOnTop: map.get('widgetOnTop') === '1',
     widgetGris: map.get('widgetGris') === '1',
-    widgetAcrilico: map.get('widgetAcrilico') === '1',
     widgetAccountIds: ids(map.get('widgetAccountIds')),
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null

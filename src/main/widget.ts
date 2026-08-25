@@ -23,14 +23,6 @@ const ALTO_MINIMO = 96
 const MARGEN = 18
 
 let widget: BrowserWindow | null = null
-/**
- * Con qué se creó la ventana.
- *
- * El acrílico es una opción del constructor y riñe con la transparencia, así que
- * no se enciende en caliente: hay que rehacer la ventana. Se recuerda con qué se
- * hizo para saber cuándo hace falta.
- */
-let acrilicaAlCrearla = false
 
 export function widgetWindow(): BrowserWindow | null {
   return widget && !widget.isDestroyed() ? widget : null
@@ -135,29 +127,18 @@ export function createWidget(isDev: boolean): void {
    * Transparente: la ventana desaparece y solo se ve la tarjeta redondeada que
    * pinta la página, con su sombra.
    *
-   * Se probó el acrílico de Windows —`backgroundMaterial`— y quedaba peor: como
-   * lo rellena el sistema en la ventana entera, la tarjeta deja de ser una
-   * tarjeta y pasa a ser el rectángulo de la ventana. El cristal traslúcido de
-   * aquí se ve mejor sobre un escritorio y no obliga a rehacer la ventana.
+   * Se probó dos veces el acrílico de Windows —`backgroundMaterial`, que es lo
+   * único que desenfoca de verdad el escritorio— y las dos se descartó: lo
+   * rellena el sistema en la ventana entera, así que la tarjeta deja de ser una
+   * tarjeta y pasa a ser el rectángulo de la ventana, sin margen ni sombra. Que
+   * quede escrito para no volver a intentarlo una tercera.
    */
-  /*
-   * O transparente, o acrílica: las dos a la vez no.
-   *
-   * Transparente, la ventana desaparece y solo se ve la tarjeta redondeada que
-   * pinta la página, con su sombra. Acrílica, la ventana es la tarjeta: la
-   * rellena Windows con su material y le redondea él las esquinas, que es lo que
-   * hacen sus propios paneles.
-   */
-  const acrilica = getSettings().widgetAcrilico
-  acrilicaAlCrearla = acrilica
-
   widget = new BrowserWindow({
     width: ANCHO,
     height: ALTO_MINIMO,
     show: false,
     frame: false,
-    transparent: !acrilica,
-    ...(acrilica ? { backgroundMaterial: 'acrylic' as const, roundedCorners: true } : {}),
+    transparent: true,
     resizable: false,
     // Ni en la barra de tareas ni en Alt+Tab: no es una ventana a la que se
     // vuelva, es algo que está ahí puesto.
@@ -212,8 +193,6 @@ export function sincronizarWidget(isDev: boolean): void {
     destroyWidget()
     return
   }
-  // Cambiar el acrílico obliga a rehacerla: no se enciende sobre la marcha.
-  if (widgetWindow() && acrilicaAlCrearla !== getSettings().widgetAcrilico) destroyWidget()
   if (widgetWindow()) colocarWidget()
   else createWidget(isDev)
 }

@@ -57,9 +57,6 @@ function Widget(): React.ReactNode {
     const raiz = document.documentElement
     raiz.setAttribute('data-theme', esOscuro(settings.theme) ? 'dark' : 'light')
     raiz.setAttribute('data-palette', settings.palette)
-    // Con el acrílico de Windows detrás, la tarjeta no dibuja ni margen ni sombra.
-    if (settings.widgetAcrilico) raiz.setAttribute('data-acrilico', '')
-    else raiz.removeAttribute('data-acrilico')
   }, [settings])
 
   /*

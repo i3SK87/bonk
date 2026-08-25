@@ -82,7 +82,7 @@ try {
   const conWidget = settings.getSettings()
   check('el widget sale puesto de fábrica', conWidget.widgetVisible)
   equal('abajo a la derecha', conWidget.widgetAnchor, 'bottomRight')
-  equal('con el cristal a la vista', conWidget.widgetOpacity, 0.6)
+  equal('casi opaco', conWidget.widgetOpacity, 0.92)
   check('y por detrás de las ventanas', conWidget.widgetOnTop === false)
   equal('sin cuentas elegidas, que es «todas»', conWidget.widgetAccountIds.length, 0)
 
@@ -104,7 +104,7 @@ try {
   equal('el ancla también', movido.widgetAnchor, 'topLeft')
   check('y la capa', movido.widgetOnTop)
   settings.setSetting('widgetOpacity', 'nada')
-  equal('un número ilegible vuelve al de fábrica', settings.getSettings().widgetOpacity, 0.6)
+  equal('un número ilegible vuelve al de fábrica', settings.getSettings().widgetOpacity, 0.92)
   // Lo guardado como «libre» es de cuando el widget se arrastraba: vuelve a su
   // esquina en vez de dejar la ventana en unas coordenadas que ya nadie escribe.
   settings.setSetting('widgetAnchor', 'libre')
