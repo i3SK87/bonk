@@ -120,7 +120,29 @@ const VIEW_SELECT = `
          c.name     AS category_name,
          c.icon     AS category_icon,
          c.color    AS category_color,
-         s.is_debt  AS is_debt,
+         /*
+          * Si esto es la cuota de una deuda a plazos.
+          *
+          * No basta con mirar la programada que lo creó: el primer pago —el día
+          * que compras el portátil— se apunta a mano y la programación se monta
+          * después, así que nunca lleva su marca. Y una deuda de hace tres años
+          * tiene cuotas apuntadas mucho antes de que existiera el plan.
+          *
+          * Así que vale la misma regla con la que debtSummary cuenta lo pagado:
+          * un gasto de la misma categoría y la misma nota que una deuda es una
+          * cuota suya. Tienen que decir lo mismo los dos —si Deudas lo cuenta
+          * como cuota, la lista tiene que tratarlo como cuota—.
+          */
+         (CASE
+            WHEN s.is_debt = 1 THEN 1
+            WHEN t.type = 'expense' AND t.note IS NOT NULL AND EXISTS (
+              SELECT 1 FROM scheduled q
+               WHERE q.is_debt = 1
+                 AND q.category_id = t.category_id
+                 AND q.note = t.note
+            ) THEN 1
+            ELSE 0
+          END) AS is_debt,
          (SELECT COUNT(*) FROM attachments x WHERE x.transaction_id = t.id) AS attachment_count
     FROM transactions t
     JOIN accounts a        ON a.id = t.account_id

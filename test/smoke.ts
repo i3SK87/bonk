@@ -652,9 +652,12 @@ try {
    * un gasto es que alguien te reponga ese dinero, y una cuota es dinero que sale
    * y no vuelve. Sin la marca no hay forma de distinguirla de un gasto suelto.
    */
+  // El nombre de una deuda vive en la nota, no en el nombre: así están las de
+  // verdad —«PC», «Kindle», «4Geeks»— y es por la nota por donde debtSummary
+  // reconoce sus cuotas.
   const cuotaDeuda = scheduled.saveScheduled({
     type: 'expense',
-    name: 'Cuota del portátil',
+    note: 'Cuota del portátil',
     accountId: bank.id,
     categoryId: food.id,
     amount: 5000,
@@ -673,6 +676,58 @@ try {
     .listTransactions({ limit: 500 })
     .filter((row) => row.scheduledId == null)
   check('y un movimiento suelto no', sueltos.length > 0 && sueltos.every((row) => !row.isDebt))
+
+  /*
+   * El primer pago, el que se apunta a mano.
+   *
+   * Es el caso de verdad: compras el portátil, apuntas el gasto y de paso dejas
+   * montada la repetición. Ese movimiento no lleva `scheduled_id` —la
+   * programada nace después—, y sin embargo Deudas ya lo cuenta como la primera
+   * cuota. Si la lista no lo trata igual, ofrece reembolsar una cuota.
+   */
+  const pagoAMano = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 5000,
+    note: 'Cuota del portátil'
+  })
+  const aparteEnLaLista = transactions.listTransactions({ limit: 500 }).find((row) => row.id === pagoAMano.id)!
+  equal('el primer pago no lleva programada', aparteEnLaLista.scheduledId, null)
+  check('y aun así cuenta como cuota', aparteEnLaLista.isDebt)
+  check(
+    'Deudas y la lista dicen lo mismo',
+    scheduled.debtSummary(cuotaDeuda.id).count ===
+      transactions.listTransactions({ limit: 500 }).filter((row) => row.isDebt).length
+  )
+  // La misma nota en otra categoría no es esa deuda.
+  const otraCategoria = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 5000,
+    note: 'Cuota del portátil'
+  })
+  check(
+    'la misma nota en otra categoría no cuela',
+    !transactions.listTransactions({ limit: 500 }).find((row) => row.id === otraCategoria.id)!.isDebt
+  )
+  // Y un gasto sin nota tampoco, que sin nota no hay con qué distinguir deudas.
+  const sinNota = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 5000
+  })
+  check(
+    'un gasto sin nota no se da por cuota',
+    !transactions.listTransactions({ limit: 500 }).find((row) => row.id === sinNota.id)!.isDebt
+  )
+
+  transactions.deleteTransactions([pagoAMano.id, otraCategoria.id, sinNota.id])
   transactions.deleteTransactions(cuotas.map((row) => row.id))
   scheduled.deleteScheduled(cuotaDeuda.id)
 
