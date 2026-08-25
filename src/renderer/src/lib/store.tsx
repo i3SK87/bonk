@@ -114,6 +114,7 @@ const FALLBACK_SETTINGS: Settings = {
   widgetOpacity: 0.92,
   widgetOnTop: false,
   widgetGris: false,
+  widgetAcrilico: false,
   widgetAccountIds: [],
   lastMonthlySummary: null,
   lastBackupAt: null

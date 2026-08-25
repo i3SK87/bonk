@@ -232,6 +232,13 @@ export function SettingsView(): ReactNode {
               </Field>
 
               <Checkbox
+                checked={settings.widgetAcrilico}
+                onChange={(value) => updateSettings({ widgetAcrilico: value })}
+                label="Fondo acrílico"
+                hint="El desenfoque de Windows: emborrona de verdad lo que hay detrás. Bájale la opacidad para verlo, que a tope el color de la tarjeta lo tapa. Pierde la sombra, y el widget parpadea al cambiarlo."
+              />
+
+              <Checkbox
                 checked={settings.widgetGris}
                 onChange={(value) => updateSettings({ widgetGris: value })}
                 label="En escala de grises"

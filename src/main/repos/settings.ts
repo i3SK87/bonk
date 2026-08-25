@@ -49,6 +49,7 @@ export function getSettings(): Settings {
     widgetOpacity: numero(map.get('widgetOpacity'), 0.92),
     widgetOnTop: map.get('widgetOnTop') === '1',
     widgetGris: map.get('widgetGris') === '1',
+    widgetAcrilico: map.get('widgetAcrilico') === '1',
     widgetAccountIds: ids(map.get('widgetAccountIds')),
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
     lastBackupAt: map.get('lastBackupAt') || null

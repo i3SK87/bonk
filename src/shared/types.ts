@@ -377,6 +377,19 @@ export interface Settings {
   widgetOpacity: number
   /** En gris: los colores de las cuentas y de las cifras se apagan. */
   widgetGris: boolean
+  /**
+   * Fondo acrílico de Windows: desenfoca de verdad lo que hay detrás.
+   *
+   * Es la única forma de desenfocar el escritorio. El `backdrop-filter` del
+   * navegador no vale: en una ventana transparente el escritorio no entra en la
+   * página, así que no tiene nada detrás que desenfocar.
+   *
+   * Lo pinta el sistema en la ventana entera, así que con él la ventana es la
+   * tarjeta: sin margen, sin sombra y con las esquinas que le redondea Windows.
+   * Y como es una opción del constructor —y riñe con la transparencia—,
+   * encenderlo y apagarlo vuelve a crear la ventana.
+   */
+  widgetAcrilico: boolean
   /** Por delante de todas las ventanas. Apagado se queda en el orden normal. */
   widgetOnTop: boolean
   /** Qué cuentas salen. Vacío es todas, que es como empieza. */
