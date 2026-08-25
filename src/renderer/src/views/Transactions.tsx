@@ -10,6 +10,7 @@ import { ImporteRapido } from '../components/ImporteRapido'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
 import { Teletipo, type Dato } from '../components/Teletipo'
+import { AccionCabecera } from '../components/ui'
 import { formatMoney, parseAmount } from '@shared/money'
 import { byName } from '@shared/text'
 import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
@@ -550,6 +551,23 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   return (
     <>
+      {/* Junto a «Nuevo movimiento», que es de donde salen las filas de la lista:
+          unas se escriben y otras se traen. Sin relleno y un punto más pequeño
+          porque no es la acción principal de la pantalla, es la de al lado. */}
+      <AccionCabecera>
+        <button
+          className="btn small mini contorno"
+          onClick={async () => {
+            const picked = await run(() => api.csv.pick())
+            if (picked) setImportando(picked)
+          }}
+          title="Traer movimientos de un extracto o de otra aplicación"
+        >
+          <Icon name="upload" size={14} />
+          Importar CSV
+        </button>
+      </AccionCabecera>
+
       <div className="card">
         <div className="card-body networth-strip">
           <div className="networth">
@@ -708,23 +726,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   es lo que está por venir, y no todo lo que viene se repite. */}
               <Icon name="calendar" size={15} />
               Programados
-            </button>
-
-            {/* La última de la fila y separada: no filtra nada, trae filas de
-                fuera. Sin relleno y un punto más pequeña que las demás porque no
-                es una de las acciones de la barra: es una herramienta que se
-                abre desde aquí de tarde en tarde. */}
-            <div className="divider vertical" />
-            <button
-              className="btn small mini contorno"
-              onClick={async () => {
-                const picked = await run(() => api.csv.pick())
-                if (picked) setImportando(picked)
-              }}
-              title="Traer movimientos de un extracto o de otra aplicación"
-            >
-              <Icon name="upload" size={14} />
-              Importar CSV
             </button>
           </div>
 

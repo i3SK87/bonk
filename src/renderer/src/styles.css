@@ -2203,6 +2203,13 @@ textarea::placeholder {
   transition: background 0.12s ease;
 }
 
+/* Con su menú abierto se queda encendida, como la fila de un movimiento: el
+   menú sale bajo el puntero y sin esto no se sabe a qué deuda le estás
+   diciendo que la pagues entera. */
+.tarjeta-clicable.marcada {
+  background: var(--bg-sunken);
+}
+
 .tarjeta-clicable:hover {
   background: var(--bg-sunken);
 }

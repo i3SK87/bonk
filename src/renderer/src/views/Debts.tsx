@@ -11,7 +11,8 @@ import {
   AmountInput,
   NumberInput
 } from '../components/ui'
-import { AccionCabecera } from '../components/ui'
+import { AccionCabecera, Confirm } from '../components/ui'
+import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { formatMoney } from '@shared/money'
 import { findLender } from '@shared/lenders'
 import { formatDate } from '@shared/dates'
@@ -40,11 +41,20 @@ function espera(days: number): string {
 }
 
 export function DebtsView(): ReactNode {
-  const { settings, revision, fail, run } = useStore()
+  const { settings, revision, fail, run, refresh } = useStore()
   const [debts, setDebts] = useState<DebtProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [adjusting, setAdjusting] = useState<DebtProgress | null>(null)
   const [creando, setCreando] = useState(false)
+  /*
+   * Pagar desde aquí, que es donde se mira la deuda.
+   *
+   * Adelantar una cuota o cancelar la deuda entera son cosas que se deciden
+   * viendo cuánto queda, y hasta ahora había que irse a Programados a buscar el
+   * plan. Van por clic derecho: la tarjeta entera ya se pulsa para ajustarla.
+   */
+  const [menu, setMenu] = useState<{ debt: DebtProgress; x: number; y: number } | null>(null)
+  const [saldando, setSaldando] = useState<DebtProgress | null>(null)
 
 
   useEffect(() => {
@@ -55,6 +65,37 @@ export function DebtsView(): ReactNode {
       .catch(fail('tus deudas'))
       .finally(() => setLoading(false))
   }, [revision])
+
+  /*
+   * Lo que ofrece el clic derecho.
+   *
+   * «Pagar todo ahora» solo cuando se sabe cuánto queda: sin fecha de fin ni
+   * total puesto a mano no hay cifra que cobrar, y un botón que a veces no puede
+   * hacer nada es peor que un botón que no está.
+   */
+  const opcionesDe = (debt: DebtProgress): OpcionMenu[] => {
+    const lista: OpcionMenu[] = [
+      {
+        etiqueta: 'Pagar cuota actual',
+        icono: 'check',
+        onElegir: async () => {
+          const hecho = await run(
+            () => api.scheduled.postNow(debt.scheduledId),
+            `Cuota de ${debt.title} apuntada`
+          )
+          if (hecho !== undefined) await refresh()
+        }
+      }
+    ]
+    if (debt.left != null && debt.left > 0) {
+      lista.push({
+        etiqueta: 'Pagar todo ahora',
+        icono: 'invest',
+        onElegir: () => setSaldando(debt)
+      })
+    }
+    return lista
+  }
 
   const abiertas = debts.filter((debt) => !debt.settled)
   const pagadas = debts.filter((debt) => debt.settled)
@@ -128,6 +169,8 @@ export function DebtsView(): ReactNode {
                 debt={debt}
                 currency={settings.baseCurrency}
                 onAdjust={() => setAdjusting(debt)}
+                marcada={menu?.debt.scheduledId === debt.scheduledId}
+                onMenu={(x, y) => setMenu({ debt, x, y })}
               />
             ))}
           </div>
@@ -169,6 +212,52 @@ export function DebtsView(): ReactNode {
         </div>
       )}
 
+      {/*
+        Dos opciones y las dos escriben en los mismos tres sitios: la cuota se
+        apunta en Movimientos, la programada avanza su fecha —o se sella, si era
+        la última— y esta pantalla vuelve a echar la cuenta. No hay tres
+        operaciones, hay una que se ve desde tres pantallas.
+      */}
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={opcionesDe(menu.debt)}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {/* Saldar sí pregunta: es un pago grande, de una vez, y deja la deuda
+          cerrada. Adelantar una cuota no, que es lo que iba a pasar de todos
+          modos unos días después. */}
+      {saldando && (
+        <Confirm
+          title="Pagar toda la deuda"
+          confirmLabel={`Pagar ${formatMoney(saldando.left ?? 0, settings.baseCurrency)}`}
+          message={
+            <>
+              Se apunta un pago de{' '}
+              <strong>{formatMoney(saldando.left ?? 0, settings.baseCurrency)}</strong> en{' '}
+              {saldando.accountName}, con fecha de hoy, y «{saldando.title}» pasa a pagadas.
+              {saldando.leftCount != null && saldando.leftCount > 1 && (
+                <>
+                  {' '}Las {saldando.leftCount} cuotas que quedaban dejan de generarse.
+                </>
+              )}
+            </>
+          }
+          onCancel={() => setSaldando(null)}
+          onConfirm={async () => {
+            const hecho = await run(
+              () => api.scheduled.settleDebt(saldando.scheduledId),
+              `${saldando.title} pagada del todo`
+            )
+            setSaldando(null)
+            if (hecho) await refresh()
+          }}
+        />
+      )}
+
       {adjusting && (
         <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
       )}
@@ -191,18 +280,32 @@ export function DebtsView(): ReactNode {
 function DebtCard({
   debt,
   currency,
-  onAdjust
+  onAdjust,
+  marcada,
+  onMenu
 }: {
   debt: DebtProgress
   currency: string
   onAdjust: () => void
+  /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
+  marcada?: boolean
+  onMenu?: (x: number, y: number) => void
 }): ReactNode {
   const quienCobra = findLender(debt.lender)
 
   // La tarjeta entera abre el ajuste: dentro no hay ningún mando con el que
   // pelearse, que la barra de cuotas es dibujo.
   return (
-    <div className="tarjeta-clicable" role="button" onClick={onAdjust}>
+    <div
+      className={`tarjeta-clicable${marcada ? ' marcada' : ''}`}
+      role="button"
+      onClick={onAdjust}
+      onContextMenu={(event) => {
+        if (!onMenu) return
+        event.preventDefault()
+        onMenu(event.clientX, event.clientY)
+      }}
+    >
       {/* Sin icono delante: en una pantalla que solo tiene deudas, un distintivo
           de deuda repetido en cada ficha no distingue nada. */}
       <div className="row">

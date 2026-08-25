@@ -161,6 +161,13 @@ export function registerIpc(
     celebrate()
     return posted
   })
+  // Saldarla de golpe también puede ser el último pago, así que la
+  // enhorabuena se mira aquí igual que al registrar una cuota a mano.
+  handle('scheduled:settleDebt', (id: number) => {
+    const result = scheduled.settleDebtNow(id)
+    celebrate()
+    return result
+  })
   handle('scheduled:postDue', () => {
     const posted = scheduled.postDue().created
     celebrate()

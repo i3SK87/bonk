@@ -729,6 +729,50 @@ export function postNow(id: number): void {
 }
 
 /**
+ * Salda una deuda de golpe: un pago por todo lo que falta, y se acabó.
+ *
+ * Es lo que pasa cuando la cancelas antes de tiempo —vendiste el portátil, te
+ * llegó una paga—. Un solo movimiento por el importe pendiente y no una cuota
+ * por cada mes que quedaba: el dinero salió una vez y en un día, y apuntar doce
+ * cuotas con la fecha de hoy diría que pagaste doce veces hoy.
+ *
+ * El plan se sella con la fecha del pago. No se apaga y ya: apagada es una
+ * pausada, y una pausada espera a que la reanuden. Esta no espera nada.
+ *
+ * Las dos escrituras van juntas o no van: un pago sin sellar dejaría la deuda
+ * pagada dos veces y un sello sin pago la daría por saldada sin que saliera el
+ * dinero.
+ */
+export function settleDebtNow(id: number, date = today()): { amount: number } {
+  const debt = debtProgress(date).find((row) => row.scheduledId === id)
+  if (!debt) throw new Error('Esa deuda ya no existe')
+  if (debt.settled) throw new Error('Esa deuda ya está saldada')
+  if (debt.left == null) {
+    throw new Error('No se sabe cuánto queda: ponle una fecha de fin o un total a la deuda')
+  }
+  if (debt.left <= 0) throw new Error('No queda nada que pagar')
+
+  const row = getScheduled(id)
+  if (!row) throw new Error('La programación ya no existe')
+
+  return atomic(() => {
+    saveTransaction({
+      type: row.type,
+      date,
+      accountId: row.accountId,
+      toAccountId: row.toAccountId,
+      categoryId: row.categoryId,
+      amount: debt.left as number,
+      payee: row.payee,
+      note: row.note,
+      scheduledId: row.id
+    })
+    finishScheduled(id, date)
+    return { amount: debt.left as number }
+  })
+}
+
+/**
  * Proyecta las repeticiones que caen dentro de un rango, sin escribir nada.
  * Sirve para enseñar en la lista lo que está por venir; en cuanto la programada
  * se registra de verdad, su fecha avanza y la proyección desaparece sola.

@@ -731,6 +731,118 @@ try {
   transactions.deleteTransactions(cuotas.map((row) => row.id))
   scheduled.deleteScheduled(cuotaDeuda.id)
 
+  section('Pagar una deuda desde su pantalla')
+  /*
+   * Las dos operaciones del clic derecho en Deudas.
+   *
+   * Cada una tiene que dejar las tres pantallas de acuerdo: el movimiento en la
+   * lista, la programada avanzada o sellada, y la deuda recontada. Se comprueban
+   * las tres cosas, que es donde estaría el fallo si lo hubiera.
+   */
+  const plan = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Portátil',
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 10000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    endDate: addMonths(day, 4),
+    autoPost: true,
+    isDebt: true
+  })
+  const antesDeNada = scheduled.debtProgress(day).find((row) => row.scheduledId === plan.id)!
+  equal('la deuda arranca sin nada pagado', antesDeNada.paidCount, 0)
+  equal('y con cuatro cuotas por delante', antesDeNada.leftCount, 4)
+  equal('que suman lo que falta', antesDeNada.left, 40000)
+
+  // — Pagar la cuota actual —
+  const saldoAntes = accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance
+  scheduled.postNow(plan.id)
+  const trasCuota = scheduled.debtProgress(day).find((row) => row.scheduledId === plan.id)!
+  equal('pagar la cuota apunta una cuota', trasCuota.paidCount, 1)
+  equal('y deja tres por delante', trasCuota.leftCount, 3)
+  equal('la programada avanza al mes siguiente', scheduled.getScheduled(plan.id)!.nextDate, addMonths(day, 2))
+  check('la programada sigue viva', scheduled.getScheduled(plan.id)!.settledAt == null)
+  const cuotaEnLista = transactions
+    .listTransactions({ limit: 500 })
+    .filter((row) => row.scheduledId === plan.id)
+  equal('el movimiento sale en la lista', cuotaEnLista.length, 1)
+  equal('con la fecha de hoy', cuotaEnLista[0].date, day)
+  equal('por el importe de la cuota', cuotaEnLista[0].amount, 10000)
+  check('y marcado como cuota de deuda', cuotaEnLista[0].isDebt)
+  equal(
+    'el saldo baja lo que vale una cuota',
+    accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance,
+    saldoAntes - 10000
+  )
+
+  // — Pagar todo ahora —
+  const queFalta = trasCuota.left!
+  equal('quedan tres cuotas por pagar', queFalta, 30000)
+  const saldado = scheduled.settleDebtNow(plan.id, day)
+  equal('salda por lo que faltaba', saldado.amount, queFalta)
+  const trasSaldar = scheduled.debtProgress(day).find((row) => row.scheduledId === plan.id)!
+  check('la deuda queda pagada', trasSaldar.settled)
+  equal('sin nada pendiente', trasSaldar.left, 0)
+  equal('y sin cuotas por delante', trasSaldar.leftCount, 0)
+  equal('la programada se sella con la fecha del pago', scheduled.getScheduled(plan.id)!.settledAt, day)
+  check('y se apaga', !scheduled.getScheduled(plan.id)!.active)
+  equal(
+    'ya no proyecta nada',
+    scheduled.projectUpcoming(day, addMonths(day, 12)).filter((p) => p.scheduledId === plan.id).length,
+    0
+  )
+  const todosLosPagos = transactions
+    .listTransactions({ limit: 500 })
+    .filter((row) => row.scheduledId === plan.id)
+  equal('son dos movimientos: la cuota y el resto', todosLosPagos.length, 2)
+  equal(
+    'y entre los dos suman la deuda entera',
+    todosLosPagos.reduce((suma, row) => suma + row.amount, 0),
+    40000
+  )
+  equal(
+    'el saldo baja el total de la deuda',
+    accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance,
+    saldoAntes - 40000
+  )
+
+  // Y no se puede pagar dos veces.
+  let repetido = ''
+  try {
+    scheduled.settleDebtNow(plan.id, day)
+  } catch (error) {
+    repetido = (error as Error).message
+  }
+  check('saldar una ya saldada no cuela', /saldada/i.test(repetido), repetido)
+
+  // Sin fecha de fin no hay cifra que cobrar, y se dice en vez de inventarla.
+  const sinFin = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Sin final',
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 5000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    autoPost: true,
+    isDebt: true
+  })
+  let sinSaber = ''
+  try {
+    scheduled.settleDebtNow(sinFin.id, day)
+  } catch (error) {
+    sinSaber = (error as Error).message
+  }
+  check('sin saber cuánto queda, no se salda', /cuánto queda/i.test(sinSaber), sinSaber)
+
+  transactions.deleteTransactions(todosLosPagos.map((row) => row.id))
+  scheduled.deleteScheduled(plan.id)
+  scheduled.deleteScheduled(sinFin.id)
+
   section('El informe en PDF')
   const paraInforme = transactions.listTransactions({ limit: 40 })
   const sumasInforme = transactions.totalsForFilter({})

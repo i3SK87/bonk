@@ -283,6 +283,16 @@ export function App(): ReactNode {
       <main className="main">
         <header className="topbar">
           <h1>{TITLES[view]}</h1>
+          {/* Aquí aterrizan las acciones de cada pantalla. Cada una sigue siendo
+              dueña de su botón y de su formulario; lo único que se comparte es el
+              sitio, que es esta esquina.
+
+              Va antes del botón de abajo y no después, que la acción principal
+              es la última de la fila: en Movimientos, importar un extracto se
+              lee como el paso previo a apuntar algo, no como lo que se viene a
+              hacer. */}
+          <div id="acciones-cabecera" className="row tight" />
+
           {/* Solo donde se listan: en Ahorro o en Categorías no pinta nada.
               Ctrl+N sigue funcionando desde cualquier pestaña. */}
           {view === 'transactions' && (
@@ -290,11 +300,6 @@ export function App(): ReactNode {
               Nuevo movimiento
             </button>
           )}
-
-          {/* Y aquí aterrizan las de las demás pantallas. Cada una sigue siendo
-              dueña de su botón y de su formulario; lo único que se comparte es el
-              sitio, que es esta esquina. */}
-          <div id="acciones-cabecera" className="row tight" />
         </header>
 
         {!ready ? (

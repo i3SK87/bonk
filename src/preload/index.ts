@@ -88,6 +88,8 @@ const api = {
       call<void>('scheduled:resume', id, endDate),
     finish: (id: number) => call<Settlement[]>('scheduled:finish', id),
     postNow: (id: number) => call<void>('scheduled:postNow', id),
+    /** Paga de una vez lo que falte de una deuda y la da por saldada. */
+    settleDebt: (id: number) => call<{ amount: number }>('scheduled:settleDebt', id),
     postDue: () => call<number>('scheduled:postDue'),
     debts: () => call<DebtProgress[]>('scheduled:debts'),
     adjustDebt: (id: number, patch: DebtAdjust) =>

@@ -487,7 +487,7 @@ export function ReportsView(): ReactNode {
               }}
             >
               <Icon name="download" size={15} />
-              Exportar PDF
+              Descargar PDF
             </button>
           </div>
 
