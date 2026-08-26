@@ -3156,17 +3156,43 @@ button.list-row:focus-visible {
   cursor: pointer;
 }
 
-/* A lo ancho de las cuatro columnas: es la que cierra la cuenta. */
+/* A lo ancho de las cuatro columnas: es la que cierra la cuenta.
+
+   Va del acento fuerte y no del acento a secas, como cualquier botón macizo de
+   la casa. El acento a secas es claro en los modos oscuros —el aqua de Ghost,
+   el oro de Sepia— y el blanco encima no llegaba ni a 2:1: el «=» se disolvía
+   en su propia tecla en las nueve paletas oscuras. Con el fuerte, el blanco
+   pasa de 4,5:1 en las dieciocho combinaciones de paleta y modo. */
 .calc-key.igual {
   grid-column: 1 / -1;
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast);
   font-size: 16px;
 }
 
-.calc-key.igual:disabled { opacity: 0.45; cursor: default; }
-.calc-key.igual:hover:not(:disabled) { filter: brightness(1.08); }
+/*
+ * Apagada se apaga el relleno, no el signo.
+ *
+ * Llevaba un `opacity` al 45 % sobre el botón entero, y eso atenúa también la
+ * letra: el «=» salía grisáceo justo cuando más se mira, con la cuenta todavía
+ * sin escribir. Ahora cede un poco el relleno —lo justo para decir que aún no
+ * hace nada— y el signo se queda blanco entero. Lo que cede está medido: el
+ * blanco sigue por encima de 4,5:1 en todas las paletas.
+ */
+.calc-key.igual:disabled {
+  background: color-mix(in srgb, var(--accent-strong) 88%, var(--bg-elevated));
+  border-color: color-mix(in srgb, var(--accent-strong) 88%, var(--bg-elevated));
+  cursor: default;
+}
+
+/* El fondo, repetido a propósito: `.calc-key:hover` pesa lo mismo que
+   `.calc-key.igual` y va después, así que al pasar el ratón por encima le
+   robaba el acento y dejaba la tecla del gris de las demás. */
+.calc-key.igual:hover:not(:disabled) {
+  background: var(--accent-strong);
+  filter: brightness(1.08);
+}
 
 .calc-key:hover { background: var(--bg-sunken); }
 .calc-key:active { transform: scale(0.96); }

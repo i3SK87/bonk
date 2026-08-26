@@ -24,18 +24,22 @@ const APP_ID = 'com.bonk.desktop'
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 1280,
+    width: 1100,
     height: 840,
     minWidth: 940,
     minHeight: 620,
     /*
      * Más ancha no: a lo largo la ventana crece lo que quiera, pero a lo ancho
-     * se queda en los 1280 con los que nace. Pasados de ahí, la lista de
+     * se queda en los 1100 con los que nace. Pasados de ahí, la lista de
      * movimientos estira sus columnas sin llenarlas y las tarjetas de los
      * informes quedan una al lado de la otra con medio metro de aire en medio.
      * Maximizar sigue valiendo: ocupa todo el alto y respeta este ancho.
+     *
+     * Eran 1280 y sobraba sitio. El número sale de medir la ventana con el
+     * ancho que él le dejó puesta: 1.095 px lógicos. Se redondea a 1.100, que
+     * son cinco de diferencia y no se ven.
      */
-    maxWidth: 1280,
+    maxWidth: 1100,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#14161a' : '#f5f6f8',

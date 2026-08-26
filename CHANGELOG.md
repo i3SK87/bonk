@@ -3,6 +3,21 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.7.1
+
+- **La ventana se queda en 1.100 px de ancho**, no en 1.280. A lo largo sigue
+  creciendo lo que quiera y maximizar vale igual; a lo ancho sobraba sitio.
+- **El «=» de la calculadora se lee.** Iba del color de acento con el signo en
+  blanco, y en las nueve paletas oscuras el acento es claro: en Ghost, el blanco
+  encima no llegaba a 1,5:1 y el signo se disolvía en su propia tecla. Ahora usa
+  el acento fuerte, como cualquier botón macizo de la aplicación.
+- **Y se queda blanco también apagado.** Con la cuenta sin escribir se atenuaba
+  la tecla entera, letra incluida, y el signo salía grisáceo. Ahora cede el
+  relleno y el signo no se toca.
+- La tecla ya no pierde su color al pasarle el ratón por encima.
+- Se retira el borrado en lote del proceso principal, que se quedó sin usar al
+  irse la selección múltiple en la 2.7.0.
+
 ## Novedades de la 2.7.0
 
 - **El «Personalizado» abre el calendario.** En Movimientos y en Informes ya no
