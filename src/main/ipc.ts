@@ -173,11 +173,6 @@ export function registerIpc(
     transactions.deleteTransaction(id)
     celebrate()
   })
-  handle('tx:deleteMany', (ids: number[]) => {
-    const count = transactions.deleteTransactions(ids)
-    celebrate()
-    return count
-  })
   handle('tx:bulkCategory', (ids: number[], categoryId: number | null) =>
     transactions.bulkSetCategory(ids, categoryId)
   )

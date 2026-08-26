@@ -62,7 +62,6 @@ const api = {
     get: (id: number) => call<TransactionView | null>('tx:get', id),
     save: (input: TransactionInput) => call<TransactionView>('tx:save', input),
     remove: (id: number) => call<void>('tx:delete', id),
-    removeMany: (ids: number[]) => call<number>('tx:deleteMany', ids),
     setCategory: (ids: number[], categoryId: number | null) =>
       call<number>('tx:bulkCategory', ids, categoryId),
     /** Recoloca los movimientos de un día: los ids en el orden que han de quedar. */

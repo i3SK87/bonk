@@ -3,6 +3,44 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.7.0
+
+- **El «Personalizado» abre el calendario.** En Movimientos y en Informes ya no
+  hay que escribir dos fechas: se pulsa el botón, se elige el día de inicio y el
+  de fin —en el orden que sea, que si el segundo cae antes se cambian entre
+  ellos— y el tramo queda escrito al lado. Entre un toque y otro la banda sigue
+  al ratón, así que se ve el tramo antes de cerrarlo.
+- **Cada cuánto se repite algo, dicho por su nombre:** Diaria, Semanal, Mensual,
+  Bimensual, Trimestral, Cuatrimestral y Anual, en la ficha de un movimiento y
+  en la de una programada. Lo que no tiene nombre —cada 10 días, cada 6 meses—
+  se sigue montando detrás de «Otra…», y una programada que ya lo tuviera abre
+  ahí, con su valor puesto, sin convertirse en otra cosa. La lista dice ahora
+  «Bimensual» donde decía «Cada 2 meses».
+- **Los deslizadores de Planes Ahorro llegan al final.** Se plantaban antes de la
+  meta aunque hubiera ahorro de sobra: una de 249,99 € topaba en 225 €.
+- **En Deudas se acaban los años.** Por debajo del mes se cuenta en días; a
+  partir de ahí, siempre en meses. «Faltan 2 años» tapaba un año entero de
+  diferencia entre dieciocho meses y treinta.
+- **La botonera de la ficha pasa a Único / Cíclico / Deuda a plazos**, y el
+  cuadro que abre la de en medio se titula «Ciclo de repetición».
+- **Dos paletas nuevas, Ghost y 2049**, en Ajustes › Apariencia.
+- **Se retira la selección múltiple** de Movimientos: el Ctrl o Mayús + clic que
+  marcaba filas y la barra de «N seleccionados». Un clic vuelve a ser solo
+  «abre la ficha». El menú contextual y el borrado de uno en uno no cambian.
+- **«Cambiar categoría» ya no sale en los reembolsos:** su categoría es la del
+  gasto del que cuelgan, y cambiarla por su cuenta separaría las dos.
+- El botón de las celebraciones se llama **«Continuar»** y pierde el aro amarillo
+  de foco que le ponía el navegador.
+- Fuera la frase del ritmo de los últimos tres meses en los planes de ahorro.
+
+## De la 1.27.0 a la 2.6.1
+
+Ese tramo no está recogido aquí. Durante esas versiones lo que se publicaba en
+cada una se contaba en su propia entrega, y ahí siguen, una por versión y con
+más detalle del que cabe en una lista:
+
+**<https://github.com/i3SK87/bonk/releases>**
+
 ## Novedades de la 1.26.0
 
 - **Cada deuda se puede ajustar.** Lo pagado se deduce de tus movimientos, y eso
