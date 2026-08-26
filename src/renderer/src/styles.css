@@ -3568,9 +3568,24 @@ button.list-row:focus-visible {
 /* ---------- Recolocar movimientos dentro de su día ---------- */
 
 /*
- * La fila que se está arrastrando se queda como una sombra de sí misma: el
- * navegador ya lleva su copia pegada al puntero, así que dejarla igual en su
- * sitio hacía parecer que había dos.
+ * Un solo cursor mientras se recoloca, y en toda la ventana.
+ *
+ * Es lo que se gana al recolocar a puntero en vez de con el arrastre del
+ * navegador: aquel cursor lo pintaba Windows y no había CSS que lo tocara, así
+ * que iba saltando entre el candado de «aquí no se suelta» y la flecha del
+ * recuadro de puntos según lo que hubiera debajo. Este no cambia. El `!important`
+ * es para ganarle al `cursor` que cada trozo declara por su cuenta.
+ */
+body.recolocando,
+body.recolocando * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/*
+ * La fila que viaja se queda como una sombra de sí misma. Sin la copia flotante
+ * del navegador, esto y la raya de destino son toda la pista de lo que pasa:
+ * de dónde sale y dónde va a caer.
  */
 .tx-row.arrastrando {
   opacity: 0.35;

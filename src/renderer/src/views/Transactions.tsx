@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { nestByParent } from '../lib/nesting'
 import { Icon } from '../components/Icon'
@@ -170,6 +170,27 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /** El día sobre cuya cabecera se está soltando, para marcarla. */
   const [diaDestino, setDiaDestino] = useState<string | null>(null)
 
+  /*
+   * Se recoloca a puntero y no con el arrastre del navegador.
+   *
+   * Con `draggable` venían de balde la copia pegada al cursor y el soltar
+   * encima de quien toca, pero durante ese arrastre el puntero lo pinta Windows
+   * y la hoja de estilos no lo toca: iba alternando entre el candado de «aquí no
+   * se suelta» y la flecha del recuadro de puntos, dos dibujos para un gesto que
+   * es uno solo. A puntero el cursor lo manda el CSS y no cambia en todo el
+   * viaje; lo que se pierde —la copia flotante— lo cubren la fila atenuada y la
+   * raya de dónde va a caer.
+   */
+  const gesto = useRef<{ id: number; date: string; x: number; y: number; vivo: boolean } | null>(
+    null
+  )
+  /** Lo agrupado que hay en pantalla, para saber en qué día se ha soltado. */
+  const gruposRef = useRef<
+    Array<[string, { real: TransactionView[]; upcoming: ProjectedTransaction[] }]>
+  >([])
+  /** Se acaba de arrastrar: el clic que viene detrás no cuenta. */
+  const recienSoltado = useRef(false)
+
   /**
    * Los movimientos de un día repartidos en bloques.
    *
@@ -186,6 +207,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }
 
   function finDelArrastre(): void {
+    document.body.classList.remove('recolocando')
+    gesto.current = null
     setArrastrado(null)
     setDestino(null)
     setDiaDestino(null)
@@ -197,10 +220,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * `sobreId` es la fila sobre la que se ha soltado; sin ella, se ha soltado en
    * la cabecera del día y el movimiento se pone el primero.
    */
-  async function soltarEn(dia: string, reales: TransactionView[], sobreId?: number): Promise<void> {
-    const movido = arrastrado
-    finDelArrastre()
-    if (movido == null || movido.id === sobreId) return
+  async function soltarEn(
+    movido: { id: number; date: string },
+    dia: string,
+    reales: TransactionView[],
+    sobreId?: number
+  ): Promise<void> {
+    if (movido.id === sobreId) return
 
     const bloques = bloquesDe(reales)
     const hasta =
@@ -235,6 +261,150 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       () => api.transactions.reorder(orden.flat().map((fila) => fila.id)),
       'Orden del día actualizado'
     )
+  }
+
+  /** Lo que hay justo debajo del puntero: una fila, la cabecera de un día o nada. */
+  function bajoElPuntero(x: number, y: number): { fila?: HTMLElement; dia?: string } {
+    const debajo = document.elementFromPoint(x, y) as HTMLElement | null
+    const fila = debajo?.closest<HTMLElement>('.tx-row[data-tx-id]') ?? undefined
+    if (fila) return { fila, dia: fila.dataset.txDate }
+    const cabecera = debajo?.closest<HTMLElement>('.day-heading[data-dia]')
+    return { dia: cabecera?.dataset.dia }
+  }
+
+  /** Pinta la raya donde caería lo que se arrastra si se soltara aquí. */
+  function apuntarA(x: number, y: number): void {
+    const suyo = gesto.current
+    if (!suyo) return
+    const { fila, dia } = bajoElPuntero(x, y)
+    // Encima de sí misma no se marca nada: soltar ahí no hace nada.
+    if (fila && Number(fila.dataset.txId) !== suyo.id) {
+      setDestino(Number(fila.dataset.txId))
+      setDiaDestino(null)
+      return
+    }
+    setDestino(null)
+    setDiaDestino(fila ? null : (dia ?? null))
+  }
+
+  /*
+   * Al rozar el canto, la lista se desplaza sola.
+   *
+   * Sin esto no hay manera de llevar un movimiento a un día que no quepa en
+   * pantalla. Va colgado del mover el puntero y no de un temporizador, así que
+   * al soltar no queda nada corriendo por detrás.
+   */
+  function acercarElCanto(y: number): void {
+    const caja = document.querySelector<HTMLElement>('.main')
+    if (!caja) return
+    const marco = caja.getBoundingClientRect()
+    const margen = 56
+    if (y < marco.top + margen) caja.scrollTop -= Math.ceil((marco.top + margen - y) / 3)
+    else if (y > marco.bottom - margen)
+      caja.scrollTop += Math.ceil((y - (marco.bottom - margen)) / 3)
+  }
+
+  function alMoverPuntero(event: PointerEvent): void {
+    const suyo = gesto.current
+    if (!suyo) return
+    // Hasta cuatro píxeles esto sigue siendo un clic y no un arrastre.
+    if (!suyo.vivo) {
+      if (Math.abs(event.clientX - suyo.x) + Math.abs(event.clientY - suyo.y) < 4) return
+      suyo.vivo = true
+      document.body.classList.add('recolocando')
+      setArrastrado({ id: suyo.id, date: suyo.date })
+    }
+    acercarElCanto(event.clientY)
+    apuntarA(event.clientX, event.clientY)
+  }
+
+  function alLevantarPuntero(event: PointerEvent): void {
+    const suyo = gesto.current
+    quitarEscuchas()
+    if (!suyo?.vivo) {
+      finDelArrastre()
+      return
+    }
+    recienSoltado.current = true
+    const { fila, dia } = bajoElPuntero(event.clientX, event.clientY)
+    const movido = { id: suyo.id, date: suyo.date }
+    finDelArrastre()
+    if (!dia) return
+    const reales = gruposRef.current.find(([fecha]) => fecha === dia)?.[1].real ?? []
+    void soltarEn(movido, dia, reales, fila ? Number(fila.dataset.txId) : undefined)
+  }
+
+  function alCancelarPuntero(): void {
+    quitarEscuchas()
+    finDelArrastre()
+  }
+
+  function alTeclearArrastrando(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return
+    alCancelarPuntero()
+  }
+
+  function ponerEscuchas(): void {
+    window.addEventListener('pointermove', alMoverPuntero)
+    window.addEventListener('pointerup', alLevantarPuntero)
+    window.addEventListener('pointercancel', alCancelarPuntero)
+    window.addEventListener('keydown', alTeclearArrastrando)
+  }
+
+  function quitarEscuchas(): void {
+    window.removeEventListener('pointermove', alMoverPuntero)
+    window.removeEventListener('pointerup', alLevantarPuntero)
+    window.removeEventListener('pointercancel', alCancelarPuntero)
+    window.removeEventListener('keydown', alTeclearArrastrando)
+  }
+
+  /*
+   * Las escuchas viven en la ventana, no en React: si la pantalla se va con el
+   * ratón apretado —cambiando de sección a media recolocación— hay que
+   * descolgarlas a mano o se quedan disparando contra una vista que ya no está.
+   */
+  const alDesmontar = useRef<() => void>(() => undefined)
+  alDesmontar.current = quitarEscuchas
+  useEffect(
+    () => () => {
+      alDesmontar.current()
+      document.body.classList.remove('recolocando')
+    },
+    []
+  )
+
+  function empezarGesto(event: React.PointerEvent<HTMLDivElement>): void {
+    recienSoltado.current = false
+    // Solo el botón izquierdo. El dedo no: en un portátil táctil arrastrar la
+    // lista es desplazarla, y robárselo dejaría la pantalla sin poder moverse.
+    if (event.button !== 0 || event.pointerType === 'touch') return
+    const desde = event.target as HTMLElement
+    // Los botones y los campos de la fila hacen lo suyo.
+    if (desde.closest('button, a, input, select, textarea, label')) return
+    const fila = desde.closest<HTMLElement>('.tx-row[data-arrastrable="si"]')
+    if (!fila) return
+    gesto.current = {
+      id: Number(fila.dataset.txId),
+      date: fila.dataset.txDate ?? '',
+      x: event.clientX,
+      y: event.clientY,
+      vivo: false
+    }
+    ponerEscuchas()
+  }
+
+  /*
+   * Detrás de un arrastre no hay clic.
+   *
+   * El ratón se levanta encima de una fila y el navegador remata el gesto con un
+   * clic de propina, que aquí es seleccionar. Se para en la bajada, antes de que
+   * llegue a la fila.
+   */
+  function pararElClicDeDespues(event: React.MouseEvent<HTMLDivElement>): void {
+    if (!recienSoltado.current) return
+    recienSoltado.current = false
+    event.preventDefault()
+    event.stopPropagation()
   }
   const [confirmBulk, setConfirmBulk] = useState(false)
 
@@ -338,6 +508,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
     return [...map.entries()].sort((a, b) => (a[0] < b[0] ? 1 : -1))
   }, [rows, projected])
+
+  gruposRef.current = groups
 
   /**
    * Los totales suman también lo que está por venir mientras las programadas se
@@ -992,7 +1164,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             />
           ) : (
             // Al refiltrar se atenúa lo que ya había en vez de vaciar la lista.
-            <div style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.15s ease' }}>
+            <div
+              style={{ opacity: loading ? 0.5 : 1, transition: 'opacity 0.15s ease' }}
+              onPointerDown={empezarGesto}
+              onClickCapture={pararElClicDeDespues}
+            >
             {groups.map(([date, items]) => {
               // El total del día también cuenta lo previsto mientras se enseñe.
               const dayTotal =
@@ -1008,17 +1184,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       quiere es cambiar la fecha. */}
                   <div
                     className={`day-heading${diaDestino === date ? ' destino' : ''}`}
-                    onDragOver={(event) => {
-                      if (!arrastrado) return
-                      event.preventDefault()
-                      event.dataTransfer.dropEffect = 'move'
-                      setDestino(null)
-                      setDiaDestino(date)
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault()
-                      soltarEn(date, items.real)
-                    }}
+                    data-dia={date}
                   >
                     <span>{formatDayHeading(date)}</span>
                     <span
@@ -1050,14 +1216,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         arrastrable={!nested}
                         arrastrando={arrastrado?.id === row.id}
                         destino={destino === row.id}
-                        onArrastrar={() => setArrastrado({ id: row.id, date })}
-                        onEncima={() => {
-                          if (!arrastrado) return
-                          setDestino(row.id)
-                          setDiaDestino(null)
-                        }}
-                        onSoltar={() => soltarEn(date, items.real, row.id)}
-                        onFinArrastre={finDelArrastre}
                         nested={nested}
                         lastChild={last}
                       />
@@ -1280,10 +1438,6 @@ function TransactionRow({
   arrastrable,
   arrastrando,
   destino,
-  onArrastrar,
-  onEncima,
-  onSoltar,
-  onFinArrastre,
   nested,
   lastChild
 }: {
@@ -1308,10 +1462,6 @@ function TransactionRow({
   arrastrando?: boolean
   /** El puntero está encima de ella con algo agarrado: aquí caería. */
   destino?: boolean
-  onArrastrar?: () => void
-  onEncima?: () => void
-  onSoltar?: () => void
-  onFinArrastre?: () => void
   /** La devolución cuelga del gasto que tiene justo encima. */
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
@@ -1357,30 +1507,16 @@ function TransactionRow({
       aria-pressed={selected}
       title={linkTitle}
       /*
-       * Se arrastra con el arrastre del navegador y no a mano.
+       * Quién es y de qué día, escrito en la propia fila.
        *
-       * Lo trae hecho: la imagen que sigue al puntero, el que suelta encima de
-       * quien toca y el cancelar con Escape. A mano habría que escribir las tres
-       * cosas y ninguna quedaría mejor.
+       * El gesto de recolocar vive arriba, en la lista entera, y averigua qué
+       * hay debajo del puntero preguntándole al documento. Estos dos datos son
+       * lo que lee: sin ellos tendría que mantener un mapa de nodos a
+       * movimientos y volver a rehacerlo en cada repintado.
        */
-      draggable={arrastrable}
-      onDragStart={(event) => {
-        // Hace falta poner algo o el navegador cancela el arrastre.
-        event.dataTransfer.setData('text/plain', String(row.id))
-        event.dataTransfer.effectAllowed = 'move'
-        onArrastrar?.()
-      }}
-      onDragOver={(event) => {
-        // Sin esto no se puede soltar: por defecto nada acepta lo que se arrastra.
-        event.preventDefault()
-        event.dataTransfer.dropEffect = 'move'
-        onEncima?.()
-      }}
-      onDrop={(event) => {
-        event.preventDefault()
-        onSoltar?.()
-      }}
-      onDragEnd={() => onFinArrastre?.()}
+      data-tx-id={row.id}
+      data-tx-date={row.date}
+      data-arrastrable={arrastrable ? 'si' : undefined}
       onMouseEnter={() => family !== undefined && onFamily?.(family)}
       onMouseLeave={() => family !== undefined && onFamily?.(null)}
       onClick={(event) => onActivate?.(event.ctrlKey || event.metaKey || event.shiftKey)}

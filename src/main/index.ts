@@ -28,6 +28,14 @@ function createWindow(): void {
     height: 840,
     minWidth: 940,
     minHeight: 620,
+    /*
+     * Más ancha no: a lo largo la ventana crece lo que quiera, pero a lo ancho
+     * se queda en los 1280 con los que nace. Pasados de ahí, la lista de
+     * movimientos estira sus columnas sin llenarlas y las tarjetas de los
+     * informes quedan una al lado de la otra con medio metro de aire en medio.
+     * Maximizar sigue valiendo: ocupa todo el alto y respeta este ancho.
+     */
+    maxWidth: 1280,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#14161a' : '#f5f6f8',
