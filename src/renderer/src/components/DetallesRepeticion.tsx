@@ -17,9 +17,10 @@
  * obliga a repetirlo todo.
  */
 import { useState, type ReactNode } from 'react'
-import { Modal, Field, NumberInput } from './ui'
+import { Modal, Field } from './ui'
 import { DateInput } from './DateInput'
-import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
+import { SelectorCadencia } from './SelectorCadencia'
+import { describeFrequency } from '../lib/frecuencias'
 import { LENDERS } from '@shared/lenders'
 import { formatDate } from '@shared/dates'
 import type { Frequency } from '@shared/types'
@@ -72,28 +73,11 @@ export function DetallesRepeticion({
     >
       {campos.includes('repeticion') && (
         <Field label="Cada cuánto">
-          <div className="row tight">
-            <span className="muted small">Cada</span>
-            <NumberInput
-              value={borrador.interval}
-              onChange={(interval) => pone({ interval })}
-              min={1}
-              max={99}
-              style={{ width: 74 }}
-            />
-            <select
-              className="select"
-              style={{ flex: 1 }}
-              value={borrador.freq}
-              onChange={(event) => pone({ freq: event.target.value as Frequency })}
-            >
-              {FRECUENCIAS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {borrador.interval === 1 ? item.singular : item.plural}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectorCadencia
+            freq={borrador.freq}
+            interval={borrador.interval}
+            onChange={(freq, interval) => pone({ freq, interval })}
+          />
         </Field>
       )}
 

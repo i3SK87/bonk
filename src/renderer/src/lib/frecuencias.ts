@@ -7,6 +7,48 @@ import type { Frequency } from '@shared/types'
  * programadas y el formulario de un movimiento, desde donde también se puede
  * dejar montada la repetición.
  */
+
+/** Una cadencia con nombre propio: lo que se elige sin tener que contar nada. */
+export interface Cadencia {
+  /** Lo que se lee en el desplegable y en las listas. */
+  nombre: string
+  freq: Frequency
+  interval: number
+}
+
+/**
+ * Las siete que se eligen por su nombre.
+ *
+ * Casi todo lo que se programa cae en una de estas —la nómina, el alquiler, el
+ * seguro del coche, la cuota del gimnasio—, y decirlas por su nombre se lee de
+ * un golpe: «Trimestral» se entiende antes que «cada 3 meses», que hay que
+ * pararse a multiplicar. Lo que no encaje sigue pudiéndose montar a mano, pero
+ * escondido detrás de una opción más, que es donde tiene que estar lo raro.
+ *
+ * «Bimensual» aquí es cada dos meses, que es como se lee en una lista que sube:
+ * mensual, bimensual, trimestral, cuatrimestral.
+ */
+export const CADENCIAS: Cadencia[] = [
+  { nombre: 'Diaria', freq: 'daily', interval: 1 },
+  { nombre: 'Semanal', freq: 'weekly', interval: 1 },
+  { nombre: 'Mensual', freq: 'monthly', interval: 1 },
+  { nombre: 'Bimensual', freq: 'monthly', interval: 2 },
+  { nombre: 'Trimestral', freq: 'monthly', interval: 3 },
+  { nombre: 'Cuatrimestral', freq: 'monthly', interval: 4 },
+  { nombre: 'Anual', freq: 'yearly', interval: 1 }
+]
+
+/** La cadencia con nombre que case con esa pareja, si es que hay alguna. */
+export function cadenciaDe(freq: Frequency, interval: number): Cadencia | null {
+  return CADENCIAS.find((item) => item.freq === freq && item.interval === interval) ?? null
+}
+
+/**
+ * Las unidades sueltas, para el mando de a mano.
+ *
+ * Solo salen cuando se pide montar una cadencia que no tiene nombre: «cada 10
+ * días», «cada 3 semanas», «cada 6 meses».
+ */
 export const FRECUENCIAS: Array<{ value: Frequency; singular: string; plural: string }> = [
   { value: 'daily', singular: 'día', plural: 'días' },
   { value: 'weekly', singular: 'semana', plural: 'semanas' },
@@ -15,22 +57,15 @@ export const FRECUENCIAS: Array<{ value: Frequency; singular: string; plural: st
 ]
 
 /**
- * «Mensual», «Cada 2 meses».
+ * «Mensual», «Cada 10 días».
  *
- * De uno en uno se dice con el adjetivo, que es como se habla; con salto va el
- * «cada», que ahí sí se está contando.
+ * Si tiene nombre se dice por su nombre, que es como se habla; si no lo tiene,
+ * con el «cada», que ahí sí se está contando.
  */
 export function describeFrequency(freq: Frequency, interval: number): string {
+  const cadencia = cadenciaDe(freq, interval)
+  if (cadencia) return cadencia.nombre
   const entry = FRECUENCIAS.find((item) => item.value === freq)
   if (!entry) return ''
-  if (interval === 1) {
-    return freq === 'daily'
-      ? 'Diario'
-      : freq === 'weekly'
-        ? 'Semanal'
-        : freq === 'monthly'
-          ? 'Mensual'
-          : 'Anual'
-  }
-  return `Cada ${interval} ${entry.plural}`
+  return `Cada ${interval} ${interval === 1 ? entry.singular : entry.plural}`
 }

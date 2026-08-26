@@ -205,7 +205,7 @@ function Party({
   onClose,
   adorno = 'papelillo',
   sello,
-  boton = 'Bien',
+  boton = 'Continuar',
   tono,
   ancha
 }: {
@@ -471,7 +471,6 @@ export function MonthlySummary({
       }
       adorno="estrellas"
       tono={enPositivo ? 'buena' : 'neutra'}
-      boton="Entendido"
       sello={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

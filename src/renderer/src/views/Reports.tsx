@@ -7,7 +7,7 @@ import { CategoriaRapida } from '../components/CategoriaRapida'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
 import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
-import { DateInput } from '../components/DateInput'
+import { CalendarioDeTramo } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
 import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
@@ -215,6 +215,8 @@ export function ReportsView(): ReactNode {
   // Arrancan en el mes en curso: es de donde vienes al pulsar «Personalizado».
   const [customFrom, setCustomFrom] = useState(() => startOfMonth(today()))
   const [customTo, setCustomTo] = useState(() => endOfMonth(today()))
+  /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
+  const [eligiendoTramo, setEligiendoTramo] = useState(false)
 
   useEffect(() => {
     api.reports.span().then(setSpan).catch(fail('el histórico'))
@@ -441,11 +443,27 @@ export function ReportsView(): ReactNode {
               <button
                 key={id}
                 className={`btn small${period === id ? ' primary' : ' ghost'}`}
-                onClick={() => setPeriod(id)}
+                onClick={() => {
+                  setPeriod(id)
+                  // «Personalizado» no dice nada por sí solo: lo que se pide al
+                  // pulsarlo es elegir los dos días, así que el calendario sale
+                  // sin tener que ir a buscarlo. Y vuelve a salir si se pulsa
+                  // otra vez estando ya puesto, que es cómo se cambia el tramo.
+                  if (id === 'custom') setEligiendoTramo(true)
+                }}
               >
                 {NOMBRES_DE_RANGO[id]}
               </button>
             ))}
+
+            {/* El tramo elegido, escrito al lado del botón que lo pone. Es un
+                rótulo y no un campo: no hay nada que tocar ahí, para cambiarlo
+                se vuelve a pulsar «Personalizado». */}
+            {period === 'custom' && (
+              <span className="small muted" style={{ marginLeft: 4, whiteSpace: 'nowrap' }}>
+                {formatDate(customFrom)} – {formatDate(customTo)}
+              </span>
+            )}
           </div>
           <div className="spacer" />
 
@@ -476,23 +494,15 @@ export function ReportsView(): ReactNode {
             </button>
           </div>
 
-          {/*
-            Las fechas van dentro de la cabecera y no en una tira aparte debajo.
-            La cabecera lleva raya cuando algo la sigue, y esa raya partía en dos
-            lo que es un solo mando: eliges el periodo y, si es a mano, lo
-            escribes. Ocupando toda la línea bajan solas, y el hueco que las
-            separa es el mismo que separa cualquier par de cosas aquí.
-          */}
-          {period === 'custom' && (
-            <div className="row" style={{ flexBasis: '100%', marginTop: 4 }}>
-              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-                <DateInput value={customFrom} onChange={setCustomFrom} />
-              </div>
-              <span className="muted">hasta</span>
-              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-                <DateInput value={customTo} onChange={setCustomTo} />
-              </div>
-            </div>
+          {eligiendoTramo && (
+            <CalendarioDeTramo
+              desde={customFrom}
+              onChange={(from, to) => {
+                setCustomFrom(from)
+                setCustomTo(to)
+              }}
+              onClose={() => setEligiendoTramo(false)}
+            />
           )}
         </div>
       </div>

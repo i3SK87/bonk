@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { nestByParent } from '../lib/nesting'
 import { Icon } from '../components/Icon'
-import { DateInput } from '../components/DateInput'
+import { CalendarioDeTramo } from '../components/DateInput'
 import { Avatar, EmptyState, Loading, Confirm } from '../components/ui'
 import { TransactionForm } from '../components/TransactionForm'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
@@ -98,12 +98,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    */
   const { range, customFrom, customTo, search, types, categoryIds, uncategorized } = filtros
   const setRange = (value: RangoId): void => ponFiltros({ range: value })
-  const setCustomFrom = (value: string): void => ponFiltros({ customFrom: value })
-  const setCustomTo = (value: string): void => ponFiltros({ customTo: value })
   const setSearch = (value: string): void => ponFiltros({ search: value })
   const setTypes = (value: TxType[]): void => ponFiltros({ types: value })
   const setCategoryIds = (value: number[]): void => ponFiltros({ categoryIds: value })
   const setUncategorized = (value: boolean): void => ponFiltros({ uncategorized: value })
+
+  /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
+  const [eligiendoTramo, setEligiendoTramo] = useState(false)
 
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
   const [settledSearch, setSettledSearch] = useState(filtros.search)
@@ -143,7 +144,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [sumas, setSumas] = useState<FilterTotals | null>(null)
   const [limit, setLimit] = useState(200)
   const [loading, setLoading] = useState(true)
-  const [selection, setSelection] = useState<number[]>([])
   const [editing, setEditing] = useState<TransactionView | null>(null)
   /** El menú del clic derecho: qué fila y en qué punto de la ventana. */
   const [menu, setMenu] = useState<{ row: TransactionView; x: number; y: number } | null>(null)
@@ -397,8 +397,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * Detrás de un arrastre no hay clic.
    *
    * El ratón se levanta encima de una fila y el navegador remata el gesto con un
-   * clic de propina, que aquí es seleccionar. Se para en la bajada, antes de que
-   * llegue a la fila.
+   * clic de propina, que aquí abriría su ficha. Se para en la bajada, antes de
+   * que llegue a la fila.
    */
   function pararElClicDeDespues(event: React.MouseEvent<HTMLDivElement>): void {
     if (!recienSoltado.current) return
@@ -406,7 +406,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     event.preventDefault()
     event.stopPropagation()
   }
-  const [confirmBulk, setConfirmBulk] = useState(false)
 
   useEffect(() => {
     const id = window.setTimeout(() => setSettledSearch(search), 250)
@@ -614,17 +613,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
   }
 
-  function toggleSelection(id: number, modified: boolean): void {
-    if (modified) {
-      setSelection((current) =>
-        current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
-      )
-    } else {
-      const row = rows.find((item) => item.id === id)
-      if (row) setEditing(row)
-    }
-  }
-
   /**
    * Lo que un movimiento le hace al día que se está mirando.
    *
@@ -788,9 +776,16 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     const lista: OpcionMenu[] = [
       { etiqueta: 'Editar importe', icono: 'edit', onElegir: () => setCambiandoImporte(row) }
     ]
-    // Un traspaso no lleva categoría: mueve dinero de un bolsillo a otro y no
-    // es ni gasto ni ingreso, así que no hay nada que clasificar.
-    if (row.type !== 'transfer') {
+    /*
+     * Ni un traspaso ni un reembolso llevan categoría propia.
+     *
+     * El traspaso mueve dinero de un bolsillo a otro y no es ni gasto ni
+     * ingreso, así que no hay nada que clasificar. La devolución sí cuenta,
+     * pero su categoría es la del gasto del que cuelga —se devuelve *eso*—, y
+     * cambiársela por su cuenta las separaría: el gasto seguiría en Suscripciones
+     * y lo que te devuelven contaría en otro sitio, descuadrando las dos.
+     */
+    if (row.type !== 'transfer' && row.type !== 'refund') {
       lista.push({
         etiqueta: 'Cambiar categoría',
         icono: 'tag',
@@ -922,11 +917,27 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               <button
                 key={id}
                 className={`btn small${range === id ? ' primary' : ' ghost'}`}
-                onClick={() => setRange(id)}
+                onClick={() => {
+                  setRange(id)
+                  // «Personalizado» no dice nada por sí solo: lo que se pide al
+                  // pulsarlo es elegir los dos días, así que el calendario sale
+                  // sin tener que ir a buscarlo. Y vuelve a salir si se pulsa
+                  // otra vez estando ya puesto, que es cómo se cambia el tramo.
+                  if (id === 'custom') setEligiendoTramo(true)
+                }}
               >
                 {NOMBRES_DE_RANGO[id]}
               </button>
             ))}
+
+            {/* El tramo elegido, escrito al lado del botón que lo pone. Es un
+                rótulo y no un campo: no hay nada que tocar ahí, para cambiarlo
+                se vuelve a pulsar «Personalizado». */}
+            {range === 'custom' && (
+              <span className="small muted" style={{ marginLeft: 4, whiteSpace: 'nowrap' }}>
+                {formatDate(customFrom)} – {formatDate(customTo)}
+              </span>
+            )}
           </div>
 
           <div className="spacer" />
@@ -1002,22 +1013,12 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             </button>
           </div>
 
-          {/*
-            Las fechas van dentro de la cabecera y no en una tira aparte debajo.
-            La cabecera dibuja una raya cuando algo la sigue, y esa raya partía
-            en dos lo que es un solo mando: eliges el periodo y, si es a mano, lo
-            escribes. Ocupando toda la línea bajan solas.
-          */}
-          {range === 'custom' && (
-            <div className="row" style={{ flexBasis: '100%', marginTop: 4 }}>
-              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-                <DateInput value={customFrom} onChange={setCustomFrom} />
-              </div>
-              <span className="muted">hasta</span>
-              <div style={{ flex: '1 1 170px', minWidth: 130, maxWidth: 190 }}>
-                <DateInput value={customTo} onChange={setCustomTo} />
-              </div>
-            </div>
+          {eligiendoTramo && (
+            <CalendarioDeTramo
+              desde={customFrom}
+              onChange={(from, to) => ponFiltros({ customFrom: from, customTo: to })}
+              onClose={() => setEligiendoTramo(false)}
+            />
           )}
         </div>
 
@@ -1111,37 +1112,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           movimientos que la lista de debajo no está enseñando. */}
       {!sinCuenta && <Teletipo datos={cifras} />}
 
-      {selection.length > 0 && (
-        <div className="card card-body row" style={{ position: 'sticky', top: 66, zIndex: 15 }}>
-          <strong>{selection.length} seleccionados</strong>
-          <div className="spacer" />
-          <select
-            className="select"
-            style={{ width: 200 }}
-            value=""
-            onChange={async (event) => {
-              const value = event.target.value ? Number(event.target.value) : null
-              await run(() => api.transactions.setCategory(selection, value), 'Categoría actualizada')
-              setSelection([])
-            }}
-          >
-            <option value="">Cambiar categoría…</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn danger small" onClick={() => setConfirmBulk(true)}>
-            <Icon name="trash" size={15} />
-            Eliminar
-          </button>
-          <button className="btn ghost small" onClick={() => setSelection([])}>
-            Cancelar
-          </button>
-        </div>
-      )}
-
       <div className="card">
         <div className="card-body tight">
           {/* Vacía es vacía del todo: si no hay movimientos registrados pero sí
@@ -1200,8 +1170,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       <TransactionRow
                         key={row.id}
                         row={row}
-                        selected={selection.includes(row.id)}
-                        onActivate={(modified) => toggleSelection(row.id, modified)}
+                        onActivate={() => setEditing(row)}
                         family={family}
                         linkedTo={
                           family !== undefined && family !== row.id
@@ -1315,20 +1284,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         />
       )}
 
-      {confirmBulk && (
-        <Confirm
-          title="Eliminar movimientos"
-          message={`Se eliminarán ${selection.length} movimientos de forma definitiva.`}
-          confirmLabel="Eliminar"
-          destructive
-          onCancel={() => setConfirmBulk(false)}
-          onConfirm={async () => {
-            await run(() => api.transactions.removeMany(selection), 'Movimientos eliminados')
-            setSelection([])
-            setConfirmBulk(false)
-          }}
-        />
-      )}
     </>
   )
 }
@@ -1427,7 +1382,6 @@ function ProjectedRow({
 
 function TransactionRow({
   row,
-  selected,
   onActivate,
   family,
   linkedTo,
@@ -1442,9 +1396,8 @@ function TransactionRow({
   lastChild
 }: {
   row: TransactionView
-  selected?: boolean
-  /** `modified` indica si venía con Ctrl o Mayús, que es lo que alterna la selección. */
-  onActivate?: (modified: boolean) => void
+  /** Abre su ficha: con el clic, con Intro o con la barra espaciadora. */
+  onActivate?: () => void
   /** Id del gasto que encabeza la familia gasto + devoluciones, si la hay. */
   family?: number
   /** El otro movimiento del enlace, para poder nombrarlo en el título emergente. */
@@ -1490,7 +1443,6 @@ function TransactionRow({
     <div
       className={[
         'tx-row',
-        selected ? 'selected' : '',
         marcada ? 'marcada' : '',
         arrastrando ? 'arrastrando' : '',
         destino ? 'destino' : '',
@@ -1504,7 +1456,6 @@ function TransactionRow({
         .join(' ')}
       role="button"
       tabIndex={0}
-      aria-pressed={selected}
       title={linkTitle}
       /*
        * Quién es y de qué día, escrito en la propia fila.
@@ -1519,7 +1470,7 @@ function TransactionRow({
       data-arrastrable={arrastrable ? 'si' : undefined}
       onMouseEnter={() => family !== undefined && onFamily?.(family)}
       onMouseLeave={() => family !== undefined && onFamily?.(null)}
-      onClick={(event) => onActivate?.(event.ctrlKey || event.metaKey || event.shiftKey)}
+      onClick={() => onActivate?.()}
       onContextMenu={(event) => {
         if (!onMenu) return
         // Fuera el menú de Chromium, que aquí no pinta nada: no hay texto que
@@ -1530,7 +1481,7 @@ function TransactionRow({
       onKeyDown={(event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
-        onActivate?.(event.ctrlKey || event.metaKey || event.shiftKey)
+        onActivate?.()
       }}
       onFocus={() => family !== undefined && onFamily?.(family)}
       onBlur={() => family !== undefined && onFamily?.(null)}

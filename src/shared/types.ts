@@ -33,7 +33,16 @@ export type WidgetAnchor =
 /** En qué se leen las diferencias de Informes: en porcentaje o en su unidad. */
 export type UnidadCambio = 'porcentaje' | 'valor'
 
-export type Palette = 'grafito' | 'indigo' | 'marea' | 'sepia' | 'ciruela' | 'heat' | 'arasaka'
+export type Palette =
+  | 'grafito'
+  | 'indigo'
+  | 'marea'
+  | 'sepia'
+  | 'ciruela'
+  | 'heat'
+  | 'arasaka'
+  | 'ghost'
+  | '2049'
 
 export interface Account {
   id: number

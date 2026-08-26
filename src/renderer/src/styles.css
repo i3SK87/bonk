@@ -203,6 +203,89 @@
   --sidebar-fg: #8d949d;
 }
 
+/*
+ * Ghost in the Shell (1995) — de día.
+ *
+ * Los tonos no están elegidos a ojo: salen de medir 51 fotogramas de la
+ * película —los de la galería de Film-Grab, en orden— agrupando sus 2,8
+ * millones de píxeles por color en OKLab.
+ *
+ * Lo que enseñó la medición y no se ve mirando: la película tiene color en el
+ * 8,5 % de su superficie y nada más. Pero el hallazgo que gobierna esta paleta
+ * es otro: hay un **cálido constante** —un ladrillo apagado, #845a4a, que
+ * aparece en casi todo el metraje en forma de óxido, madera, piel y luz de
+ * sodio— y sostiene el 4,4 % de la película. Sin él, el frío no se lee como
+ * frío. Una paleta hecha entera en frío sale muerta, y salió muerta dos veces.
+ *
+ * De ahí la estructura de esta versión, que es la del día de la película: el
+ * papel es el **hormigón cálido** de las calles del mercado —los fotogramas
+ * 16, 17, 19, 20, 26 y 32 son todos ocres y marrones—, y encima van las dos
+ * cosas frías, la **barra de pizarra azulada** (#2b343d, el tercer color más
+ * repetido, 14,3 % de la superficie) y el **azul de los monitores** de la
+ * Sección 9. Frío recortado contra cálido, que es como está rodada.
+ *
+ * El acento no es el aqua de la noche a propósito: de día no hay neón, y
+ * pintarlo aquí era encender una farola a mediodía.
+ */
+:root[data-palette="ghost"] {
+  --accent: #266296;
+  --accent-strong: #21578a;
+  --bg: #e3ddd6;
+  --bg-elevated: #f4f1ec;
+  --bg-sunken: #d6cec4;
+  --fg: #201c19;
+  --fg-muted: #5d564d;
+  --fg-subtle: #79705f;
+  --border: #d2cabf;
+  --border-strong: #b3a99c;
+  --sidebar-bg: #2b343d;
+  --sidebar-fg: #aeb9c1;
+  --sidebar-fg-active: #ffffff;
+  --sidebar-active-bg: rgba(255, 255, 255, 0.13);
+  --warning: #8a6420;
+  --series-income: #1c6a75;
+  --series-expense: #9c4a3c;
+}
+/*
+ * Blade Runner 2049 — de día.
+ *
+ * Medida igual que Ghost: 65 fotogramas de la galería de Film-Grab, 3,6
+ * millones de píxeles agrupados por color en OKLab. Pero esta película pedía
+ * medirse de otra manera, porque no tiene un grado de color: tiene cinco
+ * mundos que no se parecen en nada —el gris verdoso de Los Ángeles, el ámbar
+ * de Las Vegas, el violeta de los hologramas, el azul profundo de la noche y
+ * el verde del bosque—, y medida entera de una vez devuelve un caqui que no
+ * está en ningún fotograma.
+ *
+ * De los cinco, esta paleta usa **el azul profundo**: el vuelo nocturno, el
+ * escenario del hotel y el sueño. Sus siete colores medidos son todo lo que
+ * hay aquí, salvo el acento.
+ *
+ * De día el mundo azul no existe —es de noche entero—, así que el papel es su
+ * propio claro llevado a la luz: el verde azulado pálido que ilumina esas
+ * escenas. La barra lateral se queda con el azul medio medido, que es el único
+ * sitio donde el mundo se ve tal cual a plena luz.
+ */
+:root[data-palette="2049"] {
+  --accent: #7c2a66;
+  --accent-strong: #6b2359;
+  --bg: #dbe4e1;
+  --bg-elevated: #f1f5f3;
+  --bg-sunken: #cbd7d3;
+  --fg: #0b1020;
+  --fg-muted: #45565f;
+  --fg-subtle: #63737a;
+  --border: #c6d2ce;
+  --border-strong: #a6b3af;
+  --sidebar-bg: #031c3b;
+  --sidebar-fg: #a8bccc;
+  --sidebar-fg-active: #ffffff;
+  --sidebar-active-bg: rgba(224, 122, 192, 0.18);
+  --warning: #8a5210;
+  --series-income: #1d5c85;
+  --series-expense: #a35a12;
+}
+
 :root[data-theme="dark"][data-palette="indigo"] {
   --accent: #a5a0ff;
   --accent-strong: #5b4fd6;
@@ -296,6 +379,82 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.7);
   --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.75);
   --shadow-lg: 0 20px 52px rgba(0, 0, 0, 0.85);
+}
+
+/*
+ * Ghost in the Shell (1995) — de noche, que es cuando la película es la
+ * película.
+ *
+ * El fondo es el negro que más se repite en los 51 fotogramas, y no es negro:
+ * es violeta. Los cuatro oscuros que gobiernan el metraje caen todos entre los
+ * tonos 273 y 299 —el sector violeta—, ninguno en el verde. Es lo contrario de
+ * lo que dice la memoria, que la recuerda verdosa por culpa del primer minuto.
+ *
+ * Aquí los neutros van fríos de arriba abajo, y el cálido solo entra por lo
+ * que se enciende: el **aqua del neón** de la persecución nocturna manda, y el
+ * **oro del tanque** de la fábrica avisa. Las dos series de las gráficas son el
+ * azul de los monitores de la Sección 9 y el ladrillo de los toldos del
+ * mercado: siguen siendo un frío y un cálido, que es lo que las separa para un
+ * daltónico.
+ *
+ * La tensión de temperatura que lleva la versión de día —papel cálido, encima
+ * lo frío— es cosa suya y no de esta: de noche la película es fría y se queda
+ * fría.
+ */
+:root[data-theme="dark"][data-palette="ghost"] {
+  --accent: #6ae7e6;
+  --accent-strong: #1d6d78;
+  --bg: #12101a;
+  --bg-elevated: #1c1a26;
+  --bg-sunken: #0b0911;
+  --fg: #dee2ec;
+  --fg-muted: #9aa0b6;
+  --fg-subtle: #7a7f95;
+  --border: #2b2839;
+  --border-strong: #3b3850;
+  --sidebar-bg: #0a0810;
+  --sidebar-fg: #8b90a6;
+  --sidebar-fg-active: #ffffff;
+  --sidebar-active-bg: rgba(106, 231, 230, 0.16);
+  --warning: #d9a253;
+  --series-income: #4f98cd;
+  --series-expense: #b8564f;
+}
+/*
+ * Blade Runner 2049 — de noche, que es cuando el mundo azul ocurre.
+ *
+ * El fondo es el color que más manda de ese mundo: un azul violáceo casi negro
+ * que ocupa el 35,7 % de sus fotogramas. Y la tinta no es blanca sino el
+ * **verde azulado pálido** que ilumina esas escenas (#9ab9ac, el claro del
+ * mundo): sostiene 9,3:1 sobre el fondo, muy por encima del 7:1 de la casa, y
+ * es lo que hace que la pantalla parezca alumbrada por el agua y no por una
+ * bombilla.
+ *
+ * El acento es el violeta del holograma de Joi, elegido por encima del ámbar
+ * de Las Vegas —que es dos tercios de todo el color de la película— por una
+ * razón práctica: el ámbar significa aviso en BONK, y tenerlo también en los
+ * botones le quitaba el susto. El violeta, en cambio, no comparte sector con
+ * nada: ni con el verde de los ingresos, ni con el rojo de los gastos, ni con
+ * el ámbar. Así el aviso se queda con su ámbar, que además es el de Las Vegas.
+ */
+:root[data-theme="dark"][data-palette="2049"] {
+  --accent: #e07ac0;
+  --accent-strong: #7c2a66;
+  --bg: #070919;
+  --bg-elevated: #0f1730;
+  --bg-sunken: #020207;
+  --fg: #9ab9ac;
+  --fg-muted: #6a94a9;
+  --fg-subtle: #527989;
+  --border: #1b2547;
+  --border-strong: #2b3a63;
+  --sidebar-bg: #020207;
+  --sidebar-fg: #6d8ea3;
+  --sidebar-fg-active: #ffffff;
+  --sidebar-active-bg: rgba(224, 122, 192, 0.18);
+  --warning: #e0993d;
+  --series-income: #4f88b5;
+  --series-expense: #c07a30;
 }
 
 :root[data-theme="dark"][data-palette="ciruela"] {
@@ -1356,11 +1515,6 @@ p { margin: 0; }
  */
 .tx-row.marcada {
   background: var(--bg-sunken);
-}
-
-.tx-row.selected {
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 /* Un gasto y sus devoluciones se encienden juntos al pasar por encima de
@@ -2713,6 +2867,16 @@ button.list-row:focus-visible {
 
 .celebration .btn { margin-top: 16px; width: 100%; }
 
+/* Sin el aro del navegador. El botón se enfoca solo al abrirse el cuadro —para
+   que Intro lo cierre sin buscarlo— y Chromium lo remata con su aro de sistema,
+   un amarillo que no sale en ninguna paleta de aquí. Quitarlo no cuesta nada de
+   accesibilidad: es el único botón del cuadro, así que enfocado solo puede
+   estar él. */
+.celebration .btn:focus,
+.celebration .btn:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .celebration, .celebration-seal { animation: none; }
 }
@@ -3262,6 +3426,30 @@ button.list-row:focus-visible {
   background: var(--accent);
   color: #fff;
   font-weight: 650;
+}
+
+/*
+ * El tramo, cuando se eligen dos fechas.
+ *
+ * Los extremos van del color de acento, como cualquier día elegido, y lo de en
+ * medio con un tinte del mismo color: se ve de un vistazo dónde empieza, dónde
+ * acaba y cuánto hay en medio. La rejilla deja tres píxeles entre día y día, así
+ * que lo tintado no llega a ser una barra corrida; a cambio no hay que romper la
+ * rejilla para dibujarla, que sale más caro de lo que arregla.
+ */
+.calendario-dia.en-rango {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--fg);
+}
+
+/* Qué se está eligiendo ahora: el día de inicio o el de fin. Sin esto, el
+   calendario del tramo es idéntico al de una fecha suelta y no hay forma de
+   saber que falta un segundo clic. */
+.calendario-rotulo {
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--fg-subtle);
 }
 
 .calendario-pie {

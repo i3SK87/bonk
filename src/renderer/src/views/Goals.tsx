@@ -271,6 +271,29 @@ function GoalCard({
   const tecleado = useRef(goal.reserved)
   const falta = Math.max(0, goal.targetAmount - puesto)
 
+  /*
+   * Hasta dónde puede llegar el mando: la meta, o la hucha si no da para tanto.
+   *
+   * Los dos extremos tienen que poder tocarse justos, y casi nunca caen en un
+   * salto redondo: una meta de 249,99 € no es múltiplo de 25 €.
+   */
+  const tope = Math.min(techo, goal.targetAmount)
+
+  /*
+   * El salto de veinticinco en veinticinco, puesto a mano.
+   *
+   * Con el `step` del navegador el mando no llegaba al final. Chromium redondea
+   * al salto más cercano y, si el resultado se pasa del máximo, le resta un
+   * salto entero: en un plan de 249,99 € el mando se plantaba en 225 € y ahí se
+   * quedaba por mucho que hubiera en la hucha. Redondeando aquí, por el medio se
+   * sigue notando el salto y los extremos se alcanzan exactos.
+   */
+  const aSaltos = (valor: number): number => {
+    if (valor >= tope) return tope
+    if (valor <= 0) return 0
+    return Math.min(Math.round(valor / PASO) * PASO, tope)
+  }
+
   // Hasta dónde llega la hucha, en tanto por ciento del plan. Lo que venga
   // después del tope no es que esté vacío: es que no hay con qué llenarlo.
   const parte = (valor: number): string =>
@@ -391,7 +414,8 @@ function GoalCard({
             type="range"
             min={0}
             max={goal.targetAmount}
-            step={PASO}
+            /* Al céntimo, que el salto lo pone `aSaltos`. Ver ahí por qué. */
+            step="any"
             value={puesto}
             style={
               {
@@ -400,7 +424,39 @@ function GoalCard({
                 '--alcance': parte(techo)
               } as CSSProperties
             }
-            onChange={(event) => setReserva(Math.min(Number(event.target.value), techo))}
+            onChange={(event) => setReserva(aSaltos(Number(event.target.value)))}
+            onKeyDown={(event) => {
+              /*
+               * Las flechas las mueve la ficha, no el navegador.
+               *
+               * Con el carril al céntimo, lo que mueve una flecha por su cuenta
+               * es la centésima parte del plan —dos euros y medio en uno de
+               * 250 €—, y `aSaltos` lo redondeaba de vuelta al sitio del que
+               * había salido: el mando no se movía. Aquí la flecha vale un
+               * salto entero, que es lo que se espera al verlo saltar.
+               */
+              const salto =
+                event.key === 'ArrowRight' || event.key === 'ArrowUp'
+                  ? PASO
+                  : event.key === 'ArrowLeft' || event.key === 'ArrowDown'
+                    ? -PASO
+                    : event.key === 'PageUp'
+                      ? PASO * 4
+                      : event.key === 'PageDown'
+                        ? -PASO * 4
+                        : null
+              const destino =
+                event.key === 'Home'
+                  ? 0
+                  : event.key === 'End'
+                    ? tope
+                    : salto == null
+                      ? null
+                      : puesto + salto
+              if (destino == null) return
+              event.preventDefault()
+              setReserva(aSaltos(destino))
+            }}
             onMouseUp={() => onReserve(Math.min(reserva, techo))}
             onKeyUp={() => onReserve(Math.min(reserva, techo))}
             aria-label={`Ahorrado para ${goal.name}`}
@@ -415,10 +471,7 @@ function GoalCard({
         {falta === 0
           ? 'Ya tienes ahorrado lo que querías.'
           : goal.perMonth != null
-            ? `Tendrías que apartar ${formatMoney(goal.perMonth, currency)} al mes. ` +
-              (goal.recentPace > 0
-                ? `En los últimos tres meses has ido ahorrando ${formatMoney(goal.recentPace, currency)} al mes.`
-                : 'En los últimos tres meses no ha entrado nada en esta cuenta.')
+            ? `Tendrías que apartar ${formatMoney(goal.perMonth, currency)} al mes.`
             : goal.daysLeft != null && goal.daysLeft < 0
               ? 'La fecha ya pasó; cámbiala o dalo por cerrado.'
               : 'Sin fecha no hay ritmo que calcular: ponle una y te digo cuánto al mes.'}

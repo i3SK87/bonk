@@ -17,7 +17,9 @@ const PALETAS: Array<{ id: Palette; label: string; hint: string; bg: string; car
   { id: 'sepia', label: 'Sepia', hint: 'Cálido, tono papel', bg: '#1a1714', card: '#241f1b', accent: '#e0ac5c' },
   { id: 'ciruela', label: 'Ciruela', hint: 'Vino y rosa', bg: '#1a1218', card: '#241a21', accent: '#f090c4' },
   { id: 'heat', label: 'Heat', hint: 'Los Ángeles de noche', bg: '#0e1418', card: '#162026', accent: '#5fb0d4' },
-  { id: 'arasaka', label: 'Arasaka', hint: 'Negro corporativo y rojo', bg: '#0b0c0e', card: '#15171b', accent: '#ff3b47' }
+  { id: 'arasaka', label: 'Arasaka', hint: 'Negro corporativo y rojo', bg: '#0b0c0e', card: '#15171b', accent: '#ff3b47' },
+  { id: 'ghost', label: 'Ghost', hint: 'Violeta de noche y neón aqua', bg: '#12101a', card: '#1c1a26', accent: '#6ae7e6' },
+  { id: '2049', label: '2049', hint: 'Azul profundo y violeta', bg: '#070919', card: '#0f1730', accent: '#e07ac0' }
 ]
 
 

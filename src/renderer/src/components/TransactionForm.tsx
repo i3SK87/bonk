@@ -25,6 +25,17 @@ interface Props {
   onSaved?: () => void
 }
 
+/**
+ * Lo que falta por rellenar, y de qué campo es.
+ *
+ * Solo sale uno cada vez: la comprobación para en el primero que falla, que es
+ * el orden en que se leen los campos.
+ */
+interface Aviso {
+  campo: 'cuenta' | 'importe' | 'destino' | 'reembolso'
+  texto: string
+}
+
 export function TransactionForm({
   existing,
   defaultAccountId,
@@ -78,7 +89,7 @@ export function TransactionForm({
   /*
    * El cuadro con los detalles de la elección, y a qué se vuelve si se cancela.
    *
-   * Marcar «Se repite» sin decir cada cuánto no es una respuesta a medias: es
+   * Marcar «Cíclico» sin decir cada cuánto no es una respuesta a medias: es
    * una respuesta que la ficha se inventaría por ti. Así que la elección abre
    * el cuadro, y cancelarlo deshace la elección.
    */
@@ -98,7 +109,16 @@ export function TransactionForm({
   const [previews, setPreviews] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  /*
+   * Los avisos de lo que falta van con el nombre de su campo puesto.
+   *
+   * Antes era un texto a secas y salía al pie del cuadro, a media pantalla del
+   * campo que lo provocaba: con la lista de categorías de por medio, «escribe
+   * un importe mayor que cero» aparecía tan lejos del importe que había que
+   * buscar a qué se refería. Sabiendo de quién es cada aviso, cada uno sale
+   * debajo del suyo.
+   */
+  const [error, setError] = useState<Aviso | null>(null)
   const [refunds, setRefunds] = useState<TransactionView[]>([])
   const [refunding, setRefunding] = useState(false)
   const [creatingCategory, setCreatingCategory] = useState(false)
@@ -233,10 +253,12 @@ export function TransactionForm({
 
   async function save(keepOpen = false): Promise<void> {
     setError(null)
-    if (!accountId) return setError('Elige una cuenta')
-    if (amount <= 0) return setError('Escribe un importe mayor que cero')
-    if (type === 'transfer' && !toAccountId) return setError('Elige la cuenta de destino')
-    if (type === 'refund' && !refundForId) return setError('Elige el gasto que te devuelven')
+    if (!accountId) return setError({ campo: 'cuenta', texto: 'Elige una cuenta' })
+    if (amount <= 0) return setError({ campo: 'importe', texto: 'Escribe un importe mayor que cero' })
+    if (type === 'transfer' && !toAccountId)
+      return setError({ campo: 'destino', texto: 'Elige la cuenta de destino' })
+    if (type === 'refund' && !refundForId)
+      return setError({ campo: 'reembolso', texto: 'Elige el gasto que te devuelven' })
 
     setSaving(true)
     const saved = await run(
@@ -420,8 +442,8 @@ export function TransactionForm({
         )}
 
         {/* Debajo, la otra mitad de la misma pregunta: qué es esto y si vuelve.
-            Se repite lo que sea: el alquiler, la nómina, el traspaso mensual a la
-            hucha y la parte del alquiler que devuelve el otro. «Deuda a plazos»
+            Cíclico puede serlo cualquier cosa: el alquiler, la nómina, el traspaso
+            mensual a la hucha y la parte del alquiler que devuelve el otro. «Deuda a plazos»
             solo en los gastos, que no se debe dinero cobrándolo. Devolviendo un
             gasto concreto tampoco: esa devolución es de ese gasto y de ninguno
             más. */}
@@ -443,13 +465,13 @@ export function TransactionForm({
               options={
                 type === 'expense'
                   ? [
-                      { value: 'suelto', label: 'No se repite' },
-                      { value: 'repite', label: 'Se repite' },
+                      { value: 'suelto', label: 'Único' },
+                      { value: 'repite', label: 'Cíclico' },
                       { value: 'deuda', label: 'Deuda a plazos' }
                     ]
                   : [
-                      { value: 'suelto', label: 'No se repite' },
-                      { value: 'repite', label: 'Se repite' }
+                      { value: 'suelto', label: 'Único' },
+                      { value: 'repite', label: 'Cíclico' }
                     ]
               }
             />
@@ -478,6 +500,7 @@ export function TransactionForm({
           <Field
             label="Gasto que te devuelven"
             required
+            error={error?.campo === 'reembolso' ? error.texto : undefined}
             hint={
               candidates.length === 0
                 ? `Ningún gasto del ${formatDate(date)} tiene nada pendiente. Cambia la fecha o hazlo desde el gasto.`
@@ -507,13 +530,34 @@ export function TransactionForm({
           </Field>
         )}
 
-        {/* Lo primero que se piensa de un movimiento es qué fue, no cuánto: el
-            título encabeza y se lleva el foco. De una línea, que es un título y no
-            un cuaderno. */}
+        {/* El importe encabeza: es el único dato que este cuadro no puede
+            inventar —sin él no se guarda— y el que se viene a teclear. El título
+            va detrás porque se puede dejar vacío. */}
+        <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
+          <Field
+            label="Importe"
+            required
+            error={error?.campo === 'importe' ? error.texto : undefined}
+          >
+            <AmountInput
+              value={amount}
+              currency={currency}
+              onChange={setAmount}
+              autoFocus
+              /* Se recuadra en rojo solo cuando el aviso es suyo. Mirando si el
+                 importe estaba a cero y había *algún* error, se recuadraba
+                 también al faltar la cuenta: el importe todavía sin escribir no
+                 es un importe mal escrito. */
+              invalid={error?.campo === 'importe'}
+            />
+          </Field>
+        </div>
+
+        {/* De una línea, que es un título y no un cuaderno. El foco ya no
+            empieza aquí: lo tiene el importe, que es el que va primero. */}
         <Field label="Título">
           <input
             className="input"
-            autoFocus
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder={
@@ -522,19 +566,12 @@ export function TransactionForm({
           />
         </Field>
 
-        <div style={{ borderLeft: `3px solid ${typeTone}`, paddingLeft: 12 }}>
-          <Field label="Importe" required>
-            <AmountInput
-              value={amount}
-              currency={currency}
-              onChange={setAmount}
-              invalid={amount <= 0 && error != null}
-            />
-          </Field>
-        </div>
-
         <div className="grid cols-2">
-          <Field label={type === 'transfer' ? 'Desde' : 'Cuenta'} required>
+          <Field
+            label={type === 'transfer' ? 'Desde' : 'Cuenta'}
+            required
+            error={error?.campo === 'cuenta' ? error.texto : undefined}
+          >
             <select
               className="select"
               value={accountId ?? ''}
@@ -550,7 +587,11 @@ export function TransactionForm({
           </Field>
 
           {type === 'transfer' ? (
-            <Field label="Hacia" required>
+            <Field
+              label="Hacia"
+              required
+              error={error?.campo === 'destino' ? error.texto : undefined}
+            >
               <select
                 className="select"
                 value={toAccountId ?? ''}
@@ -727,13 +768,11 @@ export function TransactionForm({
             </button>
           </Field>
         )}
-
-        {error && <div className="field-error">{error}</div>}
       </Modal>
 
       {detalles && (
         <DetallesRepeticion
-          titulo={detalles === 'deuda' ? 'Deuda a plazos' : 'Se repite'}
+          titulo={detalles === 'deuda' ? 'Deuda a plazos' : 'Ciclo de repetición'}
           campos={camposDe(detalles)}
           valores={{ freq, interval, endDate, lender }}
           onCancelar={() => {

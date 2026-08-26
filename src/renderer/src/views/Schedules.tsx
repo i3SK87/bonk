@@ -7,7 +7,6 @@ import {
   Field,
   Checkbox,
   AmountInput,
-  NumberInput,
   Confirm,
   EmptyState,
   Avatar,
@@ -17,7 +16,8 @@ import {
 } from '../components/ui'
 import { formatMoney } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
-import { FRECUENCIAS, describeFrequency } from '../lib/frecuencias'
+import { describeFrequency } from '../lib/frecuencias'
+import { SelectorCadencia } from '../components/SelectorCadencia'
 import { DetallesRepeticion, ResumenRepeticion } from '../components/DetallesRepeticion'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteProgramado, FechasProgramadas } from '../components/ProgramadaRapida'
@@ -857,28 +857,14 @@ export function ScheduleModal({
         )}
 
         <Field label="Repetición">
-          <div className="row tight">
-            <span className="muted small">Cada</span>
-            <NumberInput
-              value={interval}
-              onChange={setInterval}
-              min={1}
-              max={99}
-              style={{ width: 74 }}
-            />
-            <select
-              className="select"
-              style={{ flex: 1 }}
-              value={freq}
-              onChange={(event) => setFreq(event.target.value as Frequency)}
-            >
-              {FRECUENCIAS.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {interval === 1 ? item.singular : item.plural}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SelectorCadencia
+            freq={freq}
+            interval={interval}
+            onChange={(nuevaFreq, nuevoInterval) => {
+              setFreq(nuevaFreq)
+              setInterval(nuevoInterval)
+            }}
+          />
         </Field>
 
         <div className="grid cols-2">

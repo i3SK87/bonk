@@ -30,14 +30,21 @@ import type { DebtProgress } from '@shared/types'
 
 const api = window.bonk
 
-/** «faltan 8 meses», «faltan 12 días»: en la unidad en que se piensa la espera. */
+/**
+ * «faltan 8 meses», «faltan 12 días»: en la unidad en que se piensa la espera.
+ *
+ * Dos unidades y no tres. Las esperas largas se contaban en años —«faltan 2
+ * años»— y un año es demasiado grueso para lo que se pregunta aquí: entre 18 y
+ * 30 meses hay un año entero de diferencia y los dos salían como «2 años». En
+ * meses siempre se sabe cuántas cuotas quedan, que es lo que se está mirando.
+ * Los días, solo por debajo del mes, donde contar en meses sería redondear el
+ * final a cero.
+ */
 function espera(days: number): string {
   if (days <= 0) return 'ya vencida'
-  if (days < 45) return `faltan ${days} ${days === 1 ? 'día' : 'días'}`
+  if (days < 30) return `falta${days === 1 ? '' : 'n'} ${days} ${days === 1 ? 'día' : 'días'}`
   const meses = Math.round(days / 30)
-  if (meses < 18) return `faltan ${meses} meses`
-  const años = Math.round((meses / 12) * 10) / 10
-  return `falta${años === 1 ? '' : 'n'} ${String(años).replace('.', ',')} años`
+  return `falta${meses === 1 ? '' : 'n'} ${meses} ${meses === 1 ? 'mes' : 'meses'}`
 }
 
 export function DebtsView(): ReactNode {
