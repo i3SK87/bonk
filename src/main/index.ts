@@ -25,9 +25,20 @@ const APP_ID = 'com.bonk.desktop'
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1100,
-    height: 840,
+    height: 930,
     minWidth: 940,
-    minHeight: 620,
+    /*
+     * Más baja tampoco: el alto de trabajo es el que él le tiene puesto, y por
+     * debajo de ahí las pantallas empiezan a partirse. La tira de cifras de
+     * Deudas o de Planes Ahorro se lleva un tercio de la ventana, y con menos
+     * alto lo que queda debajo —las fichas, que son de lo que va la pantalla—
+     * se ve por una rendija de dos filas.
+     *
+     * El número sale de medir la ventana tal y como la tenía abierta: 930 px
+     * lógicos de alto, marco incluido. Eran 620, que nadie había medido.
+     * A lo alto sigue creciendo lo que quiera, y maximizar ocupa la pantalla.
+     */
+    minHeight: 930,
     /*
      * Más ancha no: a lo largo la ventana crece lo que quiera, pero a lo ancho
      * se queda en los 1100 con los que nace. Pasados de ahí, la lista de

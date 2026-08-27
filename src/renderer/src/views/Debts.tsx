@@ -13,6 +13,7 @@ import {
 } from '../components/ui'
 import { AccionCabecera, Confirm } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
+import { CategoriaRapida } from '../components/CategoriaRapida'
 import { formatMoney } from '@shared/money'
 import { findLender } from '@shared/lenders'
 import { formatDate } from '@shared/dates'
@@ -63,6 +64,8 @@ export function DebtsView(): ReactNode {
   const [menu, setMenu] = useState<{ debt: DebtProgress; x: number; y: number } | null>(null)
   const [saldando, setSaldando] = useState<DebtProgress | null>(null)
   const [borrando, setBorrando] = useState<DebtProgress | null>(null)
+  /** La deuda a la que se le está cambiando la categoría. */
+  const [recategorizando, setRecategorizando] = useState<DebtProgress | null>(null)
 
 
   useEffect(() => {
@@ -105,6 +108,14 @@ export function DebtsView(): ReactNode {
         onElegir: () => setSaldando(debt)
       })
     }
+    // La categoría es lo que ahora se ve en la ficha, así que se cambia desde
+    // aquí. Toca la programación y no las cuotas ya apuntadas: esas son
+    // movimientos hechos, con la categoría que tenían el día que entraron.
+    lista.push({
+      etiqueta: 'Cambiar categoría',
+      icono: 'tag',
+      onElegir: () => setRecategorizando(debt)
+    })
     lista.push({
       etiqueta: 'Eliminar',
       icono: 'trash',
@@ -306,6 +317,23 @@ export function DebtsView(): ReactNode {
         />
       )}
 
+      {/* Solo gastos: una deuda se paga, y ofrecerle «Nómina» sería ofrecerle
+          un error. */}
+      {recategorizando && (
+        <CategoriaRapida
+          kind="expense"
+          puesta={recategorizando.categoryId}
+          contexto={`Las cuotas de «${recategorizando.title}» que entren a partir de ahora. Las ya apuntadas se quedan como están.`}
+          onClose={() => setRecategorizando(null)}
+          onElegir={async (categoryId) => {
+            await run(
+              () => api.scheduled.setCategory(recategorizando.scheduledId, categoryId),
+              'Categoría cambiada'
+            )
+          }}
+        />
+      )}
+
       {adjusting && (
         <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
       )}
@@ -354,9 +382,13 @@ function DebtCard({
         onMenu(event.clientX, event.clientY)
       }}
     >
-      {/* Sin icono delante: en una pantalla que solo tiene deudas, un distintivo
-          de deuda repetido en cada ficha no distingue nada. */}
+      {/* Con el icono de su categoría delante, como las pagadas de abajo. Lo que
+          llevó siempre era un distintivo de deuda, y ese sí sobraba: en una
+          pantalla que solo tiene deudas no distinguía ninguna de otra. El de la
+          categoría sí dice algo —el portátil de Tecnología, el curso de
+          Formación—, y es lo que se reconoce antes que el título. */}
       <div className="row">
+        <Avatar icon={debt.categoryIcon ?? 'debt'} color={debt.categoryColor ?? '#8E8E93'} />
         <div style={{ minWidth: 0, flex: 1 }}>
           <div className="row tight">
             <span style={{ fontWeight: 570 }} className="truncate">

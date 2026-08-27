@@ -22,6 +22,19 @@ interface ModalProps {
   sobre?: boolean
   /** Estrecho: para lo que no llena el ancho normal, como la calculadora. */
   estrecho?: boolean
+  /**
+   * Flotante: se queda encima sin apagar la aplicación.
+   *
+   * Sin velo y sin capturar el ratón, así que por detrás se puede seguir
+   * pasando la lista o cambiando de pestaña mientras el cuadro sigue puesto.
+   * Lo pide la calculadora, que es una herramienta que se usa *mirando* otra
+   * cosa: echar la cuenta de un recibo que está tres filas más abajo obligaba a
+   * cerrarla, bajar a mirar y volver a abrirla.
+   *
+   * Un cuadro que pregunta algo no lleva esto: ahí el velo es lo que dice que
+   * hay algo que contestar antes de seguir.
+   */
+  flotante?: boolean
 }
 
 export function Modal({
@@ -31,7 +44,8 @@ export function Modal({
   footer,
   wide,
   sobre,
-  estrecho
+  estrecho,
+  flotante
 }: ModalProps): ReactNode {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -121,10 +135,13 @@ export function Modal({
 
   return createPortal(
     <div
-      className={`overlay${sobre ? ' sobre' : ''}${moved ? ' moved' : ''}${dragging ? ' dragging' : ''}`}
+      className={`overlay${sobre ? ' sobre' : ''}${flotante ? ' flotante' : ''}${moved ? ' moved' : ''}${dragging ? ' dragging' : ''}`}
       // Una vez apartado el diálogo, un clic fuera ya no lo cierra: se supone
-      // que se ha movido para mirar el fondo con calma.
-      onMouseDown={(event) => !moved && event.target === event.currentTarget && onClose()}
+      // que se ha movido para mirar el fondo con calma. Flotando tampoco, que
+      // ahí el clic de fuera es para lo de debajo y ni siquiera llega hasta aquí.
+      onMouseDown={(event) =>
+        !moved && !flotante && event.target === event.currentTarget && onClose()
+      }
     >
       <div
         ref={dialog}
@@ -384,6 +401,19 @@ interface AmountInputProps {
   /** Para los importes que no son el protagonista del formulario. */
   compact?: boolean
   /**
+   * El tope, en céntimos. Casi ningún importe lo tiene —un gasto es el que es—,
+   * pero lo que se aparta en un plan de ahorro no puede pasar de lo que hay en
+   * la hucha.
+   *
+   * Manda mientras se escribe y no solo al salir del campo: recortarlo al final
+   * dejaba teclear 500 € con 0 € en la cuenta, verlos escritos, guardar, y que
+   * el campo se quedara en cero sin haber dicho nunca que no cabían. Se compara
+   * con la cifra sin signo, así que un campo con signo conserva el suyo.
+   */
+  max?: number
+  /** Apagado: no hay nada que escribir, como una hucha sin un euro libre. */
+  disabled?: boolean
+  /**
    * Admite el signo. Casi ningún importe lo necesita —el de un movimiento lo
    * pone su tipo—, pero el saldo de una cuenta sí: una tarjeta de crédito o un
    * préstamo están en números rojos y se escriben tal cual.
@@ -402,7 +432,9 @@ export function AmountInput({
   autoFocus,
   invalid,
   compact,
-  signed
+  signed,
+  max,
+  disabled
 }: AmountInputProps): ReactNode {
   const [text, setText] = useState(() => (value ? String(value / 100).replace('.', ',') : ''))
   const [focused, setFocused] = useState(false)
@@ -418,12 +450,20 @@ export function AmountInput({
     if (!focusedRef.current) setText(formatMoney(value, currency, { noSymbol: true }))
   }, [value, currency, focused])
 
+  /** El tope, escrito como se teclea: pelado y con coma. */
+  const alTope = (): string => String(toMajor(max ?? 0, currency)).replace('.', ',')
+
+  /** Lo que cabe, con su signo. Lo de fuera del tope se recorta al tope. */
+  const cabe = (minor: number): number =>
+    max == null || Math.abs(minor) <= max ? minor : minor < 0 ? -max : max
+
   return (
     <div style={{ position: 'relative' }}>
       <input
         className={`input amount-input${compact ? ' compact' : ''}${invalid ? ' invalid' : ''}`}
         inputMode="decimal"
         autoFocus={autoFocus}
+        disabled={disabled}
         value={text}
         placeholder="0,00"
         onFocus={(event) => {
@@ -438,17 +478,27 @@ export function AmountInput({
           focusedRef.current = false
           setFocused(false)
           const parsed = parseAmount(text, currency, { grouping: false })
-          onChange(parsed == null ? 0 : signed ? parsed : Math.abs(parsed))
+          onChange(cabe(parsed == null ? 0 : signed ? parsed : Math.abs(parsed)))
         }}
         onChange={(event) => {
           // Salvo donde se pida, los importes son positivos: el signo lo pone el
           // tipo de movimiento, no quien escribe.
           const cleaned = keepNumericChars(event.target.value, { decimals: true, negative: signed })
-          setText(cleaned)
           // Un solo separador y decimal: aquí no se agrupan millares, así que
           // "1,23334" y "1.23334" son el mismo importe.
           const parsed = parseAmount(cleaned, currency, { grouping: false })
-          if (parsed != null) onChange(signed ? parsed : Math.abs(parsed))
+          /*
+           * Pasado el tope, lo que se ve es el tope.
+           *
+           * Como en el campo de números de al lado: si solo se recortara el
+           * valor por dentro, el campo enseñaría los 500 € que acabas de
+           * teclear mientras por debajo vale 0, y no hay forma de saber que no
+           * caben hasta que guardas y la cifra se desploma.
+           */
+          const pasado = max != null && parsed != null && Math.abs(parsed) > max
+          setText(pasado ? alTope() : cleaned)
+          if (pasado) onChange(cabe(parsed))
+          else if (parsed != null) onChange(signed ? parsed : Math.abs(parsed))
         }}
       />
       <span

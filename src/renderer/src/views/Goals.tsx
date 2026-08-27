@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { Icon, PALETTE, ALL_ICONS } from '../components/Icon'
 import { DateInput } from '../components/DateInput'
@@ -42,6 +42,8 @@ export function GoalsView(): ReactNode {
   /* El clic derecho de las dos listas, y el plan que se va a borrar. */
   const [menu, setMenu] = useState<{ goal: GoalProgress; x: number; y: number } | null>(null)
   const [borrando, setBorrando] = useState<GoalProgress | null>(null)
+  /** El plan al que se le está escribiendo cuánto lleva ahorrado. */
+  const [ahorrando, setAhorrando] = useState<GoalProgress | null>(null)
   // La hucha principal es la marcada de su tipo; si no hay ninguna, la primera.
   const [potId, setPotId] = useState<number | null>(
     accounts.find((account) => account.type === 'savings' && account.isPrimary)?.id ?? null
@@ -146,6 +148,7 @@ export function GoalsView(): ReactNode {
                   }
                   marcada={menu?.goal.id === goal.id}
                   onMenu={(x, y) => setMenu({ goal, x, y })}
+                  onAbrir={() => setEditing(goal)}
                 />
               ))}
 
@@ -210,22 +213,32 @@ export function GoalsView(): ReactNode {
 
       {/* El clic derecho, en las dos listas.
 
-          Aquí vive ahora editar, y por eso la ficha ya no lleva su lápiz a la
-          derecha: un botón permanente para algo que se hace de tarde en tarde
-          ocupaba sitio en todas las fichas a la vez. Borrar se podía desde
-          dentro de la ficha, pero eran tres pasos —abrir, bajar al pie y
-          confirmar— para deshacer algo que se apuntó mal. El mensaje de borrar
-          es el mismo que el del pie, que la acción es la misma. */}
+          Aquí vive escribir cuánto llevas ahorrado, y por eso la cifra de la
+          ficha ya no lleva su lápiz: un botón permanente para algo que se hace
+          de tarde en tarde ocupaba sitio en todas las fichas a la vez. Cambiar
+          el plan —su nombre, su meta, su fecha— es pulsar la ficha, y por eso
+          no está también aquí.
+
+          En los cumplidos no se ofrece: su dinero ya está comprometido y el
+          reparto de la hucha no cuenta con ellos, así que retocarles la cifra
+          sería mover algo que ya nadie mira. Borrar se podía desde dentro de la
+          ficha, pero eran tres pasos —abrir, bajar al pie y confirmar— para
+          deshacer algo que se apuntó mal. El mensaje es el mismo que el del
+          pie, que la acción es la misma. */}
       {menu && (
         <MenuContextual
           x={menu.x}
           y={menu.y}
           opciones={[
-            {
-              etiqueta: 'Editar plan',
-              icono: 'edit',
-              onElegir: () => setEditing(menu.goal)
-            },
+            ...(menu.goal.achievedAt
+              ? []
+              : [
+                  {
+                    etiqueta: 'Editar ahorro',
+                    icono: 'edit',
+                    onElegir: () => setAhorrando(menu.goal)
+                  }
+                ]),
             {
               etiqueta: 'Eliminar',
               icono: 'trash',
@@ -234,6 +247,21 @@ export function GoalsView(): ReactNode {
             }
           ]}
           onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {/* El techo se vuelve a echar aquí y no se guarda con el menú: entre
+          abrirlo y contestar puede haber entrado una cuota o haberse movido
+          otro plan, y lo que cabe apartar sería el de hace un rato. */}
+      {ahorrando && (
+        <AhorroModal
+          goal={ahorrando}
+          currency={settings.baseCurrency}
+          techo={Math.min(ahorrando.targetAmount, ahorrando.reserved + porRepartir)}
+          onClose={() => setAhorrando(null)}
+          onGuardar={(amount) =>
+            run(() => api.goals.reserve([{ id: ahorrando.id, amount }]), 'Ahorro actualizado')
+          }
         />
       )}
 
@@ -274,7 +302,8 @@ function GoalCard({
   onAchieve,
   onReserve,
   marcada,
-  onMenu
+  onMenu,
+  onAbrir
 }: {
   goal: GoalProgress
   currency: string
@@ -285,6 +314,8 @@ function GoalCard({
   /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
   marcada?: boolean
   onMenu?: (x: number, y: number) => void
+  /** Abrir la ficha. La ficha se abre pulsando la tarjeta, ver abajo. */
+  onAbrir?: () => void
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
 
@@ -295,20 +326,8 @@ function GoalCard({
    * lo dice, así que se hace que siga al dedo en vez de añadir otro número al
    * lado del mando.
    */
-  const ajustable = onReserve != null
-  const puesto = ajustable ? Math.min(reserva, goal.targetAmount) : goal.saved
+  const puesto = onReserve != null ? Math.min(reserva, goal.targetAmount) : goal.saved
 
-  /*
-   * La cifra también se escribe.
-   *
-   * Arrastrar va bien para tantear, pero cuando ya sabes que son 400 € es
-   * absurdo buscarlos a pulso: se pulsa el número y se teclea. Es el mismo
-   * número que mueve el mando, así que no hay dos sitios donde mirar.
-   */
-  const [escribiendo, setEscribiendo] = useState(false)
-  // Lo tecleado, en una referencia: al perder el foco, el estado que se leería
-  // aquí todavía es el de antes de la última tecla.
-  const tecleado = useRef(goal.reserved)
   const falta = Math.max(0, goal.targetAmount - puesto)
 
   /*
@@ -339,12 +358,10 @@ function GoalCard({
   const parte = (valor: number): string =>
     `${Math.max(0, Math.min(100, (valor / Math.max(1, goal.targetAmount)) * 100))}%`
 
-  // Al recargar los datos manda lo guardado, no lo que quedó en el mando. Salvo
-  // mientras se teclea: cualquier guardado en otra parte de la aplicación refresca
-  // el almacén, y eso borraba de un plumazo lo que estabas escribiendo.
+  // Al recargar los datos manda lo guardado, no lo que quedó en el mando.
   useEffect(() => {
-    if (!escribiendo) setReserva(goal.reserved)
-  }, [goal.reserved, escribiendo])
+    setReserva(goal.reserved)
+  }, [goal.reserved])
 
   const color =
     goal.status === 'complete'
@@ -355,9 +372,26 @@ function GoalCard({
           ? 'var(--warning)'
           : goal.color
 
+  /*
+   * La tarjeta entera abre la ficha, como en Deudas y como en las cumplidas de
+   * abajo. Aquí, a diferencia de allí, sí hay mandos dentro —el deslizador, la
+   * cifra que se teclea, el botón de darlo por cumplido—, así que un clic que
+   * caiga en uno de ellos no cuenta: se está usando el mando, no abriendo nada.
+   *
+   * Sin `role="button"`: una caja que anuncia ser un botón y lleva dentro un
+   * deslizador y otros dos botones miente sobre lo que es. Al teclado se llega
+   * por los mandos de dentro y por el clic derecho, que es de donde salió esto.
+   */
+  const abrir = (event: React.MouseEvent<HTMLDivElement>): void => {
+    if (!onAbrir) return
+    if ((event.target as HTMLElement).closest('button, input, a, select, textarea')) return
+    onAbrir()
+  }
+
   return (
     <div
-      className={`plan-ahorro${marcada ? ' marcada' : ''}`}
+      className={`plan-ahorro${onAbrir ? ' clicable' : ''}${marcada ? ' marcada' : ''}`}
+      onClick={abrir}
       onContextMenu={(event) => {
         if (!onMenu) return
         event.preventDefault()
@@ -381,58 +415,15 @@ function GoalCard({
         </div>
         <div className="spacer" />
         <div style={{ textAlign: 'right' }}>
-          {escribiendo ? (
-            <div
-              style={{ width: 132, marginLeft: 'auto' }}
-              onBlur={() => {
-                setEscribiendo(false)
-                onReserve?.(Math.min(tecleado.current, techo))
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') (event.target as HTMLInputElement).blur()
-                if (event.key === 'Escape') {
-                  tecleado.current = goal.reserved
-                  setReserva(goal.reserved)
-                  setEscribiendo(false)
-                }
-              }}
-            >
-              <AmountInput
-                value={reserva}
-                currency={currency}
-                compact
-                autoFocus
-                onChange={(valor) => {
-                  // Más de lo que hay en la hucha no se puede apartar, se teclee
-                  // o se arrastre.
-                  const cabe = Math.min(valor, techo)
-                  tecleado.current = cabe
-                  setReserva(cabe)
-                }}
-              />
-            </div>
-          ) : (
-            <div className="amount" style={{ fontSize: 16 }}>
-              {ajustable ? (
-                <button
-                  className="cifra-editable"
-                  onClick={() => {
-                    tecleado.current = puesto
-                    setEscribiendo(true)
-                  }}
-                  title="Escribir la cantidad"
-                >
-                  <Icon name="edit" size={13} />
-                  {formatMoney(puesto, currency)}
-                </button>
-              ) : (
-                formatMoney(puesto, currency)
-              )}{' '}
-              <span className="muted" style={{ fontWeight: 500 }}>
-                de {formatMoney(goal.targetAmount, currency)}
-              </span>
-            </div>
-          )}
+          {/* La cifra es cifra y nada más. Fue un botón con un lápiz que abría
+              un campo aquí mismo; ahora la cantidad se escribe desde «Editar
+              ahorro», en el clic derecho, y la ficha se queda para leerse. */}
+          <div className="amount" style={{ fontSize: 16 }}>
+            {formatMoney(puesto, currency)}{' '}
+            <span className="muted" style={{ fontWeight: 500 }}>
+              de {formatMoney(goal.targetAmount, currency)}
+            </span>
+          </div>
           <div className="small muted">
             {falta > 0 ? `Faltan ${formatMoney(falta, currency)}` : 'Completo'}
           </div>
@@ -521,6 +512,107 @@ function GoalCard({
               : 'Sin fecha no hay ritmo que calcular: ponle una y te digo cuánto al mes.'}
       </div>
     </div>
+  )
+}
+
+/**
+ * Cuánto llevas ahorrado de un plan, escrito.
+ *
+ * El deslizador de la ficha va bien para tantear —se ve moverse la barra y lo
+ * que falta—, pero cuando ya sabes que son 400 € buscarlos a pulso es absurdo.
+ * Estuvo en la propia cifra, detrás de un lápiz: el campo salía donde estaba el
+ * número y se guardaba al salir de él. Se cambió a un cuadro porque el lápiz
+ * tenía que estar puesto en todas las fichas para el rato suelto en que se usa,
+ * y porque escribiendo ahí no había forma de arrepentirse: cualquier clic fuera
+ * ya lo había guardado.
+ *
+ * Aquí sí: se cancela y no ha pasado nada. Y el tope se respeta mientras se
+ * escribe, que apartar lo que no hay en la hucha no es una cifra, es un error.
+ */
+function AhorroModal({
+  goal,
+  currency,
+  techo,
+  onClose,
+  onGuardar
+}: {
+  goal: GoalProgress
+  currency: string
+  /** Lo máximo que se le puede apartar: lo suyo más lo que quede libre. */
+  techo: number
+  onClose: () => void
+  onGuardar: (amount: number) => Promise<unknown>
+}): ReactNode {
+  // Lo que ya tiene, sin pasar de la meta: un plan al que se le bajó la meta
+  // después puede llevar reservado de más, y eso no es lo que hay que enseñar.
+  const [importe, setImporte] = useState(Math.min(goal.reserved, goal.targetAmount))
+
+  /*
+   * La hucha está a cero y este plan no tiene nada apartado: no hay ninguna
+   * cifra que escribir aquí más que la que ya está.
+   *
+   * El campo se apaga en vez de dejarte teclear para nada. Se llegaba a poner
+   * 500 € con la cuenta vacía, se guardaba, y la ficha volvía a enseñar 0,00 €
+   * sin que nadie hubiera dicho por qué. El tope ya recorta mientras escribes,
+   * pero un tope de cero es un campo que solo sabe decir que no: mejor que lo
+   * diga de una vez y con sus palabras.
+   *
+   * Solo puede pasar con la reserva a cero: mientras haya algo apartado, ese
+   * algo se puede bajar, y entonces el campo sí sirve.
+   */
+  const sinHueco = techo === 0
+
+  const guardar = async (): Promise<void> => {
+    const hecho = await onGuardar(Math.min(importe, techo))
+    if (hecho !== null) onClose()
+  }
+
+  return (
+    <Modal
+      title="Editar ahorro"
+      estrecho
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={guardar} disabled={sinHueco}>
+            Guardar
+          </button>
+        </>
+      }
+    >
+      {/* De qué plan se está hablando: el cuadro sale bajo el puntero y con
+          cuatro planes en pantalla no se sabría sobre cuál se pulsó. */}
+      <p className="small muted" style={{ margin: 0 }}>
+        «{goal.name}» · meta de {formatMoney(goal.targetAmount, currency)}
+      </p>
+
+      {/* Enter guarda, que es un campo y un botón: obligar a bajar el ratón
+          hasta «Guardar» para una cifra de cuatro teclas sobra. */}
+      <div onKeyDown={(event) => event.key === 'Enter' && !sinHueco && guardar()}>
+        <Field
+          label="Cuánto llevas ahorrado"
+          hint={
+            sinHueco
+              ? 'No queda nada libre en la hucha: mete dinero en la cuenta, o baja lo apartado en otro plan.'
+              : techo >= goal.targetAmount
+                ? 'La hucha da para llegar a la meta.'
+                : `Como mucho ${formatMoney(techo, currency)}: es lo que queda libre en la hucha.`
+          }
+        >
+          <AmountInput
+            value={importe}
+            currency={currency}
+            max={techo}
+            disabled={sinHueco}
+            autoFocus={!sinHueco}
+            onChange={setImporte}
+          />
+        </Field>
+      </div>
+    </Modal>
   )
 }
 

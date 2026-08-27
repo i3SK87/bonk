@@ -109,6 +109,9 @@ const api = {
     debts: () => call<DebtProgress[]>('scheduled:debts'),
     adjustDebt: (id: number, patch: DebtAdjust) =>
       call<void>('scheduled:adjustDebt', id, patch),
+    /** Cambiarle la categoría sin tocar nada más de la programación. */
+    setCategory: (id: number, categoryId: number | null) =>
+      call<void>('scheduled:setCategory', id, categoryId),
     project: (from: string, to: string) => call<ProjectedTransaction[]>('scheduled:project', from, to)
   },
   reports: {

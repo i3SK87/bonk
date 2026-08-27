@@ -255,6 +255,9 @@ export function registerIpc(
   handle('scheduled:adjustDebt', (id: number, patch: DebtAdjust) =>
     scheduled.adjustDebt(id, patch)
   )
+  handle('scheduled:setCategory', (id: number, categoryId: number | null) =>
+    scheduled.setScheduledCategory(id, categoryId)
+  )
 
   // — Informes —
   handle('reports:categories', (from: string, to: string, kind: CategoryKind) =>

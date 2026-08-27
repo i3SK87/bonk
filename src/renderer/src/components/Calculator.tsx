@@ -16,6 +16,11 @@ import { evaluate } from '@shared/calc'
  * desde Informes o Cuentas no había forma de llegar a ella. Una calculadora se
  * usa mirando cualquier cosa, así que ahora se puede apartar para ver lo de
  * debajo mientras se echa la cuenta.
+ *
+ * Y va flotante: sin velo y sin apagar lo de detrás, de modo que la lista se
+ * sigue pasando y las pestañas se siguen cambiando con ella puesta. Era lo que
+ * faltaba para que apartarla sirviera de algo: se podía ver el fondo, pero no
+ * tocarlo ni moverlo.
  */
 
 const KEYS = [
@@ -104,7 +109,7 @@ export function CalculadoraModal({
   }
 
   return (
-    <Modal title="Calculadora" onClose={onClose} estrecho>
+    <Modal title="Calculadora" onClose={onClose} estrecho flotante>
       {/*
         La cuenta y el botón de copiar, en la misma caja.
 

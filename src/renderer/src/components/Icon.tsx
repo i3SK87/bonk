@@ -29,6 +29,7 @@ import {
   Calendar,
   Camera,
   Car,
+  Cat,
   ChartColumn,
   Cigarette,
   Cloud,
@@ -163,6 +164,7 @@ const LUCIDE: Record<string, LucideIcon> = {
   bolleria: Croissant,
   teatro: Drama,
   perro: Dog,
+  gato: Cat,
   cine: Film,
   flor: Flower,
   videojuegos: Gamepad2,
@@ -525,7 +527,7 @@ export const ICON_GROUPS: IconGroup[] = [
   {
     label: 'Personal',
     icons: [
-      'pet', 'perro', 'bebe', 'juguetes', 'gift', 'corazon', 'phone',
+      'pet', 'perro', 'gato', 'bebe', 'juguetes', 'gift', 'corazon', 'phone',
       'calendar', 'tag', 'nube'
     ]
   }
@@ -571,7 +573,7 @@ export const ICON_LABELS: Record<string, string> = {
   monitor: 'Monitor', impresora: 'Impresora', idea: 'Idea',
   justicia: 'Justicia', shield: 'Protección',
 
-  pet: 'Mascota', perro: 'Perro', bebe: 'Bebé', juguetes: 'Juguetes',
+  pet: 'Mascota', perro: 'Perro', gato: 'Gato', bebe: 'Bebé', juguetes: 'Juguetes',
   gift: 'Regalo', corazon: 'Corazón', phone: 'Móvil', calendar: 'Calendario',
   tag: 'Etiqueta', nube: 'Nube'
 }
@@ -662,6 +664,7 @@ const ICON_ALIASES: Record<string, string> = {
   justicia: 'balanza abogado juicio',
   pet: 'animal huella',
   perro: 'can',
+  gato: 'gata michi minino felino',
   bebe: 'hijo niños guardería',
   juguetes: 'niños juegos',
   gift: 'cumpleaños navidad detalle',

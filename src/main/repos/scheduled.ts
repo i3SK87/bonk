@@ -465,6 +465,55 @@ export function adjustDebt(id: number, patch: DebtAdjust): void {
     )
 }
 
+/**
+ * Cambiarle la categoría a una programación, y a nada más.
+ *
+ * Va por su cuenta y no por `saveScheduled` porque ahí hay que mandar la ficha
+ * entera: para mover una deuda de «Tecnología» a «Formación» habría que
+ * reconstruir su importe, su cadencia y sus fechas desde la pantalla que la
+ * está enseñando, y cualquier campo que se quedara por el camino se guardaría
+ * en blanco. Las cuotas ya apuntadas no se tocan: son movimientos hechos, y
+ * cada uno lleva la categoría que tenía el día que entró.
+ *
+ * Lo que sí hay que sostener es el recuento de cuotas pagadas, y ahí está toda
+ * la gracia de esta función. Una deuda no guarda cuántas lleva: las deduce
+ * buscando gastos con su misma nota **y su misma categoría** (ver
+ * `debtSummary`), y les suma las que le hayas dicho a mano que no puede ver.
+ * Cambiarle la categoría cambia, por tanto, lo que encuentra: la deuda del
+ * Kindle pasaba de 3/4 a 2/3 sin que nadie hubiera pagado ni dejado de pagar
+ * nada. El dinero seguía donde estaba —el número es deducido, y por eso volvía
+ * solo al deshacer el cambio—, pero un contador que se mueve al tocar algo que
+ * no tiene que ver con él no vale para nada.
+ *
+ * Así que aquí se apunta cuántas cuotas valía antes, se cambia la categoría, y
+ * se rehace el ajuste manual para que la suma dé lo mismo: lo que cambia es
+ * cuántas ve la aplicación por su cuenta, no cuántas has pagado. Sin tocar un
+ * solo movimiento.
+ *
+ * Queda un caso que no se puede sostener: mudar la deuda a una categoría que ya
+ * tenga movimientos con su misma nota. Ahí la aplicación encuentra *más* de las
+ * que valía, y el ajuste no puede restar —solo dice cuántas hay que no se ven—.
+ * Se queda en cero y el recuento sube. Es lo honrado: esos movimientos existen
+ * y son suyos por nota y categoría, igual que los demás.
+ */
+export function setScheduledCategory(id: number, categoryId: number | null): void {
+  atomic(() => {
+    const antes = getScheduled(id)
+    // Solo las deudas llevan cuenta de cuotas; en una programada normal esto no
+    // significa nada y no hay nada que sostener.
+    const valia = antes?.isDebt ? debtSummary(id).count + (antes.debtExtraCount ?? 0) : null
+
+    getDb().prepare('UPDATE scheduled SET category_id = ? WHERE id = ?').run(bind(categoryId), id)
+
+    if (valia == null) return
+    // Las que la aplicación ve ahora, ya con la categoría nueva puesta.
+    const seVen = debtSummary(id).count
+    getDb()
+      .prepare('UPDATE scheduled SET debt_extra_count = ? WHERE id = ?')
+      .run(Math.max(0, valia - seVen) || null, id)
+  })
+}
+
 /** Lo que ha costado un plan, para poder contarlo al terminar. */
 export function debtSummary(id: number): DebtSummary {
   const scheduled = getScheduled(id)
@@ -588,6 +637,7 @@ export function debtProgress(reference = today()): DebtProgress[] {
     return {
       scheduledId: debt.id,
       title: tituloProgramada(debt, 'Deuda'),
+      categoryId: debt.categoryId,
       categoryName: debt.categoryName,
       categoryIcon: debt.categoryIcon,
       categoryColor: debt.categoryColor,

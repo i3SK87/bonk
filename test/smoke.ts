@@ -943,6 +943,87 @@ try {
   scheduled.deleteScheduled(plan.id)
   scheduled.deleteScheduled(sinFin.id)
 
+  section('Cambiarle la categoría a una deuda')
+  /*
+   * Cambiar de categoría no cambia cuántas cuotas llevas pagadas.
+   *
+   * Una deuda no guarda ese número: cuenta los gastos con su misma nota y su
+   * misma categoría, y les suma las que se le hayan dicho a mano. Mudarla de
+   * categoría cambiaba, por tanto, lo que encontraba —una deuda real pasó de
+   * 3/4 a 2/3 sin que nadie hubiera pagado nada—, así que ahora se rehace el
+   * ajuste manual para que la suma no se mueva.
+   *
+   * El montaje reproduce el caso de verdad: dos cuotas apuntadas en la
+   * categoría de la deuda, una tercera traspapelada en otra, y el ajuste a mano
+   * puesto a 3 para compensar la que no se veía.
+   */
+  const kindle = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Kindle Scribe',
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 2975,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    endDate: addMonths(day, 1),
+    autoPost: true,
+    isDebt: true
+  })
+  const cuotaSuelta = (mes: number, categoryId: number): number =>
+    transactions.saveTransaction({
+      type: 'expense',
+      date: addMonths(day, mes),
+      accountId: bank.id,
+      categoryId,
+      amount: 2975,
+      note: 'Kindle Scribe'
+    }).id
+  const kindleVistas = [cuotaSuelta(-2, debt.id), cuotaSuelta(-1, debt.id)]
+  const kindleTraspapelada = cuotaSuelta(-3, food.id)
+  scheduled.adjustDebt(kindle.id, { paidCount: 3, lastAmount: 0, total: 0 })
+
+  const kindleDe = (): DebtProgress =>
+    scheduled.debtProgress(day).find((row) => row.scheduledId === kindle.id)!
+  equal('arranca con tres cuotas pagadas', kindleDe().paidCount, 3)
+  equal('y una por delante', kindleDe().leftCount, 1)
+
+  scheduled.setScheduledCategory(kindle.id, food.id)
+  equal('mudada de categoría, sigue llevando tres', kindleDe().paidCount, 3)
+  equal('y sigue quedando una', kindleDe().leftCount, 1)
+  equal('la programada sí se ha mudado', scheduled.getScheduled(kindle.id)!.categoryId, food.id)
+  check(
+    'y ningún movimiento se ha tocado',
+    transactions
+      .listTransactions({ limit: 500 })
+      .filter((row) => [...kindleVistas, kindleTraspapelada].includes(row.id))
+      .every((row) => row.categoryId === (row.id === kindleTraspapelada ? food.id : debt.id))
+  )
+
+  scheduled.setScheduledCategory(kindle.id, debt.id)
+  equal('y de vuelta, tres otra vez', kindleDe().paidCount, 3)
+  equal('con el ajuste a mano donde estaba', scheduled.getScheduled(kindle.id)!.debtExtraCount, 1)
+
+  // Lo que no es una deuda no lleva cuenta de cuotas: se muda y ya.
+  const gimnasio = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Gimnasio',
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 3000,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(day, 1),
+    autoPost: true
+  })
+  scheduled.setScheduledCategory(gimnasio.id, food.id)
+  equal('una programada normal se muda igual', scheduled.getScheduled(gimnasio.id)!.categoryId, food.id)
+  check('y sin inventarle un ajuste de cuotas', scheduled.getScheduled(gimnasio.id)!.debtExtraCount == null)
+
+  transactions.deleteTransactions([...kindleVistas, kindleTraspapelada])
+  scheduled.deleteScheduled(kindle.id)
+  scheduled.deleteScheduled(gimnasio.id)
+
   section('Recolocar movimientos dentro de su día')
   /*
    * El orden de una jornada lo decide quien la mira.

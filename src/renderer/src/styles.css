@@ -1100,6 +1100,16 @@ p { margin: 0; }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+/* Apagado como los botones, y por lo mismo: un campo que no acepta nada tiene
+   que verse que no lo acepta antes de que se teclee dentro. Chromium lo deja
+   casi igual cuando el fondo se lo pone la hoja, que es nuestro caso. */
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .textarea {
   resize: vertical;
   min-height: 74px;
@@ -1868,6 +1878,29 @@ p { margin: 0; }
   backdrop-filter: none;
 }
 
+/*
+ * El cuadro que flota: sin velo y sin tocar el ratón.
+ *
+ * `pointer-events: none` es lo que deja pasar la rueda y los clics a lo que hay
+ * debajo, y es todo lo que hace falta para que la aplicación siga viva con la
+ * calculadora puesta: la lista se pasa, las pestañas se cambian, las fichas se
+ * abren. El cuadro se lo devuelve para sí mismo, que si no no se podría ni
+ * teclear en él.
+ *
+ * Y sin velo, porque un fondo apagado que además se puede usar es una
+ * contradicción: el velo es lo que dice «esto está esperando una respuesta», y
+ * este cuadro no espera ninguna.
+ */
+.overlay.flotante {
+  background: none;
+  backdrop-filter: none;
+  pointer-events: none;
+}
+
+.overlay.flotante > .modal {
+  pointer-events: auto;
+}
+
 .modal-header.draggable {
   cursor: grab;
 }
@@ -2146,33 +2179,36 @@ p { margin: 0; }
   flex-shrink: 0;
 }
 
-/* En Informes no se resalta nada al pasar por encima: es una tabla que se lee
-   de arriba abajo, y la franja saltando de fila en fila mientras se leen las
-   cifras molestaba más de lo que ayudaba. */
+/*
+ * La categoría se enciende al pasar por encima.
+ *
+ * Estuvo apagado a propósito —una tabla se lee de arriba abajo y la franja
+ * saltando de fila en fila distrae—, pero desde que la fila hace cosas (se
+ * abre su desglose, y con el clic derecho se le cambia la categoría) tiene que
+ * decir por sí sola dónde está el puntero, como cualquier otra fila de la
+ * aplicación. El desglose de conceptos no: esas no se pulsan ni tienen menú.
+ *
+ * El fondo lo pintan las celdas y no la fila: puesto en el `tr` sale de canto a
+ * canto y con las esquinas en pico, que es lo único de la aplicación que se
+ * resaltaría así. De ahí que se redondeen la primera y la última celda.
+ */
 .table.breakdown tbody tr:hover {
   background: transparent;
 }
 
-/* Con su menú abierto sí, que aquí no hay franja al pasar por encima y sin esto
-   no habría nada que dijera sobre qué categoría se ha pulsado. */
-/*
- * Las esquinas, redondeadas como todo lo demás que se enciende.
- *
- * El fondo de una fila de tabla lo pintan sus celdas, no la fila: puesto en el
- * `tr` sale de canto a canto y con las esquinas en pico, que es lo único de la
- * aplicación que se resaltaba así. Se pinta en las celdas y se redondean la
- * primera y la última.
- */
+.table.breakdown tbody tr:not(.subrow):hover > td,
 .table.breakdown tbody tr.marcada > td,
 .table.breakdown tbody tr.marcada:hover > td {
   background: var(--bg-sunken);
 }
 
+.table.breakdown tbody tr:not(.subrow):hover > td:first-child,
 .table.breakdown tbody tr.marcada > td:first-child {
   border-top-left-radius: var(--radius-sm);
   border-bottom-left-radius: var(--radius-sm);
 }
 
+.table.breakdown tbody tr:not(.subrow):hover > td:last-child,
 .table.breakdown tbody tr.marcada > td:last-child {
   border-top-right-radius: var(--radius-sm);
   border-bottom-right-radius: var(--radius-sm);
@@ -2372,40 +2408,6 @@ textarea::placeholder {
   margin-top: 10px;
 }
 
-/* La cantidad apartada se puede teclear, y tiene que cantarlo: con solo un
-   borde fino se perdía entre las cifras de la ficha. Fondo hundido, borde
-   marcado y un lápiz delante; lo de al lado —la meta— se queda en texto pelado
-   para que se note la diferencia entre lo que se toca y lo que no. */
-.cifra-editable {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-sunken);
-  border: 1px solid var(--border-strong);
-  border-radius: 9px;
-  padding: 2px 9px;
-  font: inherit;
-  color: inherit;
-  cursor: text;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.cifra-editable svg {
-  color: var(--fg-subtle);
-}
-
-.cifra-editable:hover,
-.cifra-editable:focus-visible {
-  background: var(--bg-elevated);
-  border-color: var(--accent);
-}
-
-.cifra-editable:hover svg {
-  color: var(--accent);
-}
-
 /*
  * El carril se pinta a mano en tres tramos: lo apartado, lo que aun puedes
  * apartar y -al final, apagado- lo que no cabe porque no hay tanto en la hucha.
@@ -2514,12 +2516,7 @@ textarea::placeholder {
 }
 
 /*
- * La ficha de un plan de ahorro se enciende, pero no se pulsa entera.
- *
- * No puede ser una `tarjeta-clicable`: lleva dentro el deslizador y el lápiz,
- * y poner el cursor de mano sobre todo el bloque prometería un clic que no
- * hace nada. Encenderse sí tiene que hacerlo, porque el clic derecho actúa
- * sobre ella entera y hay que ver sobre cuál.
+ * La ficha de un plan de ahorro.
  *
  * El relleno se compensa con el mismo margen en negativo: el fondo crece
  * 8 px por arriba y por abajo, la ficha se sube otros 8, y el contenido se
@@ -2538,18 +2535,51 @@ textarea::placeholder {
   background: var(--bg-sunken);
 }
 
+/*
+ * Abre su ficha, así que lleva el cursor de mano. No lo llevaba: pulsarla no
+ * hacía nada y una mano habría prometido un clic que no existía.
+ *
+ * Los mandos de dentro —el deslizador, la cifra que se teclea, el botón de
+ * darlo por cumplido— se quedan con el suyo: ahí el clic es para ellos, y la
+ * ficha lo deja pasar sin abrirse.
+ */
+.plan-ahorro.clicable {
+  cursor: pointer;
+}
+
+.plan-ahorro.clicable input[type='range'] {
+  cursor: grab;
+}
+
+.plan-ahorro.clicable input[type='range']:active {
+  cursor: grabbing;
+}
+
+.plan-ahorro.clicable input[type='text'],
+.plan-ahorro.clicable .input {
+  cursor: text;
+}
+
 .tarjeta-clicable:hover {
   background: var(--bg-sunken);
 }
 
-/* Las casillas de un formulario, a la par. Son respuestas de sí o no y en fila
-   india estiraban la ficha media pantalla; de dos en dos se leen de un vistazo.
-   Con `auto-fit` se acomodan solas: si el diálogo se estrecha, vuelven a una
-   por renglón sin necesidad de medir nada. */
+/*
+ * Las casillas de un formulario, a la par y centradas.
+ *
+ * Son respuestas de sí o no: en fila india estiraban la ficha media pantalla y
+ * de dos en dos se leen de un vistazo. Iban en una rejilla de columnas iguales,
+ * y como los rótulos son de largos distintos —«Adjuntar facturas» al lado de
+ * «Desglose en la pestaña Informes»— el par acababa arrimado a la izquierda con
+ * un palmo de aire muerto a la derecha. En fila centrada el bloque queda a
+ * plomo con el resto de la ficha, y lo que no cabe se va al renglón siguiente,
+ * también centrado.
+ */
 .casillas {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 6px 20px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 26px;
   align-items: start;
 }
 

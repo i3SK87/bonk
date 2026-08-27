@@ -434,6 +434,8 @@ export interface DebtAdjust {
 export interface DebtProgress {
   scheduledId: number
   title: string
+  /** La categoría con la que se apunta cada cuota; null si no tiene ninguna. */
+  categoryId: number | null
   categoryName: string | null
   categoryIcon: string | null
   categoryColor: string | null

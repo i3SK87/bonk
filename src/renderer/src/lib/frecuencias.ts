@@ -27,24 +27,23 @@ export interface Cadencia {
 export const UNA_VEZ: Cadencia = { nombre: 'Una vez', freq: 'once', interval: 1 }
 
 /**
- * Las siete que se eligen por su nombre.
+ * Las cuatro que se eligen por su nombre.
  *
  * Casi todo lo que se programa cae en una de estas —la nómina, el alquiler, el
  * seguro del coche, la cuota del gimnasio—, y decirlas por su nombre se lee de
- * un golpe: «Trimestral» se entiende antes que «cada 3 meses», que hay que
- * pararse a multiplicar. Lo que no encaje sigue pudiéndose montar a mano, pero
- * escondido detrás de una opción más, que es donde tiene que estar lo raro.
+ * un golpe. Lo que no encaje sigue pudiéndose montar a mano, pero escondido
+ * detrás de una opción más, que es donde tiene que estar lo raro.
  *
- * «Bimensual» aquí es cada dos meses, que es como se lee en una lista que sube:
- * mensual, bimensual, trimestral, cuatrimestral.
+ * Fueron siete: estaban además «Bimensual», «Trimestral» y «Cuatrimestral».
+ * Alargaban la lista justo por el medio, donde están las que se eligen a
+ * diario, para tres casos que salen de higos a brevas. Lo guardado con una de
+ * ellas no se pierde: al quedarse sin nombre se lee «Cada 3 meses» y su ficha
+ * abre el mando de a mano con lo que tuviera puesto.
  */
 export const CADENCIAS: Cadencia[] = [
   { nombre: 'Diaria', freq: 'daily', interval: 1 },
   { nombre: 'Semanal', freq: 'weekly', interval: 1 },
   { nombre: 'Mensual', freq: 'monthly', interval: 1 },
-  { nombre: 'Bimensual', freq: 'monthly', interval: 2 },
-  { nombre: 'Trimestral', freq: 'monthly', interval: 3 },
-  { nombre: 'Cuatrimestral', freq: 'monthly', interval: 4 },
   { nombre: 'Anual', freq: 'yearly', interval: 1 }
 ]
 
