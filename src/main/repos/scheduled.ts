@@ -1,10 +1,11 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { today, nextOccurrence, formatDate } from '@shared/dates'
-import { saveTransaction } from './transactions'
+import { saveTransaction, deleteTransaction, getTransaction } from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
 import type {
+  TransactionInput,
   Scheduled,
   ScheduledView,
   ProjectedTransaction,
@@ -187,6 +188,19 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
   }
   if (input.interval < 1) throw new Error('La repetición tiene que ser de al menos 1')
 
+  /*
+   * «Una vez» se guarda acotada a su propio día.
+   *
+   * Es lo que la convierte en algo que pasa y se acaba sin inventar ninguna
+   * regla nueva: con la fecha de fin igual que la de inicio, en cuanto se
+   * registra su siguiente fecha rebasa el fin y se sella sola, por el mismo
+   * camino que una deuda al pagar la última cuota. El intervalo se ignora: «cada
+   * 3 una vez» no quiere decir nada.
+   */
+  const unaVez = input.freq === 'once'
+  const interval = unaVez ? 1 : input.interval
+  const endDate = unaVez ? input.nextDate : input.endDate || null
+
   const db = getDb()
   const isTransfer = input.type === 'transfer'
   const toAccountId = isTransfer ? (input.toAccountId ?? null) : null
@@ -218,9 +232,9 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(input.payee?.trim() || null),
       bind(input.note?.trim() || null),
       input.freq,
-      input.interval,
+      interval,
       input.nextDate,
-      bind(input.endDate || null),
+      bind(endDate),
       input.autoPost ? 1 : 0,
       input.active === false ? 0 : 1,
       bind(refundForScheduledId),
@@ -253,9 +267,9 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(input.payee?.trim() || null),
       bind(input.note?.trim() || null),
       input.freq,
-      input.interval,
+      interval,
       input.nextDate,
-      bind(input.endDate || null),
+      bind(endDate),
       input.autoPost ? 1 : 0,
       input.active === false ? 0 : 1,
       nowISO(),
@@ -266,6 +280,66 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.isDebt ? 1 : 0
     )
   return getScheduled(Number(result.lastInsertRowid))!
+}
+
+/** Lo que se programa a partir de un movimiento, con su cadencia si la lleva. */
+export interface FromTransactionInput extends TransactionInput {
+  /**
+   * Cada cuánto, si el movimiento venía marcado como cíclico. Sin esto es de una
+   * vez: pasa ese día y se acabó.
+   */
+  cadencia?: { freq: Frequency; interval: number; endDate?: string | null } | null
+  isDebt?: boolean
+  lender?: string | null
+}
+
+/**
+ * Convierte en programada un movimiento con fecha por delante.
+ *
+ * Un movimiento con fecha futura no es un movimiento: es algo que va a pasar. Y
+ * el saldo no distingue —los suma todos sin mirar la fecha—, así que apuntar hoy
+ * el recibo del día 5 dejaba el dinero descontado cinco días antes de salir de
+ * la cuenta. Programado, el saldo se entera el día que toca.
+ *
+ * Si venía de editar uno que ya existía, el movimiento se borra: es el mismo
+ * apunte que se muda al futuro, no una copia. Las dos cosas van dentro de la
+ * misma transacción, que si no un fallo a mitad dejaría el apunte duplicado —una
+ * vez en la lista y otra esperando— o desaparecido del todo.
+ *
+ * Lo que no puede viajar se queda donde está y por eso no se llama desde la
+ * ficha en esos casos: las facturas cuelgan de un movimiento, y un reembolso
+ * apunta a un gasto concreto que una programada no sabe señalar.
+ */
+export function scheduleFromTransaction(input: FromTransactionInput): ScheduledView {
+  if (input.date <= today()) {
+    throw new Error('Solo se programa lo que todavía no ha pasado')
+  }
+
+  return atomic(() => {
+    if (input.id != null && getTransaction(input.id)) deleteTransaction(input.id)
+
+    return saveScheduled({
+      type: input.type,
+      accountId: input.accountId,
+      toAccountId: input.toAccountId ?? null,
+      categoryId: input.categoryId ?? null,
+      amount: input.amount,
+      amountTo: input.amountTo ?? null,
+      payee: input.payee ?? null,
+      note: input.note ?? null,
+      goalId: input.goalId ?? null,
+      freq: input.cadencia?.freq ?? 'once',
+      interval: input.cadencia?.interval ?? 1,
+      // Empieza el día que se puso en la ficha, no una vuelta después: esa fecha
+      // es la primera vez que pasa, no una que ya haya pasado.
+      nextDate: input.date,
+      endDate: input.cadencia?.endDate ?? null,
+      autoPost: true,
+      remind: true,
+      isDebt: input.isDebt === true && input.type === 'expense',
+      lender: input.isDebt === true && input.type === 'expense' ? (input.lender ?? null) : null
+    })
+  })
 }
 
 export function deleteScheduled(id: number): void {

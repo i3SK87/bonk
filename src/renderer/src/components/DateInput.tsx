@@ -354,9 +354,13 @@ export function DateInput({ value, onChange, clearable, autoFocus }: DateInputPr
  * Dos toques en el calendario: el día de inicio y el de fin.
  *
  * No es un campo, es el calendario y nada más. Lo abre quien lo necesite —hoy,
- * el «Personalizado» de Movimientos y el de Informes— y se cierra en cuanto hay
- * dos días. El tramo elegido se lee luego donde toque, que aquí no se pinta
- * ninguna caja.
+ * el «Personalizado» de Movimientos y el de Informes— y el tramo elegido se lee
+ * luego donde toque, que aquí no se pinta ninguna caja.
+ *
+ * Con los dos días dados avisa por `onChange` y ya no llama a `onClose`: cerrar
+ * es solo cancelar, y quien lo abrió sabe qué hacer con cada cosa. Antes salían
+ * los dos avisos seguidos y desde fuera no había manera de distinguir el que
+ * traía tramo del que se iba de vacío, que son cosas distintas.
  *
  * Empieza siempre en blanco, sin el tramo que hubiera puesto antes. A lo que se
  * viene es a elegir uno nuevo, y el viejo pintado en la rejilla solo confunde:
@@ -374,6 +378,7 @@ export function CalendarioDeTramo({
   /** Solo para saber por qué mes abrirlo. No se pinta nada de lo que hubiera. */
   desde?: string
   onChange: (from: string, to: string) => void
+  /** Se ha cerrado sin elegir. Quien lo abrió decide qué hacer con eso. */
   onClose: () => void
 }): ReactNode {
   const { settings } = useStore()
@@ -393,7 +398,6 @@ export function CalendarioDeTramo({
     // El segundo puede caer antes que el primero: se ordenan solos.
     const [inicio, fin] = anclado <= iso ? [anclado, iso] : [iso, anclado]
     onChange(inicio, fin)
-    onClose()
   }
 
   /*

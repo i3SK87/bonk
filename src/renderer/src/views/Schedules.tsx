@@ -310,7 +310,11 @@ export function SchedulesView(): ReactNode {
                     {describeFrequency(row.freq, row.interval)}
                     {row.type === 'refund' ? '' : ` · ${row.accountName}`}
                     {row.type === 'transfer' && row.toAccountName ? ` → ${row.toAccountName}` : ''}
-                    {row.endDate ? ` · Hasta el ${formatDate(row.endDate)}` : ''}
+                    {/* La de una vez se acaba el día que pasa, y eso ya lo dice
+                        la fecha de al lado: «Hasta el» ahí sobra. */}
+                    {row.endDate && row.freq !== 'once'
+                      ? ` · Hasta el ${formatDate(row.endDate)}`
+                      : ''}
                     {!row.autoPost && ' · Registro manual'}
                   </div>
                 </div>
@@ -858,9 +862,19 @@ export function ScheduleModal({
 
         <Field label="Repetición">
           <SelectorCadencia
+            unaVez
             freq={freq}
             interval={interval}
             onChange={(nuevaFreq, nuevoInterval) => {
+              /*
+               * Al dejar de ser de una vez, se le suelta el fin.
+               *
+               * El de una vez es su propio día, y es lo que la sella al pasar.
+               * Heredado por una mensual, la mataría en el primer repaso: la
+               * siguiente caería más allá del fin y se sellaría sin haber
+               * llegado a repetir ni una vez.
+               */
+              if (freq === 'once' && nuevaFreq !== 'once' && endDate === nextDate) setEndDate('')
               setFreq(nuevaFreq)
               setInterval(nuevoInterval)
             }}
@@ -868,12 +882,16 @@ export function ScheduleModal({
         </Field>
 
         <div className="grid cols-2">
-          <Field label="Próxima fecha">
+          <Field label={freq === 'once' ? 'Cuándo' : 'Próxima fecha'}>
             <DateInput value={nextDate} onChange={setNextDate} />
           </Field>
-          <Field label="Termina el" hint="Déjalo vacío si no tiene fin.">
-            <DateInput value={endDate} onChange={setEndDate} clearable />
-          </Field>
+          {/* La de una vez no tiene fin que elegir: se acaba al pasar, y el
+              guardado le pone esa misma fecha. */}
+          {freq !== 'once' && (
+            <Field label="Termina el" hint="Déjalo vacío si no tiene fin.">
+              <DateInput value={endDate} onChange={setEndDate} clearable />
+            </Field>
+          )}
         </div>
 
         {/* Las casillas, a la par: son respuestas de sí o no, cortas, y en

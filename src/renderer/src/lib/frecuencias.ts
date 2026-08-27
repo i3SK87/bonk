@@ -17,6 +17,16 @@ export interface Cadencia {
 }
 
 /**
+ * «Una vez», la que no se repite.
+ *
+ * Va aparte de las demás porque no se ofrece siempre: en la ficha de un
+ * movimiento marcado como cíclico no pinta nada —cíclico y una vez se
+ * contradicen—, y en la de una programada sí, que es donde se apunta lo que pasa
+ * un día y se acaba.
+ */
+export const UNA_VEZ: Cadencia = { nombre: 'Una vez', freq: 'once', interval: 1 }
+
+/**
  * Las siete que se eligen por su nombre.
  *
  * Casi todo lo que se programa cae en una de estas —la nómina, el alquiler, el
@@ -40,6 +50,7 @@ export const CADENCIAS: Cadencia[] = [
 
 /** La cadencia con nombre que case con esa pareja, si es que hay alguna. */
 export function cadenciaDe(freq: Frequency, interval: number): Cadencia | null {
+  if (freq === 'once') return UNA_VEZ
   return CADENCIAS.find((item) => item.freq === freq && item.interval === interval) ?? null
 }
 

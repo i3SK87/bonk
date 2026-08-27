@@ -62,6 +62,7 @@ export function DebtsView(): ReactNode {
    */
   const [menu, setMenu] = useState<{ debt: DebtProgress; x: number; y: number } | null>(null)
   const [saldando, setSaldando] = useState<DebtProgress | null>(null)
+  const [borrando, setBorrando] = useState<DebtProgress | null>(null)
 
 
   useEffect(() => {
@@ -101,6 +102,12 @@ export function DebtsView(): ReactNode {
         onElegir: () => setSaldando(debt)
       })
     }
+    lista.push({
+      etiqueta: 'Eliminar',
+      icono: 'trash',
+      peligrosa: true,
+      onElegir: () => setBorrando(debt)
+    })
     return lista
   }
 
@@ -261,6 +268,33 @@ export function DebtsView(): ReactNode {
             )
             setSaldando(null)
             if (hecho) await refresh()
+          }}
+        />
+      )}
+
+      {/* Eliminar no es saldar. Saldar cierra la deuda y la manda a pagadas,
+          que es donde queda constancia de que se pagó; eliminar la borra del
+          mapa, con su programación, y no deja rastro en ninguna de las dos
+          listas. Es para la deuda que nunca debió apuntarse, no para la que se
+          terminó de pagar. Los movimientos ya registrados no se tocan: ese
+          dinero salió de la cuenta de verdad. */}
+      {borrando && (
+        <Confirm
+          title="Eliminar deuda"
+          confirmLabel="Eliminar"
+          destructive
+          message={
+            <>
+              Se borran «{borrando.title}» y su movimiento programado, así que dejan de
+              generarse cuotas. No aparecerá entre las pagadas.
+              {borrando.paidCount > 0 &&
+                ' Los pagos ya apuntados se conservan como movimientos normales.'}
+            </>
+          }
+          onCancel={() => setBorrando(null)}
+          onConfirm={async () => {
+            await run(() => api.scheduled.remove(borrando.scheduledId), 'Deuda eliminada')
+            setBorrando(null)
           }}
         />
       )}

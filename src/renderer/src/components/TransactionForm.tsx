@@ -251,6 +251,26 @@ export function TransactionForm({
     if (picked && picked.length) setPending((current) => [...current, ...picked])
   }
 
+  /**
+   * Lo que se hace después de guardar, salga movimiento o programada.
+   *
+   * «Guardar y seguir» conserva el contexto —la cuenta, el tipo, la fecha— y
+   * limpia lo que era de ese apunte y no del siguiente.
+   */
+  function terminar(keepOpen: boolean): void {
+    if (keepOpen) {
+      setAmount(0)
+      setNote('')
+      setAttachments([])
+      setPreviews({})
+      setPending([])
+      toast('Listo para el siguiente', 'info')
+      return
+    }
+    onSaved?.()
+    onClose()
+  }
+
   async function save(keepOpen = false): Promise<void> {
     setError(null)
     if (!accountId) return setError({ campo: 'cuenta', texto: 'Elige una cuenta' })
@@ -259,6 +279,49 @@ export function TransactionForm({
       return setError({ campo: 'destino', texto: 'Elige la cuenta de destino' })
     if (type === 'refund' && !refundForId)
       return setError({ campo: 'reembolso', texto: 'Elige el gasto que te devuelven' })
+
+    /*
+     * Con la fecha por delante no sale un movimiento, sale una programada.
+     *
+     * El saldo suma todos los movimientos sin mirar la fecha, así que apuntar
+     * hoy el recibo del día 5 dejaba el dinero descontado cinco días antes de
+     * salir de la cuenta. Lo que todavía no ha pasado es algo que va a pasar, y
+     * eso ya tiene su sitio: se registra solo el día que le toca.
+     *
+     * Dos cosas no pueden hacer el viaje, y por eso se quedan como movimiento:
+     * las facturas cuelgan de un movimiento y se irían con él, y un reembolso
+     * apunta a un gasto concreto que una programada no sabe señalar. En ambos
+     * casos el aviso lo dice, que si no parecería que la regla falla a ratos.
+     */
+    const futuro = date > today()
+    const conFacturas = pending.length > 0 || attachments.length > 0
+    if (futuro && type !== 'refund' && !conFacturas) {
+      setSaving(true)
+      const programada = await run(
+        () =>
+          api.transactions.program({
+            id: existing?.id,
+            type,
+            date,
+            accountId,
+            toAccountId: type === 'transfer' ? toAccountId : null,
+            goalId: hucha ? goalId : null,
+            categoryId: type === 'transfer' ? null : categoryId,
+            amount,
+            note: note || null,
+            // Marcado como cíclico, la programada nace con su cadencia y empieza
+            // ese día; suelto, es de una vez y se acaba ahí.
+            cadencia: repite ? { freq, interval, endDate: endDate || null } : null,
+            isDebt: esDeuda && type === 'expense',
+            lender: esDeuda && type === 'expense' ? lender || null : null
+          }),
+        `Programado para el ${formatDate(date)}`
+      )
+      setSaving(false)
+      if (!programada) return
+      terminar(keepOpen)
+      return
+    }
 
     setSaving(true)
     const saved = await run(
@@ -276,7 +339,13 @@ export function TransactionForm({
           note: note || null,
           refundForId
         }),
-      existing ? 'Movimiento actualizado' : 'Movimiento guardado'
+      futuro
+        ? conFacturas
+          ? 'Lleva facturas, así que se queda como movimiento'
+          : 'Un reembolso no se puede programar: se queda como movimiento'
+        : existing
+          ? 'Movimiento actualizado'
+          : 'Movimiento guardado'
     )
     setSaving(false)
 
@@ -325,19 +394,7 @@ export function TransactionForm({
       }
     }
 
-    if (keepOpen) {
-      // «Guardar y seguir»: se conserva el contexto y se limpia lo que es de ese
-      // movimiento y no del siguiente.
-      setAmount(0)
-      setNote('')
-      setAttachments([])
-      setPreviews({})
-      setPending([])
-      toast('Listo para el siguiente', 'info')
-      return
-    }
-    onSaved?.()
-    onClose()
+    terminar(keepOpen)
   }
 
   async function remove(): Promise<void> {

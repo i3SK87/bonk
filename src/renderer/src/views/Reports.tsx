@@ -2,7 +2,6 @@ import {
   Fragment,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type KeyboardEvent,
   type ReactNode
@@ -14,7 +13,7 @@ import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
-import { today, startOfMonth, endOfMonth, daysBetween, formatDate } from '@shared/dates'
+import { today, daysBetween, formatDate } from '@shared/dates'
 import { CalendarioDeTramo } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
@@ -220,26 +219,17 @@ export function ReportsView(): ReactNode {
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
-  // Arrancan en el mes en curso: es de donde vienes al pulsar «Personalizado».
-  const [customFrom, setCustomFrom] = useState(() => startOfMonth(today()))
-  const [customTo, setCustomTo] = useState(() => endOfMonth(today()))
+  /*
+   * El tramo de «Personalizado», o `null` mientras no se haya elegido ninguno.
+   *
+   * Arrancaban valiendo el mes en curso, y esas fechas heredadas se escribían al
+   * lado del botón en cuanto se pulsaba «Personalizado» —antes de tocar el
+   * calendario— como si las hubiera elegido alguien.
+   */
+  const [customFrom, setCustomFrom] = useState<string | null>(null)
+  const [customTo, setCustomTo] = useState<string | null>(null)
   /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
   const [eligiendoTramo, setEligiendoTramo] = useState(false)
-
-  /*
-   * Si al cerrar el calendario hay un tramo que enseñar.
-   *
-   * Cerrarlo sin haber elegido los dos días dejaba «Personalizado» puesto, y el
-   * rótulo del lado escribía las fechas de arranque —las del mes en curso— como
-   * si las hubieras elegido tú. Sin tramo se vuelve a «Este mes», que es de
-   * donde se venía y lo que el informe está enseñando de todas formas.
-   *
-   * Es una referencia y no un estado porque el calendario avisa de los dos días
-   * y se cierra en el mismo suspiro: un `useState` llegaría al cierre valiendo
-   * todavía lo de antes. Se pone al abrirlo —si venías de «Personalizado» ya
-   * había uno, y ese se respeta— y con la elección hecha.
-   */
-  const hayTramo = useRef(false)
 
   useEffect(() => {
     api.reports.span().then(setSpan).catch(fail('el histórico'))
@@ -261,7 +251,12 @@ export function ReportsView(): ReactNode {
    * un rango vacío y no una fecha rara. «Personalizado» lo escribes tú.
    */
   const range = useMemo(() => {
-    if (period === 'custom') return { from: customFrom, to: customTo }
+    // Sin tramo elegido todavía —el calendario está delante— el informe sigue
+    // enseñando el mes en curso, que es de donde se viene al pulsar el botón.
+    if (period === 'custom') {
+      if (customFrom && customTo) return { from: customFrom, to: customTo }
+      return rangoDe('month') ?? { from: today(), to: today() }
+    }
     if (period === 'all') return span ?? { from: today(), to: today() }
     return rangoDe(period) ?? { from: today(), to: today() }
   }, [period, span, customFrom, customTo])
@@ -473,7 +468,15 @@ export function ReportsView(): ReactNode {
                   // sin tener que ir a buscarlo. Y vuelve a salir si se pulsa
                   // otra vez estando ya puesto, que es cómo se cambia el tramo.
                   if (id === 'custom') {
-                    hayTramo.current = period === 'custom'
+                    // Se entra a elegir uno nuevo, así que el de antes deja de
+                    // enseñarse mientras tanto: es lo mismo que hace el
+                    // calendario, que abre en blanco. Pulsarlo estando ya en
+                    // «Personalizado» es solo volver a mirar, y ahí el tramo
+                    // puesto se queda.
+                    if (period !== 'custom') {
+                      setCustomFrom(null)
+                      setCustomTo(null)
+                    }
                     setEligiendoTramo(true)
                   }
                 }}
@@ -485,7 +488,7 @@ export function ReportsView(): ReactNode {
             {/* El tramo elegido, escrito al lado del botón que lo pone. Es un
                 rótulo y no un campo: no hay nada que tocar ahí, para cambiarlo
                 se vuelve a pulsar «Personalizado». */}
-            {period === 'custom' && (
+            {period === 'custom' && customFrom && customTo && (
               <span className="small muted" style={{ marginLeft: 4, whiteSpace: 'nowrap' }}>
                 {formatDate(customFrom)} – {formatDate(customTo)}
               </span>
@@ -507,7 +510,7 @@ export function ReportsView(): ReactNode {
               confirmaba lo que ya se estaba leyendo.
             */}
             <button
-              className="btn small"
+              className="btn small mini contorno"
               onClick={async () => {
                 const result = await run(() =>
                   api.informe.exportPdf({ from: range.from, to: range.to })
@@ -515,22 +518,24 @@ export function ReportsView(): ReactNode {
                 if (result) toast(`${result.count} movimientos exportados`, 'success')
               }}
             >
-              <Icon name="download" size={15} />
+              <Icon name="download" size={14} />
               Descargar PDF
             </button>
           </div>
 
           {eligiendoTramo && (
             <CalendarioDeTramo
-              desde={customFrom}
+              desde={customFrom ?? undefined}
               onChange={(from, to) => {
-                hayTramo.current = true
                 setCustomFrom(from)
                 setCustomTo(to)
+                setEligiendoTramo(false)
               }}
               onClose={() => {
                 setEligiendoTramo(false)
-                if (!hayTramo.current) setPeriod('month')
+                // Cerrado sin elegir y sin tramo de antes: «Personalizado» no
+                // tiene nada que decir, así que se vuelve de donde se vino.
+                if (customFrom == null) setPeriod('month')
               }}
             />
           )}

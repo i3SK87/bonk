@@ -65,11 +65,22 @@ export function daysBetween(a: string, b: string): number {
 
 export function nextOccurrence(
   iso: string,
-  freq: 'daily' | 'weekly' | 'monthly' | 'yearly',
+  freq: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly',
   interval: number
 ): string {
   const step = Math.max(1, interval)
   switch (freq) {
+    /*
+     * «Una vez» no tiene siguiente, y aun así hay que contestar algo.
+     *
+     * Se devuelve el día de después porque una programada de una vez se guarda
+     * con la fecha de fin igual que la de inicio: en cuanto se registra, su
+     * siguiente fecha rebasa el fin y se sella sola, por el mismo camino que
+     * una deuda que acaba de pagar su última cuota. Devolver el mismo día la
+     * dejaría dando vueltas para siempre.
+     */
+    case 'once':
+      return addDays(iso, 1)
     case 'daily':
       return addDays(iso, step)
     case 'weekly':

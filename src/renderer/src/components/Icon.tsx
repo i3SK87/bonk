@@ -448,26 +448,254 @@ export function Icon({ name, size = 18, className, strokeWidth = 1.8, filled }: 
   )
 }
 
-/** Iconos ofrecidos en los selectores de categoría y cuenta. */
-export const CATEGORY_ICONS: string[] = [
-  'cart', 'restaurant', 'bus', 'fuel', 'home', 'bolt', 'phone', 'health',
-  'fun', 'tv', 'clothes', 'beauty', 'sport', 'education', 'travel', 'gift',
-  'pet', 'tax', 'shield', 'salary', 'tools', 'chart', 'coins', 'refund',
-  'invest', 'piggy', 'card', 'bank', 'wallet', 'target', 'calendar', 'tag',
-  'bebe', 'bici', 'libro', 'tarta', 'coche', 'tabaco', 'nube', 'cafe',
-  'ordenador', 'bolleria', 'teatro', 'perro', 'cine', 'flor', 'videojuegos', 'gafas',
-  'obras', 'musica', 'corazon', 'hospital', 'portatil', 'planta', 'idea', 'maleta',
-  'prensa', 'paquete', 'arte', 'farmacia', 'pizza', 'palomitas', 'recibo', 'reciclaje',
-  'cohete', 'peluqueria', 'compras', 'barco', 'sofa', 'huerto', 'medico', 'tienda',
-  'tren', 'bosque', 'mudanza', 'seguro', 'universidad', 'vino', 'internet', 'cama',
-  'bano', 'trabajo', 'foto', 'agua', 'gas', 'llave', 'mapa', 'monitor',
-  'montana', 'pintura', 'impresora', 'ensalada', 'justicia', 'colegio', 'frio', 'entradas',
-  'juguetes', 'trofeo', 'propina'
+/**
+ * La familia del dinero, aparte porque es toda la lista de una cuenta.
+ *
+ * Una cuenta es una cartera, un banco, una tarjeta o una hucha; el perro y la
+ * pizza no pintan nada ahí. Catorce caben de una vez en la ficha, así que su
+ * selector va sin buscador y sin rótulos: la rejilla y ya.
+ */
+export const MONEY_ICONS: string[] = [
+  'wallet', 'salary', 'bank', 'card', 'piggy', 'invest', 'coins', 'debt',
+  'recibo', 'tax', 'refund', 'chart', 'propina', 'target'
 ]
 
-export const ACCOUNT_ICONS: string[] = [
-  'wallet', 'bank', 'card', 'piggy', 'invest', 'debt', 'coins', 'home', 'travel', 'target'
+export const ACCOUNT_ICONS: string[] = MONEY_ICONS
+
+/**
+ * Los cien iconos, repartidos en ocho familias y con nombre en castellano.
+ *
+ * Cien en una rejilla plana son tres pantallas de muro donde encontrar el del
+ * perro es cuestión de suerte. Con las familias, quien busca «algo de casa»
+ * mira dieciocho iconos y no cien; con el nombre, quien ya sabe cuál quiere lo
+ * escribe. Las claves ('bolleria', 'fuel') no se tocan: son las que tienen
+ * guardadas las categorías y las cuentas de verdad.
+ */
+export interface IconGroup {
+  label: string
+  icons: string[]
+}
+
+export const ICON_GROUPS: IconGroup[] = [
+  {
+    label: 'Dinero',
+    icons: MONEY_ICONS
+  },
+  {
+    label: 'Casa',
+    icons: [
+      'home', 'bolt', 'agua', 'gas', 'internet', 'llave', 'sofa', 'cama',
+      'bano', 'obras', 'tools', 'mudanza', 'huerto', 'planta', 'flor',
+      'reciclaje', 'frio', 'seguro'
+    ]
+  },
+  {
+    label: 'Compras y comida',
+    icons: [
+      'cart', 'compras', 'tienda', 'paquete', 'restaurant', 'cafe', 'pizza',
+      'bolleria', 'ensalada', 'vino', 'tarta', 'clothes', 'beauty',
+      'peluqueria', 'gafas'
+    ]
+  },
+  {
+    label: 'Transporte y viajes',
+    icons: [
+      'coche', 'bus', 'tren', 'bici', 'fuel', 'travel', 'barco', 'maleta',
+      'mapa', 'montana', 'bosque', 'cohete'
+    ]
+  },
+  {
+    label: 'Salud y deporte',
+    icons: ['health', 'hospital', 'medico', 'farmacia', 'sport', 'trofeo', 'tabaco']
+  },
+  {
+    label: 'Ocio',
+    icons: [
+      'fun', 'tv', 'cine', 'palomitas', 'teatro', 'musica', 'videojuegos',
+      'entradas', 'arte', 'pintura', 'libro', 'prensa', 'foto'
+    ]
+  },
+  {
+    label: 'Trabajo y estudios',
+    icons: [
+      'trabajo', 'education', 'colegio', 'universidad', 'ordenador', 'portatil',
+      'monitor', 'impresora', 'idea', 'justicia', 'shield'
+    ]
+  },
+  {
+    label: 'Personal',
+    icons: [
+      'pet', 'perro', 'bebe', 'juguetes', 'gift', 'corazon', 'phone',
+      'calendar', 'tag', 'nube'
+    ]
+  }
 ]
+
+/**
+ * Todos, en el orden de las familias. Lo que ofrece un plan de ahorro: se
+ * ahorra para una boda, una moto o el dentista, y eso cae en cualquier familia.
+ */
+export const ALL_ICONS: string[] = ICON_GROUPS.flatMap((grupo) => grupo.icons)
+
+/** El nombre que se lee al pasar por encima y por el que se busca. */
+export const ICON_LABELS: Record<string, string> = {
+  wallet: 'Cartera', salary: 'Nómina', bank: 'Banco', card: 'Tarjeta',
+  piggy: 'Hucha', invest: 'Inversión', coins: 'Monedas', debt: 'Deuda',
+  recibo: 'Recibo', tax: 'Impuestos', refund: 'Devolución', chart: 'Gráfico',
+  propina: 'Propina', target: 'Objetivo',
+
+  home: 'Casa', bolt: 'Luz', agua: 'Agua', gas: 'Gas', internet: 'Internet',
+  llave: 'Llave', sofa: 'Sofá', cama: 'Cama', bano: 'Baño', obras: 'Obras',
+  tools: 'Herramientas', mudanza: 'Mudanza', huerto: 'Huerto', planta: 'Planta',
+  flor: 'Flor', reciclaje: 'Reciclaje', frio: 'Frío', seguro: 'Seguro',
+
+  cart: 'Carro de la compra', compras: 'Bolsa de la compra', tienda: 'Tienda',
+  paquete: 'Paquete', restaurant: 'Restaurante', cafe: 'Café', pizza: 'Pizza',
+  bolleria: 'Bollería', ensalada: 'Ensalada', vino: 'Vino', tarta: 'Tarta',
+  clothes: 'Ropa', beauty: 'Belleza', peluqueria: 'Peluquería', gafas: 'Gafas',
+
+  coche: 'Coche', bus: 'Autobús', tren: 'Tren', bici: 'Bici', fuel: 'Gasolina',
+  travel: 'Avión', barco: 'Barco', maleta: 'Maleta', mapa: 'Mapa',
+  montana: 'Montaña', bosque: 'Bosque', cohete: 'Cohete',
+
+  health: 'Salud', hospital: 'Hospital', medico: 'Médico', farmacia: 'Farmacia',
+  sport: 'Gimnasio', trofeo: 'Trofeo', tabaco: 'Tabaco',
+
+  fun: 'Fiesta', tv: 'Televisión', cine: 'Cine', palomitas: 'Palomitas',
+  teatro: 'Teatro', musica: 'Música', videojuegos: 'Videojuegos',
+  entradas: 'Entradas', arte: 'Arte', pintura: 'Pintura', libro: 'Libro',
+  prensa: 'Prensa', foto: 'Foto',
+
+  trabajo: 'Trabajo', education: 'Estudios', colegio: 'Colegio',
+  universidad: 'Universidad', ordenador: 'Ordenador', portatil: 'Portátil',
+  monitor: 'Monitor', impresora: 'Impresora', idea: 'Idea',
+  justicia: 'Justicia', shield: 'Protección',
+
+  pet: 'Mascota', perro: 'Perro', bebe: 'Bebé', juguetes: 'Juguetes',
+  gift: 'Regalo', corazon: 'Corazón', phone: 'Móvil', calendar: 'Calendario',
+  tag: 'Etiqueta', nube: 'Nube'
+}
+
+/**
+ * Palabras que también deberían encontrarlo. Solo donde el nombre se queda
+ * corto: nadie escribe «avión» buscando el viaje, ni «luz» buscando la factura
+ * de la electricidad.
+ */
+const ICON_ALIASES: Record<string, string> = {
+  wallet: 'monedero efectivo metálico',
+  salary: 'sueldo salario paga',
+  bank: 'entidad hipoteca préstamo',
+  card: 'crédito débito visa',
+  piggy: 'ahorro',
+  invest: 'bolsa acciones fondo',
+  coins: 'efectivo dinero metálico',
+  debt: 'préstamo plazos crédito',
+  tax: 'hacienda declaración irpf',
+  recibo: 'factura ticket',
+  refund: 'reembolso abono',
+  chart: 'gráfica estadística informe',
+  target: 'meta ahorro',
+  home: 'hogar hipoteca alquiler piso',
+  bolt: 'electricidad factura enchufe',
+  agua: 'gota factura fontanería',
+  gas: 'butano calefacción fuego',
+  internet: 'wifi fibra router',
+  llave: 'llaves alquiler portal',
+  sofa: 'salón mueble',
+  cama: 'dormitorio colchón',
+  bano: 'aseo ducha',
+  obras: 'reforma martillo bricolaje',
+  tools: 'llave inglesa arreglo fontanero',
+  mudanza: 'camión transporte porte',
+  huerto: 'brote jardín',
+  planta: 'hoja verde',
+  reciclaje: 'basura residuos',
+  frio: 'nieve invierno aire',
+  seguro: 'paraguas lluvia póliza',
+  cart: 'supermercado súper carrito',
+  compras: 'bolsa tienda',
+  tienda: 'comercio',
+  paquete: 'envío pedido',
+  restaurant: 'comer bar menú',
+  cafe: 'desayuno cafetería',
+  vino: 'bebida copa',
+  tarta: 'cumpleaños pastel',
+  clothes: 'camisa moda',
+  beauty: 'cosmética perfume brillo',
+  peluqueria: 'tijeras corte',
+  gafas: 'óptica vista',
+  coche: 'auto vehículo taller',
+  bus: 'autobús metro transporte',
+  tren: 'cercanías estación',
+  bici: 'bicicleta',
+  fuel: 'combustible diésel repostar',
+  travel: 'viaje vuelo vacaciones',
+  barco: 'crucero ferry',
+  maleta: 'equipaje viaje',
+  montana: 'excursión senderismo',
+  bosque: 'árbol campo naturaleza',
+  health: 'médico pulso',
+  hospital: 'urgencias ingreso',
+  medico: 'consulta fonendoscopio',
+  farmacia: 'medicinas pastillas medicamentos',
+  sport: 'deporte pesas',
+  trofeo: 'premio competición',
+  tabaco: 'cigarrillos',
+  fun: 'ocio celebración cumpleaños',
+  tv: 'televisor suscripción streaming',
+  cine: 'película',
+  musica: 'auriculares canción concierto',
+  entradas: 'ticket concierto',
+  arte: 'paleta pintar',
+  libro: 'lectura librería',
+  prensa: 'periódico revista',
+  foto: 'cámara fotografía',
+  trabajo: 'oficina maletín empleo',
+  education: 'estudios beca carrera',
+  colegio: 'escuela cole',
+  universidad: 'facultad máster',
+  ordenador: 'informática procesador pc',
+  portatil: 'laptop ordenador',
+  monitor: 'pantalla',
+  impresora: 'tinta folios',
+  idea: 'bombilla ocurrencia',
+  justicia: 'balanza abogado juicio',
+  pet: 'animal huella',
+  perro: 'can',
+  bebe: 'hijo niños guardería',
+  juguetes: 'niños juegos',
+  gift: 'cumpleaños navidad detalle',
+  corazon: 'amor pareja',
+  phone: 'teléfono móvil tarifa',
+  calendar: 'fecha agenda',
+  nube: 'suscripción almacenamiento'
+}
+
+
+/** Sin tildes y en minúsculas, que es como se escribe cuando hay prisa. */
+export function normalizarBusqueda(texto: string): string {
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+/**
+ * El texto contra el que busca el selector: nombre, familia, sinónimos y la
+ * clave. Va la familia entera para que «viajes» saque los doce del grupo,
+ * aunque ninguno se llame así.
+ */
+export const ICON_SEARCH: Record<string, string> = (() => {
+  const indice: Record<string, string> = {}
+  for (const grupo of ICON_GROUPS) {
+    for (const icon of grupo.icons) {
+      indice[icon] = normalizarBusqueda(
+        [ICON_LABELS[icon] ?? icon, grupo.label, ICON_ALIASES[icon] ?? '', icon].join(' ')
+      )
+    }
+  }
+  return indice
+})()
 
 /** Paleta de la app: tonos separados en tono y con contraste suficiente en ambos temas. */
 export const PALETTE: string[] = [

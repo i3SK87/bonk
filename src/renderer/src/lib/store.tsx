@@ -10,7 +10,6 @@ import {
 } from 'react'
 import { pushNotificationIcons } from './notificationIcons'
 import { recordarTema } from './tema'
-import { today, startOfMonth, endOfMonth } from '@shared/dates'
 import type { AccountWithBalance, Category, Settings, TxType } from '@shared/types'
 import type { RangoId } from '@shared/rangos'
 
@@ -34,8 +33,16 @@ interface Toast {
  */
 export interface FiltrosMovimientos {
   range: RangoId
-  customFrom: string
-  customTo: string
+  /**
+   * El tramo de «Personalizado», o `null` mientras no se haya elegido ninguno.
+   *
+   * Arrancaban valiendo el mes en curso, y esas fechas heredadas se escribían al
+   * lado del botón en cuanto se pulsaba «Personalizado» —antes de tocar el
+   * calendario— como si las hubiera elegido alguien. Sin tramo no hay nada que
+   * escribir, y la lista enseña el mes en curso mientras se elige.
+   */
+  customFrom: string | null
+  customTo: string | null
   search: string
   types: TxType[]
   /**
@@ -53,8 +60,8 @@ export interface FiltrosMovimientos {
 function filtrosIniciales(): FiltrosMovimientos {
   return {
     range: 'month',
-    customFrom: startOfMonth(today()),
-    customTo: endOfMonth(today()),
+    customFrom: null,
+    customTo: null,
     search: '',
     types: [],
     accountIds: null,

@@ -106,21 +106,6 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
   const [eligiendoTramo, setEligiendoTramo] = useState(false)
 
-  /*
-   * Si al cerrar el calendario hay un tramo que enseñar.
-   *
-   * Cerrarlo sin haber elegido los dos días dejaba «Personalizado» puesto, y el
-   * rótulo del lado escribía las fechas de arranque —las del mes en curso— como
-   * si las hubieras elegido tú. Sin tramo se vuelve a «Este mes», que es de
-   * donde se venía y lo que la lista está enseñando de todas formas.
-   *
-   * Es una referencia y no un estado porque el calendario avisa de los dos días
-   * y se cierra en el mismo suspiro: un `useState` llegaría al cierre valiendo
-   * todavía lo de antes. Se pone al abrirlo —si venías de «Personalizado» ya
-   * había uno, y ese se respeta— y con la elección hecha.
-   */
-  const hayTramo = useRef(false)
-
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
   const [settledSearch, setSettledSearch] = useState(filtros.search)
 
@@ -428,7 +413,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }, [search])
 
   const filter = useMemo<TransactionFilter>(() => {
-    const dates = range === 'custom' ? { from: customFrom, to: customTo } : (rangoDe(range) ?? {})
+    /*
+     * «Personalizado» sin tramo todavía enseña el mes en curso.
+     *
+     * Es el rato que va de pulsar el botón a elegir el segundo día, con el
+     * calendario delante: la lista de detrás tiene que decir algo, y lo que
+     * dice es lo mismo que decía antes de pulsar.
+     */
+    const dates =
+      range === 'custom'
+        ? customFrom && customTo
+          ? { from: customFrom, to: customTo }
+          : (rangoDe('month') ?? {})
+        : (rangoDe(range) ?? {})
     return {
       ...dates,
       search: settledSearch.trim() || undefined,
@@ -939,7 +936,12 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   // sin tener que ir a buscarlo. Y vuelve a salir si se pulsa
                   // otra vez estando ya puesto, que es cómo se cambia el tramo.
                   if (id === 'custom') {
-                    hayTramo.current = range === 'custom'
+                    // Se entra a elegir uno nuevo, así que el de antes deja de
+                    // enseñarse mientras tanto: es lo mismo que hace el
+                    // calendario, que abre en blanco. Pulsarlo estando ya en
+                    // «Personalizado» es solo volver a mirar, y ahí el tramo
+                    // puesto se queda.
+                    if (range !== 'custom') ponFiltros({ customFrom: null, customTo: null })
                     setEligiendoTramo(true)
                   }
                 }}
@@ -951,7 +953,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             {/* El tramo elegido, escrito al lado del botón que lo pone. Es un
                 rótulo y no un campo: no hay nada que tocar ahí, para cambiarlo
                 se vuelve a pulsar «Personalizado». */}
-            {range === 'custom' && (
+            {range === 'custom' && customFrom && customTo && (
               <span className="small muted" style={{ marginLeft: 4, whiteSpace: 'nowrap' }}>
                 {formatDate(customFrom)} – {formatDate(customTo)}
               </span>
@@ -1033,14 +1035,16 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
           {eligiendoTramo && (
             <CalendarioDeTramo
-              desde={customFrom}
+              desde={customFrom ?? undefined}
               onChange={(from, to) => {
-                hayTramo.current = true
                 ponFiltros({ customFrom: from, customTo: to })
+                setEligiendoTramo(false)
               }}
               onClose={() => {
                 setEligiendoTramo(false)
-                if (!hayTramo.current) setRange('month')
+                // Cerrado sin elegir y sin tramo de antes: «Personalizado» no
+                // tiene nada que decir, así que se vuelve de donde se vino.
+                if (customFrom == null) setRange('month')
               }}
             />
           )}

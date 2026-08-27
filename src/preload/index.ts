@@ -12,6 +12,7 @@ import type {
   ProjectedTransaction,
   DebtAdjust,
   DebtProgress,
+  Frequency,
   ScheduledView,
   Settings,
   TransactionFilter,
@@ -61,6 +62,18 @@ const api = {
     totals: (filter: TransactionFilter = {}) => call<FilterTotals>('tx:totals', filter),
     get: (id: number) => call<TransactionView | null>('tx:get', id),
     save: (input: TransactionInput) => call<TransactionView>('tx:save', input),
+    /**
+     * Lo mismo, pero para una fecha que todavía no ha llegado: en vez de un
+     * movimiento sale una programada, y el movimiento de partida —si lo había—
+     * se va con ella.
+     */
+    program: (
+      input: TransactionInput & {
+        cadencia?: { freq: Frequency; interval: number; endDate?: string | null } | null
+        isDebt?: boolean
+        lender?: string | null
+      }
+    ) => call<ScheduledView>('tx:program', input),
     remove: (id: number) => call<void>('tx:delete', id),
     setCategory: (ids: number[], categoryId: number | null) =>
       call<number>('tx:bulkCategory', ids, categoryId),

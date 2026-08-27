@@ -597,5 +597,72 @@ export const MIGRATIONS: string[] = [
   `
   ALTER TABLE transactions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
   CREATE INDEX idx_tx_orden ON transactions(date, sort_order);
+  `,
+
+  // v27 — programar algo que pasa una sola vez.
+  //
+  // Una programada se repetía siempre: diaria, semanal, mensual o anual. Pero
+  // lo que más se apunta con fecha por delante no se repite —el recibo del
+  // seguro que pasa el día 5, la entrada del concierto de marzo—, y hasta ahora
+  // eso solo se podía guardar como movimiento, con la fecha en el futuro. El
+  // saldo no espera: los suma todos sin mirar la fecha, así que el dinero
+  // aparecía gastado antes de gastarlo.
+  //
+  // `once` es una cadencia como las demás y no un caso aparte: se registra el
+  // día que toca y se sella sola, porque al crearla la fecha de fin se pone
+  // igual que la de inicio y lo que ya había para las que se agotan hace el
+  // resto.
+  //
+  // El CHECK de una columna no se puede tocar en SQLite, así que la tabla se
+  // reconstruye entera. Es la misma maniobra de la v2, con las columnas que ha
+  // ido ganando desde entonces.
+  `
+  CREATE TABLE scheduled_new (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT,
+    type          TEXT    NOT NULL CHECK (type IN ('expense','income','transfer','refund')),
+    account_id    INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    to_account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+    category_id   INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+    amount        INTEGER NOT NULL,
+    amount_to     INTEGER,
+    payee         TEXT,
+    note          TEXT,
+    freq          TEXT    NOT NULL CHECK (freq IN ('once','daily','weekly','monthly','yearly')),
+    interval      INTEGER NOT NULL DEFAULT 1,
+    next_date     TEXT    NOT NULL,
+    end_date      TEXT,
+    auto_post     INTEGER NOT NULL DEFAULT 1,
+    active        INTEGER NOT NULL DEFAULT 1,
+    last_posted   TEXT,
+    created_at    TEXT    NOT NULL,
+    refund_for_scheduled_id INTEGER REFERENCES scheduled_new(id) ON DELETE SET NULL,
+    remind        INTEGER NOT NULL DEFAULT 1,
+    reminded_for  TEXT,
+    settled_at    TEXT,
+    settled_notified INTEGER NOT NULL DEFAULT 0,
+    goal_id       INTEGER REFERENCES goals(id) ON DELETE SET NULL,
+    debt_total    INTEGER,
+    debt_last_amount INTEGER,
+    lender        TEXT,
+    debt_extra_count INTEGER,
+    debt_start_date TEXT,
+    is_debt       INTEGER NOT NULL DEFAULT 0
+  );
+
+  INSERT INTO scheduled_new
+    (id, name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
+     freq, interval, next_date, end_date, auto_post, active, last_posted, created_at,
+     refund_for_scheduled_id, remind, reminded_for, settled_at, settled_notified, goal_id,
+     debt_total, debt_last_amount, lender, debt_extra_count, debt_start_date, is_debt)
+  SELECT
+     id, name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
+     freq, interval, next_date, end_date, auto_post, active, last_posted, created_at,
+     refund_for_scheduled_id, remind, reminded_for, settled_at, settled_notified, goal_id,
+     debt_total, debt_last_amount, lender, debt_extra_count, debt_start_date, is_debt
+    FROM scheduled;
+
+  DROP TABLE scheduled;
+  ALTER TABLE scheduled_new RENAME TO scheduled;
   `
 ]

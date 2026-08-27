@@ -8,7 +8,14 @@
 export type TxType = 'expense' | 'income' | 'transfer' | 'refund'
 export type CategoryKind = 'expense' | 'income'
 export type AccountType = 'cash' | 'bank' | 'card' | 'savings' | 'investment' | 'debt'
-export type Frequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
+/**
+ * Cada cuánto vuelve algo. `once` es la que no vuelve: pasa un día y se acabó.
+ *
+ * Vale para lo que se apunta por delante y no se repite —el recibo del seguro,
+ * la entrada de un concierto—. No es un movimiento todavía, así que no toca el
+ * saldo hasta el día que le toque.
+ */
+export type Frequency = 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly'
 export type ThemeMode = 'light' | 'dark' | 'system'
 /** Paletas de color. Cambian la decoración, nunca el verde y el rojo del dinero. */
 /**

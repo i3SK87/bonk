@@ -25,6 +25,38 @@ export interface OpcionMenu {
 /** Cuánto se le deja al menú respirar contra el borde de la ventana. */
 const MARGEN = 8
 
+/**
+ * El clic que cierra el menú no cuenta para nada más.
+ *
+ * Cerrar va por `pointerdown`, pero el `click` que viene detrás es otro evento
+ * y llegaba entero a lo que hubiera debajo: cerrar el menú sobre una fila abría
+ * su ficha de paso. Aquí se le pone un cepo de un solo uso al siguiente clic,
+ * como hacen los menús de Windows: el primero cierra y el segundo ya actúa.
+ *
+ * El cepo no puede colgar del efecto del menú: al cerrarse se desmonta y su
+ * limpieza lo quitaría antes de que el clic llegue. Vive aquí fuera y se retira
+ * solo, o en cuanto empieza otra pulsación — si aquella no acabó en clic (se
+ * soltó fuera de la ventana), el cepo se habría quedado esperando al inocente.
+ */
+let retirarCepo: (() => void) | null = null
+
+function tragarSiguienteClic(): void {
+  retirarCepo?.()
+  const tragar = (evento: MouseEvent): void => {
+    evento.preventDefault()
+    evento.stopPropagation()
+    retirarCepo?.()
+  }
+  const otraPulsacion = (): void => retirarCepo?.()
+  window.addEventListener('click', tragar, true)
+  window.addEventListener('pointerdown', otraPulsacion, true)
+  retirarCepo = () => {
+    window.removeEventListener('click', tragar, true)
+    window.removeEventListener('pointerdown', otraPulsacion, true)
+    retirarCepo = null
+  }
+}
+
 export function MenuContextual({
   x,
   y,
@@ -68,11 +100,17 @@ export function MenuContextual({
    * queda puesto mientras lo de debajo se mueve señala a cualquier otra cosa.
    *
    * En captura, que si no un botón de debajo se lleva el clic antes de que este
-   * se entere de que tiene que irse.
+   * se entere de que tiene que irse; y el clic de cerrar se traga, que si no
+   * abriría además la ficha de la fila sobre la que se cierra.
    */
   useEffect(() => {
     const fuera = (evento: Event): void => {
       if (caja.current?.contains(evento.target as Node)) return
+      // Solo el botón principal: el derecho no llega a producir `click`, y
+      // ponerle el cepo dejaría el cebo esperando al siguiente clic de verdad.
+      if (evento.type === 'pointerdown' && (evento as PointerEvent).button === 0) {
+        tragarSiguienteClic()
+      }
       onCerrar()
     }
     const tecla = (evento: KeyboardEvent): void => {

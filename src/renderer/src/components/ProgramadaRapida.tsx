@@ -143,13 +143,20 @@ export function FechasProgramadas({
     >
       <Contexto row={row} />
 
-      <Field label="Próxima fecha" required hint="Cuándo se cobra la siguiente.">
+      <Field
+        label={row.freq === 'once' ? 'Cuándo' : 'Próxima fecha'}
+        required
+        hint={row.freq === 'once' ? 'El día que pasa.' : 'Cuándo se cobra la siguiente.'}
+      >
         <DateInput value={nextDate} onChange={setNextDate} />
       </Field>
 
-      <Field label="Termina el" hint="Déjalo vacío si no tiene fin.">
-        <DateInput value={endDate} onChange={setEndDate} clearable />
-      </Field>
+      {/* La de una vez se acaba al pasar: no hay fin que elegir. */}
+      {row.freq !== 'once' && (
+        <Field label="Termina el" hint="Déjalo vacío si no tiene fin.">
+          <DateInput value={endDate} onChange={setEndDate} clearable />
+        </Field>
+      )}
 
       {alReves && (
         <div className="field-error">

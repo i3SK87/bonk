@@ -180,6 +180,21 @@ export function registerIpc(
   handle('tx:moveToDay', (id: number, date: string, orden: number[]) =>
     transactions.moveTransactionToDay(id, date, orden)
   )
+  /*
+   * Lo que se apunta con fecha por delante nace programado.
+   *
+   * La ficha manda aquí lo mismo que mandaría a `tx:save`, y este es el único
+   * sitio que lo desvía: la importación de un CSV y las propias programadas al
+   * registrarse escriben por su cuenta, y ahí una fecha futura es un dato, no
+   * una intención.
+   */
+  handle('tx:program', (input: scheduled.FromTransactionInput) => {
+    const programada = scheduled.scheduleFromTransaction(input)
+    // Al mudar al futuro un movimiento que ya existía, el dinero que sostenía
+    // una reserva vuelve a estar libre, y eso puede deshacer un hito cumplido.
+    celebrate()
+    return programada
+  })
   handle('tx:duplicate', (id: number) => transactions.duplicateTransaction(id))
   handle('tx:refundsFor', (id: number) => transactions.listRefundsFor(id))
   handle('tx:refundCandidates', (date: string, excludeId?: number, linkedId?: number) =>

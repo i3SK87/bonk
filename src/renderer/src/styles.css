@@ -2613,6 +2613,67 @@ button.list-row:focus-visible {
   background: var(--accent-soft);
 }
 
+/* El selector de iconos: buscador arriba y las familias debajo, cada una con
+   su rótulo pegado al borde mientras se baja, para saber siempre dónde se
+   está. La rejilla de dentro deja de ser el marco con desplazamiento —eso lo
+   hace ahora .icon-picker-scroll— y se queda solo con la retícula; suelta,
+   .icon-grid sigue igual, que la usa el selector de categoría de un
+   movimiento. */
+.icon-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+}
+
+/* El buscador va dentro de la bandeja, no encima: suelto parecía un campo más
+   de la ficha y no la herramienta de la rejilla que tiene debajo. Se queda
+   fuera del desplazamiento, eso sí, para no perderlo al bajar. */
+.icon-picker .input {
+  padding: 7px 10px;
+}
+
+.icon-picker-scroll {
+  max-height: 216px;
+  overflow-y: auto;
+  padding: 0 2px;
+}
+
+.icon-picker .icon-grid {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
+/*
+ * El rótulo de cada familia NO se queda pegado arriba al bajar, aunque la
+ * primera versión lo hacía. Con filas de texto un encabezado pegajoso se lee
+ * bien, pero aquí lo que pasa por debajo son cuadrados: el rótulo los partía
+ * por la mitad y dejaba una fila de medios botones colgando, que parece un
+ * fallo de pintado. Saber en qué familia estás no vale ese precio, y menos
+ * con ocho cortas y un buscador encima.
+ */
+.icon-picker-head {
+  padding: 11px 2px 9px;
+  color: var(--fg-subtle);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.icon-picker-empty {
+  margin: 0;
+  padding: 18px 4px;
+  text-align: center;
+  color: var(--fg-subtle);
+  font-size: 13px;
+}
+
 /* La casilla de «Nueva» en la rejilla de categorías: mismo hueco que las demás
    pero de trazo discontinuo, para que se lea como sitio vacío y no como una
    categoría más. */

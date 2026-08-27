@@ -16,7 +16,7 @@
  */
 import { useState, type ReactNode } from 'react'
 import { NumberInput } from './ui'
-import { CADENCIAS, FRECUENCIAS, cadenciaDe } from '../lib/frecuencias'
+import { CADENCIAS, FRECUENCIAS, UNA_VEZ, cadenciaDe } from '../lib/frecuencias'
 import type { Frequency } from '@shared/types'
 
 /** El valor del desplegable cuando se está montando a mano. */
@@ -25,14 +25,24 @@ const A_MANO = 'otra'
 export function SelectorCadencia({
   freq,
   interval,
-  onChange
+  onChange,
+  unaVez = false
 }: {
   freq: Frequency
   interval: number
   onChange: (freq: Frequency, interval: number) => void
+  /**
+   * Ofrecer «Una vez» entre las demás. Lo pide la ficha de una programada, donde
+   * algo que pasa un solo día es una respuesta; no la de un movimiento cíclico,
+   * donde sería la contraria de lo que se acaba de marcar.
+   */
+  unaVez?: boolean
 }): ReactNode {
   const [aMano, setAMano] = useState(() => cadenciaDe(freq, interval) == null)
   const cadencia = cadenciaDe(freq, interval)
+  // La que ya está puesta sale siempre, se ofrezca o no: abrir una ficha no
+  // puede cambiarle la cadencia a lo que hay guardado solo por enseñarlo.
+  const opciones = unaVez || freq === 'once' ? [UNA_VEZ, ...CADENCIAS] : CADENCIAS
 
   return (
     <div className="col" style={{ gap: 8 }}>
@@ -46,13 +56,13 @@ export function SelectorCadencia({
             setAMano(true)
             return
           }
-          const elegida = CADENCIAS.find((item) => item.nombre === event.target.value)
+          const elegida = opciones.find((item) => item.nombre === event.target.value)
           if (!elegida) return
           setAMano(false)
           onChange(elegida.freq, elegida.interval)
         }}
       >
-        {CADENCIAS.map((item) => (
+        {opciones.map((item) => (
           <option key={item.nombre} value={item.nombre}>
             {item.nombre}
           </option>
@@ -60,7 +70,8 @@ export function SelectorCadencia({
         <option value={A_MANO}>Otra…</option>
       </select>
 
-      {(aMano || cadencia == null) && (
+      {/* «Una vez» no lleva número: no hay nada que contar. */}
+      {(aMano || cadencia == null) && freq !== 'once' && (
         <div className="row tight">
           <span className="muted small">Cada</span>
           <NumberInput

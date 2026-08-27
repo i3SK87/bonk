@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
-import { Icon, PALETTE } from '../components/Icon'
+import { Icon, PALETTE, ALL_ICONS } from '../components/Icon'
 import { DateInput } from '../components/DateInput'
+import { MenuContextual } from '../components/MenuContextual'
 import {
   Modal,
   Field,
@@ -23,21 +24,6 @@ type Cumplido = GoalProgress & { achievedAt: string }
 
 const api = window.bonk
 
-const GOAL_ICONS = [
-  'piggy',
-  'target',
-  'home',
-  'travel',
-  'card',
-  'invest',
-  'gift',
-  'education',
-  'health',
-  'fun',
-  'clothes',
-  'tools'
-]
-
 /**
  * De veinticinco en veinticinco euros. Al céntimo el mando resbalaba y no había
  * forma de saber dónde se paraba; a saltos se nota lo que se mueve.
@@ -53,6 +39,9 @@ export function GoalsView(): ReactNode {
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
   const [creating, setCreating] = useState(false)
+  /* El clic derecho de las dos listas, y el plan que se va a borrar. */
+  const [menu, setMenu] = useState<{ goal: GoalProgress; x: number; y: number } | null>(null)
+  const [borrando, setBorrando] = useState<GoalProgress | null>(null)
   // La hucha principal es la marcada de su tipo; si no hay ninguna, la primera.
   const [potId, setPotId] = useState<number | null>(
     accounts.find((account) => account.type === 'savings' && account.isPrimary)?.id ?? null
@@ -156,6 +145,7 @@ export function GoalsView(): ReactNode {
                   onReserve={(amount) =>
                     run(() => api.goals.reserve([{ id: goal.id, amount }]))
                   }
+                  onMenu={(x, y) => setMenu({ goal, x, y })}
                 />
               ))}
 
@@ -184,9 +174,13 @@ export function GoalsView(): ReactNode {
             {done.map((goal) => (
               <div
                 key={goal.id}
-                className="list-row clickable"
+                className={`list-row clickable${menu?.goal.id === goal.id ? ' marcada' : ''}`}
                 role="button"
                 onClick={() => setEditing(goal)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setMenu({ goal, x: event.clientX, y: event.clientY })
+                }}
               >
                 <Avatar icon={goal.icon} color={goal.color} />
                 <div style={{ minWidth: 0, flex: 1 }}>
@@ -214,6 +208,40 @@ export function GoalsView(): ReactNode {
         </div>
       )}
 
+      {/* El clic derecho, en las dos listas. Eliminar ya estaba dentro de la
+          ficha, pero para borrar un plan había que abrirlo, bajar al pie y
+          volver a confirmar: tres pasos para deshacer algo que se apuntó mal.
+          El mensaje es el mismo que el del pie, que la acción es la misma. */}
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={[
+            {
+              etiqueta: 'Eliminar',
+              icono: 'trash',
+              peligrosa: true,
+              onElegir: () => setBorrando(menu.goal)
+            }
+          ]}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
+
+      {borrando && (
+        <Confirm
+          title="Eliminar plan"
+          message={`«${borrando.name}» desaparece. El dinero de la hucha no se toca.`}
+          confirmLabel="Eliminar"
+          destructive
+          onCancel={() => setBorrando(null)}
+          onConfirm={async () => {
+            await run(() => api.goals.remove(borrando.id), 'Plan eliminado')
+            setBorrando(null)
+          }}
+        />
+      )}
+
       {(creating || editing) && (
         <GoalModal
           goal={editing}
@@ -236,7 +264,8 @@ function GoalCard({
   techo,
   onEdit,
   onAchieve,
-  onReserve
+  onReserve,
+  onMenu
 }: {
   goal: GoalProgress
   currency: string
@@ -245,6 +274,7 @@ function GoalCard({
   onEdit: () => void
   onAchieve: () => void
   onReserve?: (amount: number) => void
+  onMenu?: (x: number, y: number) => void
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
 
@@ -316,7 +346,13 @@ function GoalCard({
           : goal.color
 
   return (
-    <div>
+    <div
+      onContextMenu={(event) => {
+        if (!onMenu) return
+        event.preventDefault()
+        onMenu(event.clientX, event.clientY)
+      }}
+    >
       <div className="row" style={{ marginBottom: 8 }}>
         <Avatar icon={goal.icon} color={goal.color} />
         <div style={{ minWidth: 0 }}>
@@ -576,7 +612,7 @@ function GoalModal({ goal, defaultAccountId, onClose, onSave, onDelete }: GoalMo
         </Field>
 
         <Field label="Icono">
-          <IconPicker value={icon} options={GOAL_ICONS} onChange={setIcon} />
+          <IconPicker value={icon} options={ALL_ICONS} onChange={setIcon} />
         </Field>
 
         <Field label="Color">

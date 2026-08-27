@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
-import { Icon, PALETTE } from './Icon'
+import { Icon, PALETTE, ICON_GROUPS, ICON_LABELS, ICON_SEARCH, normalizarBusqueda } from './Icon'
 import { formatMoney, parseAmount, currencySymbol, toMajor } from '@shared/money'
 import { keepNumericChars } from '@shared/numbers'
 import { useStore } from '../lib/store'
@@ -505,28 +505,115 @@ export function Avatar({ icon, color, size = 'normal' }: AvatarProps): ReactNode
 
 /* ---------- Selectores de icono y color ---------- */
 
+/** Un icono de la rejilla. Igual esté agrupada o desnuda. */
+function BotonIcono({
+  icon,
+  value,
+  onChange
+}: {
+  icon: string
+  value: string
+  onChange: (icon: string) => void
+}): ReactNode {
+  return (
+    <button
+      type="button"
+      className={icon === value ? 'active' : undefined}
+      onClick={() => onChange(icon)}
+      title={ICON_LABELS[icon] ?? icon}
+    >
+      <Icon name={icon} size={19} />
+    </button>
+  )
+}
+
+/**
+ * Cien iconos no caben en una rejilla plana sin volverse un muro, así que van
+ * repartidos por familias, con el rótulo pegado arriba mientras se baja, y con
+ * un buscador que filtra por nombre, familia o sinónimo. Los que el formulario
+ * ofrezca y no estén en ninguna familia caen en «Otros»: así, si algún día se
+ * añade un icono y se olvida meterlo en su grupo, se ve en vez de desaparecer.
+ *
+ * Con `plano` se pide lo contrario: la rejilla desnuda, sin buscador ni
+ * rótulos. Es lo que quiere una lista corta —los catorce del dinero de una
+ * cuenta—, donde buscar y agrupar es andamiaje para nada.
+ */
 export function IconPicker({
   value,
   options,
-  onChange
+  onChange,
+  plano
 }: {
   value: string
   options: string[]
   onChange: (icon: string) => void
+  plano?: boolean
 }): ReactNode {
+  const [query, setQuery] = useState('')
+  const buscado = normalizarBusqueda(query.trim())
+
+  if (plano) {
+    /*
+     * Una cuenta guardada con un icono de fuera de la lista —de cuando se
+     * ofrecieron los cien, o de la lista corta de antes— lo lleva al final,
+     * para que se vea cuál tiene puesto. Un formulario que no sabe enseñar su
+     * propio estado es peor que uno con un botón de más.
+     */
+    const lista = options.includes(value) ? options : [...options, value]
+    return (
+      <div className="icon-grid">
+        {lista.map((icon) => (
+          <BotonIcono key={icon} icon={icon} value={value} onChange={onChange} />
+        ))}
+      </div>
+    )
+  }
+
+  const disponibles = new Set(options)
+  const agrupados = new Set<string>()
+  const grupos: { label: string; icons: string[] }[] = []
+
+  for (const grupo of ICON_GROUPS) {
+    const icons: string[] = []
+    for (const icon of grupo.icons) {
+      if (!disponibles.has(icon)) continue
+      agrupados.add(icon)
+      if (!buscado || (ICON_SEARCH[icon] ?? icon).includes(buscado)) icons.push(icon)
+    }
+    if (icons.length) grupos.push({ label: grupo.label, icons })
+  }
+
+  const sueltos = options.filter(
+    (icon) => !agrupados.has(icon) && (!buscado || normalizarBusqueda(icon).includes(buscado))
+  )
+  if (sueltos.length) grupos.push({ label: 'Otros', icons: sueltos })
+
   return (
-    <div className="icon-grid">
-      {options.map((icon) => (
-        <button
-          key={icon}
-          type="button"
-          className={icon === value ? 'active' : undefined}
-          onClick={() => onChange(icon)}
-          title={icon}
-        >
-          <Icon name={icon} size={19} />
-        </button>
-      ))}
+    <div className="icon-picker">
+      {/* Un campo pelado, como el de la categoría rápida: la lupa dibujada
+          dentro no la lleva ningún otro buscador de la aplicación. */}
+      <input
+        className="input"
+        value={query}
+        placeholder="Buscar icono…"
+        onChange={(event) => setQuery(event.target.value)}
+        onKeyDown={(event) => event.key === 'Escape' && query && setQuery('')}
+      />
+
+      <div className="icon-picker-scroll">
+        {grupos.map((grupo) => (
+          <div className="icon-picker-group" key={grupo.label}>
+            <div className="icon-picker-head">{grupo.label}</div>
+            <div className="icon-grid">
+              {grupo.icons.map((icon) => (
+                <BotonIcono key={icon} icon={icon} value={value} onChange={onChange} />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {!grupos.length && <p className="icon-picker-empty">Ningún icono se llama así.</p>}
+      </div>
     </div>
   )
 }

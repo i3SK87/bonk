@@ -3,6 +3,44 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.8.0
+
+- **Programar algo que pasa una sola vez.** Hasta ahora una programada se
+  repetía siempre, y lo que más se apunta con fecha por delante no se repite: el
+  recibo del seguro que pasa el día 5, la entrada del concierto de marzo. Eso
+  solo se podía guardar como movimiento con fecha futura, y el saldo no espera
+  —los suma todos sin mirar la fecha—, así que el dinero aparecía gastado antes
+  de gastarlo. «Una vez» es ahora una cadencia como las demás: se registra el día
+  que toca y se sella sola. En la ficha de un movimiento cíclico no se ofrece,
+  que cíclico y una vez se contradicen.
+- **Los iconos, por familias y con buscador.** Eran cien en una rejilla plana de
+  tres pantallas donde encontrar el del perro era cuestión de suerte. Ahora van
+  repartidos en ocho familias —Dinero, Casa, Compras y comida, Transporte y
+  viajes, Salud y deporte, Ocio, Trabajo y estudios, Personal— con un campo
+  arriba que filtra por nombre, familia o sinónimo: «hipoteca» saca el banco y la
+  casa, «viajes» saca los doce de su grupo, «gasolina» y «repostar» llevan al
+  mismo sitio. Las tildes dan igual.
+- **Cada icono tiene nombre en castellano**, que es lo que se lee al pasar por
+  encima. Antes decía la clave interna: «bolleria», «fuel».
+- **Nueva categoría y Nuevo plan de ahorro ofrecen todos los iconos.** Los planes
+  se conformaban con doce, y a las categorías les faltaba el de deuda por un
+  resto histórico. Se ahorra para una boda, una moto o el dentista, y eso cae en
+  cualquier familia.
+- **Nueva cuenta ofrece los catorce del dinero** y solo esos: cartera, banco,
+  tarjeta, hucha, inversión, deuda y los suyos. Una cuenta no es una pizza. Si
+  alguna tuya llevaba otro, se sigue viendo y no lo pierde.
+- **Eliminar una deuda desde su clic derecho.** Se borra la deuda con su
+  movimiento programado, dejan de generarse cuotas y no aparece entre las
+  pagadas. Los pagos ya apuntados se conservan como movimientos normales: ese
+  dinero salió de la cuenta de verdad. No es lo mismo que «Pagar todo ahora», que
+  cierra la deuda y deja constancia de que se pagó.
+- **Eliminar un plan de ahorro desde su clic derecho**, en los que están en
+  marcha y en los cumplidos. Ya se podía desde dentro de la ficha, pero había que
+  abrirla y bajar al pie. El dinero de la hucha no se toca.
+- El rótulo de cada familia de iconos ya no se queda pegado arriba al bajar la
+  lista. Partía por la mitad la fila que pasaba por debajo y dejaba una tira de
+  medios botones colgando, que parecía un fallo de pintado.
+
 ## Novedades de la 2.7.2
 
 - **Cerrar el calendario sin elegir nada ya no inventa un tramo.** Al pulsar

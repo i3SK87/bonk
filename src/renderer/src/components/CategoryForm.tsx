@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Icon, CATEGORY_ICONS, PALETTE } from './Icon'
+import { Icon, ALL_ICONS, PALETTE } from './Icon'
 import { Avatar, Modal, Field, IconPicker, ColorPicker, Confirm, Segmented, Checkbox } from './ui'
 import type { Category, CategoryKind } from '@shared/types'
 
@@ -102,7 +102,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         </Field>
 
         <Field label="Icono">
-          <IconPicker value={icon} options={CATEGORY_ICONS} onChange={setIcon} />
+          <IconPicker value={icon} options={ALL_ICONS} onChange={setIcon} />
         </Field>
 
         <Field label="Color">

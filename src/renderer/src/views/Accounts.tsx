@@ -316,7 +316,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
         </div>
 
         <Field label="Icono">
-          <IconPicker value={icon} options={ACCOUNT_ICONS} onChange={setIcon} />
+          <IconPicker value={icon} options={ACCOUNT_ICONS} onChange={setIcon} plano />
         </Field>
 
         <Field label="Color">

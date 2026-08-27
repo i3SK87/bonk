@@ -2532,6 +2532,106 @@ try {
       mezcla.some((row) => row.categoryId === conCategoria.categoryId) &&
       mezcla.some((row) => row.categoryId == null)
   )
+
+  section('Lo que todavía no ha pasado se programa')
+  // Alimentación se ha ido con el borrado en cascada de aquí arriba.
+  const categoriaViva = categories.listCategories().find((row) => row.kind === 'expense')!
+  equal('«una vez» no tiene siguiente, así que se va al día de después',
+    nextOccurrence(day, 'once', 1), addDays(day, 1))
+
+  const saldoPrevio = accounts.listAccountsWithBalance().find((row) => row.id === bank.id)!.balance
+  const dentroDeUnaSemana = addDays(day, 7)
+
+  const seguroCoche = scheduled.scheduleFromTransaction({
+    type: 'expense',
+    date: dentroDeUnaSemana,
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 4250,
+    note: 'Seguro del coche'
+  })
+  equal('nace de una vez', seguroCoche.freq, 'once')
+  equal('el día que se puso es el suyo, no el de la vuelta siguiente', seguroCoche.nextDate, dentroDeUnaSemana)
+  equal('y se acota a ese mismo día', seguroCoche.endDate, dentroDeUnaSemana)
+  equal(
+    'el saldo no se entera hasta que llegue',
+    accounts.listAccountsWithBalance().find((row) => row.id === bank.id)!.balance,
+    saldoPrevio
+  )
+  equal(
+    'la lista de lo que viene la enseña una sola vez',
+    scheduled.projectUpcoming(day, addDays(day, 400)).filter((row) => row.scheduledId === seguroCoche.id)
+      .length,
+    1
+  )
+
+  // El día llega: se registra sola, descuenta y se sella. Nada de repetirse.
+  const repaso = scheduled.postDue(dentroDeUnaSemana)
+  check('el día que toca, entra', repaso.created >= 1)
+  equal(
+    'ahora sí baja el saldo',
+    accounts.listAccountsWithBalance().find((row) => row.id === bank.id)!.balance,
+    saldoPrevio - 4250
+  )
+  const yaPasado = scheduled.getScheduled(seguroCoche.id)!
+  check('y queda apagada', !yaPasado.active)
+  check('sellada, que es lo que la manda a Finalizadas', yaPasado.settledAt != null)
+  equal(
+    'y no vuelve por segunda vez',
+    scheduled.postDue(addDays(day, 400)).created,
+    0
+  )
+
+  // Mover al futuro uno que ya existía: se muda, no se copia.
+  const yaApuntado = transactions.saveTransaction({
+    type: 'expense',
+    date: day,
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 900,
+    note: 'Entradas'
+  })
+  const mudado = scheduled.scheduleFromTransaction({
+    id: yaApuntado.id,
+    type: 'expense',
+    date: dentroDeUnaSemana,
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 900,
+    note: 'Entradas'
+  })
+  check('el movimiento de partida se va con ella', transactions.getTransaction(yaApuntado.id) == null)
+  equal('y lo que queda es la programada', mudado.note, 'Entradas')
+  scheduled.deleteScheduled(mudado.id)
+
+  // Marcado como cíclico, la cadencia manda y empieza ese mismo día.
+  const ciclica = scheduled.scheduleFromTransaction({
+    type: 'expense',
+    date: dentroDeUnaSemana,
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 1500,
+    note: 'Gimnasio',
+    cadencia: { freq: 'monthly', interval: 1, endDate: null }
+  })
+  equal('la cíclica conserva su cadencia', ciclica.freq, 'monthly')
+  equal('empieza el día que se puso', ciclica.nextDate, dentroDeUnaSemana)
+  equal('y esa no se acota a nada', ciclica.endDate, null)
+  scheduled.deleteScheduled(ciclica.id)
+
+  let sePudo = true
+  try {
+    scheduled.scheduleFromTransaction({
+      type: 'expense',
+      date: day,
+      accountId: bank.id,
+      categoryId: categoriaViva.id,
+      amount: 100
+    })
+  } catch {
+    sePudo = false
+  }
+  check('lo de hoy no se programa: hoy ya está pasando', !sePudo)
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })
