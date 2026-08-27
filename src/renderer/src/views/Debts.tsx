@@ -82,8 +82,11 @@ export function DebtsView(): ReactNode {
    * hacer nada es peor que un botón que no está.
    */
   const opcionesDe = (debt: DebtProgress): OpcionMenu[] => {
-    const lista: OpcionMenu[] = [
-      {
+    const lista: OpcionMenu[] = []
+    // Cobrar cuotas de algo ya saldado no tiene sentido: a una pagada solo se
+    // le puede quitar el sello, y eso se hace desde Programados, o borrarla.
+    if (!debt.settled) {
+      lista.push({
         etiqueta: 'Pagar cuota actual',
         icono: 'check',
         onElegir: async () => {
@@ -93,8 +96,8 @@ export function DebtsView(): ReactNode {
           )
           if (hecho !== undefined) await refresh()
         }
-      }
-    ]
+      })
+    }
     if (debt.left != null && debt.left > 0) {
       lista.push({
         etiqueta: 'Pagar todo ahora',
@@ -201,9 +204,13 @@ export function DebtsView(): ReactNode {
             {pagadas.map((debt) => (
               <div
                 key={debt.scheduledId}
-                className="list-row finished clickable"
+                className={`list-row finished clickable${menu?.debt.scheduledId === debt.scheduledId ? ' marcada' : ''}`}
                 role="button"
                 onClick={() => setAdjusting(debt)}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  setMenu({ debt, x: event.clientX, y: event.clientY })
+                }}
               >
                 <Avatar
                   icon={debt.categoryIcon ?? 'debt'}

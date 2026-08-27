@@ -3,6 +3,13 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.8.3
+
+- **Una deuda pagada también se borra desde su clic derecho.** El menú estaba
+  solo en las abiertas, así que una deuda saldada que se apuntó mal había que ir
+  a quitarla a Programados. En una pagada el menú ofrece solo Eliminar: cobrarle
+  una cuota a algo ya saldado no lleva a ninguna parte.
+
 ## Novedades de la 2.8.2
 
 - **Lo terminado se ve apagado en las tres pantallas.** Las programadas
