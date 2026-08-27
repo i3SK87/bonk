@@ -201,7 +201,7 @@ export function DebtsView(): ReactNode {
             {pagadas.map((debt) => (
               <div
                 key={debt.scheduledId}
-                className="list-row clickable"
+                className="list-row finished clickable"
                 role="button"
                 onClick={() => setAdjusting(debt)}
               >

@@ -3403,8 +3403,13 @@ button.list-row:focus-visible {
   transition: opacity 0.12s ease;
 }
 
+/* Y mientras su menú esté abierto, por lo mismo que las etiquetas de las filas
+   normales: al irse el ratón hacia las opciones se perdía el hover y la fila
+   se apagaba justo cuando hacía falta saber sobre cuál se pulsó. */
 .list-row.finished:hover,
-.list-row.paused:hover {
+.list-row.paused:hover,
+.list-row.finished.marcada,
+.list-row.paused.marcada {
   opacity: 1;
 }
 

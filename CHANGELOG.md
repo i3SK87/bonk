@@ -3,6 +3,16 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.8.2
+
+- **Lo terminado se ve apagado en las tres pantallas.** Las programadas
+  finalizadas ya se atenuaban; ahora hacen lo mismo los planes de ahorro
+  cumplidos y las deudas pagadas. Se encienden del todo al pasarles el ratón por
+  encima, y también mientras su menú del clic derecho está abierto: si no, la
+  fila se apagaba justo cuando hacía falta ver sobre cuál estabas pulsando.
+- **El botón de reabrir un plan cumplido pierde su caja**, como el de reanudar
+  una programada. Era el único de las tres listas que iba enmarcado.
+
 ## Novedades de la 2.8.1
 
 - **Editar un plan de ahorro se hace desde su clic derecho**, junto a Eliminar, y

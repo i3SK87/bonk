@@ -174,7 +174,7 @@ export function GoalsView(): ReactNode {
             {done.map((goal) => (
               <div
                 key={goal.id}
-                className={`list-row clickable${menu?.goal.id === goal.id ? ' marcada' : ''}`}
+                className={`list-row finished clickable${menu?.goal.id === goal.id ? ' marcada' : ''}`}
                 role="button"
                 onClick={() => setEditing(goal)}
                 onContextMenu={(event) => {
@@ -193,7 +193,7 @@ export function GoalsView(): ReactNode {
                 {/* Reabrir no es editar: se queda de botón, y frena el clic para
                     no abrir además la ficha por detrás. */}
                 <button
-                  className="btn small"
+                  className="btn ghost icon"
                   title="Volver a ponerlo en marcha"
                   onClick={(event) => {
                     event.stopPropagation()
