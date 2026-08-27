@@ -3,6 +3,21 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.8.1
+
+- **Editar un plan de ahorro se hace desde su clic derecho**, junto a Eliminar, y
+  la ficha se queda sin el lápiz de la derecha. Un botón permanente para algo que
+  se hace de tarde en tarde ocupaba sitio en todas las fichas a la vez.
+- **La ficha del plan se enciende al pasar por encima**, y se queda encendida
+  mientras su menú está abierto: hacía falta para saber sobre cuál estás
+  pulsando. No cambia el cursor a mano, porque la ficha no se pulsa entera —lleva
+  dentro el deslizador—, y el resalte no mueve nada de sitio.
+- **«Darlo por cumplido y archivarlo» estrena el icono del paquete**, en lugar de
+  la marca de visto. Lo que hace es guardar el plan, no solo darlo por bueno.
+- **El menú del clic derecho ya no dibuja la raya de separación cuando solo tiene
+  una opción.** Esa raya está para apartar el borrado de lo que tiene encima; sin
+  nada encima, separaba de la nada.
+
 ## Novedades de la 2.8.0
 
 - **Programar algo que pasa una sola vez.** Hasta ahora una programada se

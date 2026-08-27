@@ -140,11 +140,11 @@ export function GoalsView(): ReactNode {
                   goal={goal}
                   currency={settings.baseCurrency}
                   techo={Math.min(goal.targetAmount, goal.reserved + porRepartir)}
-                  onEdit={() => setEditing(goal)}
                   onAchieve={() => run(() => api.goals.setAchieved(goal.id, true), 'Plan cumplido')}
                   onReserve={(amount) =>
                     run(() => api.goals.reserve([{ id: goal.id, amount }]))
                   }
+                  marcada={menu?.goal.id === goal.id}
                   onMenu={(x, y) => setMenu({ goal, x, y })}
                 />
               ))}
@@ -208,15 +208,24 @@ export function GoalsView(): ReactNode {
         </div>
       )}
 
-      {/* El clic derecho, en las dos listas. Eliminar ya estaba dentro de la
-          ficha, pero para borrar un plan había que abrirlo, bajar al pie y
-          volver a confirmar: tres pasos para deshacer algo que se apuntó mal.
-          El mensaje es el mismo que el del pie, que la acción es la misma. */}
+      {/* El clic derecho, en las dos listas.
+
+          Aquí vive ahora editar, y por eso la ficha ya no lleva su lápiz a la
+          derecha: un botón permanente para algo que se hace de tarde en tarde
+          ocupaba sitio en todas las fichas a la vez. Borrar se podía desde
+          dentro de la ficha, pero eran tres pasos —abrir, bajar al pie y
+          confirmar— para deshacer algo que se apuntó mal. El mensaje de borrar
+          es el mismo que el del pie, que la acción es la misma. */}
       {menu && (
         <MenuContextual
           x={menu.x}
           y={menu.y}
           opciones={[
+            {
+              etiqueta: 'Editar plan',
+              icono: 'edit',
+              onElegir: () => setEditing(menu.goal)
+            },
             {
               etiqueta: 'Eliminar',
               icono: 'trash',
@@ -262,18 +271,19 @@ function GoalCard({
   goal,
   currency,
   techo,
-  onEdit,
   onAchieve,
   onReserve,
+  marcada,
   onMenu
 }: {
   goal: GoalProgress
   currency: string
   /** Lo máximo que se le puede reservar: lo suyo más lo que quede libre. */
   techo: number
-  onEdit: () => void
   onAchieve: () => void
   onReserve?: (amount: number) => void
+  /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
+  marcada?: boolean
   onMenu?: (x: number, y: number) => void
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
@@ -347,6 +357,7 @@ function GoalCard({
 
   return (
     <div
+      className={`plan-ahorro${marcada ? ' marcada' : ''}`}
       onContextMenu={(event) => {
         if (!onMenu) return
         event.preventDefault()
@@ -428,12 +439,9 @@ function GoalCard({
         </div>
         {falta === 0 && (
           <button className="btn small" onClick={onAchieve} title="Darlo por cumplido y archivarlo">
-            <Icon name="check" size={15} />
+            <Icon name="paquete" size={15} />
           </button>
         )}
-        <button className="btn ghost icon" onClick={onEdit} aria-label="Editar plan">
-          <Icon name="edit" size={16} />
-        </button>
       </div>
 
       {/* Un solo mando: lo que se le reserva de la hucha es a la vez lo que lleva

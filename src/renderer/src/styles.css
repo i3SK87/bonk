@@ -2513,6 +2513,31 @@ textarea::placeholder {
   background: var(--bg-sunken);
 }
 
+/*
+ * La ficha de un plan de ahorro se enciende, pero no se pulsa entera.
+ *
+ * No puede ser una `tarjeta-clicable`: lleva dentro el deslizador y el lápiz,
+ * y poner el cursor de mano sobre todo el bloque prometería un clic que no
+ * hace nada. Encenderse sí tiene que hacerlo, porque el clic derecho actúa
+ * sobre ella entera y hay que ver sobre cuál.
+ *
+ * El relleno se compensa con el mismo margen en negativo: el fondo crece
+ * 8 px por arriba y por abajo, la ficha se sube otros 8, y el contenido se
+ * queda donde estaba. Sin eso, el hueco de 20 px entre planes se convertía
+ * en 36 y la lista se estiraba sola.
+ */
+.plan-ahorro {
+  margin: -8px -12px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: background 0.12s ease;
+}
+
+.plan-ahorro:hover,
+.plan-ahorro.marcada {
+  background: var(--bg-sunken);
+}
+
 .tarjeta-clicable:hover {
   background: var(--bg-sunken);
 }
@@ -3111,6 +3136,16 @@ button.list-row:focus-visible {
 }
 
 .menu-contextual-opcion.peligrosa svg { color: var(--negative); }
+
+/* Sola no separa de nada. Cuando borrar es la única opción del menú, la raya
+   y su hueco dibujaban un apartado por encima de la nada: se quitan y la
+   opción se comporta como cualquier otra. */
+.menu-contextual-opcion.peligrosa:first-child {
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 0;
+  border-radius: calc(var(--radius) - 4px);
+}
 
 .menu-contextual-opcion.peligrosa:hover,
 .menu-contextual-opcion.peligrosa:focus-visible {
