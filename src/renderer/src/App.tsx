@@ -44,7 +44,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   // El que tuvo siempre, ahora fijo: salía de la categoría marcada como deuda,
   // y esa marca ya no existe.
   { id: 'debts', label: 'Deudas', icon: 'invest' },
-  { id: 'goals', label: 'Planes Ahorro', icon: 'target' },
+  { id: 'goals', label: 'Planes Ahorro', icon: 'piggy' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'reports', label: 'Informes', icon: 'chart' }

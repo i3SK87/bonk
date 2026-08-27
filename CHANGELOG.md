@@ -3,6 +3,16 @@
 Lo que ha ido entrando en cada versión de BONK, de lo más reciente a lo más
 antiguo. Para instalarla y usarla, mira el [README](README.md).
 
+## Novedades de la 2.7.2
+
+- **Cerrar el calendario sin elegir nada ya no inventa un tramo.** Al pulsar
+  «Personalizado» y cerrar sin marcar los dos días, quedaba escrito al lado el
+  mes en curso como si lo hubieras elegido tú. Ahora no se escribe nada y se
+  vuelve a «Este mes». Vale igual en Movimientos y en Informes. Si ya tenías un
+  tramo puesto y solo abriste a mirar, ese se queda como estaba.
+- **Planes Ahorro estrena el cerdito** de la hucha en la barra lateral, en lugar
+  de la diana.
+
 ## Novedades de la 2.7.1
 
 - **La ventana se queda en 1.100 px de ancho**, no en 1.280. A lo largo sigue

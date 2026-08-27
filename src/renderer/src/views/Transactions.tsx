@@ -106,6 +106,21 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
   const [eligiendoTramo, setEligiendoTramo] = useState(false)
 
+  /*
+   * Si al cerrar el calendario hay un tramo que enseñar.
+   *
+   * Cerrarlo sin haber elegido los dos días dejaba «Personalizado» puesto, y el
+   * rótulo del lado escribía las fechas de arranque —las del mes en curso— como
+   * si las hubieras elegido tú. Sin tramo se vuelve a «Este mes», que es de
+   * donde se venía y lo que la lista está enseñando de todas formas.
+   *
+   * Es una referencia y no un estado porque el calendario avisa de los dos días
+   * y se cierra en el mismo suspiro: un `useState` llegaría al cierre valiendo
+   * todavía lo de antes. Se pone al abrirlo —si venías de «Personalizado» ya
+   * había uno, y ese se respeta— y con la elección hecha.
+   */
+  const hayTramo = useRef(false)
+
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
   const [settledSearch, setSettledSearch] = useState(filtros.search)
 
@@ -923,7 +938,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   // pulsarlo es elegir los dos días, así que el calendario sale
                   // sin tener que ir a buscarlo. Y vuelve a salir si se pulsa
                   // otra vez estando ya puesto, que es cómo se cambia el tramo.
-                  if (id === 'custom') setEligiendoTramo(true)
+                  if (id === 'custom') {
+                    hayTramo.current = range === 'custom'
+                    setEligiendoTramo(true)
+                  }
                 }}
               >
                 {NOMBRES_DE_RANGO[id]}
@@ -1016,8 +1034,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           {eligiendoTramo && (
             <CalendarioDeTramo
               desde={customFrom}
-              onChange={(from, to) => ponFiltros({ customFrom: from, customTo: to })}
-              onClose={() => setEligiendoTramo(false)}
+              onChange={(from, to) => {
+                hayTramo.current = true
+                ponFiltros({ customFrom: from, customTo: to })
+              }}
+              onClose={() => {
+                setEligiendoTramo(false)
+                if (!hayTramo.current) setRange('month')
+              }}
             />
           )}
         </div>
