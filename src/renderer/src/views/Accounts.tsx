@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
+import { useContador } from '../lib/contador'
 import { Icon, ACCOUNT_ICONS } from '../components/Icon'
 import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, Confirm, EmptyState, AccionCabecera } from '../components/ui'
 import { formatMoney } from '@shared/money'
@@ -17,7 +18,7 @@ const ACCOUNT_TYPES: Array<{ value: AccountType; label: string; icon: string }> 
 ]
 
 export function AccountsView(): ReactNode {
-  const { accounts, settings, run, fail } = useStore()
+  const { accounts, settings, revision, run, fail } = useStore()
   const [editing, setEditing] = useState<AccountWithBalance | null>(null)
   const [creating, setCreating] = useState(false)
   const [archived, setArchived] = useState<AccountWithBalance[]>([])
@@ -35,6 +36,8 @@ export function AccountsView(): ReactNode {
     .filter((account) => !account.excludeFromTotal)
     .reduce((sum, account) => sum + account.balanceInBase, 0)
   const excluded = accounts.filter((account) => account.excludeFromTotal)
+  // Sube o baja contando cuando entra o sale dinero; ver `useContador`.
+  const contado = useContador(total, revision)
 
   // Solo los tipos que tengas: una lista con seis epígrafes y dos cuentas no
   // ordena nada, solo hace scroll.
@@ -108,7 +111,7 @@ export function AccountsView(): ReactNode {
           <div className="networth suelto">
             <div className="label">Patrimonio total</div>
             <div className={`value amount ${total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral'}`}>
-              {formatMoney(total, settings.baseCurrency)}
+              {formatMoney(contado, settings.baseCurrency)}
             </div>
           </div>
           {excluded.length > 0 && (

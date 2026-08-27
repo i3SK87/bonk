@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from './lib/store'
+import { useContador } from './lib/contador'
 import { Icon } from './components/Icon'
 import { Toasts, Loading } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
@@ -75,7 +76,8 @@ const TITLES: Record<ViewId, string> = {
 }
 
 export function App(): ReactNode {
-  const { ready, accounts, settings, toast, refresh, updateSettings, focusedAccountId } = useStore()
+  const { ready, accounts, settings, revision, toast, refresh, updateSettings, focusedAccountId } =
+    useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [calculando, setCalculando] = useState(false)
@@ -220,6 +222,12 @@ export function App(): ReactNode {
   const netWorth = accounts
     .filter((account) => !account.excludeFromTotal)
     .reduce((sum, account) => sum + account.balanceInBase, 0)
+  /*
+   * Aquí el conteo hace algo más que enseñar la dirección: esta cifra vive en
+   * un rincón y se mira de refilón, así que verla moverse es lo que avisa de
+   * que el gasto que acabas de apuntar ha llegado hasta el total.
+   */
+  const contado = useContador(netWorth, revision)
 
   return (
     <div className="app">
@@ -273,7 +281,7 @@ export function App(): ReactNode {
             <div className="sidebar-networth">
               Patrimonio total
               <strong className={netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : ''}>
-                {formatMoney(netWorth, settings.baseCurrency)}
+                {formatMoney(contado, settings.baseCurrency)}
               </strong>
             </div>
           </div>

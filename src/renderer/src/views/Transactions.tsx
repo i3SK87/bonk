@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
+import { useContador } from '../lib/contador'
 import { nestByParent } from '../lib/nesting'
 import { Icon } from '../components/Icon'
 import { CalendarioDeTramo } from '../components/DateInput'
@@ -671,6 +672,14 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const netWorth =
     shownAccounts.reduce((sum, account) => sum + account.balanceInBase, 0) +
     (showingProjected ? projected.reduce((sum, item) => sum + item.amountInBase, 0) : 0)
+  /*
+   * El saldo cuenta hasta su nuevo valor cuando entra o sale dinero.
+   *
+   * Con la revisión del almacén por delante: cambiar de cuenta o asomar los
+   * previstos también mueve esta cifra, pero eso es enseñar otro dato, no el
+   * mismo dato cambiado, y ahí se pone de golpe.
+   */
+  const contado = useContador(netWorth, revision)
   const netWorthLabel = accountIds.length
     ? shownAccounts.length === 1
       ? `Saldo · ${shownAccounts[0].name}`
@@ -851,8 +860,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         <div className="card-body networth-strip">
           <div className="networth">
             <div className="label">{netWorthLabel}</div>
+            {/* El color lo pone la cifra de verdad y no la del conteo: verlo
+                pasar de verde a rojo y volver mientras la cuenta baja diría
+                cosas que no son. */}
             <div className={`value amount ${tonoPatrimonio}`}>
-              {formatMoney(netWorth, settings.baseCurrency)}
+              {formatMoney(contado, settings.baseCurrency)}
             </div>
           </div>
 

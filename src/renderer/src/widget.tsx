@@ -17,6 +17,7 @@ import { StrictMode, useCallback, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Avatar } from './components/ui'
 import { esOscuro } from './lib/tema'
+import { useContador } from './lib/contador'
 import { formatMoney } from '@shared/money'
 import type { AccountWithBalance, Settings } from '@shared/types'
 import './styles.css'
@@ -26,7 +27,18 @@ const api = window.bonk
 function Widget(): React.ReactNode {
   const [settings, setSettings] = useState<Settings | null>(null)
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([])
+  /*
+   * Cuántas veces han cambiado los datos, que es lo que dispara el conteo de la
+   * cifra. Aquí no hay almacén del que sacarlo: el widget se entera de que ha
+   * pasado algo por el aviso del proceso principal, así que se cuenta a mano.
+   * La primera carga no lo sube, y por eso al abrirlo la cifra sale puesta en
+   * vez de contando desde cero.
+   */
+  const [revision, setRevision] = useState(0)
   const caja = useRef<HTMLDivElement>(null)
+  /** La última medida que se le mandó a la ventana, y el encogimiento en cola. */
+  const enviado = useRef({ alto: 0, ancho: 0 })
+  const pendiente = useRef<number | null>(null)
 
   const cargar = useCallback(async () => {
     try {
@@ -41,7 +53,10 @@ function Widget(): React.ReactNode {
 
   useEffect(() => {
     cargar()
-    const off = api.events.on('data:changed', cargar)
+    const off = api.events.on('data:changed', () => {
+      setRevision((valor) => valor + 1)
+      cargar()
+    })
     const offAjustes = api.events.on('settings:changed', (detail) => {
       setSettings(detail as Settings)
     })
@@ -82,27 +97,66 @@ function Widget(): React.ReactNode {
     const medir = (): void => {
       const rect = nodo.getBoundingClientRect()
       const estilo = getComputedStyle(nodo)
-      const alto =
+      const alto = Math.ceil(
         rect.height + parseFloat(estilo.marginTop || '0') + parseFloat(estilo.marginBottom || '0')
-      const ancho =
+      )
+      const ancho = Math.ceil(
         rect.width + parseFloat(estilo.marginLeft || '0') + parseFloat(estilo.marginRight || '0')
-      api.widget.resize(Math.ceil(alto), Math.ceil(ancho)).catch(() => undefined)
+      )
+
+      const mandar = (): void => {
+        pendiente.current = null
+        enviado.current = { alto, ancho }
+        api.widget.resize(alto, ancho).catch(() => undefined)
+      }
+
+      if (pendiente.current != null) {
+        clearTimeout(pendiente.current)
+        pendiente.current = null
+      }
+      /*
+       * Crece al momento y encoge con un respiro.
+       *
+       * Desde que la cifra cuenta hasta su nuevo valor, su ancho cambia varias
+       * veces por segundo mientras dura el conteo —al cruzar el millar aparece
+       * un punto de más—, y cada cambio llegaba aquí. Recolocar la ventana en
+       * cada cuadro no es solo trabajo de más: el widget va anclado a una
+       * esquina, así que al ensanchar se mueve el otro canto y se veía temblar
+       * el borde mientras el número corría.
+       *
+       * Crecer no se puede aplazar, que la cifra se quedaría cortada media
+       * pantalla. Encoger sí: nadie nota un cuarto de segundo de aire de más, y
+       * con eso todo el conteo cabe en un solo respiro. Al terminar se manda la
+       * medida buena y ya está.
+       */
+      if (alto > enviado.current.alto || ancho > enviado.current.ancho) mandar()
+      else if (alto !== enviado.current.alto || ancho !== enviado.current.ancho) {
+        pendiente.current = window.setTimeout(mandar, 260)
+      }
     }
     medir()
     const observador = new ResizeObserver(medir)
     observador.observe(nodo)
-    return () => observador.disconnect()
+    return () => {
+      observador.disconnect()
+      if (pendiente.current != null) clearTimeout(pendiente.current)
+    }
   }, [settings, accounts])
-
-  if (!settings) return null
 
   /*
    * Las cuentas elegidas, y todas si no se ha elegido ninguna.
    *
    * Una lista vacía es «no he tocado esto», no «ninguna»: un widget vacío no
    * dice nada y el que lo estrena no ha marcado nada todavía.
+   *
+   * Todo esto se calcula antes del corte de abajo, y no después como estaba,
+   * porque de la cifra cuelga un hook —el conteo— y un hook no puede vivir
+   * detrás de un `return`: en el primer pintado, sin ajustes todavía, no se
+   * llegaría a él, y React cuenta los de cada vuelta. Sin ajustes las listas
+   * están vacías y la cifra es cero, que es justo lo que hay que enseñar
+   * mientras no haya nada.
    */
-  const elegidas = settings.widgetAccountIds
+  const elegidas = settings?.widgetAccountIds ?? []
   const visibles = accounts.filter((cuenta) => elegidas.length === 0 || elegidas.includes(cuenta.id))
 
   /*
@@ -120,7 +174,21 @@ function Widget(): React.ReactNode {
     .reduce((suma, cuenta) => suma + cuenta.balanceInBase, 0)
 
   const cifra = unica ? unica.balance : patrimonio
+  /*
+   * La cifra sube o baja contando, igual que en la aplicación: aquí es donde
+   * más se agradece, que el widget está en el escritorio para mirarlo de reojo
+   * y lo que se ve por el rabillo del ojo es el movimiento, no el número.
+   *
+   * La primera carga no sube la revisión, así que al abrirlo la cifra sale
+   * puesta y no contando desde cero.
+   */
+  const contada = useContador(cifra, revision)
+
+  if (!settings) return null
+
   const divisa = unica ? unica.currency : settings.baseCurrency
+  // El tono lo pone la cifra de verdad y no la del conteo: pasar de verde a
+  // rojo y volver mientras baja diría cosas que no son.
   const tono = cifra > 0 ? 'positive' : cifra < 0 ? 'negative' : 'neutral'
 
   /*
@@ -144,7 +212,7 @@ function Widget(): React.ReactNode {
           {/* La cifra manda y va primero; de quién es se dice después, al otro
               lado de la raya. Es el reparto de la cabecera de Movimientos: el
               dinero a la izquierda y la cuenta a la derecha. */}
-          <span className={`widget-total amount ${tono}`}>{formatMoney(cifra, divisa)}</span>
+          <span className={`widget-total amount ${tono}`}>{formatMoney(contada, divisa)}</span>
           <span className="divider vertical" />
           <span className="widget-suya">
             <Avatar icon={unica.icon} color={unica.color} size="small" />
@@ -154,7 +222,7 @@ function Widget(): React.ReactNode {
       ) : (
         <>
           <div className="widget-rotulo">Patrimonio</div>
-          <div className={`widget-total amount ${tono}`}>{formatMoney(cifra, divisa)}</div>
+          <div className={`widget-total amount ${tono}`}>{formatMoney(contada, divisa)}</div>
 
           {visibles.length > 0 && (
             <div className="widget-cuentas">
