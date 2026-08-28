@@ -14,7 +14,12 @@ import * as csv from './repos/csv'
 import { construirInformeHtml } from './repos/informe'
 import { widgetWindow, colocarWidget } from './widget'
 import { applyAutoLaunch } from './autostart'
-import { buscarActualizacion, estadoActualizacion, instalarActualizacion } from './updates'
+import {
+  buscarActualizacion,
+  descargarActualizacion,
+  estadoActualizacion,
+  instalarActualizacion
+} from './updates'
 import {
   sendTestNotification,
   setCategoryIcons,
@@ -419,6 +424,7 @@ export function registerIpc(
   // — Actualizaciones —
   handle('updates:estado', () => estadoActualizacion())
   handle('updates:buscar', () => buscarActualizacion())
+  handle('updates:descargar', () => descargarActualizacion())
   handle('updates:instalar', () => instalarActualizacion())
 
   handle('db:clearTransactions', () => csv.clearTransactions())

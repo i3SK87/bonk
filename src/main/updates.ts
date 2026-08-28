@@ -9,8 +9,9 @@ import type { EstadoActualizacion } from '@shared/types'
  *
  * Hasta aquí, actualizar era acordarse de mirar la página de GitHub, bajarse
  * cien megas de instalador y ejecutarlo. Quien tiene BONK instalado no hace eso,
- * así que se quedaba en la versión con la que empezó. Esto lo mira solo, se lo
- * baja solo y lo único que pide es reiniciar.
+ * así que se quedaba en la versión con la que empezó. Esto lo mira solo y avisa;
+ * la descarga la manda quien está delante, pulsando el aviso, porque cien megas
+ * por su línea son suyos. Cuando acaba, pide reiniciar.
  *
  * Se apoya en el «latest.yml» que electron-builder ya venía generando en cada
  * compilación y que hasta ahora no se subía a ninguna parte: dentro va la
@@ -89,11 +90,15 @@ export function iniciarActualizaciones(notificar: (estado: EstadoActualizacion) 
    */
   if (!app.isPackaged) return
 
-  autoUpdater.autoDownload = true
   /*
-   * Y si nunca llega a pulsar «Reiniciar», la próxima vez que salga de verdad
-   * se instala igual. No es un atajo suelto: el aspa esconde en la bandeja, así
-   * que salir de verdad es raro y cuando pasa conviene aprovecharlo.
+   * Encontrarla no es bajarla: eso lo manda quien está delante, pulsando el
+   * aviso. Lo automático es enterarse, que es lo que nadie hace por su cuenta.
+   */
+  autoUpdater.autoDownload = false
+  /*
+   * Pero una vez bajada sí se instala sola al salir, si no se llegó a pulsar
+   * «Reiniciar». No es un atajo suelto: el aspa esconde en la bandeja, así que
+   * salir de verdad es raro y cuando pasa conviene aprovecharlo.
    */
   autoUpdater.autoInstallOnAppQuit = true
 
@@ -110,9 +115,9 @@ export function iniciarActualizaciones(notificar: (estado: EstadoActualizacion) 
   )
 
   autoUpdater.on('update-available', (info) => {
-    registrar('actualización', `encontrada la ${info.version}, descargando`)
+    registrar('actualización', `encontrada la ${info.version}, esperando a que la pidan`)
     poner({
-      fase: 'descargando',
+      fase: 'disponible',
       version: info.version,
       porcentaje: 0,
       comprobadaEn: new Date().toISOString(),
@@ -146,8 +151,9 @@ export function iniciarActualizaciones(notificar: (estado: EstadoActualizacion) 
 /** El repaso automático, que sí obedece al ajuste. */
 function repasar(): void {
   if (!getSettings().buscarActualizaciones) return
-  // Con una descarga en marcha o ya hecha no hay nada que volver a preguntar.
-  if (estado.fase === 'descargando' || estado.fase === 'lista') return
+  // Con una ya encontrada tampoco hay nada que volver a preguntar: el aviso
+  // está puesto y lo que falta es que alguien lo pulse.
+  if (estado.fase === 'disponible' || estado.fase === 'descargando' || estado.fase === 'lista') return
   void buscarActualizacion()
 }
 
@@ -166,6 +172,22 @@ export async function buscarActualizacion(): Promise<EstadoActualizacion> {
   // El fallo llega por el evento `error`, que ya deja el estado como toca.
   await autoUpdater.checkForUpdates().catch(() => undefined)
   return estado
+}
+
+/**
+ * Traérsela. Es lo que hace el aviso de la barra lateral al pulsarlo.
+ *
+ * El progreso y el final llegan por los eventos de arriba, así que aquí no hay
+ * nada que esperar: se arranca, se contesta, y quien mire el estado la verá
+ * avanzar sola.
+ */
+export function descargarActualizacion(): boolean {
+  if (estado.fase !== 'disponible') return false
+  registrar('actualización', `descargando la ${estado.version}`)
+  poner({ fase: 'descargando', porcentaje: 0, mensaje: null })
+  // El fallo llega por el evento `error`, igual que en la búsqueda.
+  autoUpdater.downloadUpdate().catch(() => undefined)
+  return true
 }
 
 /**

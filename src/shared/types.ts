@@ -417,7 +417,12 @@ export interface Settings {
  * en cada cambio, que es más barato que tener dos copias que se desincronizan.
  */
 export interface EstadoActualizacion {
-  fase: 'ociosa' | 'buscando' | 'descargando' | 'lista' | 'error'
+  /**
+   * «disponible» es la que espera: hay una versión nueva y no se baja nada
+   * hasta que se pulse. Cien megas por la línea de alguien son suyos, no de la
+   * aplicación.
+   */
+  fase: 'ociosa' | 'buscando' | 'disponible' | 'descargando' | 'lista' | 'error'
   /** La versión nueva, cuando se ha encontrado una. */
   version: string | null
   /** De 0 a 100 mientras se descarga. */

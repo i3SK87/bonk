@@ -27,6 +27,8 @@ function contarActualizacion(estado: EstadoActualizacion): string {
   switch (estado.fase) {
     case 'buscando':
       return 'Mirando si hay una versión nueva…'
+    case 'disponible':
+      return `Está la versión ${estado.version}. Se descarga cuando tú digas.`
     case 'descargando':
       return `Descargando la versión ${estado.version}: ${estado.porcentaje} %.`
     case 'lista':
@@ -427,6 +429,10 @@ export function SettingsView(): ReactNode {
               {actualizacion.fase === 'lista' ? (
                 <button className="btn primary small" onClick={() => setReiniciando(true)}>
                   Reiniciar e instalar
+                </button>
+              ) : actualizacion.fase === 'disponible' ? (
+                <button className="btn primary small" onClick={() => run(() => api.updates.descargar())}>
+                  Descargar
                 </button>
               ) : (
                 <button

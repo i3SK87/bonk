@@ -38,7 +38,7 @@ export function useActualizacion(): EstadoActualizacion {
   return estado
 }
 
-/** Hay algo que enseñar: se está bajando o ya está lista. */
+/** Hay algo que enseñar: hay una esperando, se está bajando o ya está lista. */
 export function hayNovedad(estado: EstadoActualizacion): boolean {
-  return estado.fase === 'descargando' || estado.fase === 'lista'
+  return estado.fase === 'disponible' || estado.fase === 'descargando' || estado.fase === 'lista'
 }

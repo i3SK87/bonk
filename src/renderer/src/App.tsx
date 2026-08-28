@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from './lib/store'
 import { useContador } from './lib/contador'
 import { Icon } from './components/Icon'
@@ -233,6 +233,18 @@ export function App(): ReactNode {
    */
   const contado = useContador(netWorth, revision)
   const actualizacion = useActualizacion()
+  /*
+   * En cuanto acaba de bajarse, se pregunta por el reinicio sin esperar a que
+   * se vuelva a pulsar: el aviso ya se pulsó una vez y esto es el final de esa
+   * misma acción, no una nueva. Si se dice que no, el aviso se queda puesto
+   * como «Reiniciar para actualizar» y ahí sigue para cuando venga bien.
+   */
+  const yaPreguntado = useRef(false)
+  useEffect(() => {
+    if (actualizacion.fase !== 'lista' || yaPreguntado.current) return
+    yaPreguntado.current = true
+    setReiniciando(true)
+  }, [actualizacion.fase])
 
   return (
     <div className="app">
@@ -288,16 +300,26 @@ export function App(): ReactNode {
         {hayNovedad(actualizacion) && (
           <button
             className={`aviso-version${actualizacion.fase === 'lista' ? ' lista' : ''}`}
-            onClick={() => (actualizacion.fase === 'lista' ? setReiniciando(true) : setView(AJUSTES.id))}
+            disabled={actualizacion.fase === 'descargando'}
+            onClick={() => {
+              if (actualizacion.fase === 'disponible') void run(() => api.updates.descargar())
+              else if (actualizacion.fase === 'lista') setReiniciando(true)
+            }}
             title={
-              actualizacion.fase === 'lista'
-                ? `La versión ${actualizacion.version} está descargada. Se instala al reiniciar.`
-                : `Descargando la versión ${actualizacion.version}: ${actualizacion.porcentaje} %`
+              actualizacion.fase === 'disponible'
+                ? `Está la versión ${actualizacion.version}. Pulsa para traértela.`
+                : actualizacion.fase === 'descargando'
+                  ? `Descargando la versión ${actualizacion.version}: ${actualizacion.porcentaje} %`
+                  : `La versión ${actualizacion.version} ya está descargada. Se instala al reiniciar.`
             }
           >
             <Icon name={actualizacion.fase === 'lista' ? 'refresh' : 'download'} size={14} />
             <span className="truncate">
-              {actualizacion.fase === 'lista' ? 'Reiniciar para actualizar' : 'Actualización disponible'}
+              {actualizacion.fase === 'disponible'
+                ? 'Actualización disponible'
+                : actualizacion.fase === 'descargando'
+                  ? `Descargando… ${actualizacion.porcentaje} %`
+                  : 'Reiniciar para actualizar'}
             </span>
             {/* Lo que lleva bajado, en el propio fondo del aviso: una barra
                 aparte para un número que nadie mira sería otro trasto más. */}

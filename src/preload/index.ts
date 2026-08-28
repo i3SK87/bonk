@@ -198,6 +198,8 @@ const api = {
   updates: {
     estado: () => call<EstadoActualizacion>('updates:estado'),
     buscar: () => call<EstadoActualizacion>('updates:buscar'),
+    /** Arranca la descarga. Devuelve false si no había ninguna esperando. */
+    descargar: () => call<boolean>('updates:descargar'),
     /** Cierra y vuelve a abrir ya actualizada. Devuelve false si no había nada listo. */
     instalar: () => call<boolean>('updates:instalar')
   },
