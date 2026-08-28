@@ -6,13 +6,17 @@
  * tiene nombre propio —mensual, trimestral, anual— y decirlo así se lee de un
  * golpe.
  *
- * Lo que no tiene nombre se sigue pudiendo montar, pero detrás de «Otra…», sin
+ * Lo que no tiene nombre se sigue pudiendo montar, pero detrás de «Otro», sin
  * el número y la unidad a la vista de todos: son la salida de emergencia de un
  * caso raro, no la forma normal de contestar a esto.
  *
- * Se abre en «Otra…» solo cuando lo guardado no cabe en ninguna de las de
- * nombre. Es lo que salva a una programada vieja de «cada 10 días»: abrir su
- * ficha no puede convertirla a otra cosa por el camino.
+ * «Otro» y no «Otra» aunque las de al lado sean femeninas —Diaria, Semanal—:
+ * las cuatro concuerdan con la repetición, y esta quinta no nombra una
+ * repetición sino la puerta que lleva a montársela. Es como se pidió.
+ *
+ * Se abre por ahí solo cuando lo guardado no cabe en ninguna de las de nombre.
+ * Es lo que salva a una programada vieja de «cada 10 días»: abrir su ficha no
+ * puede convertirla a otra cosa por el camino.
  */
 import { useState, type ReactNode } from 'react'
 import { NumberInput } from './ui'
@@ -51,7 +55,7 @@ export function SelectorCadencia({
         value={aMano || cadencia == null ? A_MANO : cadencia.nombre}
         onChange={(event) => {
           if (event.target.value === A_MANO) {
-            // Lo que hubiera puesto se queda: «Otra…» abre el mando de a mano
+            // Lo que hubiera puesto se queda: «Otro» abre el mando de a mano
             // por donde estaba, no lo vacía.
             setAMano(true)
             return
@@ -67,7 +71,7 @@ export function SelectorCadencia({
             {item.nombre}
           </option>
         ))}
-        <option value={A_MANO}>Otra…</option>
+        <option value={A_MANO}>Otro</option>
       </select>
 
       {/* «Una vez» no lleva número: no hay nada que contar. */}
