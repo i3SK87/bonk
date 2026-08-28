@@ -109,18 +109,24 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
           <ColorPicker value={color} onChange={setColor} />
         </Field>
 
-        {/* A la par: son respuestas de sí o no, y en columna estiraban la ficha. */}
+        {/* Cada casilla con su renglón de ayuda, como las de las demás fichas:
+            dicen qué cambia en otra pantalla —el formulario de movimientos, la
+            pestaña Informes— y desde aquí no se ve. Eran las dos únicas de la
+            aplicación que iban a secas, y a secas cabían a la par: quedaban de
+            adorno al pie de la ficha, sin el aire de las de al lado. */}
         <div className="casillas">
           <Checkbox
             checked={keepsInvoices}
             onChange={setKeepsInvoices}
             label="Adjuntar facturas"
+            hint="Sus movimientos llevan un campo para guardar el recibo."
           />
 
           <Checkbox
             checked={breakdownByNote}
             onChange={setBreakdownByNote}
             label="Desglose en la pestaña Informes"
+            hint="La categoría se abre por la nota de cada movimiento."
           />
 
           {category && (
