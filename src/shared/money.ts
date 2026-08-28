@@ -147,3 +147,65 @@ export function convert(
   const inBase = toMajor(minor, origin) / rateFrom
   return toMinor(inBase * rateTo, target)
 }
+
+/**
+ * Cuántos caracteres caben donde la cifra preside sin sitio de sobra.
+ *
+ * Son los de la barra lateral, medidos: a 38 px, «12.345,67 €» ocupa 195 de los
+ * 208 px que quedan entre los márgenes, y un carácter más se sale. Vive aquí y
+ * no en el componente porque es lo que decide si una cifra se abrevia.
+ */
+const TOPE_BARRA = 11
+
+/** Si la cifra entera cabe, que es lo que decide si hay que abreviarla. */
+export function cabeEntero(minor: number, code: string, tope = TOPE_BARRA): boolean {
+  return formatMoney(minor, code).length <= tope
+}
+
+/**
+ * La cifra entera si cabe, y si no, abreviada: «123,46k €», «1,23M €».
+ *
+ * Un patrimonio de seis cifras no entra en la barra lateral y se salía por el
+ * canto. Recortarlo con puntos suspensivos deja un número que no se puede leer,
+ * y encoger la letra hace que la misma cifra cambie de tamaño según el día.
+ *
+ * La «k» y la «M» no son la abreviatura del castellano —lo suyo sería «mil» y
+ * «M», que es lo que da Intl—, pero «123,46 mil €» ocupa casi lo mismo que la
+ * cifra entera y no arregla nada. Se eligieron a sabiendas.
+ *
+ * Los decimales caen si con dos tampoco cabe, que es lo que pasa a partir del
+ * millar de millones: antes de sacar la cifra fuera de su sitio, mejor menos
+ * precisión en un número que ya es un orden de magnitud.
+ */
+export function formatMoneyBreve(minor: number, code: string, tope = TOPE_BARRA): string {
+  const entero = formatMoney(minor, code)
+  if (entero.length <= tope) return entero
+
+  const valor = toMajor(minor, code)
+  /*
+   * El escalón se elige contando con el redondeo.
+   *
+   * Novecientos noventa y nueve mil novecientos noventa y nueve con noventa y
+   * nueve, en miles y con dos decimales, se redondea a «1000,00k», que es un
+   * millón escrito de la forma más rara posible. Desde el punto en que el
+   * redondeo llega al millar se salta ya al escalón siguiente.
+   */
+  const millones = Math.abs(valor) >= 999_995
+  const escala = millones ? 1_000_000 : 1_000
+  const sufijo = millones ? 'M' : 'k'
+  const signo = valor < 0 ? '−' : ''
+  const simbolo = currencySymbol(code)
+
+  let breve = entero
+  for (const decimales of [2, 1, 0]) {
+    const numero = new Intl.NumberFormat('es-ES', {
+      minimumFractionDigits: decimales,
+      maximumFractionDigits: decimales
+    }).format(Math.abs(valor) / escala)
+    // El espacio duro es el que pone Intl entre la cifra y el símbolo: con uno
+    // normal, la divisa podría quedarse sola en el renglón siguiente.
+    breve = `${signo}${numero}${sufijo} ${simbolo}`
+    if (breve.length <= tope) return breve
+  }
+  return breve
+}

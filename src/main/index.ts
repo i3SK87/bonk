@@ -24,34 +24,25 @@ const iconPath = join(__dirname, '../../resources/icon.ico')
 const APP_ID = 'com.bonk.desktop'
 
 function createWindow(): void {
+  /*
+   * La ventana nace con esta talla, y de ahí en adelante manda quien la usa.
+   *
+   * Sin mínimos ni máximos. Los hubo —940 de ancho, 930 de alto y un tope de
+   * 1100 a lo ancho— y cada uno tenía su razón: más estrecha o más baja, las
+   * pantallas con tira de cifras se ven por una rendija; más ancha, la lista de
+   * movimientos estira sus columnas sin llenarlas. Pero entre los tres dejaban
+   * la ventana clavada en un solo tamaño: maximizar no ensanchaba y arrastrar
+   * el canto no hacía nada, que es peor que cualquiera de las dos cosas que
+   * evitaban. Lo que se vea mal a un tamaño se arregla en la hoja de estilos;
+   * atar la ventana no es arreglarlo, es esconderlo.
+   *
+   * Los 1100 × 930 se quedan como talla de partida —están medidos sobre la
+   * ventana tal y como se venía usando—, pero son eso, el tamaño con el que
+   * abre la primera vez.
+   */
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 930,
-    minWidth: 940,
-    /*
-     * Más baja tampoco: el alto de trabajo es el que él le tiene puesto, y por
-     * debajo de ahí las pantallas empiezan a partirse. La tira de cifras de
-     * Deudas o de Planes Ahorro se lleva un tercio de la ventana, y con menos
-     * alto lo que queda debajo —las fichas, que son de lo que va la pantalla—
-     * se ve por una rendija de dos filas.
-     *
-     * El número sale de medir la ventana tal y como la tenía abierta: 930 px
-     * lógicos de alto, marco incluido. Eran 620, que nadie había medido.
-     * A lo alto sigue creciendo lo que quiera, y maximizar ocupa la pantalla.
-     */
-    minHeight: 930,
-    /*
-     * Más ancha no: a lo largo la ventana crece lo que quiera, pero a lo ancho
-     * se queda en los 1100 con los que nace. Pasados de ahí, la lista de
-     * movimientos estira sus columnas sin llenarlas y las tarjetas de los
-     * informes quedan una al lado de la otra con medio metro de aire en medio.
-     * Maximizar sigue valiendo: ocupa todo el alto y respeta este ancho.
-     *
-     * Eran 1280 y sobraba sitio. El número sale de medir la ventana con el
-     * ancho que él le dejó puesta: 1.095 px lógicos. Se redondea a 1.100, que
-     * son cinco de diferencia y no se ven.
-     */
-    maxWidth: 1100,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#14161a' : '#f5f6f8',

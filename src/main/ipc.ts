@@ -322,20 +322,6 @@ export function registerIpc(
     paths.map((path) => attachments.addAttachment(transactionId, path))
   )
 
-  // — CSV —
-  handle('csv:export', async (filter: TransactionFilter) => {
-    const window = getWindow()
-    if (!window) throw new Error('No hay ventana activa')
-    const stamp = new Date().toISOString().slice(0, 10)
-    const result = await dialog.showSaveDialog(window, {
-      title: 'Exportar movimientos',
-      defaultPath: `movimientos-${stamp}.csv`,
-      filters: [{ name: 'CSV', extensions: ['csv'] }]
-    })
-    if (result.canceled || !result.filePath) return null
-    const count = csv.exportCsv(result.filePath, filter)
-    return { path: result.filePath, count }
-  })
   // — Informe en PDF —
   /*
    * Se imprime desde una ventana oculta.
@@ -351,9 +337,23 @@ export function registerIpc(
   handle('report:exportPdf', async (filter: TransactionFilter) => {
     const window = getWindow()
     if (!window) throw new Error('No hay ventana activa')
+
+    /*
+     * Los movimientos primero y el diálogo después.
+     *
+     * Sin fechas en el filtro —que es como lo pide «Exportar todo» de Ajustes—
+     * el periodo del documento son el primer y el último movimiento que hay, y
+     * eso no se sabe hasta haberlos leído. Antes se ponía el día de hoy en los
+     * dos, así que un informe con diez años dentro decía en la cabecera que era
+     * de hoy a hoy.
+     */
+    const filas = transactions.listTransactions({ ...filter, limit: 1_000_000 })
+    const sumas = transactions.totalsForFilter(filter)
     const hoy = new Date().toISOString().slice(0, 10)
-    const desde = filter.from ?? hoy
-    const hasta = filter.to ?? hoy
+    const fechas = filas.map((fila) => fila.date)
+    const desde = filter.from ?? (fechas.length ? fechas.reduce((a, b) => (a < b ? a : b)) : hoy)
+    const hasta = filter.to ?? (fechas.length ? fechas.reduce((a, b) => (a > b ? a : b)) : hoy)
+
     const result = await dialog.showSaveDialog(window, {
       title: 'Exportar el informe',
       defaultPath: `movimientos-${desde}_${hasta}.pdf`,
@@ -361,8 +361,6 @@ export function registerIpc(
     })
     if (result.canceled || !result.filePath) return null
 
-    const filas = transactions.listTransactions({ ...filter, limit: 1_000_000 })
-    const sumas = transactions.totalsForFilter(filter)
     const html = construirInformeHtml(filas, {
       from: desde,
       to: hasta,

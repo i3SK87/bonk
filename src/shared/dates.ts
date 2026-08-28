@@ -20,6 +20,22 @@ export function today(): string {
   return toISO(new Date())
 }
 
+/**
+ * Cuánto falta, en milisegundos, para que cambie el día.
+ *
+ * Lo usa el repaso de fondo para despertarse justo al dar las doce en vez de
+ * esperar a su vuelta de media hora. Se calcula sobre la hora local y no sobre
+ * un día de 24 h fijas: en la noche del cambio de hora el día dura 23 o 25, y
+ * sumar 86.400.000 dejaría la cita una hora corrida.
+ */
+export function msHastaElCambioDeDia(desde: Date = new Date()): number {
+  const medianoche = new Date(desde)
+  // Las 24:00 de hoy son las 00:00 de mañana, y `setHours` ya tiene en cuenta
+  // el huso y el cambio de hora.
+  medianoche.setHours(24, 0, 0, 0)
+  return medianoche.getTime() - desde.getTime()
+}
+
 export function addDays(iso: string, days: number): string {
   const d = parseISO(iso)
   d.setDate(d.getDate() + days)

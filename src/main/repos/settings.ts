@@ -38,7 +38,10 @@ export function getSettings(): Settings {
     closeToTray: map.get('closeToTray') === '1',
     remindersEnabled: map.get('remindersEnabled') === '1',
     balanceEn: (map.get('balanceEn') as Settings['balanceEn']) || 'porcentaje',
-    widgetVisible: map.get('widgetVisible') !== '0',
+    // Apagado salvo que se diga lo contrario: es una segunda ventana en el
+    // escritorio de alguien que todavía no ha dicho que la quiera. Las bases
+    // que ya existían se quedan con el suyo, que la migración se lo escribe.
+    widgetVisible: map.get('widgetVisible') === '1',
     // Lo guardado como `libre` es de cuando se arrastraba: vuelve a su esquina.
     widgetAnchor:
       !map.get('widgetAnchor') || map.get('widgetAnchor') === 'libre'

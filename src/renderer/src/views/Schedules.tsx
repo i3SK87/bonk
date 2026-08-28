@@ -655,11 +655,14 @@ export function ScheduleModal({
    * Apartar lo mismo cada mes para el mismo plan es una decisión que se toma una
    * vez: aquí se dice, y cada vez que la programada entra el dinero va a su sitio.
    */
-  const destino = accounts.find((item) => item.id === toAccountId)
+  // Igual que en la ficha del movimiento: recibe el destino de un traspaso o
+  // la cuenta del ingreso.
+  const cuentaQueRecibe = type === 'transfer' ? toAccountId : type === 'income' ? accountId : null
+  const destino = accounts.find((item) => item.id === cuentaQueRecibe)
   const planes = goals.filter(
-    (goal) => !goal.achievedAt && goal.accountId === toAccountId && goal.missing > 0,
+    (goal) => !goal.achievedAt && goal.accountId === cuentaQueRecibe && goal.missing > 0,
   )
-  const hucha = type === 'transfer' && destino?.type === 'savings' && planes.length > 0
+  const hucha = destino?.type === 'savings' && planes.length > 0
 
   useEffect(() => {
     api.goals
@@ -670,8 +673,8 @@ export function ScheduleModal({
 
   useEffect(() => {
     setGoalId((current) => (current && planes.some((goal) => goal.id === current) ? current : null))
-    // Basta con la lista: cambia cuando cambia el destino.
-  }, [toAccountId, goals])
+    // Basta con la lista: cambia cuando cambia la cuenta que recibe.
+  }, [cuentaQueRecibe, goals])
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency

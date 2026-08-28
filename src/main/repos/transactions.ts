@@ -600,9 +600,11 @@ export function saveTransaction(input: TransactionInput): TransactionView {
     // Solo un reembolso puede colgar de otro movimiento.
     const refundForId = input.type === 'refund' ? (input.refundForId ?? null) : null
 
-    // El dinero solo tiene dueño cuando se aparta a propósito: un traspaso que
-    // entra en una hucha. En cualquier otro movimiento el hito no pinta nada.
-    const goalId = isTransfer && toAccountId != null ? (input.goalId ?? null) : null
+    // El dinero solo tiene dueño cuando se aparta a propósito, y eso pasa
+    // cuando entra en la cuenta: un traspaso, por su destino, o un ingreso, por
+    // la suya. Lo que sale —un gasto, un reembolso— no aparta nada.
+    const entra = isTransfer ? toAccountId : input.type === 'income' ? input.accountId : null
+    const goalId = entra != null ? (input.goalId ?? null) : null
 
     // El reembolso hereda la categoría del gasto que devuelve: descuenta de ese
     // gasto, así que no puede contar en una categoría distinta de la suya.

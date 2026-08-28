@@ -4,7 +4,7 @@
  *
  *   npm run test
  */
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openDatabase, closeDatabase, getDb } from '../src/main/db'
@@ -20,10 +20,10 @@ import * as csv from '../src/main/repos/csv'
 import { construirInformeHtml, escaparHtml } from '../src/main/repos/informe'
 import type { DebtProgress } from '../src/shared/types'
 import { LENDERS, findLender } from '../src/shared/lenders'
-import { parseAmount, formatMoney, convert, toMinor } from '../src/shared/money'
+import { parseAmount, formatMoney, formatMoneyBreve, cabeEntero, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
-import { addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today } from '../src/shared/dates'
+import { addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
 import { rangoDe, comparacionDe, NOMBRES_DE_RANGO, type RangoId } from '../src/shared/rangos'
 
 let passed = 0
@@ -80,7 +80,7 @@ try {
    * vuelta bien.
    */
   const conWidget = settings.getSettings()
-  check('el widget sale puesto de fábrica', conWidget.widgetVisible)
+  check('el widget sale apagado de fábrica', conWidget.widgetVisible === false)
   equal('abajo a la derecha', conWidget.widgetAnchor, 'bottomRight')
   equal('casi opaco', conWidget.widgetOpacity, 0.92)
   check('y por detrás de las ventanas', conWidget.widgetOnTop === false)
@@ -169,6 +169,18 @@ try {
   equal('formatea negativos con el signo menos tipográfico', plain(formatMoney(-500, 'EUR')), '−5,00 €')
   equal('convierte con tipo de cambio', convert(10000, 'EUR', 'USD', { EUR: 1, USD: 1.1 }), 11000)
 
+  // La cifra de la barra lateral, que tiene 208 px y ni uno más.
+  equal('la cifra que cabe va entera', plain(formatMoneyBreve(1234567, 'EUR')), '12.345,67 €')
+  equal('la que no cabe se abrevia en miles', plain(formatMoneyBreve(12345678, 'EUR')), '123,46k €')
+  equal('y en millones cuando llega', plain(formatMoneyBreve(123456789, 'EUR')), '1,23M €')
+  equal('el signo va delante de todo', plain(formatMoneyBreve(-123456789, 'EUR')), '−1,23M €')
+  // Redondear no puede dejar un «1000,00k», que es un millón mal escrito.
+  equal('el redondeo sube de escalón', plain(formatMoneyBreve(99999999, 'EUR')), '1,00M €')
+  // Y si ni abreviada cabe, lo que se sueltan son los decimales.
+  equal('sin decimales antes que salirse', plain(formatMoneyBreve(12345678901234, 'EUR')), '123.457M €')
+  check('doce mil euros caben', cabeEntero(1234567, 'EUR'))
+  check('ciento veintitrés mil no', !cabeEntero(12345678, 'EUR'))
+
   section('Campos que solo admiten números')
   equal('descarta las letras sueltas', keepNumericChars('12a3b'), '123')
   equal('descarta un texto entero', keepNumericChars('hola'), '')
@@ -200,6 +212,17 @@ try {
   section('Fechas')
   equal('suma meses recortando al último día', addMonths('2026-01-31', 1), '2026-02-28')
   equal('el mes siguiente de una programada mensual', nextOccurrence('2026-08-18', 'monthly', 1), '2026-09-18')
+
+  /*
+   * Cuánto falta para que cambie el día, que es cuando el repaso de fondo
+   * tiene que despertarse: una cuota que vence hoy entra al dar las doce, no
+   * media hora después ni al reiniciar la aplicación.
+   */
+  equal('a un segundo de las doce falta un segundo', msHastaElCambioDeDia(new Date(2026, 7, 28, 23, 59, 59)), 1000)
+  equal('recién dado el día falta el día entero', msHastaElCambioDeDia(new Date(2026, 7, 29, 0, 0, 0)), 24 * 60 * 60 * 1000)
+  equal('a mediodía, media jornada', msHastaElCambioDeDia(new Date(2026, 7, 29, 12, 0, 0)), 12 * 60 * 60 * 1000)
+  // Nunca cero: un cero dejaría el temporizador disparándose en bucle.
+  check('siempre queda algo por delante', msHastaElCambioDeDia(new Date()) > 0)
   /*
    * Los periodos de las pastillas, que estaban escritos dos veces.
    *
@@ -1925,15 +1948,9 @@ try {
   )
   scheduled.deleteScheduled(mensual.id)
 
-  section('Exportación e importación CSV')
-  const exportPath = join(dir, 'export.csv')
-  const exported = csv.exportCsv(exportPath)
-  const content = readFileSync(exportPath, 'utf8')
-  check('exporta todos los movimientos', exported > 0, `exportó ${exported}`)
-  check('escribe el BOM que Excel necesita', content.charCodeAt(0) === 0xfeff)
-  check('separa por punto y coma', content.split('\n')[0].includes(';'))
-  check('conserva las tildes', content.includes('Categoría'))
-
+  // Solo de entrada: lo que sale de BONK sale en PDF, y de eso se encarga el
+  // informe de más abajo. Exportar a CSV se retiró con la 2.12.0.
+  section('Importación de CSV')
   const importPath = join(dir, 'import.csv')
   writeFileSync(
     importPath,
@@ -2247,6 +2264,20 @@ try {
     goalId: tarde.id
   })
   equal('un gasto no puede apartarse para un hito', transactions.getTransaction(gastoConHito.id)!.goalId, null)
+
+  // Un ingreso que cae derecho en la hucha sí: es la paga extra que entra sin
+  // pasar por el banco, y hasta ahora había que apuntarla y repartirla aparte.
+  const ingresoConHito = transactions.saveTransaction({
+    type: 'income',
+    date: day,
+    accountId: alcancia2.id,
+    amount: 400,
+    goalId: tarde.id
+  })
+  equal('un ingreso a la hucha sí se aparta', transactions.getTransaction(ingresoConHito.id)!.goalId, tarde.id)
+  equal('y sube la reserva del plan', goals.getGoal(tarde.id)!.reserved, 1400)
+  transactions.deleteTransactions([ingresoConHito.id])
+  equal('borrarlo la deja como estaba', goals.getGoal(tarde.id)!.reserved, 1000)
   // Y lo mismo, pero repartiendo a mano desde Ahorro: la reserva vive en el hito,
   // así que se puede recolocar sin tocar ningún movimiento.
   goals.setGoalReserves([

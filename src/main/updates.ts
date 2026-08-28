@@ -26,9 +26,6 @@ import type { EstadoActualizacion } from '@shared/types'
  * `electron-builder.yml` y además se comprueba la firma.
  */
 
-/** Cada cuánto se vuelve a mirar mientras la aplicación siga abierta. */
-const CADA = 24 * 60 * 60 * 1000
-
 /**
  * Cuánto se espera antes de la primera.
  *
@@ -73,7 +70,7 @@ function legible(error: unknown): string {
 }
 
 /**
- * Deja el actualizador escuchando y programa los repasos.
+ * Deja el actualizador escuchando y programa la comprobación del arranque.
  *
  * `notificar` es cómo llega cada cambio a la ventana. Se manda el estado entero
  * y no lo que ha cambiado: son cinco campos y así la interfaz nunca tiene que
@@ -138,17 +135,26 @@ export function iniciarActualizaciones(notificar: (estado: EstadoActualizacion) 
     registrarFallo('actualización', error)
     /*
      * Un fallo después de tener la descarga hecha no borra la descarga: puede
-     * ser el repaso del día siguiente quedándose sin red, y sería absurdo
-     * retirar el aviso de «lista para instalar» por eso.
+     * ser un «Buscar ahora» quedándose sin red, y sería absurdo retirar el aviso
+     * de «lista para instalar» por eso.
      */
     poner({ fase: estado.fase === 'lista' ? 'lista' : 'error', mensaje: legible(error) })
   })
 
+  /*
+   * Y una sola vez.
+   *
+   * Hubo un repaso cada veinticuatro horas, y sobraba: BONK se abre y se cierra
+   * a diario, así que la comprobación del arranque ya cae con esa frecuencia
+   * sola. El repaso solo llegaba a saltar en las copias que se quedan abiertas
+   * de un día para otro, y ahí lo que encuentra —un aviso que aparece de noche
+   * en la barra lateral— nadie lo está esperando. Quien quiera mirar sin cerrar
+   * la aplicación tiene «Buscar ahora» en Ajustes.
+   */
   setTimeout(repasar, PRIMERA)
-  setInterval(repasar, CADA)
 }
 
-/** El repaso automático, que sí obedece al ajuste. */
+/** El repaso del arranque, que sí obedece al ajuste. */
 function repasar(): void {
   if (!getSettings().buscarActualizaciones) return
   // Con una ya encontrada tampoco hay nada que volver a preguntar: el aviso
@@ -159,7 +165,8 @@ function repasar(): void {
 
 /**
  * Mirar ahora mismo. Es lo que hace el botón de Ajustes, y por eso no mira el
- * ajuste: apagarlo quita los repasos solos, no la posibilidad de mirar a mano.
+ * ajuste: apagarlo quita la comprobación del arranque, no la posibilidad de
+ * mirar a mano.
  */
 export async function buscarActualizacion(): Promise<EstadoActualizacion> {
   if (!app.isPackaged) {

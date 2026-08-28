@@ -116,7 +116,7 @@ const FALLBACK_SETTINGS: Settings = {
   closeToTray: false,
   remindersEnabled: false,
   balanceEn: 'porcentaje',
-  widgetVisible: true,
+  widgetVisible: false,
   widgetAnchor: 'bottomRight',
   widgetOpacity: 0.92,
   widgetOnTop: false,

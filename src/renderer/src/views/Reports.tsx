@@ -452,6 +452,12 @@ export function ReportsView(): ReactNode {
     })
   }
 
+  /** El tramo elegido escrito, cuando hay uno. Se pinta en dos sitios. */
+  const tramo =
+    period === 'custom' && customFrom && customTo
+      ? `${formatDate(customFrom)} – ${formatDate(customTo)}`
+      : null
+
   return (
     <>
       <div className="card">
@@ -487,28 +493,29 @@ export function ReportsView(): ReactNode {
 
             {/* El tramo elegido, escrito al lado del botón que lo pone. Es un
                 rótulo y no un campo: no hay nada que tocar ahí, para cambiarlo
-                se vuelve a pulsar «Personalizado». */}
-            {period === 'custom' && customFrom && customTo && (
-              <span className="small muted" style={{ marginLeft: 4, whiteSpace: 'nowrap' }}>
-                {formatDate(customFrom)} – {formatDate(customTo)}
-              </span>
+                se vuelve a pulsar «Personalizado».
+
+                Aquí mientras la cabecera quepa en un renglón; si se parte, se
+                enseña el gemelo que hay abajo, junto al botón de descargar. Lo
+                decide la hoja de estilos. */}
+            {tramo && (
+              <span className="small muted tramo-elegido con-el-periodo">{tramo}</span>
             )}
           </div>
           <div className="spacer" />
 
           {/*
-            Las fechas y el botón, en el mismo grupo.
-            Sueltos, al estrecharse la ventana bajaba solo el botón y las fechas
-            se quedaban arriba pegadas al canto derecho, con un hueco enorme por
-            medio: parecían de otra fila. Juntos bajan a la vez y siguen leyéndose
-            como lo que son, el periodo y qué hacer con él.
+            El tramo y el botón, en el mismo grupo.
+            Sueltos, al estrecharse la ventana bajaba solo el botón y el tramo se
+            quedaba arriba, con el hueco del botón por medio: parecía de otra
+            fila. Juntos bajan a la vez y siguen leyéndose como lo que son, el
+            periodo y qué hacer con él.
           */}
           <div className="row tight">
-            {/*
-              El periodo no se repite aquí: los campos de fecha que hay al lado
-              ya lo dicen, y con las mismas cifras. Era un rótulo que solo
-              confirmaba lo que ya se estaba leyendo.
-            */}
+            {/* El gemelo del rótulo de arriba: este es el que se ve cuando la
+                cabecera se parte, para que el tramo baje con su botón. */}
+            {tramo && <span className="small muted tramo-elegido con-el-boton">{tramo}</span>}
+
             <button
               className="btn small mini contorno"
               onClick={async () => {

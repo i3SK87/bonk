@@ -350,15 +350,20 @@ export function SettingsView(): ReactNode {
               Importar CSV
             </button>
 
+            {/* Todo lo apuntado, en un documento que se lee y se archiva. Era
+                un CSV, que es un archivo para meter en otro programa: para
+                mirarlo hacía falta abrir Excel, y de ahí no salía nada que no
+                estuviera ya en la propia aplicación. El informe de Informes ya
+                sabía imprimirse; esto es el mismo, sin recortar por fechas. */}
             <button
               className="btn"
               onClick={async () => {
-                const result = await run(() => api.csv.exportTransactions({}))
+                const result = await run(() => api.informe.exportPdf({}))
                 if (result) toast(`${result.count} movimientos exportados`, 'success')
               }}
             >
               <Icon name="download" size={15} />
-              Exportar todo a CSV
+              Exportar todo a PDF
             </button>
 
             <button

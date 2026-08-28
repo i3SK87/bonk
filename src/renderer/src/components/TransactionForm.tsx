@@ -195,22 +195,28 @@ export function TransactionForm({
    *
    * Solo entonces tiene sentido preguntar para qué es: meter dinero en la cuenta
    * corriente no es ahorrar, y una hucha sin planes no tiene a quién dárselo.
+   *
+   * En un traspaso, la cuenta que recibe es el destino. En un ingreso es la
+   * cuenta del movimiento: la paga extra que entra derecha en la hucha es
+   * ahorro igual que si hubiera pasado por el banco, y antes había que apuntar
+   * el ingreso y luego repartirlo a mano desde Ahorro.
    */
-  const destino = accounts.find((item) => item.id === toAccountId)
+  const cuentaQueRecibe = type === 'transfer' ? toAccountId : type === 'income' ? accountId : null
+  const destino = accounts.find((item) => item.id === cuentaQueRecibe)
   const planes = goals.filter(
-    (goal) => !goal.achievedAt && goal.accountId === toAccountId && goal.missing > 0
+    (goal) => !goal.achievedAt && goal.accountId === cuentaQueRecibe && goal.missing > 0
   )
-  const hucha = type === 'transfer' && destino?.type === 'savings' && planes.length > 0
+  const hucha = destino?.type === 'savings' && planes.length > 0
 
   useEffect(() => {
     api.goals.progress().then(setGoals).catch(() => undefined)
   }, [])
 
-  // Cambiar de destino deja huérfano el plan elegido: era de la otra hucha.
+  // Cambiar de cuenta deja huérfano el plan elegido: era de la otra hucha.
   useEffect(() => {
     setGoalId((current) => (current && planes.some((goal) => goal.id === current) ? current : null))
-    // Con la lista de planes basta: cambia cuando cambia el destino.
-  }, [toAccountId, goals])
+    // Con la lista de planes basta: cambia cuando cambia la cuenta que recibe.
+  }, [cuentaQueRecibe, goals])
 
 
   useEffect(() => {
@@ -363,11 +369,12 @@ export function TransactionForm({
           api.scheduled.save({
             type,
             accountId,
-            // Un traspaso programado necesita su destino, y si entra en una
-            // hucha, el plan al que va: lo mismo que el movimiento que acaba de
-            // guardarse, para que la copia mensual sea de verdad una copia.
+            // Un traspaso programado necesita su destino, y si el dinero entra
+            // en una hucha, el plan al que va: lo mismo que el movimiento que
+            // acaba de guardarse, para que la copia mensual sea de verdad una
+            // copia.
             toAccountId: type === 'transfer' ? toAccountId : null,
-            goalId: type === 'transfer' && hucha ? goalId : null,
+            goalId: hucha ? goalId : null,
             categoryId: type === 'transfer' ? null : categoryId,
             amount,
             note: note || null,

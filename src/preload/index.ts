@@ -141,9 +141,9 @@ const api = {
     /** Trae la ventana principal al frente. */
     open: () => call<void>('widget:open')
   },
+  // Solo de entrada: los extractos del banco llegan en CSV. Lo que sale de
+  // BONK sale en PDF, que es lo que se archiva y se lee.
   csv: {
-    exportTransactions: (filter: TransactionFilter = {}) =>
-      call<{ path: string; count: number } | null>('csv:export', filter),
     pick: () =>
       call<{
         path: string

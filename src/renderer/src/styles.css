@@ -2186,6 +2186,34 @@ p { margin: 0; }
 
 .table tbody tr:hover { background: var(--bg-sunken); }
 
+/* ---------- El tramo elegido en Informes ---------- */
+
+/*
+ * El mismo rótulo, escrito dos veces, y solo uno a la vista.
+ *
+ * En una ventana ancha va donde se elige, pegado a «Personalizado». Al
+ * estrecharse, la cabecera se parte en dos renglones y el botón de descargar
+ * baja solo: el rótulo se quedaba arriba, con el hueco del botón por medio,
+ * pareciendo de otra fila. Abajo va con él.
+ *
+ * Cambiar de sitio un nodo entre dos padres no lo hace el CSS, así que están
+ * los dos puestos y se enseña el que toca. Los 874 px son el ancho de `.main`
+ * donde la cabecera deja de caber en un renglón, medido: a 875 entra y a 874 se
+ * parte. Como el rótulo mide lo mismo esté a un lado o al otro, la cabecera se
+ * parte en el mismo punto con cualquiera de los dos.
+ */
+.tramo-elegido {
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.tramo-elegido.con-el-boton { display: none; }
+
+@container (max-width: 874px) {
+  .tramo-elegido.con-el-periodo { display: none; }
+  .tramo-elegido.con-el-boton { display: inline; }
+}
+
 /* ---------- Tabla de reparto por categorías ---------- */
 
 /* Sin rayas entre categorías: cada fila ya lleva su barra de color debajo, que
@@ -3511,11 +3539,20 @@ button.list-row:focus-visible {
 /* Y mientras su menú esté abierto, por lo mismo que las etiquetas de las filas
    normales: al irse el ratón hacia las opciones se perdía el hover y la fila
    se apagaba justo cuando hacía falta saber sobre cuál se pulsó. */
-.list-row.finished:hover,
-.list-row.paused:hover,
+/* Solo se encienden las que se pueden pulsar: encender una fila que no responde
+   a nada es prometer algo que no va a pasar. */
+.list-row.finished.clickable:hover,
+.list-row.paused.clickable:hover,
 .list-row.finished.marcada,
 .list-row.paused.marcada {
   opacity: 1;
+}
+
+/* La que ni se pulsa ni se enciende. Se lee y ya. El cursor lo dice antes de
+   intentarlo, y sin puntero no hay clic derecho ni selección que valga. */
+.list-row.inerte {
+  cursor: default;
+  pointer-events: none;
 }
 
 .list-row.finished .amount,

@@ -1,19 +1,11 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync } from 'node:fs'
 import { getDb, transaction as atomic } from '../db'
-import { parseAmount, toMajor } from '@shared/money'
-import { listTransactions } from './transactions'
+import { parseAmount } from '@shared/money'
 import { listAccounts, saveAccount } from './accounts'
 import { listCategories, saveCategory } from './categories'
 import { getSettings } from './settings'
 import { saveTransaction } from './transactions'
-import type { Account, Category, CategoryKind, TransactionFilter, TxType } from '@shared/types'
-
-const TYPE_LABEL: Record<TxType, string> = {
-  refund: 'Reembolso',
-  expense: 'Gasto',
-  income: 'Ingreso',
-  transfer: 'Traspaso'
-}
+import type { Account, Category, CategoryKind, TxType } from '@shared/types'
 
 /** Divide una línea respetando las comillas dobles y los saltos escapados. */
 function splitCsvLine(line: string, delimiter: string): string[] {
@@ -45,41 +37,6 @@ function splitCsvLine(line: string, delimiter: string): string[] {
   }
   fields.push(current)
   return fields.map((field) => field.trim())
-}
-
-function escapeCsv(value: string | null | undefined): string {
-  const text = value == null ? '' : String(value)
-  return /[";\n\r,]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
-}
-
-/**
- * Exporta a CSV separado por punto y coma y con BOM, que es lo que Excel
- * en español abre sin romper las tildes ni juntarlo todo en una columna.
- */
-export function exportCsv(targetPath: string, filter: TransactionFilter = {}): number {
-  const rows = listTransactions({ ...filter, limit: 1_000_000 })
-  const header = ['Fecha', 'Hora', 'Tipo', 'Cuenta', 'Cuenta destino', 'Categoría', 'Importe', 'Notas', 'Lugar']
-
-  const lines = [header.join(';')]
-  for (const tx of rows) {
-    lines.push(
-      [
-        tx.date,
-        tx.time ?? '',
-        TYPE_LABEL[tx.type],
-        escapeCsv(tx.accountName),
-        escapeCsv(tx.toAccountName),
-        escapeCsv(tx.categoryName),
-        // Con coma decimal para que Excel lo lea como número y no como texto.
-        String(toMajor(tx.amount, tx.accountCurrency)).replace('.', ','),
-        escapeCsv(tx.note?.replace(/\r?\n/g, ' ')),
-        escapeCsv(tx.place)
-      ].join(';')
-    )
-  }
-
-  writeFileSync(targetPath, '﻿' + lines.join('\r\n'), 'utf8')
-  return rows.length
 }
 
 const HEADER_ALIASES: Record<string, string> = {

@@ -21,7 +21,7 @@ import { SchedulesView } from './views/Schedules'
 import { DebtsView } from './views/Debts'
 import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
-import { formatMoney } from '@shared/money'
+import { formatMoney, formatMoneyBreve, cabeEntero } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { useActualizacion, hayNovedad } from './lib/actualizacion'
 import type { CategoryTotal, Settlement, GoalReached } from '@shared/types'
@@ -232,6 +232,8 @@ export function App(): ReactNode {
    * que el gasto que acabas de apuntar ha llegado hasta el total.
    */
   const contado = useContador(netWorth, revision)
+  /** Si el patrimonio cabe entero donde va, o hay que abreviarlo. */
+  const entero = cabeEntero(netWorth, settings.baseCurrency)
   const actualizacion = useActualizacion()
   /*
    * En cuanto acaba de bajarse, se pregunta por el reinicio sin esperar a que
@@ -337,8 +339,17 @@ export function App(): ReactNode {
           <div className="sidebar-footer">
             <div className="sidebar-networth">
               Patrimonio total
-              <strong className={netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : ''}>
-                {formatMoney(contado, settings.baseCurrency)}
+              {/* Abreviada cuando la cifra entera no cabe en la barra, y con el
+                  valor exacto a un palmo del ratón. Lo decide el patrimonio de
+                  verdad y no el del conteo: si lo decidiera la cifra que corre,
+                  cruzar los cien mil la cambiaría de forma a media cuenta. */}
+              <strong
+                className={netWorth > 0 ? 'positive' : netWorth < 0 ? 'negative' : ''}
+                title={entero ? undefined : formatMoney(netWorth, settings.baseCurrency)}
+              >
+                {entero
+                  ? formatMoney(contado, settings.baseCurrency)
+                  : formatMoneyBreve(contado, settings.baseCurrency)}
               </strong>
             </div>
           </div>

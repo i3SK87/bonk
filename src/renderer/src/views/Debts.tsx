@@ -126,7 +126,7 @@ export function DebtsView(): ReactNode {
   }
 
   const abiertas = debts.filter((debt) => !debt.settled)
-  const pagadas = debts.filter((debt) => debt.settled)
+  const finalizadas = debts.filter((debt) => debt.settled)
 
   // Lo que queda por pagar de todo lo que debes, que es la cifra que se busca al
   // entrar. Las que no tienen fecha de fin no suman: no se sabe cuánto queda.
@@ -205,24 +205,22 @@ export function DebtsView(): ReactNode {
         )}
       </div>
 
-      {pagadas.length > 0 && (
+      {finalizadas.length > 0 && (
         <div className="card flush">
           <div className="card-header">
-            <h2>Pagadas</h2>
+            <h2>Finalizadas</h2>
             <span className="small muted">Ya no sale nada de tu cuenta por ellas.</span>
           </div>
           <div>
-            {pagadas.map((debt) => (
-              <div
-                key={debt.scheduledId}
-                className={`list-row finished clickable${menu?.debt.scheduledId === debt.scheduledId ? ' marcada' : ''}`}
-                role="button"
-                onClick={() => setAdjusting(debt)}
-                onContextMenu={(event) => {
-                  event.preventDefault()
-                  setMenu({ debt, x: event.clientX, y: event.clientY })
-                }}
-              >
+            {finalizadas.map((debt) => (
+              /*
+                Una deuda finalizada no se toca: ni se pulsa, ni se enciende al
+                pasar por encima, ni tiene menú. Está ahí de recuerdo —cuánto
+                costó y cuándo se acabó—, y lo que se le podía hacer desde aquí
+                —cambiarle la categoría o borrarla— no encaja en algo terminado.
+                Si hace falta, sigue estando en Programados ▸ Finalizadas.
+              */
+              <div key={debt.scheduledId} className="list-row finished inerte">
                 <Avatar
                   icon={debt.categoryIcon ?? 'debt'}
                   color={debt.categoryColor ?? '#8E8E93'}
@@ -270,7 +268,7 @@ export function DebtsView(): ReactNode {
             <>
               Se apunta un pago de{' '}
               <strong>{formatMoney(saldando.left ?? 0, settings.baseCurrency)}</strong> en{' '}
-              {saldando.accountName}, con fecha de hoy, y «{saldando.title}» pasa a pagadas.
+              {saldando.accountName}, con fecha de hoy, y «{saldando.title}» pasa a finalizadas.
               {saldando.leftCount != null && saldando.leftCount > 1 && (
                 <>
                   {' '}Las {saldando.leftCount} cuotas que quedaban dejan de generarse.
@@ -290,7 +288,7 @@ export function DebtsView(): ReactNode {
         />
       )}
 
-      {/* Eliminar no es saldar. Saldar cierra la deuda y la manda a pagadas,
+      {/* Eliminar no es saldar. Saldar cierra la deuda y la manda a finalizadas,
           que es donde queda constancia de que se pagó; eliminar la borra del
           mapa, con su programación, y no deja rastro en ninguna de las dos
           listas. Es para la deuda que nunca debió apuntarse, no para la que se
@@ -304,7 +302,7 @@ export function DebtsView(): ReactNode {
           message={
             <>
               Se borran «{borrando.title}» y su movimiento programado, así que dejan de
-              generarse cuotas. No aparecerá entre las pagadas.
+              generarse cuotas. No aparecerá entre las finalizadas.
               {borrando.paidCount > 0 &&
                 ' Los pagos ya apuntados se conservan como movimientos normales.'}
             </>
@@ -382,7 +380,7 @@ function DebtCard({
         onMenu(event.clientX, event.clientY)
       }}
     >
-      {/* Con el icono de su categoría delante, como las pagadas de abajo. Lo que
+      {/* Con el icono de su categoría delante, como las finalizadas de abajo. Lo que
           llevó siempre era un distintivo de deuda, y ese sí sobraba: en una
           pantalla que solo tiene deudas no distinguía ninguna de otra. El de la
           categoría sí dice algo —el portátil de Tecnología, el curso de

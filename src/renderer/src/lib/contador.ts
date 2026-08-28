@@ -47,11 +47,18 @@ function sinAnimaciones(): boolean {
  * Que no llegan en el mismo pintado que la revisión; ver `armadoHasta`.
  */
 export function useContador(destino: number, disparo: unknown): number {
-  const [valor, setValor] = useState(destino)
-  // Lo que hay puesto en pantalla ahora mismo. Es de donde arranca el siguiente
-  // conteo: si entran dos movimientos seguidos, el segundo sigue desde donde
-  // iba el primero y no da el salto atrás al valor con el que empezó.
+  /*
+   * La cifra vive en una referencia y no en un estado.
+   *
+   * Porque tiene que poder ponerse en el mismo pintado en que llega la nueva, y
+   * un estado solo cambia en el siguiente. Cuando eso pasaba un cuadro tarde, el
+   * widget enseñaba un instante el saldo de la cuenta anterior con el nombre de
+   * la nueva al lado —y la ventana, que se mide sola, se ajustaba a esa tarjeta
+   * a medio cambiar y luego pegaba un salto—. El estado se queda solo para
+   * pedir que se vuelva a pintar mientras corre el conteo.
+   */
   const mostrado = useRef(destino)
+  const [, repintar] = useState(0)
   const ultimoDisparo = useRef(disparo)
   /*
    * Hasta cuándo vale el disparo, y por qué hay un plazo de por medio.
@@ -70,26 +77,34 @@ export function useContador(destino: number, disparo: unknown): number {
    * pulsar nada.
    */
   const armadoHasta = useRef(0)
+  /** Hay un conteo corriendo: mientras dure, la cifra la pone él. */
+  const contando = useRef(false)
+
+  // El disparo se arma en el pintado en que llega. Antes se armaba en el efecto,
+  // y para entonces la decisión de abajo ya se había tomado sin él.
+  if (disparo !== ultimoDisparo.current) {
+    ultimoDisparo.current = disparo
+    armadoHasta.current = performance.now() + 1200
+  }
+
+  // Y la cifra que no va a contar se pone ya, aquí mismo, sin esperar al efecto.
+  if (!contando.current && destino !== mostrado.current) {
+    const armado = performance.now() < armadoHasta.current && !sinAnimaciones()
+    if (!armado) mostrado.current = destino
+  }
 
   useEffect(() => {
-    if (disparo !== ultimoDisparo.current) {
-      ultimoDisparo.current = disparo
-      armadoHasta.current = performance.now() + 1200
-    }
-
     const origen = mostrado.current
+    // Puesta de golpe en el pintado: no hay nada que recorrer.
     if (destino === origen) return
+
+    // El disparo se gasta al usarlo: lo que venga después ya no cuenta por él.
+    armadoHasta.current = 0
+    contando.current = true
 
     const poner = (cifra: number): void => {
       mostrado.current = cifra
-      setValor(cifra)
-    }
-
-    const armado = performance.now() < armadoHasta.current
-    armadoHasta.current = 0
-    if (!armado || sinAnimaciones()) {
-      poner(destino)
-      return
+      repintar((vuelta) => vuelta + 1)
     }
 
     const arranque = performance.now()
@@ -99,10 +114,14 @@ export function useContador(destino: number, disparo: unknown): number {
       // un céntimo de redondeo en un saldo es un céntimo que no cuadra.
       poner(t === 1 ? destino : Math.round(origen + (destino - origen) * frenada(t)))
       if (t < 1) cuadro = requestAnimationFrame(paso)
+      else contando.current = false
     })
 
-    return () => cancelAnimationFrame(cuadro)
+    return () => {
+      cancelAnimationFrame(cuadro)
+      contando.current = false
+    }
   }, [destino, disparo])
 
-  return valor
+  return mostrado.current
 }

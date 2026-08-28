@@ -39,6 +39,17 @@ function Widget(): React.ReactNode {
   /** La última medida que se le mandó a la ventana, y el encogimiento en cola. */
   const enviado = useRef({ alto: 0, ancho: 0 })
   const pendiente = useRef<number | null>(null)
+  /**
+   * La primera medida después de cambiar lo que se enseña no espera a nadie.
+   *
+   * El respiro de abajo es para el conteo de la cifra, que cambia de ancho
+   * varias veces por segundo. Pero al cambiar de cuentas no hay conteo: la
+   * tarjeta pasa de una forma a otra de golpe, y aplazar el encogimiento dejaba
+   * la ventana grande un cuarto de segundo con la tarjeta pequeña dentro. Como
+   * va anclada a una esquina, la tarjeta se veía descolocada y luego pegaba un
+   * salto hasta su sitio. Eso es lo que hacía el widget al cambiar de cuenta.
+   */
+  const inmediato = useRef(true)
 
   const cargar = useCallback(async () => {
     try {
@@ -138,11 +149,17 @@ function Widget(): React.ReactNode {
        * con eso todo el conteo cabe en un solo respiro. Al terminar se manda la
        * medida buena y ya está.
        */
-      if (alto > enviado.current.alto || ancho > enviado.current.ancho) mandar()
+      if (inmediato.current) {
+        inmediato.current = false
+        if (alto !== enviado.current.alto || ancho !== enviado.current.ancho) mandar()
+      } else if (alto > enviado.current.alto || ancho > enviado.current.ancho) mandar()
       else if (alto !== enviado.current.alto || ancho !== enviado.current.ancho) {
         pendiente.current = window.setTimeout(mandar, 260)
       }
     }
+    // Lo que ha cambiado son los ajustes o las cuentas, no la cifra corriendo:
+    // esta medida va tal cual, sin el respiro.
+    inmediato.current = true
     medir()
     const observador = new ResizeObserver(medir)
     observador.observe(nodo)

@@ -113,11 +113,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /**
    * La cuenta principal viene elegida: es la que se mira al abrir, y con ella
    * la cifra grande dice lo que hay ahí y no el total repartido entre huchas.
-   * Se quita pulsándola, y entonces vuelve el patrimonio de todas.
    *
    * Solo la primera vez: `null` es que nadie ha tocado el filtro todavía. Una
-   * lista vacía es «ninguna cuenta», y eso sí se respeta —si no, volver de otra
-   * pestaña te devolvería la principal que acababas de quitar—.
+   * lista vacía es «ninguna cuenta» —lo que deja «Limpiar»— y eso sí se
+   * respeta: si no, volver de otra pestaña la desharía.
    */
   const accountIds = filtros.accountIds ?? (accounts[0] ? [accounts[0].id] : [])
   const setAccountIds = (value: number[]): void => ponFiltros({ accountIds: value })
@@ -130,7 +129,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    *
    * El formulario lo abre la cabecera de la ventana, que no sabe nada de este
    * filtro: mirando la hucha, el gasto se guardaba en la cuenta principal y solo
-   * te enterabas después. Con varias elegidas no se supone nada.
+   * te enterabas después. Sin ninguna elegida no se supone nada.
    */
   useEffect(() => {
     setFocusedAccountId(accountIds.length === 1 ? accountIds[0] : null)
@@ -627,6 +626,21 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }
 
   /**
+   * Elegir una cuenta es dejar esa y ninguna más.
+   *
+   * Antes se acumulaban y la lista enseñaba la suma de varias, con una cifra
+   * grande que era un patrimonio parcial: ni el de todo ni el de nada. Se mira
+   * una cuenta cada vez, así que pulsar otra cambia de cuenta en vez de
+   * añadirla, y volver a pulsar la que ya está puesta no hace nada —quedarse
+   * sin ninguna era el estado que menos se busca y el más fácil de alcanzar por
+   * error—. Vaciarlas del todo sigue estando en «Limpiar».
+   */
+  function elegirCuenta(id: number): void {
+    if (accountIds.length === 1 && accountIds[0] === id) return
+    setAccountIds([id])
+  }
+
+  /**
    * Lo que un movimiento le hace al día que se está mirando.
    *
    * Sin cuenta elegida es su efecto sobre el patrimonio, y ahí un traspaso vale
@@ -894,9 +908,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   <button
                     key={account.id}
                     className={`account-chip${active ? ' active' : ''}`}
-                    // Pulsar una cuenta filtra la lista por ella; volver a pulsar lo deshace.
-                    onClick={() => toggle(accountIds, account.id, setAccountIds)}
-                    title={active ? `Quitar el filtro de ${account.name}` : `Ver solo ${account.name}`}
+                    // Pulsar una cuenta deja la lista en ella sola.
+                    onClick={() => elegirCuenta(account.id)}
+                    title={active ? `Estás viendo ${account.name}` : `Ver solo ${account.name}`}
                   >
                     <Avatar icon={account.icon} color={account.color} size="small" />
                     <span className="chip-text">
@@ -1097,7 +1111,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   <button
                     key={account.id}
                     className={`btn small${accountIds.includes(account.id) ? ' primary' : ''}`}
-                    onClick={() => toggle(accountIds, account.id, setAccountIds)}
+                    onClick={() => elegirCuenta(account.id)}
                   >
                     {account.name}
                   </button>
@@ -1162,7 +1176,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             <EmptyState
               icon="wallet"
               title="Ninguna cuenta elegida"
-              message="Elige una cuenta ahí arriba para ver sus movimientos. Pulsando otra vez la quitas, y puedes tener varias a la vez."
+              message="Elige una cuenta ahí arriba para ver sus movimientos. Se mira una cada vez: pulsando otra, cambias a esa."
             />
           ) : loading && nothingToShow ? (
             <Loading />

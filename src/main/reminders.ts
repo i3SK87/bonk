@@ -1,7 +1,7 @@
-import { Notification, nativeImage } from 'electron'
+import { Notification, nativeImage, powerMonitor } from 'electron'
 import { existsSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { addDays, today } from '@shared/dates'
+import { addDays, today, msHastaElCambioDeDia } from '@shared/dates'
 import { formatMoney } from '@shared/money'
 import {
   pendingReminders,
@@ -277,6 +277,37 @@ function monthOf(date: string | null): string {
 const FIRST_CHECK_MS = 6000
 
 /**
+ * Un respiro después de medianoche antes de mirar.
+ *
+ * Las programadas van por fecha, sin hora, así que lo que decide si una cuota
+ * ha vencido es qué día dice el sistema. Despertando clavado a las 00:00:00 el
+ * temporizador puede adelantarse unos milisegundos y encontrarse todavía en el
+ * día de ayer: la cuota no vencería y habría que esperar a la vuelta siguiente.
+ * Dos segundos lo cubren de sobra.
+ */
+const PROPINA_MEDIANOCHE = 2000
+
+/**
+ * Llama a `hacer` en cuanto cambie el día, y se vuelve a armar para el
+ * siguiente.
+ *
+ * El repaso de cada media hora ya registraba lo vencido, pero a su ritmo: una
+ * cuota que vence hoy podía tardar media hora en entrar desde que el reloj daba
+ * las doce, y quien está delante mirando su deuda a las 00:01 solo ve que no ha
+ * pasado nada. Con esto entra sola, al momento.
+ *
+ * Se vuelve a calcular la espera en cada vuelta en lugar de dejar puesto un
+ * intervalo de veinticuatro horas: así el cambio de hora, un reloj que se
+ * ajusta o el equipo durmiendo un rato no van desplazando la cita.
+ */
+function alCambiarElDia(hacer: () => void): void {
+  setTimeout(() => {
+    hacer()
+    alCambiarElDia(hacer)
+  }, msHastaElCambioDeDia() + PROPINA_MEDIANOCHE)
+}
+
+/**
  * El repaso periódico: registra lo que ha vencido y avisa de lo que vence
  * mañana.
  *
@@ -377,6 +408,18 @@ export function startBackgroundWork(
   // Sin `unref`: es el único motivo por el que la aplicación se queda en la
   // bandeja, así que este temporizador sí debe mantenerla despierta.
   setInterval(sweep, CHECK_EVERY_MS)
+  // Y en el momento en que cambia el día, que es cuando vence lo que vence.
+  alCambiarElDia(sweep)
+
+  /*
+   * Al volver de suspender, también.
+   *
+   * Un temporizador puesto para dentro de ocho horas no corre mientras el
+   * equipo duerme: al despertar salta tarde. Si se ha dormido antes de las doce
+   * y se despierta después, la cita de medianoche llega con retraso y hasta
+   * entonces la cuota sigue sin entrar. Esto lo cubre: al levantarse, se repasa.
+   */
+  powerMonitor.on('resume', sweep)
 }
 
 /** Aviso de prueba, para comprobar que Windows los deja pasar. */

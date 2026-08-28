@@ -664,5 +664,21 @@ export const MIGRATIONS: string[] = [
 
   DROP TABLE scheduled;
   ALTER TABLE scheduled_new RENAME TO scheduled;
+  `,
+
+  // v28 — el widget deja de venir puesto de fábrica
+  //
+  // Hasta aquí, no haber dicho nada significaba «enséñalo», así que la mayoría
+  // de las bases no tienen escrito ese ajuste. Cambiando el valor de partida a
+  // «no», esas bases se quedarían de pronto sin widget sin que nadie lo haya
+  // apagado. Así que se les escribe el «sí» que tenían de hecho.
+  //
+  // Una base recién creada no entra: sus ajustes se siembran después de migrar,
+  // así que aquí la tabla está vacía y es justo la que tiene que salir apagada.
+  `
+  INSERT INTO settings (key, value)
+  SELECT 'widgetVisible', '1'
+   WHERE EXISTS (SELECT 1 FROM settings)
+     AND NOT EXISTS (SELECT 1 FROM settings WHERE key = 'widgetVisible');
   `
 ]

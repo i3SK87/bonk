@@ -206,8 +206,10 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
   const toAccountId = isTransfer ? (input.toAccountId ?? null) : null
   const categoryId = isTransfer ? null : (input.categoryId ?? null)
   // Solo una devolución puede colgar de otra programada; y nunca de sí misma.
-  // Solo un traspaso que entra en una hucha puede ir a un plan.
-  const goalId = input.type === 'transfer' && toAccountId != null ? (input.goalId ?? null) : null
+  // Solo el dinero que entra en una cuenta puede ir a un plan: el destino de
+  // un traspaso o la cuenta de un ingreso. Igual que en los movimientos.
+  const entra = isTransfer ? toAccountId : input.type === 'income' ? input.accountId : null
+  const goalId = entra != null ? (input.goalId ?? null) : null
   const refundForScheduledId =
     input.type === 'refund' && input.refundForScheduledId !== input.id
       ? (input.refundForScheduledId ?? null)
