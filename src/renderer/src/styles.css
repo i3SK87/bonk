@@ -2565,22 +2565,29 @@ textarea::placeholder {
 }
 
 /*
- * Las casillas de un formulario, a la par y centradas.
+ * Las casillas de un formulario, repartidas a lo ancho.
  *
  * Son respuestas de sí o no: en fila india estiraban la ficha media pantalla y
  * de dos en dos se leen de un vistazo. Iban en una rejilla de columnas iguales,
  * y como los rótulos son de largos distintos —«Adjuntar facturas» al lado de
  * «Desglose en la pestaña Informes»— el par acababa arrimado a la izquierda con
- * un palmo de aire muerto a la derecha. En fila centrada el bloque queda a
- * plomo con el resto de la ficha, y lo que no cabe se va al renglón siguiente,
- * también centrado.
+ * un palmo de aire muerto a la derecha.
+ *
+ * Centradas tampoco: en cuanto las casillas llevan su renglón de ayuda dejan de
+ * caber a la par, y al bajar cada una a su propio renglón se quedaban a media
+ * agua, descolgadas del margen del formulario y sin un canto común entre ellas.
+ * Repartidas, el par ocupa el ancho de punta a punta —ahí se va el aire muerto—
+ * y lo que no cabe cae al margen izquierdo, en línea con los campos de arriba.
  */
 .casillas {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 26px;
+  justify-content: space-between;
+  /* Más aire entre renglones que entre columnas: apiladas, cada casilla arrastra
+     su renglón de ayuda, y con 6 px las dos se leían como un solo párrafo. */
+  gap: 12px 26px;
   align-items: start;
+  align-content: start;
 }
 
 /* Las categorías van en cuadrícula, no en lista: cada una lleva su recuadro. */
