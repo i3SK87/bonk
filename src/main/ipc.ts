@@ -73,6 +73,20 @@ const SOLO_LEEN = new Set([
   'widget:open'
 ])
 
+/**
+ * Los que escriben pero no mueven dinero.
+ *
+ * `data:changed` no quiere decir «algo ha cambiado» sino «se ha movido dinero»:
+ * el widget lo usa para contar la cifra desde la que tenía hasta la nueva.
+ * Guardar un ajuste no mueve nada —marcar otra cuenta en las opciones del
+ * widget solo cambia qué se enseña—, así que ese aviso mentía y la cifra se
+ * ponía a contar por un cambio que no era de dinero.
+ *
+ * Enterarse sí tiene que enterarse, y de eso ya se encarga `settings:changed`,
+ * que el widget atiende recargando en silencio.
+ */
+const AVISAN_APARTE = new Set(['settings:update'])
+
 /** El aviso al widget se agrupa: guardar algo dispara varias llamadas seguidas. */
 let avisoPendiente: NodeJS.Timeout | null = null
 function avisarAlWidget(): void {
@@ -98,7 +112,7 @@ function handle(channel: string, fn: (...args: never[]) => unknown): void {
        * solo sabe lo que se le cuenta, y sin esto seguía enseñando el saldo de
        * antes hasta el siguiente repaso de fondo, media hora después.
        */
-      if (!SOLO_LEEN.has(channel)) avisarAlWidget()
+      if (!SOLO_LEEN.has(channel) && !AVISAN_APARTE.has(channel)) avisarAlWidget()
       return { ok: true, data }
     } catch (error) {
       return { ok: false, error: (error as Error).message ?? 'Error inesperado' }

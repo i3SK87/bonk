@@ -57,8 +57,17 @@ function Widget(): React.ReactNode {
       setRevision((valor) => valor + 1)
       cargar()
     })
-    const offAjustes = api.events.on('settings:changed', (detail) => {
-      setSettings(detail as Settings)
+    /*
+     * Un ajuste también puede cambiar la cifra, y sin que se haya movido nada:
+     * marcar otra cuenta cambia de patrimonio a saldo, y la divisa base
+     * reconvierte todos los saldos. Así que se recarga entero —los ajustes y
+     * las cuentas, que el aviso no las trae—, pero sin subir la revisión: eso
+     * es lo que dispara el conteo, y aquí la cifra tiene que ponerse de golpe.
+     * Contar del saldo de una cuenta al de otra no dice nada; solo parece que
+     * ha entrado dinero.
+     */
+    const offAjustes = api.events.on('settings:changed', () => {
+      cargar()
     })
     return () => {
       off()
