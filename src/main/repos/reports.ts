@@ -68,7 +68,9 @@ export function categoryTotals(from: string, to: string, kind: CategoryKind = 'e
   const grandTotal = list.reduce((sum, item) => sum + item.total, 0)
   for (const item of list) item.percent = grandTotal > 0 ? (item.total / grandTotal) * 100 : 0
 
-  const byNote = noteTotals(from, to, types, rates, base)
+  // Sin los reembolsos: el desglose enseña en qué se ha ido el dinero, y una
+  // devolución no es un sitio donde se haya ido nada. Ver `noteTotals`.
+  const byNote = noteTotals(from, to, types.filter((item) => item !== 'refund'), rates, base)
   for (const item of list) {
     if (item.categoryId === null) continue
     item.notes = byNote.get(item.categoryId) ?? []
@@ -86,6 +88,13 @@ function noteKey(note: string): string {
  * `categoryTotals` porque una categoría fija (el alquiler es el alquiler) no
  * tiene nada que abrir, y sacarlo todo en la misma consulta obligaría a filtrar
  * después lo que la base ya sabe descartar.
+ *
+ * Aquí solo entran los gastos. Un reembolso sin nota se abría su propio cajón
+ * —«Sin nota», en rojo y con cero movimientos— y lo que se veía al desplegar
+ * Compras era la devolución, no las compras. Cada nota dice lo que costó lo que
+ * compraste; lo que te devolvieron ya está descontado arriba, en el total de la
+ * categoría, así que el desglose no tiene por qué sumarlo: puede quedar por
+ * encima del total de su categoría, y eso es lo pedido.
  */
 function noteTotals(
   from: string,
@@ -99,8 +108,8 @@ function noteTotals(
       `SELECT t.category_id AS categoryId,
               COALESCE(NULLIF(TRIM(t.note), ''), '') AS noteText,
               a.currency     AS currency,
-              SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS total,
-              SUM(CASE WHEN t.type = 'refund' THEN 0 ELSE 1 END) AS count
+              SUM(t.amount)  AS total,
+              COUNT(*)       AS count
          FROM transactions t
          JOIN accounts a  ON a.id = t.account_id
          JOIN categories c ON c.id = t.category_id

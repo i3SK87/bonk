@@ -501,6 +501,8 @@ try {
   // Misma nota escrita de otra forma: debe caer en el mismo grupo.
   debtTx(2500, '  pc  ')
   debtTx(3000, 'Kindle')
+  // Dos devoluciones: una con la nota de su gasto y otra sin nota ninguna.
+  // Ninguna de las dos pinta nada en el desglose, que cuenta en qué se gastó.
   transactions.saveTransaction({
     type: 'refund',
     date: day,
@@ -509,15 +511,40 @@ try {
     amount: 1000,
     note: 'Kindle'
   })
+  transactions.saveTransaction({
+    type: 'refund',
+    date: day,
+    accountId: bank.id,
+    categoryId: debt.id,
+    amount: 500,
+    note: null
+  })
 
   const withNotes = reports.categoryTotals(monthStart, day, 'expense')
   const debtRow = withNotes.find((row) => row.categoryId === debt.id)!
   equal('el desglose agrupa las notas', debtRow.notes.length, 3)
   equal('la nota mayor encabeza el desglose', debtRow.notes[0].note, '4Geeks')
   equal('suma las variantes de la misma nota', debtRow.notes[1].total, 7500)
-  equal('el reembolso rebaja su nota', debtRow.notes[2].total, 2000)
-  equal('los desgloses cuadran con el total de la categoría', debtRow.notes.reduce((sum, item) => sum + item.total, 0), debtRow.total)
+  equal('el reembolso ya no rebaja su nota', debtRow.notes[2].total, 3000)
+  check(
+    'el reembolso sin nota no abre su propio cajón',
+    debtRow.notes.every((item) => item.note !== 'Sin nota')
+  )
+  check(
+    'ninguna nota del desglose sale en negativo',
+    debtRow.notes.every((item) => item.total > 0)
+  )
+  equal('el total de la categoría sigue yendo neto', debtRow.total, 10000 + 7500 + 3000 - 1500)
+  equal(
+    'y el desglose suma lo gastado, sin las devoluciones',
+    debtRow.notes.reduce((sum, item) => sum + item.total, 0),
+    debtRow.total + 1500
+  )
   check('los porcentajes del desglose suman cien', Math.abs(debtRow.notes.reduce((sum, item) => sum + item.percent, 0) - 100) < 0.01)
+  check(
+    'y ninguno pasa del cien',
+    debtRow.notes.every((item) => item.percent <= 100)
+  )
 
   categories.saveCategory({ ...debt, breakdownByNote: false })
   const flat = reports
