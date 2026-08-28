@@ -14,6 +14,7 @@ import type {
   DebtProgress,
   Frequency,
   ScheduledView,
+  EstadoActualizacion,
   Settings,
   TransactionFilter,
   TransactionInput,
@@ -172,6 +173,8 @@ const api = {
         | 'scheduled:failed'
         | 'debt:settled'
         | 'goal:reached'
+        // Cada paso del actualizador: encontrada, descargando, lista.
+        | 'updates:changed'
         // Solo le llega al widget: es como se entera de que ha cambiado la
         // paleta, el tema o qué cuentas tiene que enseñar.
         | 'settings:changed',
@@ -191,6 +194,12 @@ const api = {
     openFolder: () => call<string>('db:openFolder'),
     clearTransactions: () => call<number>('db:clearTransactions'),
     pruneAttachments: () => call<number>('db:pruneAttachments')
+  },
+  updates: {
+    estado: () => call<EstadoActualizacion>('updates:estado'),
+    buscar: () => call<EstadoActualizacion>('updates:buscar'),
+    /** Cierra y vuelve a abrir ya actualizada. Devuelve false si no había nada listo. */
+    instalar: () => call<boolean>('updates:instalar')
   },
   notifications: {
     test: () => call<boolean>('notifications:test'),

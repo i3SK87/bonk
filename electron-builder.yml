@@ -8,7 +8,19 @@ files:
   - package.json
   # El icono lo necesitan la ventana y el icono de la bandeja, en tiempo de ejecución.
   - resources/icon.ico
+# De dónde saca la aplicación las versiones nuevas. Además de publicar, esto es
+# lo que hace que la compilación genere el «latest.yml» que consulta el
+# actualizador: sin este bloque no hay con qué comparar.
+publish:
+  provider: github
+  owner: i3SK87
+  repo: bonk
 win:
+  # Aquí no se firma nada —no hay certificado—, así que la comprobación de firma
+  # del actualizador rechazaría todas las descargas. Lo que sí se comprueba, y
+  # eso no se toca, es el sha512 de cada archivo contra el del «latest.yml», que
+  # viaja por HTTPS desde GitHub.
+  verifyUpdateCodeSignature: false
   target:
     - target: nsis
       arch: [x64]

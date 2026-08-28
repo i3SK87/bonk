@@ -9,6 +9,7 @@ import { applyAutoLaunch, startedHidden } from './autostart'
 import { startBackgroundWork } from './reminders'
 import { registrar, registrarFallo } from './registro'
 import { createWidget, destroyWidget, sincronizarWidget, widgetWindow } from './widget'
+import { iniciarActualizaciones } from './updates'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -254,6 +255,17 @@ if (!app.requestSingleInstanceLock()) {
       (reason) => mainWindow?.webContents.send('scheduled:failed', reason),
       (settlements) => mainWindow?.webContents.send('debt:settled', settlements),
       (goals) => mainWindow?.webContents.send('goal:reached', goals)
+    )
+
+    /*
+     * Lo último que se pone en marcha, y a propósito: la primera comprobación
+     * no sale hasta veinte segundos después, cuando la ventana lleva rato en
+     * pantalla. Solo avisa a la ventana principal —el widget no tiene dónde
+     * enseñar esto— y si no está, no pasa nada: la interfaz pregunta el estado
+     * al montarse.
+     */
+    iniciarActualizaciones((estado) =>
+      mainWindow?.webContents.send('updates:changed', estado)
     )
 
     app.on('activate', () => {

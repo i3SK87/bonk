@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from './lib/store'
 import { useContador } from './lib/contador'
 import { Icon } from './components/Icon'
-import { Toasts, Loading } from './components/ui'
+import { Toasts, Loading, Confirm } from './components/ui'
 import { TransactionForm } from './components/TransactionForm'
 import { Contencion } from './components/Contencion'
 import {
@@ -23,6 +23,7 @@ import { ReportsView } from './views/Reports'
 import { SettingsView } from './views/Settings'
 import { formatMoney } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
+import { useActualizacion, hayNovedad } from './lib/actualizacion'
 import type { CategoryTotal, Settlement, GoalReached } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
@@ -75,12 +76,15 @@ const TITLES: Record<ViewId, string> = {
   settings: 'Ajustes'
 }
 
+const api = window.bonk
+
 export function App(): ReactNode {
-  const { ready, accounts, settings, revision, toast, refresh, updateSettings, focusedAccountId } =
+  const { ready, accounts, settings, revision, toast, refresh, run, updateSettings, focusedAccountId } =
     useStore()
   const [view, setView] = useState<ViewId>('transactions')
   const [composing, setComposing] = useState(false)
   const [calculando, setCalculando] = useState(false)
+  const [reiniciando, setReiniciando] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [reached, setReached] = useState<GoalReached[]>([])
   /** El resumen del mes que se acaba de cerrar, cuando toca enseñarlo. */
@@ -228,6 +232,7 @@ export function App(): ReactNode {
    * que el gasto que acabas de apuntar ha llegado hasta el total.
    */
   const contado = useContador(netWorth, revision)
+  const actualizacion = useActualizacion()
 
   return (
     <div className="app">
@@ -271,6 +276,36 @@ export function App(): ReactNode {
           <Icon name={AJUSTES.icon} size={17} />
           {AJUSTES.label}
         </button>
+
+        {/*
+          * Debajo de Ajustes, que es donde está el detalle.
+          *
+          * Aquí y no en un aviso flotante porque no es urgente: nadie tiene que
+          * dejar lo que está haciendo para actualizar. Pero tampoco escondido
+          * dentro de Ajustes, que es justo donde no se entra. En la barra
+          * lateral está siempre a la vista sin taparle nada a nadie.
+          */}
+        {hayNovedad(actualizacion) && (
+          <button
+            className={`aviso-version${actualizacion.fase === 'lista' ? ' lista' : ''}`}
+            onClick={() => (actualizacion.fase === 'lista' ? setReiniciando(true) : setView(AJUSTES.id))}
+            title={
+              actualizacion.fase === 'lista'
+                ? `La versión ${actualizacion.version} está descargada. Se instala al reiniciar.`
+                : `Descargando la versión ${actualizacion.version}: ${actualizacion.porcentaje} %`
+            }
+          >
+            <Icon name={actualizacion.fase === 'lista' ? 'refresh' : 'download'} size={14} />
+            <span className="truncate">
+              {actualizacion.fase === 'lista' ? 'Reiniciar para actualizar' : 'Actualización disponible'}
+            </span>
+            {/* Lo que lleva bajado, en el propio fondo del aviso: una barra
+                aparte para un número que nadie mira sería otro trasto más. */}
+            {actualizacion.fase === 'descargando' && (
+              <span className="llenado" style={{ width: `${actualizacion.porcentaje}%` }} />
+            )}
+          </button>
+        )}
 
         {/* Donde la cifra ya está en pantalla, aquí sobra: en Movimientos preside
             la lista —y allí puede estar en modo previsión, así que repetirla en su
@@ -347,6 +382,24 @@ export function App(): ReactNode {
         <CalculadoraModal
           currency={settings.baseCurrency}
           onClose={() => setCalculando(false)}
+        />
+      )}
+
+      {/* Se pregunta antes porque esto cierra la aplicación en el acto, y el
+          aviso vive a un dedo de Ajustes: un clic de más no debería llevarse por
+          delante el movimiento que estabas escribiendo. */}
+      {reiniciando && (
+        <Confirm
+          title="Reiniciar para actualizar"
+          message={`BONK se cerrará y volverá a abrirse en la versión ${actualizacion.version}. Tus datos no se tocan.`}
+          confirmLabel="Reiniciar"
+          onCancel={() => setReiniciando(false)}
+          onConfirm={async () => {
+            const hecho = await run(() => api.updates.instalar())
+            // Si devuelve false es que la descarga ya no está lista: se cierra
+            // el cuadro y el aviso de la barra dirá lo que haya.
+            if (!hecho) setReiniciando(false)
+          }}
         />
       )}
 

@@ -123,7 +123,8 @@ const FALLBACK_SETTINGS: Settings = {
   widgetGris: false,
   widgetAccountIds: [],
   lastMonthlySummary: null,
-  lastBackupAt: null
+  lastBackupAt: null,
+  buscarActualizaciones: true
 }
 
 /** Ajustes que solo cambian cómo se ve algo, no lo que dicen los datos. */

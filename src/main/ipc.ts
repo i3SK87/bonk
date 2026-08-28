@@ -14,6 +14,7 @@ import * as csv from './repos/csv'
 import { construirInformeHtml } from './repos/informe'
 import { widgetWindow, colocarWidget } from './widget'
 import { applyAutoLaunch } from './autostart'
+import { buscarActualizacion, estadoActualizacion, instalarActualizacion } from './updates'
 import {
   sendTestNotification,
   setCategoryIcons,
@@ -57,6 +58,10 @@ const SOLO_LEEN = new Set([
   'attachments:pick',
   'attachments:data',
   'csv:pick',
+  'updates:estado',
+  // Preguntar por una versión nueva no toca ni un dato: el widget no tiene de
+  // qué enterarse.
+  'updates:buscar',
   'db:info',
   'db:openFolder',
   'widget:resize',
@@ -411,6 +416,11 @@ export function registerIpc(
   // La ventana dibuja los iconos de las categorías y los deja aquí: en el
   // proceso principal no hay con qué rasterizar un SVG.
   handle('notifications:icons', (icons: Record<string, string>) => setCategoryIcons(icons))
+  // — Actualizaciones —
+  handle('updates:estado', () => estadoActualizacion())
+  handle('updates:buscar', () => buscarActualizacion())
+  handle('updates:instalar', () => instalarActualizacion())
+
   handle('db:clearTransactions', () => csv.clearTransactions())
   handle('db:pruneAttachments', () => attachments.pruneOrphanAttachments())
 }

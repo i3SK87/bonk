@@ -3,7 +3,42 @@ import { useStore } from '../lib/store'
 import { Icon } from '../components/Icon'
 import { Field, Checkbox, Confirm, Segmented, Avatar } from '../components/ui'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
-import type { Palette, ThemeMode, WidgetAnchor } from '@shared/types'
+import { useActualizacion } from '../lib/actualizacion'
+import { today, formatDate } from '@shared/dates'
+import type { EstadoActualizacion, Palette, ThemeMode, WidgetAnchor } from '@shared/types'
+
+/** «hoy a las 14:32», o con la fecha escrita si fue otro día. */
+function cuando(iso: string): string {
+  const fecha = new Date(iso)
+  const hora = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  // A mano y no con `toISOString`, que da el día en UTC y de madrugada dice ayer.
+  const dia = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`
+  return dia === today() ? `hoy a las ${hora}` : `el ${formatDate(dia)} a las ${hora}`
+}
+
+/**
+ * En qué anda el actualizador, en una frase.
+ *
+ * Aquí sí se cuenta el fallo, con todas sus letras: el aviso de la barra lateral
+ * calla cuando algo va mal —quedarse sin internet no es noticia— y este es el
+ * sitio al que se viene a preguntar por qué no aparece nada.
+ */
+function contarActualizacion(estado: EstadoActualizacion): string {
+  switch (estado.fase) {
+    case 'buscando':
+      return 'Mirando si hay una versión nueva…'
+    case 'descargando':
+      return `Descargando la versión ${estado.version}: ${estado.porcentaje} %.`
+    case 'lista':
+      return `La versión ${estado.version} ya está descargada. Se instala al reiniciar.`
+    case 'error':
+      return estado.mensaje ?? 'No se pudo comprobar si hay versiones nuevas.'
+    default:
+      return estado.comprobadaEn
+        ? `Estás en la última versión. Comprobado ${cuando(estado.comprobadaEn)}.`
+        : 'Todavía no se ha mirado desde que se abrió la aplicación.'
+  }
+}
 
 /**
  * Las muestras del selector. Cada una enseña los tres tonos que definen la
@@ -55,6 +90,8 @@ export function SettingsView(): ReactNode {
   const [info, setInfo] = useState<{ dataDir: string; dbPath: string; version: string; electron: string; node: string } | null>(null)
   const [importing, setImporting] = useState<OrigenCsv | null>(null)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [reiniciando, setReiniciando] = useState(false)
+  const actualizacion = useActualizacion()
 
   useEffect(() => {
     api.db.info().then(setInfo).catch(fail('los datos de la aplicación'))
@@ -367,11 +404,55 @@ export function SettingsView(): ReactNode {
           <div className="card-header">
             <h2>Acerca de</h2>
           </div>
-          <div className="card-body small muted col" style={{ gap: 4 }}>
-            <div>BONK, versión {info.version}</div>
-            <div>Electron {info.electron} · Node {info.node}</div>
+          <div className="card-body col" style={{ gap: 14 }}>
+            <div className="small muted col" style={{ gap: 4 }}>
+              <div>BONK, versión {info.version}</div>
+              <div>Electron {info.electron} · Node {info.node}</div>
+            </div>
+
+            <div className="divider" />
+
+            <Checkbox
+              checked={settings.buscarActualizaciones}
+              onChange={(value) => updateSettings({ buscarActualizaciones: value })}
+              label="Buscar versiones nuevas"
+              hint="Al abrir y una vez al día. Es lo único que hace BONK por internet; apagado no se conecta a nada."
+            />
+
+            <div className="row">
+              <div className="small muted" style={{ maxWidth: 460 }}>
+                {contarActualizacion(actualizacion)}
+              </div>
+              <div className="spacer" />
+              {actualizacion.fase === 'lista' ? (
+                <button className="btn primary small" onClick={() => setReiniciando(true)}>
+                  Reiniciar e instalar
+                </button>
+              ) : (
+                <button
+                  className="btn small"
+                  disabled={actualizacion.fase === 'buscando' || actualizacion.fase === 'descargando'}
+                  onClick={() => run(() => api.updates.buscar())}
+                >
+                  Buscar ahora
+                </button>
+              )}
+            </div>
           </div>
         </div>
+      )}
+
+      {reiniciando && (
+        <Confirm
+          title="Reiniciar para actualizar"
+          message={`BONK se cerrará y volverá a abrirse en la versión ${actualizacion.version}. Tus datos no se tocan.`}
+          confirmLabel="Reiniciar"
+          onCancel={() => setReiniciando(false)}
+          onConfirm={async () => {
+            const hecho = await run(() => api.updates.instalar())
+            if (!hecho) setReiniciando(false)
+          }}
+        />
       )}
 
       {importing && (

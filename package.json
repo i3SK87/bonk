@@ -1,7 +1,7 @@
 {
   "name": "bonk",
   "productName": "BONK",
-  "version": "2.10.2",
+  "version": "2.11.0",
   "description": "Gestor de finanzas personales para Windows",
   "author": "okli2",
   "private": true,
@@ -12,7 +12,7 @@
     "build": "npm run typecheck && electron-vite build",
     "preview": "electron-vite preview",
     "test": "esbuild test/smoke.ts --bundle --platform=node --format=esm --outfile=out/test/smoke.mjs --external:node:* --alias:@shared=./src/shared && node out/test/smoke.mjs",
-    "dist": "npm run build && electron-builder --win --config electron-builder.yml",
+    "dist": "npm run build && electron-builder --win --config electron-builder.yml --publish never",
     "pack": "npm run build && electron-builder --win --dir --config electron-builder.yml",
     "deploy": "npm run build && node scripts/deploy.mjs"
   },
@@ -28,6 +28,7 @@
     "vite": "^7.3.6"
   },
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"

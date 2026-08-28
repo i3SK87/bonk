@@ -399,6 +399,39 @@ export interface Settings {
   widgetAccountIds: number[]
   lastMonthlySummary: string | null
   lastBackupAt: string | null
+
+  /**
+   * Mirar solo si hay versión nueva, al arrancar y una vez al día.
+   *
+   * Es el único momento en que BONK sale a internet, así que se puede apagar:
+   * apagado no se conecta a nada y queda el botón de Ajustes para mirarlo a
+   * mano cuando se quiera.
+   */
+  buscarActualizaciones: boolean
+}
+
+/**
+ * En qué anda el actualizador.
+ *
+ * Vive en el proceso principal —es quien descarga— y viaja a la interfaz entero
+ * en cada cambio, que es más barato que tener dos copias que se desincronizan.
+ */
+export interface EstadoActualizacion {
+  fase: 'ociosa' | 'buscando' | 'descargando' | 'lista' | 'error'
+  /** La versión nueva, cuando se ha encontrado una. */
+  version: string | null
+  /** De 0 a 100 mientras se descarga. */
+  porcentaje: number
+  /** Cuándo se miró por última vez sin fallar, en ISO. */
+  comprobadaEn: string | null
+  /**
+   * El fallo, si lo hubo.
+   *
+   * No se enseña por su cuenta: quedarse sin internet es lo más normal del
+   * mundo y no merece un aviso en mitad de la pantalla. Se ve entrando en
+   * Ajustes, que es donde se va a mirar cuando algo no cuadra.
+   */
+  mensaje: string | null
 }
 
 /** Lo que se cuenta al saldar una deuda: cuántas cuotas, cuánto y desde cuándo. */

@@ -51,7 +51,10 @@ export function getSettings(): Settings {
     widgetGris: map.get('widgetGris') === '1',
     widgetAccountIds: ids(map.get('widgetAccountIds')),
     lastMonthlySummary: map.get('lastMonthlySummary') || null,
-    lastBackupAt: map.get('lastBackupAt') || null
+    lastBackupAt: map.get('lastBackupAt') || null,
+    // Encendido salvo que se diga lo contrario: quien no toca nada quiere estar
+    // al día, y es lo que evita que se quede en la versión con la que empezó.
+    buscarActualizaciones: map.get('buscarActualizaciones') !== '0'
   }
 }
 
