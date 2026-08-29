@@ -929,13 +929,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
             <div className="row tight">
               <div className="label">Cuentas</div>
               {idsTodas.length > 1 && (
-                <span className="pill" title="Todas tus cuentas juntas, salvo las apartadas del total">
-                  Total{' '}
-                  <strong
-                    className={`amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
-                  >
-                    {formatMoney(saldoDeTodas, settings.baseCurrency)}
-                  </strong>
+                <span
+                  className={`pill amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
+                  title="Todas tus cuentas juntas, salvo las apartadas del total"
+                >
+                  {formatMoney(saldoDeTodas, settings.baseCurrency)}
                 </span>
               )}
             </div>

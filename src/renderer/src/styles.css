@@ -1437,15 +1437,56 @@ p { margin: 0; }
 
 /* ---------- Patrimonio y cuentas sobre la lista ---------- */
 
+/*
+ * La cinta de cifras que preside Movimientos, Cuentas, Deudas y Ahorro.
+ *
+ * Las tres columnas comparten pauta: un rótulo arriba, de altura fija, y
+ * debajo el contenido, centrado en lo que quede. Sin ella cada una empezaba
+ * donde le tocaba —la cifra grande mide 42 px y una pastilla de cuenta 45— y
+ * el resultado era que el saldo flotaba siete píxeles por encima de las
+ * cuentas, y el enlace de la derecha se centraba respecto a toda la cinta, o
+ * sea respecto a nada de lo que tiene al lado.
+ */
 .networth-strip {
   display: flex;
   align-items: stretch;
   gap: 18px;
+  --cinta-rotulo: 22px;
+  --cinta-hueco: 4px;
+}
+
+/* La fila de arriba: el rótulo, y lo que le acompañe. */
+.networth-strip .networth > .label,
+.networth-strip .accounts-block > .label,
+.networth-strip .accounts-block > .row {
+  display: flex;
+  align-items: center;
+  min-height: var(--cinta-rotulo);
+}
+
+/* Y la de abajo, que se reparte lo que sobra y centra lo suyo. */
+.networth-strip .networth > .value,
+.networth-strip .accounts-block > .account-chips {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+/* El enlace de la derecha se salta el rótulo para caer en la fila de abajo,
+   con las pastillas: es de ellas de quien habla. */
+.networth-strip > .link {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  margin-top: calc(var(--cinta-rotulo) + var(--cinta-hueco));
 }
 
 .networth {
   flex: none;
-  padding: 2px 22px 2px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cinta-hueco);
+  padding: 0 22px 0 4px;
   border-right: 1px solid var(--border);
 }
 
@@ -1504,7 +1545,6 @@ p { margin: 0; }
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 1.1;
-  margin-top: 4px;
 }
 
 /* Las cuentas ruedan en horizontal: con muchas, la tira no crece hacia abajo. */
