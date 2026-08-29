@@ -968,6 +968,12 @@ export interface RepeatInput {
   transactionId: number
   freq: Frequency
   interval: number
+  /**
+   * Cuándo cae la primera vuelta. Sin ella se calcula avanzando la cadencia
+   * desde el día del movimiento; puesta, manda: una paga extra de junio se
+   * programa desde el día que se cobra, no desde el que se apuntó.
+   */
+  nextDate?: string | null
   endDate?: string | null
 }
 
@@ -1005,11 +1011,16 @@ export function repeatTransaction(input: RepeatInput): ScheduledView {
    * que viene, no ocho meses atrás. El tope es el mismo que usa la proyección,
    * para que una diaria de hace años no se quede dando vueltas.
    */
-  let proxima = nextOccurrence(movimiento.date, input.freq, input.interval)
+  let proxima = input.nextDate ?? nextOccurrence(movimiento.date, input.freq, input.interval)
   let guarda = 0
-  while (proxima <= hoy && guarda < 4000) {
+  // La que viene de fuera se respeta tal cual; solo se avanza la calculada.
+  while (!input.nextDate && proxima <= hoy && guarda < 4000) {
     proxima = nextOccurrence(proxima, input.freq, input.interval)
     guarda++
+  }
+
+  if (proxima <= hoy) {
+    throw new Error('La primera vuelta tiene que caer después de hoy')
   }
 
   if (input.endDate && proxima > input.endDate) {

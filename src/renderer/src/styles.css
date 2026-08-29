@@ -595,6 +595,23 @@ p { margin: 0; }
 
   /* El patrimonio no cabe en 64 px, y en Movimientos ya preside la lista. */
   .sidebar-footer { display: none; }
+
+  /*
+   * El aviso de actualización se queda en su icono.
+   *
+   * «Actualización disponible» en 64 px no se recorta con puntos suspensivos:
+   * se queda en una «A» sola dentro de un recuadro, que no dice nada y parece
+   * un error. El icono de descarga sí se entiende, y el texto entero sigue
+   * saliendo al pasar el ratón por encima.
+   */
+  .sidebar .aviso-version {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sidebar .aviso-version .truncate { display: none; }
 }
 
 .sidebar {
@@ -828,6 +845,24 @@ p { margin: 0; }
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+}
+
+/*
+ * La tarjeta a ras recorta lo que lleva dentro.
+ *
+ * «A ras» es justo eso: el contenido llega al canto. Sin recortar, cualquier
+ * hijo con fondo propio pinta sus esquinas cuadradas encima de las redondeadas
+ * de la tarjeta, y por debajo asoma una uña del color de la tarjeta. Se veía en
+ * el pie del neto del día del calendario, que va en el fondo hundido, y en la
+ * última fila de la rejilla por el mismo motivo.
+ *
+ * Nada de lo que sale fuera se pierde por esto: el menú del clic derecho y el
+ * desplegable del calendario de fechas se pintan en su propio portal, fijos
+ * respecto a la ventana, y ninguna tarjeta lleva dentro nada pegajoso —lo único
+ * con `position: sticky` es la barra de arriba, que va por fuera—.
+ */
+.card.flush {
+  overflow: hidden;
 }
 
 .card-header {

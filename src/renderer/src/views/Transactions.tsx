@@ -852,8 +852,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      */
     if (row.scheduledId == null) {
       lista.push({
-        etiqueta: 'Hacer que se repita',
-        icono: 'repeat',
+        etiqueta: 'Programar',
+        icono: 'calendar',
         onElegir: () => setRepitiendo(row)
       })
     }

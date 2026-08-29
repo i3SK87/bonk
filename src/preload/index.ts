@@ -89,7 +89,13 @@ const api = {
      * Convierte un movimiento ya apuntado en el primero de una serie: él se
      * queda donde está y nace la programación de lo que viene detrás.
      */
-    repeat: (input: { transactionId: number; freq: Frequency; interval: number; endDate?: string | null }) =>
+    repeat: (input: {
+      transactionId: number
+      freq: Frequency
+      interval: number
+      nextDate?: string | null
+      endDate?: string | null
+    }) =>
       call<ScheduledView>('tx:repeat', input),
     refundsFor: (id: number) => call<TransactionView[]>('tx:refundsFor', id),
     refundCandidates: (date: string, excludeId?: number, linkedId?: number) =>

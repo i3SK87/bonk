@@ -2989,6 +2989,57 @@ try {
   }
   check('con el final ya pasado no queda ninguna vuelta', !conFinalPasado)
 
+  /*
+   * Y la fecha se puede poner a mano.
+   *
+   * Es lo que pide una paga extra: se cobra en junio y en diciembre, y la
+   * cuenta desde el movimiento no acierta con el día. Puesta, manda tal cual
+   * sin que nadie la avance.
+   */
+  const pagaExtra = transactions.saveTransaction({
+    type: 'income',
+    date: addMonths(today(), -3),
+    accountId: bank.id,
+    categoryId: null,
+    amount: 90000,
+    note: 'Paga extra'
+  })
+  const elegida = addDays(today(), 45)
+  const semestral = scheduled.repeatTransaction({
+    transactionId: pagaExtra.id,
+    freq: 'monthly',
+    interval: 6,
+    nextDate: elegida
+  })
+  equal('la fecha puesta a mano se respeta tal cual', semestral.nextDate, elegida)
+  equal('y la cadencia semestral se guarda', semestral.interval, 6)
+  equal('con su unidad', semestral.freq, 'monthly')
+
+  // Pero no vale una que ya pasó: eso ya está apuntado.
+  const otroMas = transactions.saveTransaction({
+    type: 'expense',
+    date: addMonths(today(), -1),
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 700
+  })
+  let fechaPasada = true
+  try {
+    scheduled.repeatTransaction({
+      transactionId: otroMas.id,
+      freq: 'monthly',
+      interval: 1,
+      nextDate: addDays(today(), -3)
+    })
+  } catch {
+    fechaPasada = false
+  }
+  check('una primera vuelta ya pasada no se acepta', !fechaPasada)
+
+  transactions.deleteTransaction(otroMas.id)
+  transactions.deleteTransaction(pagaExtra.id)
+  scheduled.deleteScheduled(semestral.id)
+
   transactions.deleteTransaction(sueltoDeDosMeses.id)
   transactions.deleteTransaction(viejo.id)
   scheduled.deleteScheduled(serie.id)

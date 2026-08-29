@@ -44,6 +44,19 @@ export const CADENCIAS: Cadencia[] = [
   { nombre: 'Diaria', freq: 'daily', interval: 1 },
   { nombre: 'Semanal', freq: 'weekly', interval: 1 },
   { nombre: 'Mensual', freq: 'monthly', interval: 1 },
+  /*
+   * Semestral vuelve a la lista, y esta sí se queda.
+   *
+   * Es la de las pagas extras, que se cobran dos veces al año y no tenían
+   * dónde decirse: montarlas por «Otro» —cada 6 meses— funcionaba, pero
+   * detrás de esa puerta no las encuentra quien no sabe ya que están ahí.
+   * Las tres que se quitaron —bimensual, trimestral, cuatrimestral— salían
+   * de higos a brevas; esta la cobra todo el que tiene nómina.
+   *
+   * Si las dos pagas no caen a seis meses justos —junio y diciembre sí, junio
+   * y navidades no siempre—, lo que toca son dos anuales, una por paga.
+   */
+  { nombre: 'Semestral', freq: 'monthly', interval: 6 },
   { nombre: 'Anual', freq: 'yearly', interval: 1 }
 ]
 
