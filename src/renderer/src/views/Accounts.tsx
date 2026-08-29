@@ -66,7 +66,7 @@ export function AccountsView(): ReactNode {
         ) : (
           <div>
             {/* Agrupadas por tipo: es como se piensan —lo del banco, lo ahorrado,
-                lo que se debe— y así la principal de cada uno se ve en su sitio. */}
+                lo que se debe—. La principal es una sola y va por delante. */}
             {porTipo.map(({ tipo, cuentas }) => (
               <div key={tipo.value}>
                 <div className="grupo-cuentas">{tipo.label}</div>
@@ -77,7 +77,7 @@ export function AccountsView(): ReactNode {
                   <div className="row tight" style={{ fontWeight: 600 }}>
                     {account.name}
                     {account.isPrimary && (
-                      <span className="pill" title="Sale marcada por defecto en los formularios">
+                      <span className="pill" title="Con esta abre Movimientos">
                         <Icon name="check" size={11} strokeWidth={2.6} />
                         Principal
                       </span>
@@ -329,16 +329,16 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
 
         {/* A la par: son respuestas de sí o no, y en columna estiraban la ficha. */}
         <div className="casillas">
-          {/* Una principal por tipo: la del banco es la que viene marcada al
-              registrar un movimiento y la de ahorro la que abre Planes Ahorro. */}
+          {/* Una sola en toda la aplicación, no una por tipo: la marca dice con
+              qué cuenta abre Movimientos y nada más. */}
           <Checkbox
             checked={isPrimary && !archived}
             onChange={setIsPrimary}
-            label={`Usar como ${(ACCOUNT_TYPES.find((item) => item.value === type)?.label ?? 'cuenta').toLowerCase()} principal`}
+            label="Usar como cuenta principal"
             hint={
               archived
                 ? 'Archivada no puede ser la principal.'
-                : 'La que se propone por defecto. Solo una por tipo.'
+                : 'Es la que sale elegida al abrir Movimientos. Solo una.'
             }
           />
 

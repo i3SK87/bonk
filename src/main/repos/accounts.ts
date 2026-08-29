@@ -71,40 +71,34 @@ export function listAccounts(includeArchived = false): Account[] {
 }
 
 /**
- * La principal de un tipo, si la hay.
+ * La cuenta principal, si hay alguna marcada. Una sola en toda la aplicación.
  *
- * Es lo que sustituye a los dos ajustes que había antes —una cuenta principal
- * suelta y una hucha principal aparte—: la marca vive en la cuenta y cada tipo
- * tiene la suya.
+ * Fue una por tipo —la del banco para los formularios, la de ahorro para Planes
+ * Ahorro—, y de todo aquello lo único que se usaba era el orden que las ponía
+ * por delante. Ahora la marca dice solo una cosa: con qué cuenta abre
+ * Movimientos.
  */
-export function primaryAccount(type: AccountType): Account | null {
+export function primaryAccount(): Account | null {
   const row = getDb()
-    .prepare('SELECT * FROM accounts WHERE type = ? AND is_primary = 1 AND archived = 0')
-    .get(type) as unknown as AccountRow | undefined
+    .prepare('SELECT * FROM accounts WHERE is_primary = 1 AND archived = 0 LIMIT 1')
+    .get() as unknown as AccountRow | undefined
   return row ? mapAccount(row) : null
 }
 
-/** La que viene marcada al registrar un movimiento. */
+/** La que sale elegida de entrada; sin ninguna marcada, la primera de la lista. */
 export function preferredAccount(): Account | null {
-  for (const type of TYPE_ORDER) {
-    const found = primaryAccount(type)
-    if (found) return found
-  }
-  return listAccounts()[0] ?? null
+  return primaryAccount() ?? listAccounts()[0] ?? null
 }
 
 /**
- * Marca esta cuenta como la principal de su tipo, o le quita la marca. Solo una
- * por tipo: poner una quita la que hubiera.
+ * Marca esta cuenta como la principal, o le quita la marca. Solo una en toda la
+ * aplicación: poner una quita la que hubiera, sea del tipo que sea.
  */
 export function setPrimaryAccount(id: number, primary: boolean): void {
   const db = getDb()
-  const row = db.prepare('SELECT type FROM accounts WHERE id = ?').get(id) as unknown as
-    | { type: string }
-    | undefined
-  if (!row) return
+  if (!db.prepare('SELECT id FROM accounts WHERE id = ?').get(id)) return
   atomic(() => {
-    if (primary) db.prepare('UPDATE accounts SET is_primary = 0 WHERE type = ?').run(row.type)
+    if (primary) db.prepare('UPDATE accounts SET is_primary = 0').run()
     db.prepare('UPDATE accounts SET is_primary = ? WHERE id = ?').run(primary ? 1 : 0, id)
   })
 }

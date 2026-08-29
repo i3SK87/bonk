@@ -2477,35 +2477,45 @@ try {
   goals.deleteGoal(meta.id)
   accounts.deleteAccount(alcancia.id)
 
-  section('Cuenta principal por tipo')
-  // La marca vive en la cuenta y hay una por tipo: la del banco es la que viene
-  // marcada al registrar un movimiento y la de ahorro la que abre Planes Ahorro.
+  section('La cuenta principal, una sola')
+  /*
+   * La marca vive en la cuenta y dice una cosa: con qué cuenta abre Movimientos.
+   * Fue una por tipo, y con dos marcadas quién abría lo decidía el orden de los
+   * tipos, que no lo eligió nadie.
+   */
   check('al principio ninguna es principal', accounts.listAccounts().every((a) => !a.isPrimary))
   accounts.setPrimaryAccount(bank.id, true)
-  equal('la del banco queda marcada', accounts.primaryAccount('bank')!.id, bank.id)
-  accounts.setPrimaryAccount(cash.id, true)
-  equal(
-    'marcar otra de otro tipo no le quita la suya',
-    accounts.primaryAccount('bank')!.id,
-    bank.id
-  )
-  equal('y cada tipo tiene la suya', accounts.primaryAccount('cash')!.id, cash.id)
+  equal('la del banco queda marcada', accounts.primaryAccount()!.id, bank.id)
 
-  // Dos del mismo tipo no pueden serlo a la vez.
+  // Y marcar otra, sea del tipo que sea, le quita la marca a la anterior.
+  accounts.setPrimaryAccount(cash.id, true)
+  equal('marcar otra de otro tipo pasa la marca', accounts.primaryAccount()!.id, cash.id)
+  check('y la anterior deja de serlo', !accounts.getAccount(bank.id)!.isPrimary)
+  equal(
+    'nunca hay más de una marcada',
+    accounts.listAccounts(true).filter((a) => a.isPrimary).length,
+    1
+  )
+
   const otroBanco = accounts.saveAccount({
     name: 'Segundo banco', type: 'bank', currency: 'EUR', initialBalance: 0,
     icon: 'bank', color: '#0A84FF', excludeFromTotal: false
   })
   accounts.setPrimaryAccount(otroBanco.id, true)
-  equal('poner una quita la que hubiera de su tipo', accounts.primaryAccount('bank')!.id, otroBanco.id)
+  equal('poner una quita la que hubiera', accounts.primaryAccount()!.id, otroBanco.id)
+  equal(
+    'y sigue habiendo una sola',
+    accounts.listAccounts(true).filter((a) => a.isPrimary).length,
+    1
+  )
   accounts.deleteAccount(otroBanco.id)
   accounts.setPrimaryAccount(bank.id, true)
 
-  // Y salen las primeras en todas partes: el orden se decide en un solo sitio y
-  // lo heredan la pestaña Cuentas, los desplegables y los filtros. El banco va
-  // antes que el efectivo, que es de donde se apunta el día a día.
-  equal('las principales encabezan la lista', accounts.listAccounts()[0].id, bank.id)
-  equal('la preferida es la del banco', accounts.preferredAccount()!.id, bank.id)
+  // Y sale la primera en todas partes: el orden se decide en un solo sitio y lo
+  // heredan la pestaña Cuentas, los desplegables y las pastillas de Movimientos,
+  // que es de donde sale con qué cuenta abre.
+  equal('la principal encabeza la lista', accounts.listAccounts()[0].id, bank.id)
+  equal('y es la preferida', accounts.preferredAccount()!.id, bank.id)
   equal('el saldo llega en el mismo orden', accounts.listAccountsWithBalance()[0].id, bank.id)
 
   accounts.saveAccount({

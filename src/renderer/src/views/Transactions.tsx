@@ -652,25 +652,20 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   }
 
   /*
-   * «Todas» es todas menos las apartadas del total.
+   * El total de todas las cuentas, menos las apartadas.
    *
    * Si una cuenta se marcó como apartada fue por algo, y el patrimonio de la
    * barra lateral y el de la pestaña Cuentas tampoco la cuentan: que aquí
-   * dijera otra cifra sería tener dos patrimonios. Se guarda como la lista de
-   * sus identificadores y no como «ninguna elegida», que era el atajo obvio:
-   * así el traspaso a una cuenta apartada resta —sale del conjunto que se está
-   * mirando— en vez de valer cero por ser traspaso.
+   * dijera otra cifra sería tener dos patrimonios en la misma aplicación.
    *
-   * Para ver una apartada se pulsa ella sola, que sigue funcionando.
+   * No es una cuenta más que se pueda elegir —se mira una cada vez—, así que va
+   * de etiqueta junto al rótulo y no de pastilla junto a las demás: es una cifra
+   * para consultar de reojo, no un sitio al que ir.
    */
   const idsTodas = useMemo(
     () => accounts.filter((account) => !account.excludeFromTotal).map((account) => account.id),
     [accounts]
   )
-  const todasActivas =
-    idsTodas.length > 1 &&
-    idsTodas.length === accountIds.length &&
-    idsTodas.every((id) => accountIds.includes(id))
   const saldoDeTodas = accounts
     .filter((account) => idsTodas.includes(account.id))
     .reduce((suma, account) => suma + account.balanceInBase, 0)
@@ -729,19 +724,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * mismo dato cambiado, y ahí se pone de golpe.
    */
   const contado = useContador(netWorth, revision)
-  // Con todas puestas la cifra es el patrimonio, y así se llama: «Saldo · 2
-  // cuentas» para lo mismo sonaba a un recuento cualquiera.
-  const netWorthLabel = todasActivas
-    ? showingProjected
+  const netWorthLabel = accountIds.length
+    ? shownAccounts.length === 1
+      ? `Saldo · ${shownAccounts[0].name}`
+      : `Saldo · ${shownAccounts.length} cuentas`
+    : showingProjected
       ? 'Patrimonio previsto'
       : 'Patrimonio'
-    : accountIds.length
-      ? shownAccounts.length === 1
-        ? `Saldo · ${shownAccounts[0].name}`
-        : `Saldo · ${shownAccounts.length} cuentas`
-      : showingProjected
-        ? 'Patrimonio previsto'
-        : 'Patrimonio'
 
   /*
    * Lo que desfila por el teletipo.
@@ -937,35 +926,22 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           </div>
 
           <div className="accounts-block">
-            <div className="label">Cuentas</div>
-            <div className="account-chips">
-              {/* Con una sola cuenta a la vista, «Todas» y ella son lo mismo. */}
+            <div className="row tight">
+              <div className="label">Cuentas</div>
               {idsTodas.length > 1 && (
-                <button
-                  className={`account-chip${todasActivas ? ' active' : ''}`}
-                  onClick={() => setAccountIds(idsTodas)}
-                  title={
-                    todasActivas
-                      ? 'Estás viendo el patrimonio de todas tus cuentas'
-                      : 'Ver todas las cuentas juntas, salvo las apartadas del total'
-                  }
-                >
-                  {/* El acento fuerte y no el claro: es el que sostiene el
-                      blanco encima en los dos modos. */}
-                  <Avatar icon="wallet" color="var(--accent-strong)" size="small" />
-                  <span className="chip-text">
-                    <span className="chip-name truncate">Todas</span>
-                    <span
-                      className={`chip-balance amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
-                    >
-                      {formatMoney(saldoDeTodas, settings.baseCurrency)}
-                    </span>
-                  </span>
-                </button>
+                <span className="pill" title="Todas tus cuentas juntas, salvo las apartadas del total">
+                  Total{' '}
+                  <strong
+                    className={`amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
+                  >
+                    {formatMoney(saldoDeTodas, settings.baseCurrency)}
+                  </strong>
+                </span>
               )}
+            </div>
+            <div className="account-chips">
               {accounts.map((account) => {
-                // Con todas puestas no se enciende ninguna: la encendida es «Todas».
-                const active = accountIds.includes(account.id) && !todasActivas
+                const active = accountIds.includes(account.id)
                 const balance = account.balance + (projectedDeltas.get(account.id) ?? 0)
                 /*
                  * Del color del aviso mientras el aviso esté puesto.

@@ -680,5 +680,36 @@ export const MIGRATIONS: string[] = [
   SELECT 'widgetVisible', '1'
    WHERE EXISTS (SELECT 1 FROM settings)
      AND NOT EXISTS (SELECT 1 FROM settings WHERE key = 'widgetVisible');
+  `,
+
+  // v29 — la cuenta principal pasa a ser una sola, no una por tipo
+  //
+  // Era una por tipo: la del banco venía marcada en los formularios y la de
+  // ahorro abría Planes Ahorro. De todo aquello lo único que se usaba de verdad
+  // era el orden que ponía a las principales por delante, y de ahí salía la
+  // cuenta con la que abre Movimientos. Ahora la marca dice solo eso, y por eso
+  // no puede haber varias: con dos marcadas, cuál abre Movimientos lo decidía
+  // el orden de los tipos, que no lo eligió nadie.
+  //
+  // Se conserva la primera por ese mismo orden de tipos —banco, efectivo,
+  // tarjeta, inversión, ahorro, deuda—, que es exactamente la que ya venía
+  // saliendo: quien no toque nada no nota el cambio.
+  `
+  UPDATE accounts SET is_primary = 0
+   WHERE is_primary = 1
+     AND id <> (
+       SELECT id FROM accounts
+        WHERE is_primary = 1 AND archived = 0
+        ORDER BY CASE type
+                   WHEN 'bank' THEN 0
+                   WHEN 'cash' THEN 1
+                   WHEN 'card' THEN 2
+                   WHEN 'investment' THEN 3
+                   WHEN 'savings' THEN 4
+                   WHEN 'debt' THEN 5
+                   ELSE 6
+                 END, sort_order, id
+        LIMIT 1
+     );
   `
 ]
