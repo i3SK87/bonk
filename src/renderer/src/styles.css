@@ -4171,7 +4171,7 @@ body.recolocando * {
 
 .cal-rejilla {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr)) 112px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .cal-cabecera {
@@ -4183,11 +4183,6 @@ body.recolocando * {
   color: var(--fg-subtle);
   background: var(--bg-sunken);
   border-bottom: 1px solid var(--border);
-}
-
-.cal-cabecera.carril {
-  text-align: right;
-  border-left: 1px solid var(--border-strong);
 }
 
 .cal-dia {
@@ -4347,47 +4342,11 @@ body.recolocando * {
   color: var(--accent);
 }
 
-.cal-carril {
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 2px;
-  background: color-mix(in srgb, var(--bg-sunken) 55%, var(--bg-elevated));
-  border-left: 1px solid var(--border-strong);
-  border-bottom: 1px solid var(--border);
-}
+/* La última columna no dibuja su raya: ahí está ya el borde de la tarjeta. */
+.cal-rejilla > *:nth-child(7n) { border-right: none; }
 
-.cal-cierre {
-  font-size: 15px;
-  letter-spacing: -0.01em;
-}
-
-/* La semana más justa del mes, que es la que se viene a buscar. */
-.cal-carril.minimo {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-}
-
-.cal-aviso {
-  font-size: 10px;
-  font-weight: 650;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--warning);
-}
-
-.cal-raya {
-  color: var(--fg-subtle);
-  opacity: 0.6;
-}
-
-/* La última columna de días no dibuja su raya: ya la pone el canto del carril,
-   que es más marcado porque separa dos cosas distintas. */
-.cal-rejilla > *:nth-child(8n - 1) { border-right: none; }
-
-/* Ni la última fila la suya: ahí abajo ya está el borde de la tarjeta. */
-.cal-rejilla > *:nth-last-child(-n + 8) { border-bottom: none; }
+/* Ni la última fila la suya, por lo mismo. */
+.cal-rejilla > *:nth-last-child(-n + 7) { border-bottom: none; }
 
 /*
  * El rótulo va pegado a su cifra, no en la otra punta.
@@ -4420,13 +4379,4 @@ body.recolocando * {
 
 .cal-pie .amount { font-size: 16px; }
 
-/*
- * En ventana estrecha el carril es lo primero que sobra: sin él quedan siete
- * columnas de ciento y pico, que es lo que necesita un nombre con su cifra al
- * lado. Se mide contra el contenido, como el resto de las rejillas.
- */
-@container (max-width: 900px) {
-  .cal-rejilla { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-  .cal-cabecera.carril,
-  .cal-carril { display: none; }
-}
+

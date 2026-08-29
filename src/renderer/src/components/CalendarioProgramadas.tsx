@@ -2,9 +2,8 @@
  * El mes de las programadas, en rejilla.
  *
  * La lista de al lado contesta «qué tengo programado»; esta contesta «cómo cae
- * el mes»: dónde se apelotonan los recibos, qué semanas quedan secas y —en el
- * carril de la derecha— con cuánto se llega al final de cada una. Todo sale de
- * la proyección, que no escribe nada, y de los movimientos que esas mismas
+ * el mes»: dónde se apelotonan los recibos y qué semanas quedan secas. Todo sale
+ * de la proyección, que no escribe nada, y de los movimientos que esas mismas
  * programadas ya registraron.
  */
 
@@ -100,11 +99,9 @@ interface Props {
 }
 
 export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNode {
-  const { settings, accounts, revision, fail } = useStore()
+  const { settings, revision, fail } = useStore()
   const [mes, setMes] = useState(() => startOfMonth(today()))
   const [vueltas, setVueltas] = useState<ScheduledOccurrence[]>([])
-  /** Solo para el carril: lo que queda por caer entre hoy y el final del mes. */
-  const [previstos, setPrevistos] = useState<ScheduledOccurrence[]>([])
   const [cargando, setCargando] = useState(true)
   const [elegido, setElegido] = useState<string | null>(null)
 
@@ -118,22 +115,10 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
 
   useEffect(() => {
     setCargando(true)
-    /*
-     * Dos preguntas distintas.
-     *
-     * La rejilla quiere el mes entero: lo que cayó y lo que falta. El carril
-     * quiere el camino desde hoy hasta el final de lo que se enseña, aunque el
-     * mes esté meses por delante, porque si no el saldo llegaría allí sin haber
-     * pasado por lo de en medio.
-     */
-    Promise.all([
-      api.scheduled.occurrences(primero, ultimo),
-      ultimo < hoy ? Promise.resolve([]) : api.scheduled.occurrences(hoy, ultimo)
-    ])
-      .then(([delMes, delCamino]) => {
-        setVueltas(delMes)
-        setPrevistos(delCamino)
-      })
+    // El mes entero: lo que cayó y lo que falta.
+    api.scheduled
+      .occurrences(primero, ultimo)
+      .then(setVueltas)
       .catch(fail('el calendario de programadas'))
       .finally(() => setCargando(false))
   }, [primero, ultimo, hoy, revision])
@@ -149,47 +134,6 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
     })
     return mapa
   }, [vueltas])
-
-  /**
-   * El patrimonio de ahora mismo, que es de donde arranca el carril. Es la misma
-   * cifra que preside la barra lateral: las cuentas apartadas del total tampoco
-   * cuentan aquí.
-   */
-  const patrimonio = useMemo(
-    () =>
-      accounts
-        .filter((cuenta) => !cuenta.excludeFromTotal)
-        .reduce((suma, cuenta) => suma + cuenta.balanceInBase, 0),
-    [accounts]
-  )
-
-  /**
-   * Con cuánto se cierra cada semana si se cumple todo lo previsto.
-   *
-   * Solo para las semanas que aún no han terminado: hacia atrás la pregunta ya
-   * no es «con cuánto llego» sino «con cuánto llegué», y esa cifra no la sabe la
-   * proyección. Ahí va una raya en vez de un número inventado.
-   */
-  const cierres = useMemo(
-    () =>
-      semanas.map((semana) => {
-        if (semana[6] < hoy) return null
-        // Lo ya registrado no vuelve a contar: el patrimonio de partida ya lo
-        // lleva dentro. Lo vencido sin registrar sí, que ese dinero no se ha
-        // movido todavía.
-        const suma = previstos
-          .filter((row) => row.date <= semana[6] && row.status !== 'done')
-          .reduce((total, row) => total + row.amountInBase, 0)
-        return patrimonio + suma
-      }),
-    [semanas, previstos, patrimonio, hoy]
-  )
-
-  /** La semana más apurada de las que aún están por venir. */
-  const minimo = useMemo(() => {
-    const conCifra = cierres.filter((cierre): cierre is number => cierre != null)
-    return conCifra.length > 1 ? Math.min(...conCifra) : null
-  }, [cierres])
 
   const delMes = useMemo(
     () => [...porDia.entries()].filter(([fecha]) => esDelMes(fecha, mes)),
@@ -273,9 +217,7 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
                 {nombre}
               </div>
             ))}
-            <div className="cal-cabecera carril">Saldo</div>
-
-            {semanas.map((semana, i) => (
+            {semanas.map((semana) => (
               <Fila
                 key={semana[0]}
                 semana={semana}
@@ -285,8 +227,6 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
                 porDia={porDia}
                 elegido={elegido}
                 onElegir={setElegido}
-                cierre={cierres[i]}
-                minimo={minimo}
               />
             ))}
           </div>
@@ -377,7 +317,7 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
   )
 }
 
-/** Una semana de la rejilla: sus siete días y el saldo con el que cierra. */
+/** Una semana de la rejilla: sus siete días. */
 function Fila({
   semana,
   mes,
@@ -385,9 +325,7 @@ function Fila({
   base,
   porDia,
   elegido,
-  onElegir,
-  cierre,
-  minimo
+  onElegir
 }: {
   semana: string[]
   mes: string
@@ -396,11 +334,7 @@ function Fila({
   porDia: Map<string, Apunte[]>
   elegido: string | null
   onElegir: (fecha: string) => void
-  cierre: number | null
-  minimo: number | null
 }): ReactNode {
-  const esElMinimo = cierre != null && minimo != null && cierre === minimo
-
   return (
     <>
       {semana.map((fecha) => {
@@ -464,20 +398,6 @@ function Fila({
         )
       })}
 
-      <div className={`cal-carril${esElMinimo ? ' minimo' : ''}`}>
-        {cierre == null ? (
-          <span className="cal-raya" title="Semana cerrada: eso ya pasó">
-            —
-          </span>
-        ) : (
-          <>
-            <span className={`cal-cierre amount${esElMinimo ? ' warning' : ''}`}>
-              {formatMoney(cierre, base)}
-            </span>
-            {esElMinimo && <span className="cal-aviso">mínimo</span>}
-          </>
-        )}
-      </div>
     </>
   )
 }
