@@ -361,7 +361,7 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
           <div className="cal-pie">
             <span className="label">Neto del día</span>
             {hayTraspaso && (
-              <span className="small muted">
+              <span className="small muted cal-nota">
                 El traspaso no suma: mueve dinero entre cuentas.
               </span>
             )}

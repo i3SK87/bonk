@@ -9,6 +9,7 @@ import { TransactionForm } from '../components/TransactionForm'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteRapido } from '../components/ImporteRapido'
 import { CategoriaRapida } from '../components/CategoriaRapida'
+import { RepetirMovimiento } from '../components/RepetirMovimiento'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { AccionCabecera } from '../components/ui'
@@ -149,6 +150,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [menu, setMenu] = useState<{ row: TransactionView; x: number; y: number } | null>(null)
   const [cambiandoImporte, setCambiandoImporte] = useState<TransactionView | null>(null)
   const [cambiandoCategoria, setCambiandoCategoria] = useState<TransactionView | null>(null)
+  const [repitiendo, setRepitiendo] = useState<TransactionView | null>(null)
   const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [importando, setImportando] = useState<OrigenCsv | null>(null)
@@ -842,6 +844,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         onElegir: () => setDevolviendo(row)
       })
     }
+    /*
+     * Y lo que resulta que pasa siempre, se programa.
+     *
+     * El que ya viene de una programación no: ese se repite de por sí, y
+     * montarle otra encima duplicaría cada vuelta a partir de ahora.
+     */
+    if (row.scheduledId == null) {
+      lista.push({
+        etiqueta: 'Hacer que se repita',
+        icono: 'repeat',
+        onElegir: () => setRepitiendo(row)
+      })
+    }
     lista.push({
       etiqueta: 'Eliminar',
       icono: 'trash',
@@ -1289,6 +1304,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
       {cambiandoImporte && (
         <ImporteRapido row={cambiandoImporte} onClose={() => setCambiandoImporte(null)} />
+      )}
+
+      {repitiendo && (
+        <RepetirMovimiento row={repitiendo} onClose={() => setRepitiendo(null)} />
       )}
 
       {cambiandoCategoria && (

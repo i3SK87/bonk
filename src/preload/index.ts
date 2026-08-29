@@ -85,6 +85,12 @@ const api = {
     moveToDay: (id: number, date: string, orden: number[]) =>
       call<number>('tx:moveToDay', id, date, orden),
     duplicate: (id: number) => call<TransactionView>('tx:duplicate', id),
+    /**
+     * Convierte un movimiento ya apuntado en el primero de una serie: él se
+     * queda donde está y nace la programación de lo que viene detrás.
+     */
+    repeat: (input: { transactionId: number; freq: Frequency; interval: number; endDate?: string | null }) =>
+      call<ScheduledView>('tx:repeat', input),
     refundsFor: (id: number) => call<TransactionView[]>('tx:refundsFor', id),
     refundCandidates: (date: string, excludeId?: number, linkedId?: number) =>
       call<TransactionView[]>('tx:refundCandidates', date, excludeId, linkedId)

@@ -2891,6 +2891,107 @@ try {
 
   transactions.deleteTransaction(suPago.id)
   scheduled.deleteScheduled(reciboMensual.id)
+
+  /*
+   * Un movimiento antiguo que empieza a repetirse.
+   *
+   * Lo que se toca aquí es delicado: el movimiento ya está apuntado y el saldo
+   * ya lo lleva dentro, así que la operación no puede ni duplicarlo ni volver a
+   * cobrarlo. Lo único que nace es el plan de lo que viene detrás.
+   */
+  section('Lo que ya pasó empieza a repetirse')
+
+  const saldoDeLaSerie = accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance
+  const viejo = transactions.saveTransaction({
+    type: 'expense',
+    date: addMonths(today(), -8),
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 1999,
+    note: 'Revista'
+  })
+
+  const serie = scheduled.repeatTransaction({
+    transactionId: viejo.id,
+    freq: 'monthly',
+    interval: 1
+  })
+
+  /*
+   * De un recibo de hace ocho meses marcado como mensual, la próxima vuelta es
+   * la del mes que viene: no ocho meses atrás, ni el mes siguiente a aquel.
+   */
+  check('la próxima vuelta cae por delante de hoy', serie.nextDate > today(), serie.nextDate)
+  let esperada = nextOccurrence(viejo.date, 'monthly', 1)
+  while (esperada <= today()) esperada = nextOccurrence(esperada, 'monthly', 1)
+  equal('y es la que toca por cadencia, contando desde su día', serie.nextDate, esperada)
+  equal('se lleva el importe del movimiento', serie.amount, 1999)
+  equal('y su concepto', serie.note, 'Revista')
+  equal('y su cuenta', serie.accountId, bank.id)
+
+  // El movimiento sigue donde estaba, con su fecha y su importe.
+  const sigueAhi = transactions.getTransaction(viejo.id)
+  check('el movimiento no se borra: ya había pasado', sigueAhi != null)
+  equal('ni le cambia la fecha', sigueAhi?.date, addMonths(today(), -8))
+  equal('queda enganchado a la serie', sigueAhi?.scheduledId, serie.id)
+
+  // Y el saldo no se mueve: no se ha apuntado nada nuevo.
+  const saldoTrasLaSerie = accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance
+  equal('el saldo solo baja por el movimiento, no por programarlo', saldoTrasLaSerie, saldoDeLaSerie - 1999)
+
+  // La serie da por dada aquella vuelta, así que el repaso no la repite.
+  equal('la serie anota que aquel día ya lo dio', serie.lastPosted, addMonths(today(), -8))
+
+  // Y en el calendario aquella vuelta sale como hecha, no como vencida.
+  const suMes = addMonths(today(), -8)
+  const enElCalendario = scheduled
+    .occurrencesInRange(startOfMonth(suMes), endOfMonth(suMes))
+    .find((row) => row.scheduledId === serie.id)
+  equal('y el calendario la enseña hecha', enElCalendario?.status, 'done')
+  equal('con su movimiento detrás', enElCalendario?.transactionId, viejo.id)
+
+  // Dos veces no: ya se repite.
+  let dosVeces = true
+  try {
+    scheduled.repeatTransaction({ transactionId: viejo.id, freq: 'monthly', interval: 1 })
+  } catch {
+    dosVeces = false
+  }
+  check('lo que ya viene de una programación no se programa otra vez', !dosVeces)
+
+  // Y «una vez» no es una repetición.
+  let unaVez = true
+  const sueltoDeDosMeses = transactions.saveTransaction({
+    type: 'expense',
+    date: addMonths(today(), -2),
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 500
+  })
+  try {
+    scheduled.repeatTransaction({ transactionId: sueltoDeDosMeses.id, freq: 'once', interval: 1 })
+  } catch {
+    unaVez = false
+  }
+  check('«una vez» no vale para algo que tiene que repetirse', !unaVez)
+
+  // Con un final ya pasado no queda nada que programar.
+  let conFinalPasado = true
+  try {
+    scheduled.repeatTransaction({
+      transactionId: sueltoDeDosMeses.id,
+      freq: 'monthly',
+      interval: 1,
+      endDate: addDays(today(), -1)
+    })
+  } catch {
+    conFinalPasado = false
+  }
+  check('con el final ya pasado no queda ninguna vuelta', !conFinalPasado)
+
+  transactions.deleteTransaction(sueltoDeDosMeses.id)
+  transactions.deleteTransaction(viejo.id)
+  scheduled.deleteScheduled(serie.id)
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })

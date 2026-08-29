@@ -963,6 +963,92 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
   return projected.sort((a, b) => (a.date === b.date ? a.scheduledId - b.scheduledId : a.date < b.date ? 1 : -1))
 }
 
+/** Lo que hace falta para que un movimiento ya apuntado empiece a repetirse. */
+export interface RepeatInput {
+  transactionId: number
+  freq: Frequency
+  interval: number
+  endDate?: string | null
+}
+
+/**
+ * Convierte un movimiento ya apuntado en el primero de una serie.
+ *
+ * No es lo mismo que `scheduleFromTransaction`, que se lleva al futuro algo que
+ * todavía no ha pasado y por el camino borra el movimiento. Aquí el movimiento
+ * ya ocurrió y se queda donde está: lo que se crea es el plan de lo que viene
+ * detrás, con su primera vuelta en la primera fecha que caiga después de hoy.
+ *
+ * El movimiento se queda enganchado a la programación nueva, y esta anota que
+ * aquel día ya lo dio por hecho. Así el calendario lo enseña como la primera
+ * vuelta —dada— de la serie en vez de como un movimiento suelto, y el repaso de
+ * vencidas no intenta volver a generarlo.
+ */
+export function repeatTransaction(input: RepeatInput): ScheduledView {
+  const movimiento = getTransaction(input.transactionId)
+  if (!movimiento) throw new Error('Ese movimiento ya no existe')
+  if (movimiento.scheduledId != null) {
+    throw new Error('Ese movimiento ya viene de una programación')
+  }
+  if (input.freq === 'once') {
+    throw new Error('Para que se repita hay que decir cada cuánto')
+  }
+  if (input.interval < 1) throw new Error('La repetición tiene que ser de al menos 1')
+
+  const hoy = today()
+
+  /*
+   * La primera vuelta que todavía no ha pasado.
+   *
+   * Se avanza desde el día del movimiento en vez de sumar una sola vez: un
+   * recibo de hace ocho meses que se marca como mensual tiene que caer el mes
+   * que viene, no ocho meses atrás. El tope es el mismo que usa la proyección,
+   * para que una diaria de hace años no se quede dando vueltas.
+   */
+  let proxima = nextOccurrence(movimiento.date, input.freq, input.interval)
+  let guarda = 0
+  while (proxima <= hoy && guarda < 4000) {
+    proxima = nextOccurrence(proxima, input.freq, input.interval)
+    guarda++
+  }
+
+  if (input.endDate && proxima > input.endDate) {
+    throw new Error('Con ese final no queda ninguna vuelta por delante')
+  }
+
+  return atomic(() => {
+    const programada = saveScheduled({
+      type: movimiento.type,
+      accountId: movimiento.accountId,
+      toAccountId: movimiento.toAccountId,
+      categoryId: movimiento.categoryId,
+      amount: movimiento.amount,
+      amountTo: movimiento.amountTo,
+      payee: movimiento.payee,
+      note: movimiento.note,
+      goalId: movimiento.goalId,
+      freq: input.freq,
+      interval: input.interval,
+      nextDate: proxima,
+      endDate: input.endDate ?? null,
+      // Como en la ficha de un movimiento que nace programado: lo normal es que
+      // algo que se repite se apunte solo. Se cambia luego desde su ficha.
+      autoPost: true,
+      remind: true
+    })
+
+    getDb()
+      .prepare('UPDATE transactions SET scheduled_id = ?, updated_at = ? WHERE id = ?')
+      .run(programada.id, nowISO(), movimiento.id)
+    getDb()
+      .prepare('UPDATE scheduled SET last_posted = ? WHERE id = ?')
+      .run(movimiento.date, programada.id)
+
+    // Releída, para que salga con el nombre de su cuenta y su categoría puestos.
+    return getScheduled(programada.id) as ScheduledView
+  })
+}
+
 /**
  * Las vueltas de cada programación que caen en un rango, hacia atrás y hacia
  * delante, con lo que pasó con cada una.

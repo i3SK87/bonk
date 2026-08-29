@@ -220,6 +220,14 @@ export function registerIpc(
     celebrate()
     return programada
   })
+  /*
+   * Y lo que ya pasó puede empezar a repetirse.
+   *
+   * Al revés que `tx:program`: aquel se lleva al futuro algo que aún no ha
+   * ocurrido y borra el movimiento; este deja el movimiento donde está y le
+   * monta detrás el plan de lo que viene.
+   */
+  handle('tx:repeat', (input: scheduled.RepeatInput) => scheduled.repeatTransaction(input))
   handle('tx:duplicate', (id: number) => transactions.duplicateTransaction(id))
   handle('tx:refundsFor', (id: number) => transactions.listRefundsFor(id))
   handle('tx:refundCandidates', (date: string, excludeId?: number, linkedId?: number) =>

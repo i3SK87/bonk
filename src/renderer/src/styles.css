@@ -771,8 +771,18 @@ p { margin: 0; }
 .sidebar-networth strong.positive { color: var(--positive); }
 .sidebar-networth strong.negative { color: var(--negative); }
 
+/*
+ * El hueco de la barra de desplazamiento se reserva siempre.
+ *
+ * Sin esto, pasar de una pantalla que cabe a una que no —de la lista de
+ * programadas al calendario, sin ir más lejos— hacía aparecer la barra, y con
+ * ella el contenido perdía diez píxeles de ancho de golpe: la cabecera entera,
+ * con su conmutador y su botón, daba un salto lateral. Reservado, el ancho no
+ * cambia y no salta nada.
+ */
 .main {
   overflow-y: auto;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   /* Lo que hace que las reglas de arriba puedan preguntar por su ancho. */
@@ -4344,16 +4354,28 @@ body.recolocando * {
 /* Ni la última fila la suya: ahí abajo ya está el borde de la tarjeta. */
 .cal-rejilla > *:nth-last-child(-n + 8) { border-bottom: none; }
 
+/*
+ * El rótulo va pegado a su cifra, no en la otra punta.
+ *
+ * Separados, el pie quedaba con «NETO DEL DÍA» en un extremo y el número en el
+ * otro, con mil píxeles de nada en medio: parecían dos cosas sin relación. Es
+ * un total, y un total se lee junto. La cifra sigue alineada con la columna de
+ * importes de las filas de arriba, que es lo que hay que poder comparar.
+ */
 .cal-pie {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
   padding: 11px 16px;
   background: var(--bg-sunken);
 }
 
+/* La advertencia del traspaso sí se va a la izquierda: no es parte del total,
+   es la explicación de por qué el total no cuadra con lo que hay encima. */
+.cal-pie .cal-nota { margin-right: auto; }
+
 .cal-pie .label {
-  margin-right: auto;
   font-size: 11px;
   font-weight: 650;
   text-transform: uppercase;
