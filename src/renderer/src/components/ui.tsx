@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type CSSProperties,
+  type RefObject
+} from 'react'
 import { createPortal } from 'react-dom'
 import { Icon, PALETTE, ICON_GROUPS, ICON_LABELS, ICON_SEARCH, normalizarBusqueda } from './Icon'
 import { formatMoney, parseAmount, currencySymbol, toMajor } from '@shared/money'
@@ -419,6 +426,8 @@ interface AmountInputProps {
    * préstamo están en números rojos y se escriben tal cual.
    */
   signed?: boolean
+  /** Para poder pedirle el foco desde fuera, como al encadenar apuntes. */
+  inputRef?: RefObject<HTMLInputElement | null>
 }
 
 /**
@@ -434,7 +443,8 @@ export function AmountInput({
   compact,
   signed,
   max,
-  disabled
+  disabled,
+  inputRef
 }: AmountInputProps): ReactNode {
   const [text, setText] = useState(() => (value ? String(value / 100).replace('.', ',') : ''))
   const [focused, setFocused] = useState(false)
@@ -460,6 +470,7 @@ export function AmountInput({
   return (
     <div style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         className={`input amount-input${compact ? ' compact' : ''}${invalid ? ' invalid' : ''}`}
         inputMode="decimal"
         autoFocus={autoFocus}

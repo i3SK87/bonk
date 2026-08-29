@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm } from './ui'
 import { Icon } from './Icon'
 import { DateInput } from './DateInput'
@@ -122,6 +122,24 @@ export function TransactionForm({
   const [refunds, setRefunds] = useState<TransactionView[]>([])
   const [refunding, setRefunding] = useState(false)
   const [creatingCategory, setCreatingCategory] = useState(false)
+
+  /*
+   * El importe recupera el foco tras «Guardar y seguir».
+   *
+   * Guardado el apunte, lo siguiente que se teclea vuelve a ser una cifra: el
+   * foco se quedaba donde estuviera el último clic y había que ir a buscar el
+   * campo con el ratón. No se enfoca desde el propio botón sino desde un efecto
+   * porque el campo enseña lo que tenga puesto al enfocarse, y en ese instante
+   * el importe anterior todavía no se ha vaciado: saldría escrito el del apunte
+   * que se acaba de guardar, y basta salir del campo para que vuelva a valer.
+   */
+  const importeRef = useRef<HTMLInputElement>(null)
+  const [enfocarImporte, setEnfocarImporte] = useState(false)
+  useEffect(() => {
+    if (!enfocarImporte) return
+    setEnfocarImporte(false)
+    importeRef.current?.focus()
+  }, [enfocarImporte])
 
   // Gastos del día a los que puede engancharse un reembolso suelto. Los que
   // llegan por el botón «Registrar reembolso» ya vienen enlazados y no eligen.
@@ -270,6 +288,7 @@ export function TransactionForm({
       setAttachments([])
       setPreviews({})
       setPending([])
+      setEnfocarImporte(true)
       toast('Listo para el siguiente', 'info')
       return
     }
@@ -608,6 +627,7 @@ export function TransactionForm({
               currency={currency}
               onChange={setAmount}
               autoFocus
+              inputRef={importeRef}
               /* Se recuadra en rojo solo cuando el aviso es suyo. Mirando si el
                  importe estaba a cero y había *algún* error, se recuadraba
                  también al faltar la cuenta: el importe todavía sin escribir no
