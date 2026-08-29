@@ -333,10 +333,13 @@ export function startBackgroundWork(
 
   const sweep = (): void => {
     try {
-      const { created, failed } = postDue()
+      const { created, failed, apartados } = postDue()
       // Si ha creado algo, la ventana tiene que enterarse: puede llevar días
       // abierta enseñando la lista de antes.
       if (created > 0) onDataChanged()
+
+      // Y lo que se haya apartado solo, dicho en voz alta.
+      anunciarApartados(icon, onClick, apartados)
 
       /*
        * Las que no han podido entrar. Ya no arrastran a las demás —cada una va
@@ -420,6 +423,33 @@ export function startBackgroundWork(
    * entonces la cuota sigue sin entrar. Esto lo cubre: al levantarse, se repasa.
    */
   powerMonitor.on('resume', sweep)
+}
+
+/**
+ * Dice en voz alta lo que la regla de ahorro ha apartado sola.
+ *
+ * Una regla automática mueve dinero sin que nadie la toque, así que callarlo es
+ * justo lo que no se quiere: un traspaso que aparece en la lista sin que
+ * recuerdes haberlo hecho. Se avisa de lo que acaba de pasar y no se guarda nada
+ * pendiente.
+ *
+ * Vive suelta porque hay dos sitios que registran vencidas: el repaso de fondo
+ * —el de cada media hora, el del cambio de día y el de volver de suspender— y el
+ * arranque, que recupera todo lo que venció con la aplicación cerrada. Sin esto,
+ * apartar mientras estaba cerrada no lo contaba nadie.
+ */
+export function anunciarApartados(
+  icon: string,
+  onClick: () => void,
+  apartados: Array<{ title: string; amount: number; currency: string }>
+): void {
+  if (!Notification.isSupported()) return
+  for (const apartado of apartados) {
+    notify(categoryImage(icon, null), onClick, {
+      title: `Apartados ${formatMoney(apartado.amount, apartado.currency)}`,
+      body: `De ${apartado.title}, a tu hucha.`
+    })
+  }
 }
 
 /** Aviso de prueba, para comprobar que Windows los deja pasar. */

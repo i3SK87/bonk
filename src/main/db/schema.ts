@@ -711,5 +711,71 @@ export const MIGRATIONS: string[] = [
                  END, sort_order, id
         LIMIT 1
      );
+  `,
+
+  // v30 — suscripciones marcadas a mano, y apartar un tanto por ciento de un ingreso.
+  //
+  // Dos cosas que cuelgan de la misma tabla y por eso viajan juntas.
+  //
+  // `is_subscription` la pone quien la usa, con un interruptor en la ficha. Se
+  // eligió eso antes que deducirla de la categoría o de que sea un gasto que se
+  // repite: lo primero deja fuera el servicio que guardaste en otra categoría, y
+  // lo segundo mete dentro el alquiler y los seguros, que son gastos fijos pero
+  // no suscripciones. Que lo diga quien lo sabe.
+  //
+  // La regla de ahorro son tres campos porque el destino tiene dos partes: la
+  // hucha, que siempre hace falta, y el plan, que es opcional —sin él, lo que
+  // entra se queda como ahorro libre—. Guardar solo el plan no valdría para el
+  // ahorro libre, y guardar solo la hucha perdería a qué plan iba.
+  //
+  // El porcentaje va en entero de 1 a 100. Nada de decimales: apartar el 7,5 %
+  // de la nómina no es una cifra que nadie tenga en la cabeza, y el céntimo lo
+  // pone luego el redondeo del importe.
+  `
+  ALTER TABLE scheduled ADD COLUMN is_subscription INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE scheduled ADD COLUMN save_percent INTEGER;
+  ALTER TABLE scheduled ADD COLUMN save_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;
+  ALTER TABLE scheduled ADD COLUMN save_goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
+  `,
+
+  // v31 — de suscripciones a recurrentes, y la regla de ahorro a la categoría.
+  //
+  // El nombre se quedó corto en cuanto se miró de cerca: lo mismo que sirve para
+  // ver que YouTube ha subido sirve para el alquiler, para el agua y para saber
+  // cuánto ha subido la nómina. Nada de eso es una suscripción. La columna se
+  // renombra en vez de añadir otra: lo marcado sigue marcado.
+  //
+  // Y la regla de ahorro se muda de la programada a la categoría, que es donde
+  // se puede decir una vez y valer siempre —«de todo lo que entre como Nómina,
+  // el 10 %»— sin acordarse de marcarla en cada ingreso. Las columnas de
+  // `scheduled` se quedan donde están y cambian de papel: ahora son la excepción
+  // que gana a la de su categoría, para el ingreso que aparta otra cosa.
+  `
+  ALTER TABLE scheduled RENAME COLUMN is_subscription TO is_recurring;
+  ALTER TABLE categories ADD COLUMN save_percent INTEGER;
+  ALTER TABLE categories ADD COLUMN save_account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL;
+  ALTER TABLE categories ADD COLUMN save_goal_id INTEGER REFERENCES goals(id) ON DELETE SET NULL;
+  `,
+
+  // v32 — el ahorro automático, por porcentaje o por cifra, y colgado del ingreso.
+  //
+  // `save_amount` es la otra forma de decir cuánto: hay quien piensa «el 10 %» y
+  // quien piensa «cien euros de cada nómina», y las dos son la misma decisión
+  // dicha de distinta manera. Se guardan en columnas separadas y solo una vale:
+  // con cifra puesta manda la cifra, y si no, el porcentaje.
+  //
+  // `saved_from_id` es de qué ingreso salió el traspaso. Sirve para dos cosas: la
+  // lista lo cuelga debajo de su ingreso, como hace con los reembolsos y su
+  // gasto, y borrar el ingreso se lleva su ahorro por delante —en cascada—, que
+  // es lo que se espera al deshacer algo que se hizo solo.
+  //
+  // De la 30 y la 31 se quedan sus columnas sin uso: `is_recurring` y las tres
+  // de ahorro en `scheduled` ya no las lee nadie. Se van con la misma razón por
+  // la que sigue ahí la tabla `budgets` desde la v6: una migración que tira
+  // datos da miedo, y una columna callada no molesta a nadie.
+  `
+  ALTER TABLE categories ADD COLUMN save_amount INTEGER;
+  ALTER TABLE transactions ADD COLUMN saved_from_id INTEGER REFERENCES transactions(id) ON DELETE CASCADE;
+  CREATE INDEX idx_tx_saved_from ON transactions(saved_from_id);
   `
 ]

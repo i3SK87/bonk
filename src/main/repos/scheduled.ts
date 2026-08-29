@@ -1,6 +1,12 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { today, nextOccurrence, previousOccurrence, formatDate } from '@shared/dates'
-import { saveTransaction, deleteTransaction, getTransaction } from './transactions'
+import {
+  saveTransaction,
+  deleteTransaction,
+  getTransaction,
+  reglaDeLaCategoria,
+  aplicarRegla
+} from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
@@ -724,8 +730,18 @@ function postedByScheduled(scheduledId: number, date: string): number | null {
  * que se gasta es la del día que tocaba, y el mes que viene sigue venciendo el
  * mismo día de siempre.
  */
+/**
+ * Lo apartado por la última programada registrada, para poder contarlo luego.
+ *
+ * Se anota aquí y lo recoge `postDue`: los repositorios no saben avisar —eso es
+ * de Electron, y esta capa no lo conoce a propósito—, así que el aviso de
+ * Windows lo manda el repaso de fondo con lo que le llegue de vuelta.
+ */
+let apartadoEnEstePost = 0
+
 function post(row: Scheduled, date: string, consumed = date): void {
-  saveTransaction({
+  apartadoEnEstePost = 0
+  const creado = saveTransaction({
     type: row.type,
     date,
     accountId: row.accountId,
@@ -743,6 +759,33 @@ function post(row: Scheduled, date: string, consumed = date): void {
         ? postedByScheduled(row.refundForScheduledId, date)
         : null
   })
+
+  /*
+   * Y lo que aparte la regla de su categoría, si es un ingreso.
+   *
+   * Con su red: si el traspaso no puede entrar —la cuenta en descubierto y sin
+   * permitirlo, la hucha borrada— lo que se pierde es el apartado, no el
+   * ingreso. Lo contrario sería dejar sin cobrar la nómina por no poder guardar
+   * su diez por ciento. En un movimiento apuntado a mano se hace al revés: allí
+   * hay alguien delante para volver a intentarlo.
+   */
+  if (row.type === 'income') {
+    try {
+      apartadoEnEstePost = atomic(() =>
+        aplicarRegla(reglaDeLaCategoria(row.categoryId), {
+          id: creado.id,
+          accountId: row.accountId,
+          amount: row.amount,
+          date
+        })
+      )
+    } catch (error) {
+      // A la consola y no al cuaderno de bitácora: `registro.ts` pide la carpeta
+      // de datos a Electron, y esta capa la usa también el banco de pruebas, que
+      // corre en Node pelado.
+      console.error('No se pudo apartar el ahorro automático:', error)
+    }
+  }
 
   const upcoming = nextOccurrence(consumed, row.freq, row.interval)
   // Esta era la última: la siguiente caería más allá del fin. Se apaga y se
@@ -766,6 +809,13 @@ function post(row: Scheduled, date: string, consumed = date): void {
 interface PostDueResult {
   created: number
   failed: Array<{ id: number; title: string; reason: string }>
+  /**
+   * Lo que se ha apartado solo al registrar ingresos con regla de ahorro.
+   *
+   * Sube hasta aquí para que el repaso de fondo pueda avisar: apartar dinero sin
+   * decirlo es justo lo que no se quiere de una regla automática.
+   */
+  apartados: Array<{ title: string; amount: number; currency: string }>
 }
 
 /**
@@ -793,13 +843,17 @@ export function postDue(reference = today()): PostDueResult {
     )
     .all(reference) as unknown as ScheduledRow[]
 
-  const resultado: PostDueResult = { created: 0, failed: [] }
+  const resultado: PostDueResult = { created: 0, failed: [], apartados: [] }
 
   for (const raw of rows) {
     // Se cuenta aparte y solo se suma al total si su transacción sale adelante:
     // al volver atrás, sus movimientos dejan de existir y contarlos haría que la
     // ventana se recargara buscando apuntes que no están.
     let suyas = 0
+    // Lo apartado por esta programada en toda la tanda: una nómina que llevaba
+    // tres meses sin registrarse aparta tres veces, y se cuenta de una vez con
+    // la suma, que es lo que se quiere leer en el aviso.
+    let apartado = 0
     try {
       // Lo de una programada sí es todo o nada: si su tercera cuota no entra, no
       // puede quedarse con las dos primeras puestas y la fecha a medio camino.
@@ -811,6 +865,7 @@ export function postDue(reference = today()): PostDueResult {
         while (current.active && current.nextDate <= reference && guard < 500) {
           if (current.endDate && current.nextDate > current.endDate) break
           post(current, current.nextDate)
+          apartado += apartadoEnEstePost
           suyas++
           guard++
           const refreshed = getDb().prepare('SELECT * FROM scheduled WHERE id = ?').get(current.id) as
@@ -829,6 +884,15 @@ export function postDue(reference = today()): PostDueResult {
         }
       })
       resultado.created += suyas
+      if (apartado > 0) {
+        const puesta = getScheduled(raw.id)
+        resultado.apartados.push({
+          title: tituloProgramada(puesta ?? mapScheduled(raw)),
+          amount: apartado,
+          // De la cuenta de la que sale, que es donde se lee el importe.
+          currency: puesta?.accountCurrency ?? getSettings().baseCurrency
+        })
+      }
     } catch (error) {
       resultado.failed.push({
         id: raw.id,

@@ -4,12 +4,14 @@ import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
 import { addToGoalReserve } from './goals'
+import { reglaDeCategoria } from './categories'
 import type {
   Transaction,
   TransactionView,
   TransactionInput,
   TransactionFilter,
   FilterTotals,
+  ReglaDeAhorro,
   TxType
 } from '@shared/types'
 
@@ -30,6 +32,7 @@ interface TxRow {
   lon: number | null
   scheduled_id: number | null
   refund_for_id: number | null
+  saved_from_id: number | null
   goal_id: number | null
   created_at: string
   updated_at: string
@@ -66,6 +69,7 @@ function mapTransaction(row: TxRow): Transaction {
     lon: row.lon,
     scheduledId: row.scheduled_id,
     refundForId: row.refund_for_id,
+    savedFromId: row.saved_from_id,
     goalId: row.goal_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -589,6 +593,72 @@ function ordenAlEntrar(date: string): number {
   return fila.tope + 10
 }
 
+/** La regla de ahorro de una categoría, tal y como está guardada. */
+export function reglaDeLaCategoria(categoryId: number | null): ReglaDeAhorro | null {
+  if (categoryId == null) return null
+  const row = getDb()
+    .prepare(
+      'SELECT kind, save_percent, save_amount, save_account_id, save_goal_id FROM categories WHERE id = ?'
+    )
+    .get(categoryId) as unknown as
+    | {
+        kind: string
+        save_percent: number | null
+        save_amount: number | null
+        save_account_id: number | null
+        save_goal_id: number | null
+      }
+    | undefined
+  if (!row) return null
+  return reglaDeCategoria({
+    kind: row.kind as 'income' | 'expense',
+    savePercent: row.save_percent,
+    saveAmount: row.save_amount,
+    saveAccountId: row.save_account_id,
+    saveGoalId: row.save_goal_id
+  })
+}
+
+/**
+ * Aparta lo que diga la regla, como un traspaso más del ingreso a la hucha.
+ *
+ * Devuelve lo apartado, o cero si no había regla o no venía a cuento. No se
+ * aparta a la misma cuenta en la que ha entrado —eso no mueve nada— ni un
+ * importe de cero, que sería un movimiento vacío en la lista.
+ */
+export function loQueApartaria(regla: ReglaDeAhorro | null, importe: number): number {
+  if (!regla || importe <= 0) return 0
+  // Al céntimo y sin redondear a euros: el 10 % de 1411,22 son 141,12. Y una
+  // cifra fija no puede pasar de lo que ha entrado: de un ingreso de 50 € no se
+  // apartan 100, se apartan 50.
+  const bruto = regla.modo === 'cifra' ? regla.valor : Math.round((importe * regla.valor) / 100)
+  return Math.min(bruto, importe)
+}
+
+export function aplicarRegla(
+  regla: ReglaDeAhorro | null,
+  ingreso: { id: number; accountId: number; amount: number; date: string },
+  destino?: number | false
+): number {
+  const hucha = typeof destino === 'number' ? destino : regla?.accountId
+  if (!regla || hucha == null || hucha === ingreso.accountId) return 0
+  const apartado = loQueApartaria(regla, ingreso.amount)
+  if (apartado <= 0) return 0
+  saveTransaction({
+    type: 'transfer',
+    date: ingreso.date,
+    accountId: ingreso.accountId,
+    toAccountId: hucha,
+    amount: apartado,
+    // El plan solo si el destino sigue siendo el suyo: mandado a otra hucha, el
+    // plan de la primera no pinta nada.
+    goalId: hucha === regla.accountId ? regla.goalId : null,
+    savedFromId: ingreso.id,
+    note: 'Ahorro automático'
+  })
+  return apartado
+}
+
 export function saveTransaction(input: TransactionInput): TransactionView {
   validate(input)
   const db = getDb()
@@ -707,9 +777,9 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         .prepare(
           `INSERT INTO transactions
              (type, date, time, account_id, to_account_id, category_id, amount, amount_to,
-              payee, note, place, lat, lon, refund_for_id, goal_id, scheduled_id, sort_order,
+              payee, note, place, lat, lon, refund_for_id, saved_from_id, goal_id, scheduled_id, sort_order,
               created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         )
         .run(
           input.type,
@@ -726,6 +796,8 @@ export function saveTransaction(input: TransactionInput): TransactionView {
           bind(input.lat),
           bind(input.lon),
           bind(refundForId),
+          // De qué ingreso salió, cuando lo ha hecho una regla de ahorro.
+          bind(input.savedFromId ?? null),
           bind(goalId),
           bind(input.scheduledId),
           ordenAlEntrar(input.date),
@@ -751,12 +823,76 @@ export function saveTransaction(input: TransactionInput): TransactionView {
     if (previous?.goalId) addToGoalReserve(previous.goalId, -(previous.amountTo ?? previous.amount))
     if (goalId) addToGoalReserve(goalId, amountTo ?? input.amount)
 
+    /*
+     * Y lo que aparte su categoría, en el mismo gesto.
+     *
+     * Sale un traspaso más, del ingreso a la hucha. Va dentro de la misma
+     * transacción y sin red: si no puede entrar, no entra nada y el aviso lo
+     * dice. Es lo contrario que en una programada —allí el apartado se pierde y
+     * la nómina se queda— porque allí no hay nadie delante para volver a
+     * intentarlo, y aquí sí.
+     *
+     * Dos condiciones más, y las dos evitan apartar dos veces lo mismo: solo al
+     * crear —sobre uno que ya existe, volver a apartar duplicaría el traspaso
+     * cada vez que se toca el importe— y solo si no lo ha traído una programada,
+     * que esas resuelven su propia regla y la aplican ellas.
+     */
+    if (
+      !input.id &&
+      input.type === 'income' &&
+      input.scheduledId == null &&
+      categoryId != null &&
+      // `false` es «esta vez no»: la regla se queda puesta para la próxima.
+      input.apartarEn !== false
+    ) {
+      aplicarRegla(
+        reglaDeLaCategoria(categoryId),
+        { id, accountId: input.accountId, amount: input.amount, date: input.date },
+        // La ventana puede mandarlo a otra hucha esta vez, sin tocar la regla.
+        input.apartarEn
+      )
+    }
+
     return getTransaction(id)!
   })
 }
 
 export function deleteTransaction(id: number): void {
   deleteTransactions([id])
+}
+
+/**
+ * Los traspasos que apartó la regla de ahorro a partir de este ingreso.
+ *
+ * Se leen a pelo de la tabla y no con la vista completa: aquí solo hacen falta
+ * cuatro columnas para deshacer lo que dejaron —su cuenta, su destino, su plan y
+ * su importe—, y no las diez que la vista trae para pintarlos.
+ */
+function hijosDelAhorro(id: number): Array<{
+  accountId: number
+  toAccountId: number | null
+  goalId: number | null
+  amount: number
+  amountTo: number | null
+}> {
+  const filas = getDb()
+    .prepare(
+      'SELECT account_id, to_account_id, goal_id, amount, amount_to FROM transactions WHERE saved_from_id = ?'
+    )
+    .all(id) as unknown as Array<{
+    account_id: number
+    to_account_id: number | null
+    goal_id: number | null
+    amount: number
+    amount_to: number | null
+  }>
+  return filas.map((fila) => ({
+    accountId: fila.account_id,
+    toAccountId: fila.to_account_id,
+    goalId: fila.goal_id,
+    amount: fila.amount,
+    amountTo: fila.amount_to
+  }))
 }
 
 export function deleteTransactions(ids: number[]): number {
@@ -770,6 +906,21 @@ export function deleteTransactions(ids: number[]): number {
       if (row) affected.push(row.accountId, row.toAccountId)
       // El dinero que sostenía una reserva se va con él.
       if (row?.goalId) addToGoalReserve(row.goalId, -(row.amountTo ?? row.amount))
+
+      /*
+       * Y lo que el ingreso arrastra consigo.
+       *
+       * El traspaso del ahorro automático cuelga del ingreso con `ON DELETE
+       * CASCADE`, así que la base lo borra sola. Pero la reserva del plan no la
+       * lleva la base: la lleva una columna de `goals` que sube y baja a mano,
+       * y sin deshacerla aquí el plan se quedaría contando un dinero que ya no
+       * existe. Se buscan antes de borrar, que después ya no están.
+       */
+      for (const hijo of hijosDelAhorro(id)) {
+        affected.push(hijo.accountId, hijo.toAccountId)
+        if (hijo.goalId) addToGoalReserve(hijo.goalId, -(hijo.amountTo ?? hijo.amount))
+      }
+
       stmt.run(id)
     }
     assertNoOverdraft(affected)

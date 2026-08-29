@@ -2016,6 +2016,17 @@ p { margin: 0; }
   color: var(--positive);
 }
 
+/* La del ahorro que se apartó solo, en el azul de los traspasos: el mismo con el
+   que se pinta su icono, para que la etiqueta y el avatar digan lo mismo. Y con
+   su vuelta bajo el ratón, como la del reembolso. */
+.pill.ahorro,
+.tx-row:hover .pill.ahorro,
+.tx-row.linked-active .pill.ahorro,
+.list-row:hover .pill.ahorro,
+.marcada .pill.ahorro {
+  color: var(--accent);
+}
+
 .pill.tag {
   background: color-mix(in srgb, var(--tag-color, var(--fg-subtle)) 16%, transparent);
   color: var(--tag-color, var(--fg-muted));

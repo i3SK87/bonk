@@ -1,6 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Icon, ALL_ICONS, PALETTE } from './Icon'
-import { Avatar, Modal, Field, IconPicker, ColorPicker, Confirm, Segmented, Checkbox } from './ui'
+import {
+  Avatar,
+  Modal,
+  Field,
+  IconPicker,
+  ColorPicker,
+  Confirm,
+  Segmented,
+  Checkbox
+} from './ui'
+import { useStore } from '../lib/store'
+import { formatMoney } from '@shared/money'
 import type { Category, CategoryKind } from '@shared/types'
 
 const api = window.bonk
@@ -20,6 +31,7 @@ interface CategoryModalProps {
 
 export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete }: CategoryModalProps): ReactNode {
   const [name, setName] = useState(category?.name ?? '')
+  const { accounts, settings } = useStore()
   const [kind, setKind] = useState<CategoryKind>(category?.kind ?? defaultKind)
   const [icon, setIcon] = useState(category?.icon ?? 'tag')
   const [color, setColor] = useState(category?.color ?? PALETTE[0])
@@ -46,7 +58,13 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       color,
       archived,
       breakdownByNote,
-      keepsInvoices
+      keepsInvoices,
+      // La regla de ahorro viaja intacta: se cambia en Planes Ahorro, y no
+      // mandarla aquí la borraría cada vez que se toca el nombre o el icono.
+      savePercent: category?.savePercent ?? null,
+      saveAmount: category?.saveAmount ?? null,
+      saveAccountId: category?.saveAccountId ?? null,
+      saveGoalId: category?.saveGoalId ?? null
     })
     if (saved) onClose()
   }
@@ -138,6 +156,25 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
             />
           )}
         </div>
+
+        {/*
+          La regla de ahorro se mira y se cambia en Planes Ahorro, no aquí.
+          Aquí solo se dice que existe: una categoría que aparta dinero sin
+          decirlo en ninguna parte es una sorpresa esperando a pasar, y basta
+          una línea para que no lo sea. Ficha de categoría es «cómo llamo yo a
+          esto»; lo que se hace con el dinero se decide en su pantalla.
+        */}
+        {kind === 'income' && category?.saveAccountId != null && (
+          <p className="small muted" style={{ margin: 0 }}>
+            Aparta{' '}
+            {category.saveAmount != null
+              ? formatMoney(category.saveAmount, settings.baseCurrency)
+              : `el ${category.savePercent} %`}{' '}
+            de lo que entre por aquí, y lo traspasa a{' '}
+            {accounts.find((item) => item.id === category.saveAccountId)?.name ?? 'tu hucha'}.
+            Se cambia en Planes Ahorro.
+          </p>
+        )}
       </Modal>
 
       {confirmDelete && (

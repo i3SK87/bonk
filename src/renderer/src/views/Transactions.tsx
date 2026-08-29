@@ -41,7 +41,12 @@ function nestRefunds(list: TransactionView[]): Array<{ row: TransactionView; nes
   return nestByParent(
     list,
     (row) => row.id,
-    (row) => (row.type === 'refund' ? row.refundForId : null)
+    /*
+     * Dos cosas cuelgan de otra: un reembolso de su gasto y el traspaso que
+     * apartó la regla de ahorro, de su ingreso. Son el mismo gesto de lectura
+     * —«esto salió de aquello»— y por eso comparten sangría, codo y resalte.
+     */
+    (row) => (row.type === 'refund' ? row.refundForId : row.savedFromId)
   )
 }
 
@@ -587,9 +592,18 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const families = useMemo(() => {
     const byRow = new Map<number, number>()
     const parents = new Map<number, TransactionView>()
+    /*
+     * Un ingreso que ha apartado se reconoce por sus hijos y no por un campo
+     * suyo: el gasto lleva la cuenta de lo devuelto en `refundedTotal`, pero el
+     * ingreso no sabe lo que se apartó de él. Se mira quién apunta a quién.
+     */
+    const conAhorro = new Set<number>()
+    for (const row of rows) if (row.savedFromId) conAhorro.add(row.savedFromId)
+
     for (const row of rows) {
       if (row.type === 'refund' && row.refundForId) byRow.set(row.id, row.refundForId)
-      else if (row.type === 'expense' && row.refundedTotal > 0) {
+      else if (row.savedFromId) byRow.set(row.id, row.savedFromId)
+      else if ((row.type === 'expense' && row.refundedTotal > 0) || conAhorro.has(row.id)) {
         byRow.set(row.id, row.id)
         parents.set(row.id, row)
       }
@@ -1655,10 +1669,15 @@ function TransactionRow({
   const detail = isTransfer ? null : row.note
 
   const linkTitle = linkedTo
-    ? `Reembolso de: ${linkedTo.categoryName ?? 'Sin categoría'}${
-        linkedTo.note ? ` · ${linkedTo.note}` : ''
-      } · ${formatDate(linkedTo.date)} · ${formatMoney(linkedTo.amount, linkedTo.accountCurrency)}`
-    : family === row.id
+    ? `${row.savedFromId != null ? 'Apartado de' : 'Reembolso de'}: ${
+        linkedTo.categoryName ?? 'Sin categoría'
+      }${linkedTo.note ? ` · ${linkedTo.note}` : ''} · ${formatDate(linkedTo.date)} · ${formatMoney(
+        linkedTo.amount,
+        linkedTo.accountCurrency
+      )}`
+    : // El padre solo tiene algo que contar si es un gasto con devoluciones: un
+      // ingreso no lleva la cuenta de lo que se apartó de él.
+      family === row.id && row.refundedTotal > 0
       ? `Devuelto ${formatMoney(row.refundedTotal, row.accountCurrency)} de ${formatMoney(row.amount, row.accountCurrency)}`
       : undefined
 
@@ -1722,6 +1741,10 @@ function TransactionRow({
         <div className="tx-title">{title}</div>
         <div className="tx-sub">
           {row.type === 'refund' && <span className="pill reembolso">Reembolso</span>}
+          {/* Lo que se apartó solo, dicho por su nombre: «Traspaso» era el cómo
+              y no el qué, y sin nombre es un traspaso más del que no se entiende
+              por qué cuelga del ingreso. */}
+          {row.savedFromId != null && <span className="pill ahorro">Ahorro</span>}
           {detail && <span className="tx-note">{detail}</span>}
           {detail && muestraCuenta && <span>·</span>}
           {muestraCuenta && <span>{row.accountName}</span>}

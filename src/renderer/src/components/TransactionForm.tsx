@@ -61,6 +61,18 @@ export function TransactionForm({
   const [toAccountId, setToAccountId] = useState<number | null>(existing?.toAccountId ?? null)
   const [goalId, setGoalId] = useState<number | null>(existing?.goalId ?? null)
   const [goals, setGoals] = useState<GoalProgress[]>([])
+  /*
+   * Lo decidido en el aviso del ahorro, o `null` mientras no se haya preguntado.
+   *
+   * La regla es automática, pero mover dinero sin decirlo es lo que convierte
+   * una comodidad en un sobresalto: antes de guardar sale el aviso con lo que se
+   * va a apartar y adónde, y ahí se puede cambiar de hucha o dejarlo para otra
+   * vez. Lo elegido vale solo para este movimiento; la regla no se toca.
+   */
+  const [decisionAhorro, setDecisionAhorro] = useState<number | false | null>(null)
+  const [avisandoDelAhorro, setAvisandoDelAhorro] = useState<{ keepOpen: boolean } | null>(null)
+  /** La hucha que enseña el aviso: por defecto, la que diga la regla. */
+  const [destinoDelAhorro, setDestinoDelAhorro] = useState(0)
   const [categoryId, setCategoryId] = useState<number | null>(
     existing?.categoryId ?? refundFor?.categoryId ?? null
   )
@@ -226,6 +238,36 @@ export function TransactionForm({
   )
   const hucha = destino?.type === 'savings' && planes.length > 0
 
+  /*
+   * Lo que va a apartar su categoría, para poder avisarlo antes de guardar.
+   *
+   * La regla no se elige aquí —vive en la ficha de la categoría— y solo se
+   * cuenta al crear: sobre un ingreso que ya existe, volver a apartar duplicaría
+   * el traspaso cada vez que se toca el importe.
+   */
+  const categoriaDelIngreso = categories.find((item) => item.id === categoryId)
+  const reglaDelIngreso =
+    type === 'income' &&
+    !existing &&
+    categoriaDelIngreso?.kind === 'income' &&
+    categoriaDelIngreso.saveAccountId != null &&
+    categoriaDelIngreso.saveAccountId !== accountId &&
+    (categoriaDelIngreso.saveAmount ?? categoriaDelIngreso.savePercent ?? 0) > 0
+      ? categoriaDelIngreso
+      : null
+  const huchasParaAhorrar = accounts.filter(
+    (item) => item.type === 'savings' && item.id !== accountId
+  )
+  /** Lo que se apartaría: la cifra tal cual, o el porcentaje del importe. */
+  const apartadoPrevisto = reglaDelIngreso
+    ? Math.min(
+        amount,
+        reglaDelIngreso.saveAmount != null
+          ? reglaDelIngreso.saveAmount
+          : Math.round((amount * Math.min(100, reglaDelIngreso.savePercent ?? 0)) / 100)
+      )
+    : 0
+
   useEffect(() => {
     api.goals.progress().then(setGoals).catch(() => undefined)
   }, [])
@@ -289,6 +331,8 @@ export function TransactionForm({
       setPreviews({})
       setPending([])
       setEnfocarImporte(true)
+      // El siguiente apunte es otro: vuelve a avisar de lo que aparta.
+      setDecisionAhorro(null)
       toast('Listo para el siguiente', 'info')
       return
     }
@@ -296,7 +340,17 @@ export function TransactionForm({
     onClose()
   }
 
-  async function save(keepOpen = false): Promise<void> {
+  /*
+   * `decidido` es lo contestado en el aviso del ahorro, y llega por el argumento
+   * a propósito.
+   *
+   * Guardarlo en el estado y llamar aquí seguido no vale: el estado no ha
+   * cambiado todavía cuando esta función lo lee, así que el aviso se volvía a
+   * abrir y había que pulsar dos veces. Pasándolo de la mano no hay nada que
+   * esperar.
+   */
+  async function save(keepOpen = false, decidido?: number | false): Promise<void> {
+    const eleccionDelAhorro = decidido ?? decisionAhorro
     setError(null)
     if (!accountId) return setError({ campo: 'cuenta', texto: 'Elige una cuenta' })
     if (amount <= 0) return setError({ campo: 'importe', texto: 'Escribe un importe mayor que cero' })
@@ -304,6 +358,19 @@ export function TransactionForm({
       return setError({ campo: 'destino', texto: 'Elige la cuenta de destino' })
     if (type === 'refund' && !refundForId)
       return setError({ campo: 'reembolso', texto: 'Elige el gasto que te devuelven' })
+
+    /*
+     * Antes de nada, el aviso del ahorro.
+     *
+     * Se pregunta una sola vez por movimiento: contestado, `decisionAhorro` deja
+     * de ser nulo y el segundo paso por aquí sigue de largo. Con «Guardar y
+     * seguir» se vuelve a poner a nulo, que el siguiente apunte es otro.
+     */
+    if (reglaDelIngreso && apartadoPrevisto > 0 && eleccionDelAhorro === null) {
+      setDestinoDelAhorro(reglaDelIngreso.saveAccountId as number)
+      setAvisandoDelAhorro({ keepOpen })
+      return
+    }
 
     /*
      * Con la fecha por delante no sale un movimiento, sale una programada.
@@ -359,6 +426,9 @@ export function TransactionForm({
           accountId,
           toAccountId: type === 'transfer' ? toAccountId : null,
           goalId: hucha ? goalId : null,
+          // Lo contestado en el aviso: otra hucha por esta vez, o `false` para
+          // dejarlo pasar. Sin regla no viaja nada y la capa de datos ni mira.
+          apartarEn: reglaDelIngreso ? (eleccionDelAhorro ?? undefined) : undefined,
           categoryId: type === 'transfer' ? null : categoryId,
           amount,
           note: note || null,
@@ -897,6 +967,71 @@ export function TransactionForm({
           onClose={() => setRefunding(false)}
           onSaved={onClose}
         />
+      )}
+
+      {/*
+        El aviso del ahorro automático.
+        Sale una vez, antes de guardar, y dice tres cosas: cuánto, de dónde sale
+        la regla y adónde va. La hucha se puede cambiar solo para este
+        movimiento —la regla se queda como está—, y «Esta vez no» deja el
+        ingreso sin apartar nada.
+      */}
+      {avisandoDelAhorro && reglaDelIngreso && (
+        <Modal
+          title="Ahorro automático"
+          onClose={() => setAvisandoDelAhorro(null)}
+          footer={
+            <>
+              <button
+                className="btn ghost"
+                onClick={() => {
+                  const { keepOpen } = avisandoDelAhorro
+                  setDecisionAhorro(false)
+                  setAvisandoDelAhorro(null)
+                  void save(keepOpen, false)
+                }}
+              >
+                Esta vez no
+              </button>
+              <div className="spacer" />
+              <button
+                className="btn primary"
+                onClick={() => {
+                  const { keepOpen } = avisandoDelAhorro
+                  setDecisionAhorro(destinoDelAhorro)
+                  setAvisandoDelAhorro(null)
+                  void save(keepOpen, destinoDelAhorro)
+                }}
+              >
+                Apartar y guardar
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin: '0 0 14px' }}>
+            De este ingreso se apartarán{' '}
+            <strong className="amount positive">{formatMoney(apartadoPrevisto, currency)}</strong>,
+            que es{' '}
+            {reglaDelIngreso.saveAmount != null
+              ? 'lo que tienes puesto'
+              : `el ${reglaDelIngreso.savePercent} %`}{' '}
+            en la categoría {reglaDelIngreso.name}.
+          </p>
+
+          <Field label="¿Dónde?" hint="Solo para este movimiento; la regla se queda como está.">
+            <select
+              className="select"
+              value={destinoDelAhorro}
+              onChange={(event) => setDestinoDelAhorro(Number(event.target.value))}
+            >
+              {huchasParaAhorrar.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {formatMoney(item.balance, item.currency)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </Modal>
       )}
 
       {confirmDelete && (

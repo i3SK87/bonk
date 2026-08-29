@@ -97,6 +97,39 @@ export interface Category {
   breakdownByNote: boolean
   /** Si sus movimientos pueden llevar facturas adjuntas. */
   keepsInvoices: boolean
+  /**
+   * Regla de ahorro: qué tanto por ciento se aparta de todo lo que entre en
+   * esta categoría, y a dónde. Solo en las de ingreso; `null` es que no hay.
+   *
+   * Vive aquí y no en cada movimiento porque así se dice una vez y vale
+   * siempre: lo que entre como Nómina aparta su parte venga de una programada o
+   * escrito a mano, sin tener que acordarse de marcar nada.
+   */
+  savePercent: number | null
+  /**
+   * O una cifra fija, para quien piensa «cien euros de cada nómina» en vez de
+   * «el diez por ciento». Puesta, manda sobre el porcentaje.
+   */
+  saveAmount: number | null
+  saveAccountId: number | null
+  saveGoalId: number | null
+}
+
+/**
+ * La regla de ahorro de una categoría de ingreso, ya comprobada.
+ *
+ * Dos formas de decir lo mismo: un tanto por ciento de lo que entre, o una cifra
+ * fija. Se guarda en un solo sitio para que nadie tenga que interpretar tres
+ * columnas sueltas cada vez que hace falta saber cuánto se aparta.
+ */
+export interface ReglaDeAhorro {
+  modo: 'porciento' | 'cifra'
+  /** El tanto por ciento (1 a 100) o los céntimos, según el modo. */
+  valor: number
+  /** La hucha adonde va. */
+  accountId: number
+  /** Y su plan, si va a uno; sin él entra como ahorro libre. */
+  goalId: number | null
 }
 
 export interface Tag {
@@ -135,6 +168,11 @@ export interface Transaction {
   scheduledId: number | null
   /** Gasto al que devuelve dinero este reembolso, cuando se registró desde él. */
   refundForId: number | null
+  /**
+   * Ingreso del que salió este traspaso, cuando lo hizo la regla de ahorro de su
+   * categoría. La lista lo cuelga debajo de él, como hace con los reembolsos.
+   */
+  savedFromId: number | null
   /**
    * Hito al que va este dinero, cuando se aparta a propósito. Solo lo llevan los
    * traspasos que entran en una cuenta de ahorro.
@@ -189,6 +227,18 @@ export interface TransactionInput {
   goalId?: number | null
   /** Programada que lo ha creado; queda anotado para poder rastrear su origen. */
   scheduledId?: number | null
+  /** Ingreso del que sale un traspaso de ahorro automático. */
+  savedFromId?: number | null
+  /**
+   * Qué hacer con la regla de ahorro de su categoría, solo por esta vez.
+   *
+   * Sin poner, lo que diga la regla y a su hucha. Con un id, se aparta igual
+   * pero en esa otra hucha —es lo que se elige en el aviso antes de guardar—.
+   * Con `false`, no se aparta nada esta vez y la regla sigue intacta para la
+   * próxima.
+   */
+  apartarEn?: number | false
+
 }
 
 export interface TransactionFilter {

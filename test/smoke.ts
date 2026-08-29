@@ -3050,6 +3050,204 @@ try {
   transactions.deleteTransaction(pagaExtra.id)
   scheduled.deleteScheduled(semestral.id)
 
+  section('Ahorro automático por categoría')
+
+  const categoriaIngreso = categories.listCategories().find((row) => row.kind === 'income')!
+  const huchaRegla = accounts.saveAccount({
+    name: 'Hucha de la regla',
+    type: 'savings',
+    currency: 'EUR',
+    initialBalance: 0,
+    icon: 'piggy',
+    color: '#34C759',
+    excludeFromTotal: false
+  })
+  const otraHucha = accounts.saveAccount({
+    name: 'La otra hucha',
+    type: 'savings',
+    currency: 'EUR',
+    initialBalance: 0,
+    icon: 'piggy',
+    color: '#34C759',
+    excludeFromTotal: false
+  })
+  const planRegla = goals.saveGoal({
+    name: 'Plan de la regla',
+    accountId: huchaRegla.id,
+    targetAmount: 500000,
+    targetDate: null,
+    icon: 'piggy',
+    color: '#34C759'
+  })
+
+  /*
+   * La regla vive en la categoría de ingreso: se dice una vez y vale para todo
+   * lo que entre por ahí, venga de una programada o escrito a mano.
+   */
+  const conPorciento = categories.saveCategory({
+    name: 'Sueldo al diez',
+    kind: 'income',
+    icon: 'salary',
+    color: '#34C759',
+    savePercent: 10,
+    saveAccountId: huchaRegla.id,
+    saveGoalId: planRegla.id
+  })
+  equal('la regla se guarda en la categoría', conPorciento.savePercent, 10)
+  equal('con su hucha', conPorciento.saveAccountId, huchaRegla.id)
+  equal('y su plan', conPorciento.saveGoalId, planRegla.id)
+  check('y sin cifra fija, que es la otra forma', conPorciento.saveAmount == null)
+
+  const saldoHucha = (id: number): number =>
+    accounts.listAccountsWithBalance().find((a) => a.id === id)!.balance
+
+  // Un ingreso a mano de esa categoría aparta solo, sin marcar nada.
+  const nomina = transactions.saveTransaction({
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conPorciento.id,
+    amount: 141122
+  })
+  // El diez por ciento de 1411,22 son 141,12, al céntimo y sin redondear a euros.
+  equal('aparta lo que diga su categoría', saldoHucha(huchaRegla.id), 14112)
+  equal('y lo apunta en el plan', goals.getGoal(planRegla.id)!.reserved, 14112)
+
+  // El traspaso cuelga del ingreso: es lo que la lista usa para anidarlo.
+  const suTraspaso = transactions
+    .listTransactions({ accountIds: [huchaRegla.id] })
+    .find((row) => row.type === 'transfer')
+  equal('el traspaso sabe de qué ingreso salió', suTraspaso?.savedFromId, nomina.id)
+
+  // Editar el ingreso no vuelve a apartar: se apartó al crearlo.
+  transactions.saveTransaction({
+    id: nomina.id,
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conPorciento.id,
+    amount: 141122
+  })
+  equal('editarlo no lo aparta dos veces', saldoHucha(huchaRegla.id), 14112)
+
+  /*
+   * Y borrar el ingreso se lleva su ahorro por delante, con la reserva incluida.
+   * El traspaso lo borra la base en cascada; la reserva del plan hay que
+   * deshacerla a mano, que es una columna y no una fila.
+   */
+  transactions.deleteTransaction(nomina.id)
+  equal('borrar el ingreso se lleva su traspaso', saldoHucha(huchaRegla.id), 0)
+  equal('y el plan suelta lo reservado', goals.getGoal(planRegla.id)!.reserved, 0)
+
+  // La otra forma de decirlo: una cifra fija.
+  const conCifra = categories.saveCategory({
+    name: 'Sueldo a cien',
+    kind: 'income',
+    icon: 'salary',
+    color: '#34C759',
+    saveAmount: 10000,
+    saveAccountId: huchaRegla.id
+  })
+  equal('la cifra fija se guarda', conCifra.saveAmount, 10000)
+  check('y entonces no hay porcentaje', conCifra.savePercent == null)
+
+  const conCien = transactions.saveTransaction({
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conCifra.id,
+    amount: 20000
+  })
+  equal('aparta la cifra, no un porcentaje', saldoHucha(huchaRegla.id), 10000)
+  transactions.deleteTransaction(conCien.id)
+
+  // Una cifra fija no puede apartar más de lo que ha entrado.
+  const ingresoCorto = transactions.saveTransaction({
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conCifra.id,
+    amount: 5000
+  })
+  equal('de un ingreso corto se aparta lo que hay', saldoHucha(huchaRegla.id), 5000)
+  transactions.deleteTransaction(ingresoCorto.id)
+
+  // «Esta vez no»: la regla se queda puesta pero este ingreso no aparta nada.
+  const sinApartar = transactions.saveTransaction({
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conPorciento.id,
+    amount: 100000,
+    apartarEn: false
+  })
+  equal('esta vez no aparta nada', saldoHucha(huchaRegla.id), 0)
+  check('y la regla sigue puesta', categories.listCategories().find((c) => c.id === conPorciento.id)!.savePercent === 10)
+  transactions.deleteTransaction(sinApartar.id)
+
+  // Y se puede mandar a otra hucha solo por esta vez.
+  const aLaOtra = transactions.saveTransaction({
+    type: 'income',
+    date: today(),
+    accountId: bank.id,
+    categoryId: conPorciento.id,
+    amount: 100000,
+    apartarEn: otraHucha.id
+  })
+  equal('va a la hucha elegida', saldoHucha(otraHucha.id), 10000)
+  equal('y no a la de la regla', saldoHucha(huchaRegla.id), 0)
+  // Sin plan: el de la primera hucha no pinta nada en la segunda.
+  equal('sin plan, que era de la otra', goals.getGoal(planRegla.id)!.reserved, 0)
+  transactions.deleteTransaction(aLaOtra.id)
+
+  // Un gasto no aparta, por mucho que se pida sobre su categoría.
+  const gastoConRegla = categories.saveCategory({
+    name: 'Gasto con regla',
+    kind: 'expense',
+    icon: 'cart',
+    color: '#FF3B30',
+    savePercent: 10,
+    saveAccountId: huchaRegla.id
+  })
+  check('una categoría de gasto no guarda regla', gastoConRegla.savePercent == null)
+
+  // Sin hucha no hay regla que valga, aunque se mande el porcentaje.
+  const sinHucha = categories.saveCategory({
+    name: 'Sueldo sin hucha',
+    kind: 'income',
+    icon: 'salary',
+    color: '#34C759',
+    savePercent: 25
+  })
+  check('un porcentaje sin hucha no es una regla', sinHucha.savePercent == null)
+
+  /*
+   * Y lo mismo cuando el ingreso entra solo, desde una programada: la regla es
+   * de la categoría, así que la programada no tiene que saber nada.
+   */
+  const nominaProgramada = scheduled.saveScheduled({
+    name: 'Nómina de la regla',
+    type: 'income',
+    accountId: bank.id,
+    categoryId: conPorciento.id,
+    amount: 141122,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: today(),
+    autoPost: true
+  })
+  const repasoDeLaRegla = scheduled.postDue()
+  equal('la programada también aparta', saldoHucha(huchaRegla.id), 14112)
+  const avisoDelAhorro = repasoDeLaRegla.apartados.find((row) => row.title === 'Nómina de la regla')
+  check('el repaso lo cuenta para poder avisar', avisoDelAhorro != null)
+  equal('con lo apartado', avisoDelAhorro?.amount, 14112)
+  equal('y la divisa de la cuenta', avisoDelAhorro?.currency, 'EUR')
+
+  scheduled.deleteScheduled(nominaProgramada.id)
+  accounts.deleteAccount(huchaRegla.id)
+  accounts.deleteAccount(otraHucha.id)
+
+
   transactions.deleteTransaction(sueltoDeDosMeses.id)
   transactions.deleteTransaction(viejo.id)
   scheduled.deleteScheduled(serie.id)

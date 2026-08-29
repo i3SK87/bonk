@@ -1,5 +1,5 @@
 import { getDb } from '../db'
-import type { Category, CategoryKind } from '@shared/types'
+import type { Category, CategoryKind, ReglaDeAhorro } from '@shared/types'
 import { byName } from '@shared/text'
 
 interface CategoryRow {
@@ -13,6 +13,10 @@ interface CategoryRow {
   sort_order: number
   breakdown_by_note: number
   keeps_invoices: number
+  save_percent: number | null
+  save_amount: number | null
+  save_account_id: number | null
+  save_goal_id: number | null
 }
 
 function mapCategory(row: CategoryRow): Category {
@@ -26,7 +30,11 @@ function mapCategory(row: CategoryRow): Category {
     archived: row.archived === 1,
     sortOrder: row.sort_order,
     breakdownByNote: row.breakdown_by_note === 1,
-    keepsInvoices: row.keeps_invoices === 1
+    keepsInvoices: row.keeps_invoices === 1,
+    savePercent: row.save_percent,
+    saveAmount: row.save_amount,
+    saveAccountId: row.save_account_id,
+    saveGoalId: row.save_goal_id
   }
 }
 
@@ -55,6 +63,45 @@ interface CategoryInput {
   archived?: boolean
   breakdownByNote?: boolean
   keepsInvoices?: boolean
+  /** La regla de ahorro, solo si es de ingreso. */
+  savePercent?: number | null
+  saveAmount?: number | null
+  saveAccountId?: number | null
+  saveGoalId?: number | null
+}
+
+/**
+ * La regla de ahorro de una categoría, ya comprobada, o `null`.
+ *
+ * Se limpia en un solo sitio para que la base no guarde a medias lo que luego
+ * hay que interpretar: una regla sin hucha, o del 0 %, o colgada de una
+ * categoría de gasto, es una regla que no existe. Del 1 al 100, que apartar el
+ * 150 % de un ingreso no significa nada.
+ */
+export function reglaDeCategoria(input: {
+  kind: CategoryKind
+  savePercent?: number | null
+  saveAmount?: number | null
+  saveAccountId?: number | null
+  saveGoalId?: number | null
+}): ReglaDeAhorro | null {
+  if (input.kind !== 'income' || !input.saveAccountId) return null
+
+  // La cifra manda sobre el porcentaje: puestas las dos, gana la que se escribió
+  // como cifra, que es la más concreta de las dos.
+  const cifra = Math.round(Number(input.saveAmount ?? 0))
+  if (Number.isFinite(cifra) && cifra > 0) {
+    return { modo: 'cifra', valor: cifra, accountId: input.saveAccountId, goalId: input.saveGoalId ?? null }
+  }
+
+  const porciento = Math.round(Number(input.savePercent ?? 0))
+  if (!Number.isFinite(porciento) || porciento <= 0) return null
+  return {
+    modo: 'porciento',
+    valor: Math.min(100, porciento),
+    accountId: input.saveAccountId,
+    goalId: input.saveGoalId ?? null
+  }
 }
 
 export function saveCategory(input: CategoryInput): Category {
@@ -64,11 +111,16 @@ export function saveCategory(input: CategoryInput): Category {
   if (!input.name?.trim()) throw new Error('La categoría necesita un título')
 
   const db = getDb()
+  const regla = reglaDeCategoria(input)
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
     db.prepare(
-      'UPDATE categories SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?, breakdown_by_note = ?, keeps_invoices = ? WHERE id = ?'
+      `UPDATE categories
+          SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?,
+              breakdown_by_note = ?, keeps_invoices = ?,
+              save_percent = ?, save_amount = ?, save_account_id = ?, save_goal_id = ?
+        WHERE id = ?`
     ).run(
       input.name.trim(),
       input.kind,
@@ -78,6 +130,10 @@ export function saveCategory(input: CategoryInput): Category {
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
       input.keepsInvoices ? 1 : 0,
+      regla?.modo === 'porciento' ? regla.valor : null,
+      regla?.modo === 'cifra' ? regla.valor : null,
+      regla?.accountId ?? null,
+      regla?.goalId ?? null,
       input.id
     )
     return getCategory(input.id)!
@@ -88,7 +144,10 @@ export function saveCategory(input: CategoryInput): Category {
     .get(input.kind) as unknown as { m: number }
   const result = db
     .prepare(
-      'INSERT INTO categories (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+      `INSERT INTO categories
+         (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices,
+          save_percent, save_amount, save_account_id, save_goal_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name.trim(),
@@ -98,7 +157,11 @@ export function saveCategory(input: CategoryInput): Category {
       input.color,
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
-      input.keepsInvoices ? 1 : 0
+      input.keepsInvoices ? 1 : 0,
+      regla?.modo === 'porciento' ? regla.valor : null,
+      regla?.modo === 'cifra' ? regla.valor : null,
+      regla?.accountId ?? null,
+      regla?.goalId ?? null
     )
   return getCategory(Number(result.lastInsertRowid))!
 }

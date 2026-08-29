@@ -85,6 +85,37 @@ export const FRECUENCIAS: Array<{ value: Frequency; singular: string; plural: st
  * Si tiene nombre se dice por su nombre, que es como se habla; si no lo tiene,
  * con el «cada», que ahí sí se está contando.
  */
+/**
+ * Cuántas veces al año cae algo con esta cadencia.
+ *
+ * Al año y no al mes: es la única medida que compara de verdad cosas que no se
+ * repiten igual. Una paga semestral no entra «129 € al mes» —ese mes no entra
+ * nada—, pero sí se puede decir lo que suma en un año al lado de una nómina.
+ *
+ * «Una vez» no cae ninguna: no se repite, así que no tiene ritmo que contar.
+ */
+export function vecesAlAño(freq: Frequency, interval: number): number {
+  const veces =
+    freq === 'daily' ? 365 : freq === 'weekly' ? 365 / 7 : freq === 'monthly' ? 12 : freq === 'yearly' ? 1 : 0
+  return veces / Math.max(1, interval)
+}
+
+/**
+ * Cuántas veces al mes cae algo con esta cadencia.
+ *
+ * Sirve para poner en el mismo renglón cosas que no se repiten igual: una cuota
+ * semanal y una nómina mensual solo se pueden comparar diciendo qué suponen al
+ * mes. Cuatro semanas y pico, treinta días, doce meses al año: son
+ * aproximaciones, y es la cifra que se busca.
+ *
+ * «Una vez» no cae ninguna: no se repite, así que no tiene ritmo que promediar.
+ */
+export function vecesAlMes(freq: Frequency, interval: number): number {
+  const veces =
+    freq === 'daily' ? 30 : freq === 'weekly' ? 4.348 : freq === 'monthly' ? 1 : freq === 'yearly' ? 1 / 12 : 0
+  return veces / Math.max(1, interval)
+}
+
 export function describeFrequency(freq: Frequency, interval: number): string {
   const cadencia = cadenciaDe(freq, interval)
   if (cadencia) return cadencia.nombre

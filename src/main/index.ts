@@ -6,7 +6,7 @@ import { registerIpc } from './ipc'
 import { postDue } from './repos/scheduled'
 import { getSettings, setSetting } from './repos/settings'
 import { applyAutoLaunch, startedHidden } from './autostart'
-import { startBackgroundWork } from './reminders'
+import { startBackgroundWork, anunciarApartados } from './reminders'
 import { registrar, registrarFallo } from './registro'
 import { createWidget, destroyWidget, sincronizarWidget, widgetWindow } from './widget'
 import { iniciarActualizaciones } from './updates'
@@ -208,10 +208,18 @@ if (!app.requestSingleInstanceLock()) {
 
     // Las recurrencias vencidas se generan al abrir, aunque la app lleve meses cerrada.
     try {
-      const { failed } = postDue()
+      const { failed, apartados } = postDue()
       for (const fallo of failed) {
         registrar('arranque', `«${fallo.title}» no entró: ${fallo.reason}`)
       }
+      /*
+       * Y si al ponerse al día una regla de ahorro ha apartado algo, se dice.
+       *
+       * Este repaso es el que recupera lo que venció con la aplicación cerrada,
+       * que es justo cuando más falta hace avisar: al abrir te encuentras un
+       * traspaso hecho que no recuerdas haber hecho.
+       */
+      anunciarApartados(iconPath, showWindow, apartados)
     } catch (error) {
       registrarFallo('arranque', error)
     }
