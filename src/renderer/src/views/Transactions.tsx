@@ -616,11 +616,20 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const activeCategories = categoryChips.filter((chip) =>
     chip.ids.some((id) => categoryIds.includes(id))
   ).length
-  const activeFilters = types.length + accountIds.length + activeCategories + (uncategorized ? 1 : 0)
+  /*
+   * La cuenta que se está mirando no cuenta como filtro.
+   *
+   * Desde que elegir una deja esa y ninguna más, siempre hay exactamente una
+   * puesta: contarla dejaba «Filtros (1)» encendido para siempre, y un
+   * contador que nunca baja de uno no dice nada. Un filtro recorta una lista
+   * que sin él estaría entera; esto elige de qué cuenta es la lista, que es
+   * otra cosa y vive arriba, en su cinta.
+   */
+  const activeFilters = types.length + activeCategories + (uncategorized ? 1 : 0)
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
-    ponFiltros({ types: [], accountIds: [], categoryIds: [], uncategorized: false })
+    ponFiltros({ types: [], categoryIds: [], uncategorized: false })
   }
 
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
@@ -641,6 +650,30 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     if (accountIds.length === 1 && accountIds[0] === id) return
     setAccountIds([id])
   }
+
+  /*
+   * «Todas» es todas menos las apartadas del total.
+   *
+   * Si una cuenta se marcó como apartada fue por algo, y el patrimonio de la
+   * barra lateral y el de la pestaña Cuentas tampoco la cuentan: que aquí
+   * dijera otra cifra sería tener dos patrimonios. Se guarda como la lista de
+   * sus identificadores y no como «ninguna elegida», que era el atajo obvio:
+   * así el traspaso a una cuenta apartada resta —sale del conjunto que se está
+   * mirando— en vez de valer cero por ser traspaso.
+   *
+   * Para ver una apartada se pulsa ella sola, que sigue funcionando.
+   */
+  const idsTodas = useMemo(
+    () => accounts.filter((account) => !account.excludeFromTotal).map((account) => account.id),
+    [accounts]
+  )
+  const todasActivas =
+    idsTodas.length > 1 &&
+    idsTodas.length === accountIds.length &&
+    idsTodas.every((id) => accountIds.includes(id))
+  const saldoDeTodas = accounts
+    .filter((account) => idsTodas.includes(account.id))
+    .reduce((suma, account) => suma + account.balanceInBase, 0)
 
   /**
    * Lo que un movimiento le hace al día que se está mirando.
@@ -696,13 +729,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * mismo dato cambiado, y ahí se pone de golpe.
    */
   const contado = useContador(netWorth, revision)
-  const netWorthLabel = accountIds.length
-    ? shownAccounts.length === 1
-      ? `Saldo · ${shownAccounts[0].name}`
-      : `Saldo · ${shownAccounts.length} cuentas`
-    : showingProjected
+  // Con todas puestas la cifra es el patrimonio, y así se llama: «Saldo · 2
+  // cuentas» para lo mismo sonaba a un recuento cualquiera.
+  const netWorthLabel = todasActivas
+    ? showingProjected
       ? 'Patrimonio previsto'
       : 'Patrimonio'
+    : accountIds.length
+      ? shownAccounts.length === 1
+        ? `Saldo · ${shownAccounts[0].name}`
+        : `Saldo · ${shownAccounts.length} cuentas`
+      : showingProjected
+        ? 'Patrimonio previsto'
+        : 'Patrimonio'
 
   /*
    * Lo que desfila por el teletipo.
@@ -900,8 +939,33 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           <div className="accounts-block">
             <div className="label">Cuentas</div>
             <div className="account-chips">
+              {/* Con una sola cuenta a la vista, «Todas» y ella son lo mismo. */}
+              {idsTodas.length > 1 && (
+                <button
+                  className={`account-chip${todasActivas ? ' active' : ''}`}
+                  onClick={() => setAccountIds(idsTodas)}
+                  title={
+                    todasActivas
+                      ? 'Estás viendo el patrimonio de todas tus cuentas'
+                      : 'Ver todas las cuentas juntas, salvo las apartadas del total'
+                  }
+                >
+                  {/* El acento fuerte y no el claro: es el que sostiene el
+                      blanco encima en los dos modos. */}
+                  <Avatar icon="wallet" color="var(--accent-strong)" size="small" />
+                  <span className="chip-text">
+                    <span className="chip-name truncate">Todas</span>
+                    <span
+                      className={`chip-balance amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
+                    >
+                      {formatMoney(saldoDeTodas, settings.baseCurrency)}
+                    </span>
+                  </span>
+                </button>
+              )}
               {accounts.map((account) => {
-                const active = accountIds.includes(account.id)
+                // Con todas puestas no se enciende ninguna: la encendida es «Todas».
+                const active = accountIds.includes(account.id) && !todasActivas
                 const balance = account.balance + (projectedDeltas.get(account.id) ?? 0)
                 /*
                  * Del color del aviso mientras el aviso esté puesto.
@@ -1117,23 +1181,15 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               </div>
             </div>
 
-            <div>
-              <div className="small muted" style={{ marginBottom: 6 }}>
-                Cuentas
-              </div>
-              <div className="chip-row">
-                {accounts.map((account) => (
-                  <button
-                    key={account.id}
-                    className={`btn small${accountIds.includes(account.id) ? ' primary' : ''}`}
-                    onClick={() => elegirCuenta(account.id)}
-                  >
-                    {account.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-
+            {/*
+              * Las cuentas ya no están aquí.
+              *
+              * Estaban repetidas: las mismas pastillas, y con el mismo
+              * comportamiento excluyente, viven arriba en la cinta con el saldo
+              * de cada una al lado, que es donde se miran. Aquí abajo eran una
+              * segunda copia sin saldos que además encendía el contador de
+              * filtros para siempre.
+              */}
             <div>
               <div className="small muted" style={{ marginBottom: 6 }}>
                 Categorías
