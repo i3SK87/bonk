@@ -24,6 +24,15 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Las rutas, siempre absolutas.
+#
+# Un .lnk no tiene desde dónde resolver una ruta relativa: guardando
+# «.\resources\icon.ico» Windows no encuentra nada y pinta el icono genérico de
+# documento en blanco —pasó el 29/08/2026, llamando al script desde la raíz del
+# proyecto—. Se resuelven aquí para que dé igual desde dónde se llame.
+$Target = (Resolve-Path -LiteralPath $Target).Path
+if ($Icon -and (Test-Path $Icon)) { $Icon = (Resolve-Path -LiteralPath $Icon).Path }
+
 Add-Type -Namespace Bonk -Name Lnk -MemberDefinition @'
 [DllImport("ole32.dll")] private static extern int CoCreateInstance(
     ref Guid clsid, IntPtr outer, uint ctx, ref Guid iid, out IntPtr obj);

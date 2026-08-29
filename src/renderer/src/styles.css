@@ -2571,7 +2571,10 @@ textarea::placeholder {
   border-bottom: 1px solid var(--border);
 }
 
-.list-row:last-child { border-bottom: none; }
+/* La raya de separación sobra en la última fila: no separa de nada. Las
+   recuadradas se quedan fuera, que ahí abajo no hay una raya de más sino un
+   lado de su recuadro. */
+.list-row:last-child:not(.recuadrada) { border-bottom: none; }
 
 /* Listas sin rayas entre filas: en Programados el avatar y el aire ya separan,
    y la retícula de líneas pesaba más que los datos. */
@@ -2860,7 +2863,11 @@ button.list-row {
   color: inherit;
 }
 
-button.list-row:last-child { border-bottom: none; }
+/* Lo mismo para las que son botón de verdad, que es el caso de la cuadrícula
+   de Categorías: esta regla gana por especificidad a la del recuadro —lleva
+   elemento, clase y pseudoclase— y era la que se comía el borde de abajo de
+   la última, dejándole la caja abierta por el pie. */
+button.list-row:last-child:not(.recuadrada) { border-bottom: none; }
 
 .tx-row:focus-visible,
 button.list-row:focus-visible {
