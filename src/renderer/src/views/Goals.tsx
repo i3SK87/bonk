@@ -13,12 +13,10 @@ import {
   IconPicker,
   ColorPicker,
   Loading,
-  AccionCabecera,
-  Segmented
+  AccionCabecera
 } from '../components/ui'
-import { formatMoney, currencySymbol } from '@shared/money'
+import { formatMoney } from '@shared/money'
 import { formatDate, today } from '@shared/dates'
-import { keepNumericChars } from '@shared/numbers'
 import { vecesAlAño, describeFrequency } from '../lib/frecuencias'
 import type { Category, Frequency, Goal, GoalProgress, ScheduledView } from '@shared/types'
 
@@ -766,8 +764,10 @@ function AhorroAutomatico({
 }: {
   onEditar: (categoria: Category | null) => void
 }): ReactNode {
-  const { categories, accounts, settings, revision } = useStore()
+  const { categories, accounts, settings, revision, run } = useStore()
   const [programadas, setProgramadas] = useState<ScheduledView[]>([])
+  /** La regla sobre la que se ha pulsado con el derecho. */
+  const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
 
   useEffect(() => {
     api.scheduled
@@ -839,7 +839,7 @@ function AhorroAutomatico({
   const total = conRegla.reduce((suma, categoria) => suma + (loQueAparta(categoria)?.alAño ?? 0), 0)
 
   return (
-    <div className="card">
+    <div className="card flush">
       <div className="card-header">
         <h2>Ahorro automático</h2>
         <span className="small muted">
@@ -856,14 +856,18 @@ function AhorroAutomatico({
         )}
       </div>
 
-      <div className="card-body col" style={{ gap: 2 }}>
+      <div>
         {conRegla.map((categoria) => {
           const hucha = accounts.find((item) => item.id === categoria.saveAccountId)
           return (
             <button
               key={categoria.id}
-              className="list-row clickable"
+              className={`list-row clickable${menu?.categoria.id === categoria.id ? ' marcada' : ''}`}
               onClick={() => onEditar(categoria)}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                setMenu({ categoria, x: event.clientX, y: event.clientY })
+              }}
             >
               <Avatar icon={categoria.icon} color={categoria.color} size="small" />
               <div style={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
@@ -912,14 +916,43 @@ function AhorroAutomatico({
             sin regla: aquello llenaba el bloque de cosas que no haces con lo que
             sí haces, y lo que se viene a mirar aquí es lo segundo. */}
         {sinRegla.length > 0 && (
-          <div className="row" style={{ marginTop: conRegla.length > 0 ? 10 : 0 }}>
+          <div className="row" style={{ padding: '6px 14px 14px' }}>
             <button className="btn small" onClick={() => onEditar(sinRegla[0])}>
               <Icon name="plus" size={14} />
-              Apartar de otro ingreso
+              Nuevo ahorro auto.
             </button>
           </div>
         )}
       </div>
+
+      {/* Quitar la regla se hace desde aquí, como se borra todo lo demás en la
+          aplicación: la ficha sigue estando para cambiarla. */}
+      {menu && (
+        <MenuContextual
+          x={menu.x}
+          y={menu.y}
+          opciones={[
+            {
+              etiqueta: 'Quitar el ahorro',
+              icono: 'trash',
+              peligrosa: true,
+              onElegir: () =>
+                run(
+                  () =>
+                    api.categories.save({
+                      ...menu.categoria,
+                      savePercent: null,
+                      saveAmount: null,
+                      saveAccountId: null,
+                      saveGoalId: null
+                    }),
+                  'Ahorro quitado'
+                )
+            }
+          ]}
+          onCerrar={() => setMenu(null)}
+        />
+      )}
     </div>
   )
 }
@@ -952,12 +985,6 @@ function ReglaModal({
     (item) => item.kind === 'income' && !item.archived && item.saveAccountId == null
   )
   const [goals, setGoals] = useState<Goal[]>([])
-  const [modo, setModo] = useState<'porciento' | 'cifra'>(
-    categoria.saveAmount != null ? 'cifra' : 'porciento'
-  )
-  const [porciento, setPorciento] = useState(
-    categoria.savePercent != null ? String(categoria.savePercent) : '10'
-  )
   const [cifra, setCifra] = useState(categoria.saveAmount ?? 0)
   const [hucha, setHucha] = useState<number | null>(categoria.saveAccountId ?? null)
   const [plan, setPlan] = useState<number | null>(categoria.saveGoalId ?? null)
@@ -969,7 +996,7 @@ function ReglaModal({
   const huchas = accounts.filter((item) => item.type === 'savings')
   const planes = goals.filter((goal) => !goal.achievedAt && goal.accountId === hucha)
   const moneda = huchas.find((item) => item.id === hucha)?.currency ?? settings.baseCurrency
-  const completa = hucha != null && (modo === 'cifra' ? cifra > 0 : Number(porciento) > 0)
+  const completa = hucha != null && cifra > 0
 
   // Cambiar de hucha deja huérfano el plan elegido, que era de la otra.
   useEffect(() => {
@@ -986,8 +1013,10 @@ function ReglaModal({
       () =>
         api.categories.save({
           ...categoria,
-          savePercent: quitando ? null : modo === 'porciento' ? Number(porciento) : null,
-          saveAmount: quitando ? null : modo === 'cifra' ? cifra : null,
+          // Solo cantidades: un porcentaje de una nómina que cambia cada año
+          // acaba siendo una cifra que nadie tiene en la cabeza.
+          savePercent: null,
+          saveAmount: quitando ? null : cifra,
           saveAccountId: quitando ? null : hucha,
           saveGoalId: quitando ? null : plan
         }),
@@ -1046,36 +1075,8 @@ function ReglaModal({
           )}
 
           <Field label="Cuánto" hint="De cada ingreso de esta categoría.">
-            <div className="row tight wrap">
-              <Segmented
-                value={modo}
-                onChange={setModo}
-                options={[
-                  { value: 'porciento', label: '%' },
-                  { value: 'cifra', label: currencySymbol(moneda) }
-                ]}
-              />
-              {modo === 'porciento' ? (
-                <div className="row tight" style={{ gap: 6 }}>
-                  <input
-                    className="input"
-                    style={{ width: 74, textAlign: 'right' }}
-                    inputMode="numeric"
-                    placeholder="0"
-                    value={porciento}
-                    onChange={(event) =>
-                      setPorciento(
-                        keepNumericChars(event.target.value, { decimals: false }).slice(0, 3)
-                      )
-                    }
-                  />
-                  <span className="small muted">% de lo que entre</span>
-                </div>
-              ) : (
-                <div style={{ width: 140 }}>
-                  <AmountInput value={cifra} currency={moneda} onChange={setCifra} compact />
-                </div>
-              )}
+            <div style={{ width: 160 }}>
+              <AmountInput value={cifra} currency={moneda} onChange={setCifra} compact />
             </div>
           </Field>
 
