@@ -21,6 +21,7 @@ import { SelectorCadencia } from '../components/SelectorCadencia'
 import { DetallesRepeticion, ResumenRepeticion } from '../components/DetallesRepeticion'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteProgramado, FechasProgramadas } from '../components/ProgramadaRapida'
+import { CalendarioProgramadas } from '../components/CalendarioProgramadas'
 import { DateInput } from '../components/DateInput'
 import { formatDate, relativeDays, today } from '@shared/dates'
 import type { DebtProgress, Frequency, GoalProgress, ScheduledView, TxType } from '@shared/types'
@@ -114,6 +115,11 @@ function ResumeModal({
 export function SchedulesView(): ReactNode {
   const { revision, run, toast, fail, settings } = useStore()
   const [rows, setRows] = useState<ScheduledView[]>([])
+  /*
+   * Las dos formas de mirar lo mismo. La lista dice qué hay programado; el
+   * calendario, cómo cae el mes. Empieza en la lista porque es la de siempre.
+   */
+  const [vista, setVista] = useState<'lista' | 'calendario'>('lista')
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<ScheduledView | null>(null)
   const [creating, setCreating] = useState(false)
@@ -216,6 +222,39 @@ export function SchedulesView(): ReactNode {
 
   return (
     <>
+      {/*
+       * El conmutador vive fuera de las tarjetas porque la cabecera es la misma
+       * en las dos vistas: metido dentro de la lista, se iba con ella al pasar
+       * al calendario y no había forma de volver.
+       */}
+      <AccionCabecera>
+        <Segmented
+          value={vista}
+          options={[
+            {
+              value: 'lista',
+              label: (
+                <>
+                  <Icon name="list" size={15} /> Lista
+                </>
+              ),
+            },
+            {
+              value: 'calendario',
+              label: (
+                <>
+                  <Icon name="calendar" size={15} /> Calendario
+                </>
+              ),
+            },
+          ]}
+          onChange={setVista}
+        />
+        <button className="btn primary" onClick={() => setCreating(true)}>
+          Nueva programación
+        </button>
+      </AccionCabecera>
+
       {overdue.length > 0 && (
         <div className="card card-body row" style={{ borderColor: 'var(--warning)' }}>
           <Icon name="alert" size={18} />
@@ -227,13 +266,14 @@ export function SchedulesView(): ReactNode {
         </div>
       )}
 
-      <div className="card flush">
-        <AccionCabecera>
-          <button className="btn primary" onClick={() => setCreating(true)}>
-            Nueva programación
-          </button>
-        </AccionCabecera>
+      {vista === 'calendario' && <CalendarioProgramadas programadas={rows} onAbrir={setEditing} />}
 
+      {/*
+       * La lista se esconde en vez de desmontarse: así volver del calendario la
+       * encuentra donde se dejó, con su desplazamiento y sus deudas ya pedidas,
+       * en vez de recargarla entera cada vez que se toca el conmutador.
+       */}
+      <div className="card flush" hidden={vista === 'calendario'}>
         {loading ? (
           <Loading />
         ) : vigentes.length === 0 ? (
@@ -383,17 +423,26 @@ export function SchedulesView(): ReactNode {
       </div>
 
       {finalizadas.length > 0 && (
-        <div className="card flush">
+        <div className="card flush" hidden={vista === 'calendario'}>
           <div className="card-header">
             <h2>Finalizadas</h2>
             <span className="small muted">Ya no generan nada.</span>
           </div>
           {finalizadas.map((row) => (
+            /*
+              Una deuda terminada no se reanuda ni se toca.
+              Lo demás que se acaba —una suscripción, un alquiler— se puede
+              volver a poner en marcha: era un plan que se paró y sigue teniendo
+              sentido. Una deuda no: se acabó de pagar, y volver a encenderla
+              sería inventarse cuotas que ya no debes. Así que ni botón de
+              reanudar, ni ficha, ni encenderse al pasar por encima. Es lo mismo
+              que hace su fila en Deudas.
+            */
             <div
               key={row.id}
-              className="list-row finished clickable"
-              role="button"
-              onClick={() => setEditing(row)}
+              className={`list-row finished ${row.isDebt ? 'inerte' : 'clickable'}`}
+              role={row.isDebt ? undefined : 'button'}
+              onClick={row.isDebt ? undefined : () => setEditing(row)}
             >
               <Avatar icon={row.categoryIcon ?? 'repeat'} color={row.categoryColor ?? '#8E8E93'} />
               <div style={{ minWidth: 0, flex: 1 }}>
@@ -424,16 +473,18 @@ export function SchedulesView(): ReactNode {
 
               {/* Como los mandos de arriba: hace lo suyo y para el clic, que si
                   no abriría además la ficha por detrás. */}
-              <button
-                className="btn ghost icon"
-                title="Reanudar: vuelve a generar movimientos"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setResuming(row)
-                }}
-              >
-                <Icon name="play" size={16} />
-              </button>
+              {!row.isDebt && (
+                <button
+                  className="btn ghost icon"
+                  title="Reanudar: vuelve a generar movimientos"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setResuming(row)
+                  }}
+                >
+                  <Icon name="play" size={16} />
+                </button>
+              )}
             </div>
           ))}
         </div>

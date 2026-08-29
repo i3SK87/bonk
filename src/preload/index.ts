@@ -10,6 +10,7 @@ import type {
   CategoryTotal,
   MonthlyPoint,
   ProjectedTransaction,
+  ScheduledOccurrence,
   DebtAdjust,
   DebtProgress,
   Frequency,
@@ -113,7 +114,15 @@ const api = {
     /** Cambiarle la categoría sin tocar nada más de la programación. */
     setCategory: (id: number, categoryId: number | null) =>
       call<void>('scheduled:setCategory', id, categoryId),
-    project: (from: string, to: string) => call<ProjectedTransaction[]>('scheduled:project', from, to)
+    project: (from: string, to: string) =>
+      call<ProjectedTransaction[]>('scheduled:project', from, to),
+    /**
+     * Las vueltas que caen en un rango, hacia atrás y hacia delante, con lo que
+     * pasó con cada una. Es lo que necesita el calendario para enseñar un mes
+     * ya empezado: la proyección sola solo mira del día de hoy en adelante.
+     */
+    occurrences: (from: string, to: string) =>
+      call<ScheduledOccurrence[]>('scheduled:occurrences', from, to)
   },
   reports: {
     categories: (from: string, to: string, kind: CategoryKind = 'expense') =>

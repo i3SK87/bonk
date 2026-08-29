@@ -108,6 +108,40 @@ export function nextOccurrence(
   }
 }
 
+/**
+ * La vuelta anterior de una cadencia: el espejo de `nextOccurrence`.
+ *
+ * Lo pide el calendario, que tiene que enseñar un mes ya empezado: sus recibos
+ * ya pasaron y la próxima fecha de la programada es del mes que viene, así que
+ * hay que recorrer la cadencia hacia atrás para saber qué cayó y cuándo.
+ *
+ * No es del todo reversible en los meses, y no puede serlo: el 31 de marzo
+ * hacia atrás es el 28 de febrero, y desde ahí hacia delante ya no se vuelve al
+ * 31. Es el mismo recorte que hace `addMonths` yendo hacia delante, y el mismo
+ * que ya arrastra la programada al avanzar.
+ */
+export function previousOccurrence(
+  iso: string,
+  freq: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly',
+  interval: number
+): string {
+  const step = Math.max(1, interval)
+  switch (freq) {
+    // Simétrico del de ida, aunque una de una vez no tenga vuelta anterior:
+    // quien la recorre la trata aparte.
+    case 'once':
+      return addDays(iso, -1)
+    case 'daily':
+      return addDays(iso, -step)
+    case 'weekly':
+      return addDays(iso, -step * 7)
+    case 'monthly':
+      return addMonths(iso, -step)
+    case 'yearly':
+      return addYears(iso, -step)
+  }
+}
+
 const dateFmt = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 const monthFmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' })

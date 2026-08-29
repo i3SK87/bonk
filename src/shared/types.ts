@@ -346,6 +346,21 @@ export interface ProjectedTransaction {
   isNext: boolean
 }
 
+/**
+ * Una vuelta concreta de una programación dentro de un rango, con lo que pasó
+ * con ella. A diferencia de la proyección, que solo mira hacia delante, esta
+ * también sabe de las que ya cayeron: es lo que permite enseñar un mes entero.
+ */
+export interface ScheduledOccurrence extends ProjectedTransaction {
+  /**
+   * `done`, se registró; `pending`, está por llegar o vence hoy; `missed`,
+   * venció y no llegó a registrarse.
+   */
+  status: 'done' | 'pending' | 'missed'
+  /** El movimiento que la materializó, cuando se le encuentra. */
+  transactionId: number | null
+}
+
 export interface Rate {
   code: string
   rate: number

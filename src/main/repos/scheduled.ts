@@ -1,5 +1,5 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
-import { today, nextOccurrence, formatDate } from '@shared/dates'
+import { today, nextOccurrence, previousOccurrence, formatDate } from '@shared/dates'
 import { saveTransaction, deleteTransaction, getTransaction } from './transactions'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
@@ -9,6 +9,7 @@ import type {
   Scheduled,
   ScheduledView,
   ProjectedTransaction,
+  ScheduledOccurrence,
   DebtAdjust,
   DebtProgress,
   TxType,
@@ -960,6 +961,157 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
   }
 
   return projected.sort((a, b) => (a.date === b.date ? a.scheduledId - b.scheduledId : a.date < b.date ? 1 : -1))
+}
+
+/**
+ * Las vueltas de cada programación que caen en un rango, hacia atrás y hacia
+ * delante, con lo que pasó con cada una.
+ *
+ * `projectUpcoming` solo camina hacia delante desde la próxima fecha, y con eso
+ * un mes ya empezado sale casi vacío: sus recibos ya cayeron y la próxima vuelta
+ * es del mes siguiente. Aquí se recorre la cadencia en los dos sentidos y se
+ * cruza con lo registrado, que es lo que permite decir de cada casilla si
+ * aquello se hizo, si está por venir, o si venció y nadie lo apuntó.
+ *
+ * No escribe nada.
+ */
+export function occurrencesInRange(from: string, to: string): ScheduledOccurrence[] {
+  if (!from || !to || from > to) return []
+
+  const rows = getDb().prepare(VIEW_SELECT).all() as unknown as ScheduledViewRow[]
+  const hoy = today()
+  const rates = rateMap()
+  const base = getSettings().baseCurrency
+
+  /*
+   * Lo que ya se registró en el rango por cuenta de una programada.
+   *
+   * Se cruza por programada y día. No basta con la marca `last_posted` de la
+   * fila: dice hasta cuándo generó, pero no con qué importe, y una cuota que
+   * se editó después vale por lo que acabó siendo, no por lo que decía el plan.
+   */
+  const registrados = getDb()
+    .prepare(
+      `SELECT id, scheduled_id, date, amount FROM transactions
+        WHERE scheduled_id IS NOT NULL AND date BETWEEN ? AND ?`
+    )
+    .all(from, to) as unknown as Array<{
+    id: number
+    scheduled_id: number
+    date: string
+    amount: number
+  }>
+
+  const hechos = new Map<string, { id: number; amount: number }>()
+  for (const t of registrados) hechos.set(`${t.scheduled_id}|${t.date}`, { id: t.id, amount: t.amount })
+
+  const salida: ScheduledOccurrence[] = []
+  const puestas = new Set<string>()
+
+  const anota = (s: ScheduledView, date: string): void => {
+    const clave = `${s.id}|${date}`
+    if (puestas.has(clave)) return
+    puestas.add(clave)
+
+    const hecho = hechos.get(clave)
+    // La marca de la fila cubre lo que se generó antes de que el movimiento
+    // guardara de quién venía, y lo que se generó y luego se borró.
+    const seHizo = hecho != null || (s.lastPosted != null && date <= s.lastPosted)
+    const status: ScheduledOccurrence['status'] =
+      date > hoy ? 'pending' : seHizo ? 'done' : date < hoy ? 'missed' : 'pending'
+
+    const amount = hecho?.amount ?? s.amount
+    const converted = convert(amount, s.accountCurrency, base, rates)
+    // El mismo criterio que en los movimientos de verdad: el traspaso no cambia
+    // el patrimonio, el gasto resta y el ingreso o el reembolso suman.
+    const amountInBase =
+      s.type === 'transfer' ? 0 : s.type === 'expense' ? -converted : converted
+
+    salida.push({
+      scheduledId: s.id,
+      date,
+      type: s.type,
+      amount,
+      amountTo: s.amountTo,
+      amountInBase,
+      accountId: s.accountId,
+      accountCurrency: s.accountCurrency,
+      accountName: s.accountName,
+      toAccountId: s.toAccountId,
+      toAccountName: s.toAccountName,
+      categoryName: s.categoryName,
+      categoryIcon: s.categoryIcon,
+      categoryColor: s.categoryColor,
+      name: s.name,
+      payee: s.payee,
+      note: s.note,
+      refundForScheduledId: s.refundForScheduledId,
+      isNext: s.active && date === s.nextDate,
+      status,
+      transactionId: hecho?.id ?? null
+    })
+  }
+
+  for (const row of rows) {
+    const s = toView(row)
+    /*
+     * El paso atrás se para el día en que se dio de alta la programación.
+     *
+     * No en el día en que arrancó el plan, que es lo que parecía natural para una
+     * deuda: 4Geeks arrancó en junio de 2024 y se apuntó aquí en agosto de 2026,
+     * y con aquel suelo salían veintiséis cuotas «vencidas» que llevaban dos años
+     * pagadas fuera. De lo de antes de darla de alta esta aplicación no sabe
+     * nada, y no puede echar en falta lo que nunca le tocó llevar.
+     *
+     * Nada real se pierde por esto: lo que se registró con la programada detrás
+     * entra igual por el repaso de abajo, aunque sea anterior a su alta.
+     */
+    const suelo = row.created_at.slice(0, 10)
+    const techo = s.endDate ?? '9999-12-31'
+
+    if (s.freq === 'once') {
+      // No tiene cadencia que recorrer: o ya se registró, o está por llegar.
+      if (s.lastPosted) anota(s, s.lastPosted)
+      if (s.active && s.nextDate <= techo) anota(s, s.nextDate)
+      continue
+    }
+
+    // Hacia atrás desde la próxima, que es lo que faltaba.
+    let atras = previousOccurrence(s.nextDate, s.freq, s.interval)
+    let guarda = 0
+    while (atras >= from && atras >= suelo && guarda < 400) {
+      if (atras <= to && atras <= techo) anota(s, atras)
+      atras = previousOccurrence(atras, s.freq, s.interval)
+      guarda++
+    }
+
+    // Y hacia delante solo si sigue viva: una apagada no va a generar nada más.
+    if (!s.active) continue
+    let alante = s.nextDate
+    guarda = 0
+    while (alante <= to && alante <= techo && guarda < 400) {
+      if (alante >= from) anota(s, alante)
+      alante = nextOccurrence(alante, s.freq, s.interval)
+      guarda++
+    }
+  }
+
+  /*
+   * Y lo que se registró sin caer en ninguna vuelta calculada.
+   *
+   * «Registrar ahora» fecha el movimiento hoy y no el día que le tocaba, así que
+   * hay cuotas que no cuadran con la cadencia. Esconderlas sería peor que
+   * enseñarlas descolocadas: son dinero que se movió de verdad.
+   */
+  const porId = new Map(rows.map((row) => [row.id, toView(row)]))
+  for (const t of registrados) {
+    const s = porId.get(t.scheduled_id)
+    if (s) anota(s, t.date)
+  }
+
+  return salida.sort((a, b) =>
+    a.date === b.date ? a.scheduledId - b.scheduledId : a.date < b.date ? -1 : 1
+  )
 }
 
 /**

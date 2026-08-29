@@ -55,6 +55,7 @@ const SOLO_LEEN = new Set([
   'scheduled:list',
   'scheduled:debts',
   'scheduled:project',
+  'scheduled:occurrences',
   'reports:categories',
   'reports:monthly',
   'reports:span',
@@ -274,6 +275,9 @@ export function registerIpc(
     celebrate()
     return posted
   })
+  handle('scheduled:occurrences', (from: string, to: string) =>
+    scheduled.occurrencesInRange(from, to)
+  )
   handle('scheduled:project', (from: string, to: string) => scheduled.projectUpcoming(from, to))
   handle('scheduled:debts', () => scheduled.debtProgress())
   handle('scheduled:adjustDebt', (id: number, patch: DebtAdjust) =>

@@ -23,8 +23,9 @@ import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, formatMoneyBreve, cabeEntero, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
-import { addMonths, addDays, nextOccurrence, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
+import { addMonths, addDays, nextOccurrence, previousOccurrence, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
 import { rangoDe, comparacionDe, NOMBRES_DE_RANGO, type RangoId } from '../src/shared/rangos'
+import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
 let passed = 0
 let failed = 0
@@ -212,6 +213,12 @@ try {
   section('Fechas')
   equal('suma meses recortando al último día', addMonths('2026-01-31', 1), '2026-02-28')
   equal('el mes siguiente de una programada mensual', nextOccurrence('2026-08-18', 'monthly', 1), '2026-09-18')
+  equal('y el anterior', previousOccurrence('2026-09-18', 'monthly', 1), '2026-08-18')
+  equal('la semanal cada dos, hacia atrás', previousOccurrence('2026-09-18', 'weekly', 2), '2026-09-04')
+  equal('la anual, hacia atrás', previousOccurrence('2026-09-18', 'yearly', 1), '2025-09-18')
+  // El recorte de los meses cortos no es reversible, y no puede serlo: es el
+  // mismo que ya hace la programada al avanzar.
+  equal('marzo hacia atrás cae en el último de febrero', previousOccurrence('2026-03-31', 'monthly', 1), '2026-02-28')
 
   /*
    * Cuánto falta para que cambie el día, que es cuando el repaso de fondo
@@ -223,6 +230,36 @@ try {
   equal('a mediodía, media jornada', msHastaElCambioDeDia(new Date(2026, 7, 29, 12, 0, 0)), 12 * 60 * 60 * 1000)
   // Nunca cero: un cero dejaría el temporizador disparándose en bucle.
   check('siempre queda algo por delante', msHastaElCambioDeDia(new Date()) > 0)
+
+  /*
+   * La rejilla del calendario de programadas.
+   *
+   * Es la cuenta que se equivoca por un día sin que se note hasta que llega un
+   * mes que empieza en domingo, así que se comprueban los tres casos que la
+   * rompen: el mes que arranca justo en el primer día de la semana, el que
+   * arranca en el último, y febrero de un año no bisiesto.
+   */
+  const sep2026 = semanasDelMes('2026-09-01')
+  equal('septiembre de 2026 ocupa cinco semanas', sep2026.length, 5)
+  equal('y arranca el lunes anterior al día 1', sep2026[0][0], '2026-08-31')
+  equal('y acaba el domingo posterior al 30', sep2026[4][6], '2026-10-04')
+  check('todas las semanas traen siete días', sep2026.every((s) => s.length === 7))
+
+  // 1 de febrero de 2026 cae en domingo: con la semana en lunes hay que
+  // retroceder seis días, y con la semana en domingo ninguno.
+  equal('febrero de 2026 empezando en lunes', semanasDelMes('2026-02-01', 'monday')[0][0], '2026-01-26')
+  equal('febrero de 2026 empezando en domingo', semanasDelMes('2026-02-01', 'sunday')[0][0], '2026-02-01')
+  equal('y en domingo le bastan cuatro semanas', semanasDelMes('2026-02-01', 'sunday').length, 4)
+
+  // Un mes de 31 días que empieza el último día de la semana necesita seis.
+  equal('mayo de 2027 ocupa seis semanas', semanasDelMes('2027-05-01', 'monday').length, 6)
+
+  check('el relleno del principio no es del mes', !esDelMes('2026-08-31', '2026-09-01'))
+  check('el día 1 sí lo es', esDelMes('2026-09-01', '2026-09-01'))
+  equal('la semana en lunes empieza por lunes', cabecerasDeSemana('monday')[0], 'lun')
+  equal('la semana en domingo empieza por domingo', cabecerasDeSemana('sunday')[0], 'dom')
+  check('el sábado es fin de semana', esFinDeSemana('2026-09-05'))
+  check('el viernes todavía no', !esFinDeSemana('2026-09-04'))
   /*
    * Los periodos de las pastillas, que estaban escritos dos veces.
    *
@@ -2771,6 +2808,89 @@ try {
     sePudo = false
   }
   check('lo de hoy no se programa: hoy ya está pasando', !sePudo)
+
+  /*
+   * El mes entero del calendario: lo que cayó y lo que falta.
+   *
+   * Es la parte que se equivoca en silencio. Una programada creada a mitad de
+   * mes no puede inventarse vueltas de antes de existir, y una que ya generó lo
+   * suyo tiene que salir hecha y no vencida.
+   */
+  section('El mes entero de las programadas')
+
+  const mesPasado = addMonths(today(), -1)
+  const arranque = startOfMonth(mesPasado)
+
+  // Nace el día 10 del mes pasado y ya ha generado esa vuelta.
+  const reciboMensual = scheduled.saveScheduled({
+    type: 'expense',
+    note: 'Recibo del mes',
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 2500,
+    freq: 'monthly',
+    interval: 1,
+    nextDate: addMonths(addDays(arranque, 9), 1),
+    autoPost: false,
+    remind: false
+  })
+
+  /*
+   * Y nació antes de esa vuelta.
+   *
+   * El suelo del paso atrás es el día en que se creó la programación: antes de
+   * existir no generaba nada. Aquí se retrasa a mano porque la de la prueba
+   * acaba de nacer, y sin esto su vuelta del mes pasado quedaría —con razón—
+   * por debajo del suelo.
+   */
+  getDb()
+    .prepare('UPDATE scheduled SET created_at = ? WHERE id = ?')
+    .run(`${addDays(arranque, -5)}T00:00:00.000Z`, reciboMensual.id)
+
+  const delMes = scheduled.occurrencesInRange(arranque, endOfMonth(mesPasado))
+  const suyas = delMes.filter((row) => row.scheduledId === reciboMensual.id)
+  equal('la vuelta del mes pasado sale aunque su próxima fecha sea de este', suyas.length, 1)
+  equal('y cae el día que le tocaba', suyas[0]?.date, addDays(arranque, 9))
+
+  /*
+   * Sin registrar y con la fecha pasada, es una vencida: la programada dice que
+   * ese dinero se movió y no hay movimiento que lo respalde.
+   */
+  equal('sin movimiento detrás, sale vencida', suyas[0]?.status, 'missed')
+
+  // Y hacia atrás no se inventa nada: antes de existir no generaba.
+  const antesDeNacer = scheduled.occurrencesInRange(
+    startOfMonth(addMonths(mesPasado, -6)),
+    endOfMonth(addMonths(mesPasado, -6))
+  ).filter((row) => row.scheduledId === reciboMensual.id)
+  equal('medio año antes no había nada que generar', antesDeNacer.length, 0)
+
+  // Con su movimiento apuntado, la misma vuelta pasa a hecha y se lleva su id.
+  const suPago = transactions.saveTransaction({
+    type: 'expense',
+    date: addDays(arranque, 9),
+    accountId: bank.id,
+    categoryId: categoriaViva.id,
+    amount: 2500,
+    scheduledId: reciboMensual.id
+  })
+  const yaHecha = scheduled
+    .occurrencesInRange(arranque, endOfMonth(mesPasado))
+    .find((row) => row.scheduledId === reciboMensual.id)
+  equal('con su movimiento detrás, sale hecha', yaHecha?.status, 'done')
+  equal('y se trae de qué movimiento viene', yaHecha?.transactionId, suPago.id)
+
+  // Lo que aún no ha llegado no es ni hecho ni vencido.
+  const proximo = addMonths(today(), 1)
+  const porVenir = scheduled
+    .occurrencesInRange(startOfMonth(proximo), endOfMonth(proximo))
+    .find((row) => row.scheduledId === reciboMensual.id)
+  equal('lo del mes que viene está por llegar', porVenir?.status, 'pending')
+
+  check('un rango del revés no devuelve nada', scheduled.occurrencesInRange('2026-09-30', '2026-09-01').length === 0)
+
+  transactions.deleteTransaction(suPago.id)
+  scheduled.deleteScheduled(reciboMensual.id)
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })

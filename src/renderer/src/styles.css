@@ -1319,7 +1319,12 @@ p { margin: 0; }
   gap: 3px;
 }
 
+/* Con icono al lado del texto: los que solo llevan texto se ven igual, que un
+   nodo suelto dentro de un contenedor flexible se centra donde ya se centraba. */
 .segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: none;
   background: transparent;
   color: var(--fg-muted);
@@ -4056,4 +4061,295 @@ body.recolocando * {
 .tx-row.destino,
 .day-heading.destino {
   box-shadow: inset 0 2px 0 var(--accent);
+}
+
+/* ============================================================
+   El calendario de programadas
+
+   Ocho columnas: los siete días y un carril con el saldo que
+   quedaría al cerrar cada semana. El carril es lo que hace que
+   la rejilla conteste «¿llego al día 25?» y no solo «qué hay».
+   ============================================================ */
+
+.cal-mes {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  /* Fija, para que los meses cortos y los largos no muevan el botón de Hoy. */
+  min-width: 148px;
+}
+
+.cal-resumen {
+  margin-left: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+}
+
+.cal-dato {
+  text-align: right;
+  line-height: 1.3;
+}
+
+.cal-dato .label {
+  display: block;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.cal-dato .amount {
+  font-size: 15px;
+}
+
+.cal-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) 112px;
+}
+
+.cal-cabecera {
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border);
+}
+
+.cal-cabecera.carril {
+  text-align: right;
+  border-left: 1px solid var(--border-strong);
+}
+
+.cal-dia {
+  min-height: 118px;
+  padding: 6px 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+  border: none;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cal-dia:hover { background: var(--bg-sunken); }
+
+/* Por dentro: el recuadro entero es la casilla, y por fuera se saldría del
+   canto de la tarjeta. */
+.cal-dia:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Los días del mes de al lado están para cuadrar la semana, no para mirarlos. */
+.cal-dia.fuera { background: var(--bg-sunken); }
+.cal-dia.fuera .cal-num { opacity: 0.5; }
+
+.cal-dia.finde {
+  background: color-mix(in srgb, var(--bg-sunken) 45%, var(--bg-elevated));
+}
+
+.cal-dia.finde:hover { background: var(--bg-sunken); }
+
+/* Hoy lleva su número en redondo de acento, como en cualquier calendario. El
+   acento de fondo es el fuerte, que es el que sostiene el blanco encima: el
+   claro no llega a 4,5:1, sobre todo en modo oscuro. */
+.cal-dia.hoy .cal-num {
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+  border-radius: var(--radius-pill);
+  padding: 0 6px;
+}
+
+.cal-dia.elegido {
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.cal-dia-cab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1px;
+}
+
+.cal-num {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-neto {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+/*
+ * El importe baja de línea cuando el nombre no cabe.
+ *
+ * En una casilla de mes hay ciento y pico píxeles, y con el nombre y la cifra
+ * peleándose por ellos «Nómina» acababa en «N…». Con el ancho mínimo del nombre
+ * puesto, el envoltorio decide solo: en ventana ancha caben los dos en la misma
+ * línea, y en cuanto aprieta, la cifra se va abajo y el nombre se queda con la
+ * casilla entera. Cuesta unos treinta píxeles de alto por casilla.
+ */
+.cal-apunte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: var(--bg-sunken);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+/* El color y su nombre no se separan nunca: sueltos, al bajar el importe el
+   puntito se quedaba huérfano en la línea de arriba. */
+.cal-linea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 88px;
+}
+
+/* A la derecha, comparta línea con el nombre o tenga la suya. */
+.cal-apunte .amount { margin-left: auto; }
+
+/* Sobre un fondo que ya es el hundido, el apunte se levanta en vez de hundirse. */
+.cal-dia.finde .cal-apunte,
+.cal-dia.elegido .cal-apunte {
+  background: var(--bg-elevated);
+}
+
+/* Lo que ya se registró se apaga: está ahí para dar cuenta del mes, no para
+   reclamar atención como lo que todavía tiene que pasar. */
+.cal-apunte.done { opacity: 0.55; }
+
+/* Y lo que venció sin registrarse se señala, que es lo contrario: dinero que
+   la programada daba por movido y no se ha movido. El ámbar de los avisos, en
+   un filo y no en el fondo, para no gritar más que el color de su categoría. */
+.cal-apunte.missed {
+  box-shadow: inset 0 0 0 1px var(--warning);
+}
+
+.pill.vencida {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.cal-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.25);
+}
+
+.cal-nombre {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 550;
+}
+
+.cal-apunte .amount {
+  font-size: 11px;
+  font-weight: 620;
+  white-space: nowrap;
+}
+
+.cal-mas {
+  margin-top: 1px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 620;
+  color: var(--accent);
+}
+
+.cal-carril {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
+  background: color-mix(in srgb, var(--bg-sunken) 55%, var(--bg-elevated));
+  border-left: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
+}
+
+.cal-cierre {
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* La semana más justa del mes, que es la que se viene a buscar. */
+.cal-carril.minimo {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+}
+
+.cal-aviso {
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--warning);
+}
+
+.cal-raya {
+  color: var(--fg-subtle);
+  opacity: 0.6;
+}
+
+/* La última columna de días no dibuja su raya: ya la pone el canto del carril,
+   que es más marcado porque separa dos cosas distintas. */
+.cal-rejilla > *:nth-child(8n - 1) { border-right: none; }
+
+/* Ni la última fila la suya: ahí abajo ya está el borde de la tarjeta. */
+.cal-rejilla > *:nth-last-child(-n + 8) { border-bottom: none; }
+
+.cal-pie {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--bg-sunken);
+}
+
+.cal-pie .label {
+  margin-right: auto;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.cal-pie .amount { font-size: 16px; }
+
+/*
+ * En ventana estrecha el carril es lo primero que sobra: sin él quedan siete
+ * columnas de ciento y pico, que es lo que necesita un nombre con su cifra al
+ * lado. Se mide contra el contenido, como el resto de las rejillas.
+ */
+@container (max-width: 900px) {
+  .cal-rejilla { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cal-cabecera.carril,
+  .cal-carril { display: none; }
 }

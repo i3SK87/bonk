@@ -722,7 +722,8 @@ export function Loading(): ReactNode {
 
 interface SegmentedProps<T extends string> {
   value: T
-  options: Array<{ value: T; label: string; tone?: string }>
+  /** Texto, o un icono con su texto al lado. */
+  options: Array<{ value: T; label: ReactNode; tone?: string }>
   onChange: (value: T) => void
 }
 
