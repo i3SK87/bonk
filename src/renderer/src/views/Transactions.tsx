@@ -10,6 +10,7 @@ import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { ImporteRapido } from '../components/ImporteRapido'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { RepetirMovimiento } from '../components/RepetirMovimiento'
+import { ScheduleModal } from './Schedules'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { AccionCabecera } from '../components/ui'
@@ -20,6 +21,7 @@ import { today, addMonths, formatDate, formatDayHeading, daysBetween } from '@sh
 import type {
   FilterTotals,
   ProjectedTransaction,
+  ScheduledView,
   TransactionFilter,
   TransactionView,
   TxType
@@ -151,6 +153,17 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const [cambiandoImporte, setCambiandoImporte] = useState<TransactionView | null>(null)
   const [cambiandoCategoria, setCambiandoCategoria] = useState<TransactionView | null>(null)
   const [repitiendo, setRepitiendo] = useState<TransactionView | null>(null)
+  /*
+   * La ficha de la programación de la que salió una fila.
+   *
+   * Se guarda ya resuelta, y con las demás al lado —la ficha las pide para el
+   * desplegable de reembolsos—, porque un movimiento solo trae el número de su
+   * programación: el plan del que viene hay que ir a buscarlo.
+   */
+  const [editandoProgramada, setEditandoProgramada] = useState<{
+    schedule: ScheduledView
+    siblings: ScheduledView[]
+  } | null>(null)
   const [devolviendo, setDevolviendo] = useState<TransactionView | null>(null)
   const [borrando, setBorrando] = useState<TransactionView | null>(null)
   const [importando, setImportando] = useState<OrigenCsv | null>(null)
@@ -724,6 +737,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * mismo dato cambiado, y ahí se pone de golpe.
    */
   const contado = useContador(netWorth, revision)
+  // El total de todas las cuentas también cuenta, aunque vaya escrito pequeño:
+  // es la misma cifra que preside la barra lateral, dicha aquí de paso.
+  const totalContado = useContador(saldoDeTodas, revision)
   const netWorthLabel = accountIds.length
     ? shownAccounts.length === 1
       ? `Saldo · ${shownAccounts[0].name}`
@@ -827,6 +843,34 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           ? 'positive'
           : 'neutral'
 
+  /**
+   * Abre la ficha de una programación de la que aquí solo se sabe el número.
+   *
+   * No hay forma de pedir una suelta, así que se piden todas: `list()` trae
+   * también las pausadas y las terminadas —una fila vieja puede venir de un plan
+   * ya cerrado—, y de la misma tirada salen las hermanas que la ficha necesita.
+   * Son unas pocas decenas; una llamada nueva al proceso principal para ahorrar
+   * eso no compensa.
+   */
+  const abrirProgramacion = async (scheduledId: number): Promise<void> => {
+    try {
+      const todas = await api.scheduled.list()
+      const schedule = todas.find((item) => item.id === scheduledId)
+      /*
+       * Puede no estar: borrada desde Programadas mientras esta lista seguía
+       * puesta. El movimiento sobrevive a su plan —la columna se queda a nulo—,
+       * pero el que hay en pantalla todavía lleva el número apuntado.
+       */
+      if (!schedule) {
+        toast('Esa programación ya no existe', 'error')
+        return
+      }
+      setEditandoProgramada({ schedule, siblings: todas })
+    } catch (error) {
+      toast(`No se pudo abrir la programación: ${(error as Error).message}`, 'error')
+    }
+  }
+
   /*
    * Lo que ofrece el menú de una fila.
    *
@@ -876,13 +920,25 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      * Y lo que resulta que pasa siempre, se programa.
      *
      * El que ya viene de una programación no: ese se repite de por sí, y
-     * montarle otra encima duplicaría cada vuelta a partir de ahora.
+     * montarle otra encima duplicaría cada vuelta a partir de ahora. Lo suyo es
+     * abrir la que ya tiene, y hasta ahora el hueco se quedaba vacío: el plan
+     * que escribe la fila solo se tocaba yendo a buscarlo a Programadas.
+     *
+     * En vez de `row.scheduledId` va una constante: dentro de la función de
+     * abajo, TypeScript no se fía de que una propiedad siga sin ser nula.
      */
-    if (row.scheduledId == null) {
+    const scheduledId = row.scheduledId
+    if (scheduledId == null) {
       lista.push({
         etiqueta: 'Programar',
         icono: 'calendar',
         onElegir: () => setRepitiendo(row)
+      })
+    } else {
+      lista.push({
+        etiqueta: 'Editar programación',
+        icono: 'calendar',
+        onElegir: () => abrirProgramacion(scheduledId)
       })
     }
     lista.push({
@@ -926,16 +982,34 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
           </div>
 
           <div className="accounts-block">
-            <div className="row tight">
-              <div className="label">Cuentas</div>
-              {idsTodas.length > 1 && (
-                <span
-                  className={`pill amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
-                  title="Todas tus cuentas juntas, salvo las apartadas del total"
-                >
-                  {formatMoney(saldoDeTodas, settings.baseCurrency)}
-                </span>
-              )}
+            {/*
+              El total, escrito en el rótulo y no en una pastilla.
+              Es el mismo reparto que el rótulo de al lado —«Saldo · CaixaBank»—:
+              una línea pequeña que dice de qué va la columna. En pastilla pesaba
+              como si fuera algo que se pulsa, y no lo es: es una cifra para
+              mirar de reojo. Lo único que se sale del gris del rótulo es el
+              número, que conserva su color.
+            */}
+            <div className="label">
+              {/* Todo dentro de un solo hijo: el rótulo es un contenedor
+                  flexible —lo necesita para cuadrar de alto con el de al lado—,
+                  y suelto, cada trozo sería un elemento suyo y los espacios de
+                  los cantos se perderían. Dentro de un span vuelve a ser una
+                  línea de texto normal, con sus espacios. */}
+              <span>
+                Cuentas
+                {idsTodas.length > 1 && (
+                  <>
+                    {' · Total '}
+                    <span
+                      className={`amount ${saldoDeTodas < 0 ? 'negative' : saldoDeTodas > 0 ? 'positive' : 'neutral'}`}
+                      title="Todas tus cuentas juntas, salvo las apartadas del total"
+                    >
+                      {formatMoney(totalContado, settings.baseCurrency)}
+                    </span>
+                  </>
+                )}
+              </span>
             </div>
             <div className="account-chips">
               {accounts.map((account) => {
@@ -968,11 +1042,12 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                     <Avatar icon={account.icon} color={account.color} size="small" />
                     <span className="chip-text">
                       <span className="chip-name truncate">{account.name}</span>
-                      <span
-                        className={`chip-balance amount ${tono}`}
-                      >
-                        {formatMoney(balance, account.currency)}
-                      </span>
+                      <SaldoDeLaPastilla
+                        balance={balance}
+                        currency={account.currency}
+                        tono={tono}
+                        disparo={revision}
+                      />
                     </span>
                   </button>
                 )
@@ -1341,6 +1416,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
         <RepetirMovimiento row={repitiendo} onClose={() => setRepitiendo(null)} />
       )}
 
+      {/* La misma ficha que abre Programadas, con su propio título: lo que se
+          cambie aquí vale para todas las vueltas de aquí en adelante, no para
+          la fila desde la que se abrió —para esa está «Editar importe»—. */}
+      {editandoProgramada && (
+        <ScheduleModal
+          schedule={editandoProgramada.schedule}
+          siblings={editandoProgramada.siblings}
+          onClose={() => setEditandoProgramada(null)}
+          onSave={(input) => run(() => api.scheduled.save(input), 'Programación actualizada')}
+          onDelete={() =>
+            run(
+              () => api.scheduled.remove(editandoProgramada.schedule.id),
+              'Programación eliminada'
+            )
+          }
+        />
+      )}
+
       {cambiandoCategoria && (
         <CategoriaRapida
           kind={cambiandoCategoria.type === 'income' ? 'income' : 'expense'}
@@ -1396,6 +1489,34 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
  * Repetición futura de una programada. Va apagada porque todavía no ha pasado:
  * se ve venir, pero no cuenta en ningún total hasta que se registre.
  */
+/**
+ * El saldo de una pastilla de cuenta, que cuenta hasta su nuevo valor.
+ *
+ * Es la misma animación de las cifras grandes, y por lo mismo: aquí el dinero
+ * entra y sale, y verlo moverse es lo que avisa de que el gasto recién apuntado
+ * ha llegado hasta la cuenta. En pequeño se agradece todavía más, que es donde
+ * menos se mira.
+ *
+ * Va en su propio componente porque el conteo es un hook y las pastillas se
+ * pintan en un bucle: un hook por vuelta no cabe dentro de un `map`.
+ */
+function SaldoDeLaPastilla({
+  balance,
+  currency,
+  tono,
+  disparo
+}: {
+  balance: number
+  currency: string
+  tono: string
+  disparo: unknown
+}): ReactNode {
+  const contado = useContador(balance, disparo)
+  // El tono lo pone el saldo de verdad y no el del conteo, como en las grandes:
+  // pasar de verde a rojo y volver mientras la cifra baja diría cosas que no son.
+  return <span className={`chip-balance amount ${tono}`}>{formatMoney(contado, currency)}</span>
+}
+
 function ProjectedRow({
   row,
   onRegister,

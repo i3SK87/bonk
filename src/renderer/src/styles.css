@@ -1561,6 +1561,13 @@ p { margin: 0; }
 
 /* Es la cifra que se busca al entrar, así que gana por tamaño a las demás:
    los totales del periodo van a 26 px y esta a 38. */
+/* La cifra que va dentro de un rótulo —el total de las cuentas— se viste como
+   él: `.amount` ahí solo aporta el color y las cifras tabulares, igual que en
+   los importes de la lista. */
+.networth-strip .label .amount {
+  font-weight: inherit;
+}
+
 /* El rotulillo que encabeza un bloque: en la tira del patrimonio y en la fila de
    huchas de Planes Ahorro, que dice lo mismo y tiene que verse igual. */
 .networth-strip .label,
