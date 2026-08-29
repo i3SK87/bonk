@@ -1,16 +1,18 @@
 # Compila el instalador de Windows y lo cuelga de la release.
 #
-# En el portátil ya no se puede: Smart App Control bloquea la ejecución del
-# ejecutable intermedio que la compilación necesita para generar el
-# desinstalador, y esa protección no admite exclusiones. Aquí no está, así que
-# el instalador se hace donde sí se deja.
+# Nació porque en el portátil no se podía: el Control inteligente de
+# aplicaciones bloqueaba el ejecutable intermedio que la compilación necesita
+# para generar el desinstalador, y esa protección no admite exclusiones. Desde
+# que está apagado también se puede compilar en local, pero esto se queda como
+# la fuente buena: aquí se corre `npm test` antes, y lo que sale no depende de
+# cómo estuviera el portátil ese día.
 name: Instalador de Windows
 
 on:
   # Al publicar una release, sus archivos se generan solos.
   release:
     types: [published]
-  # Y a mano, para rellenar una release que se quedó sin ellos.
+  # Y a mano, para rehacer los de una release que se quedó sin ellos.
   workflow_dispatch:
     inputs:
       tag:
@@ -39,16 +41,44 @@ jobs:
       # falla, más vale no repartir un instalador.
       - run: npm test
 
-      # Sin --publish never, electron-builder se cree que en CI hay que publicar
-      # solo y se para pidiendo un token. De colgar los archivos ya se encarga el
-      # paso siguiente, que sabe a qué release van.
+      # El token, aunque aquí no se publique nada.
+      #
+      # Desde que `electron-builder.yml` lleva su bloque `publish` —hizo falta
+      # para el actualizador de dentro, en la 2.11.0— electron-builder monta el
+      # publicador de GitHub aunque se le diga `--publish never`, y sin token
+      # revienta en el constructor antes de llegar a mirar la política. Es lo
+      # que tumbó siete releases seguidas con «GitHub Personal Access Token is
+      # not set». Con el token del propio runner ya no se para; de colgar los
+      # archivos sigue encargándose el paso de abajo, que sabe a qué release van.
       - run: npm run dist -- --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Colgar los archivos de la release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
-          $archivos = Get-ChildItem release/BONK-*-Setup.exe, release/BONK-*-portable.zip
-          $archivos | ForEach-Object { Write-Host "$($_.Name) — $([math]::Round($_.Length/1MB)) MB" }
+          # Los cuatro, y de una sola vez.
+          #
+          # `latest.yml` lleva el sha512 del instalador que lo acompaña, y el
+          # actualizador lo comprueba antes de instalar nada. Subiendo solo el
+          # .exe y el .zip —que es lo que se hacía— una release montada aquí
+          # encima de otra compilada en el portátil se quedaba con el ejecutable
+          # de una y la huella de la otra, y la actualización fallaba en el
+          # último paso. El .blockmap es lo que hace que la siguiente descarga
+          # sea diferencial y no cien megas otra vez.
+          $archivos = Get-ChildItem `
+            release/BONK-*-Setup.exe, `
+            release/BONK-*-portable.zip, `
+            release/BONK-*-Setup.exe.blockmap, `
+            release/latest.yml
+
+          $esperados = 4
+          if ($archivos.Count -ne $esperados) {
+            $archivos | ForEach-Object { Write-Host "  $($_.Name)" }
+            throw "Se esperaban $esperados archivos y hay $($archivos.Count). Sin los cuatro, la release queda descuadrada."
+          }
+
+          $archivos | ForEach-Object { Write-Host "$($_.Name) — $([math]::Round($_.Length/1MB, 2)) MB" }
           gh release upload $env:TAG $archivos.FullName --clobber
