@@ -1094,8 +1094,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               </button>
             )}
 
-            {/* Después de los filtros: no filtra nada, añade a la lista lo que
-                todavía no ha pasado. */}
+            {/* Con su raya delante: está en la misma fila que los filtros pero no
+                filtra nada, añade a la lista lo que todavía no ha pasado. */}
+            <span className="divisoria" />
             <button
               className={`btn small${filtros.programados ? ' primary' : ''}`}
               onClick={() => ponFiltros({ programados: !filtros.programados })}

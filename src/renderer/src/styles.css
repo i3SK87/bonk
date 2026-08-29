@@ -1369,6 +1369,11 @@ p { margin: 0; }
 .segmented button {
   display: inline-flex;
   align-items: center;
+  /* Centrado a mano: como contenedor flexible ya no vale el `text-align` que
+     trae un botón de fábrica, y dentro de un diálogo —donde los botones se
+     reparten el ancho a partes iguales— el texto se quedaba pegado a la
+     izquierda de su trozo. */
+  justify-content: center;
   gap: 6px;
   border: none;
   background: transparent;
@@ -1410,6 +1415,21 @@ p { margin: 0; }
 #acciones-cabecera .segmented button {
   padding: 3px 9px;
   font-size: 11.5px;
+}
+
+/*
+ * Una raya para separar dos cosas que no son lo mismo.
+ *
+ * En la barra de Movimientos, «Programados» está al lado de los filtros pero
+ * no filtra nada: añade a la lista lo que todavía no ha pasado. Puestos en
+ * fila y con la misma pinta, parecía un filtro más.
+ */
+.divisoria {
+  align-self: stretch;
+  width: 1px;
+  flex: none;
+  margin: 2px 3px;
+  background: var(--border);
 }
 
 /* ---------- Reembolsos ---------- */
@@ -1472,13 +1492,25 @@ p { margin: 0; }
   flex: 1;
 }
 
-/* El enlace de la derecha se salta el rótulo para caer en la fila de abajo,
-   con las pastillas: es de ellas de quien habla. */
+/*
+ * La cifra se centra por su tinta, no por su caja de línea.
+ *
+ * Una línea de texto reserva arriba y abajo el sitio de las letras que suben y
+ * las que bajan, y un número no usa casi nada de eso: la tinta se queda baja
+ * dentro de su caja, así que centrando la caja el número salía seis píxeles por
+ * debajo de las pastillas de al lado. Lo suyo sería recortar la caja con
+ * `text-box`, pero este motor la ignora —se probó y no movió un píxel—, así que
+ * se compensa a mano: doce de relleno abajo suben la línea seis, que es lo
+ * medido sobre lo pintado (la tinta iba de 150 a 181 y las pastillas de 138 a
+ * 182). Si algún día cambia el cuerpo de la cifra, hay que volver a medirlo.
+ */
+.networth-strip .networth > .value {
+  padding-bottom: 12px;
+}
+
+/* El enlace de la derecha, centrado en la cinta entera. */
 .networth-strip > .link {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  margin-top: calc(var(--cinta-rotulo) + var(--cinta-hueco));
+  align-self: center;
 }
 
 .networth {
