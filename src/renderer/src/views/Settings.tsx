@@ -423,7 +423,7 @@ export function SettingsView(): ReactNode {
               checked={settings.buscarActualizaciones}
               onChange={(value) => updateSettings({ buscarActualizaciones: value })}
               label="Buscar versiones nuevas"
-              hint="Al abrir y una vez al día. Es lo único que hace BONK por internet; apagado no se conecta a nada."
+              hint="Al abrir. Es lo único que hace BONK por internet; apagado no se conecta a nada."
             />
 
             <div className="row">
