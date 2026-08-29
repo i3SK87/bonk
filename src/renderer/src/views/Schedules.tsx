@@ -235,7 +235,7 @@ export function SchedulesView(): ReactNode {
               value: 'lista',
               label: (
                 <>
-                  <Icon name="list" size={15} /> Lista
+                  <Icon name="list" size={14} /> Lista
                 </>
               ),
             },
@@ -243,7 +243,7 @@ export function SchedulesView(): ReactNode {
               value: 'calendario',
               label: (
                 <>
-                  <Icon name="calendar" size={15} /> Calendario
+                  <Icon name="calendar" size={14} /> Calendario
                 </>
               ),
             },

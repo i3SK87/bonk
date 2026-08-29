@@ -1347,6 +1347,26 @@ p { margin: 0; }
 .segmented button.active[data-tone="transfer"] { color: var(--accent); }
 .segmented button.active[data-tone="refund"] { color: var(--positive); }
 
+/*
+ * El conmutador de vista, cuando vive en la cabecera.
+ *
+ * Ahí no es él quien manda: al lado tiene la acción principal de la pantalla,
+ * y a la misma altura y pegados parecían el mismo mando partido en tres. Se
+ * pone del tamaño de «Importar CSV», que es la otra cosa que acompaña sin
+ * protagonizar, y se separa de su vecino. Los demás segmentados de la
+ * aplicación —los de las fichas, Informes y Ajustes— se quedan como estaban:
+ * allí sí son ellos lo que hay que tocar.
+ */
+#acciones-cabecera .segmented {
+  padding: 2px;
+  margin-right: 12px;
+}
+
+#acciones-cabecera .segmented button {
+  padding: 3px 9px;
+  font-size: 11.5px;
+}
+
 /* ---------- Reembolsos ---------- */
 
 .refund-banner {
