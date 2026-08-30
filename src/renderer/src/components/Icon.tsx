@@ -18,6 +18,7 @@ import type { JSX } from 'react'
  */
 import {
   Baby,
+  Banknote,
   Bath,
   Bed,
   Bike,
@@ -139,7 +140,9 @@ const LUCIDE: Record<string, LucideIcon> = {
   pet: PawPrint,
   tax: Landmark,
   shield: Shield,
-  salary: Wallet,
+  // Un billete y no una cartera: «Nómina» y «Cartera» eran el mismo dibujo de
+  // Lucide, y las dos salen juntas en la rejilla de cuentas, que va sin rótulos.
+  salary: Banknote,
   tools: Wrench,
   chart: ChartColumn,
   coins: Coins,

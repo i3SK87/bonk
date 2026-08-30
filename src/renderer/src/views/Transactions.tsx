@@ -29,6 +29,19 @@ import type {
 
 const api = window.bonk
 
+/**
+ * Lo mínimo que hace falta saber de un movimiento —real o previsto— para poder
+ * medir lo que le hace a un puñado de cuentas.
+ */
+type ConEfecto = {
+  type: TxType
+  amount: number
+  amountTo: number | null
+  amountInBase: number
+  accountId: number
+  toAccountId: number | null
+}
+
 /** Los que se enseñan aquí. «Todo» se queda sin fechas: sin tope por ningún lado. */
 const RANGES: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all', 'custom']
 
@@ -693,26 +706,50 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     () => accounts.filter((account) => !account.excludeFromTotal).map((account) => account.id),
     [accounts]
   )
-  const saldoDeTodas = accounts
-    .filter((account) => idsTodas.includes(account.id))
-    .reduce((suma, account) => suma + account.balanceInBase, 0)
+  /*
+   * Con los previstos puestos, el total los cuenta.
+   *
+   * Cada pastilla enseña su saldo con lo que viene ya sumado, y este rótulo es
+   * la suma de esas pastillas: contando solo lo real decía 567,56 € encima de
+   * dos pastillas que sumaban 1978,78 €, y no había forma de cuadrarlo mirando.
+   * Apagadas las programadas, `projected` está vacío y la cifra vuelve sola a
+   * lo que hay hoy.
+   *
+   * El traspaso a una cuenta apartada del total sí resta, que se va del grupo.
+   */
+  const saldoDeTodas =
+    accounts
+      .filter((account) => idsTodas.includes(account.id))
+      .reduce((suma, account) => suma + account.balanceInBase, 0) +
+    projected.reduce((suma, item) => suma + efectoSobre(item, idsTodas), 0)
 
   /**
-   * Lo que un movimiento le hace al día que se está mirando.
+   * Lo que un movimiento le hace a un grupo de cuentas.
    *
-   * Sin cuenta elegida es su efecto sobre el patrimonio, y ahí un traspaso vale
-   * cero: el dinero sigue siendo tuyo. Pero mirando una cuenta concreta, ese
-   * mismo traspaso sale de ella y tiene que restar; si es el destino, suma lo que
-   * recibe. Entre dos cuentas elegidas vuelve a ser cero, que es la verdad.
+   * Sin ninguna es su efecto sobre el patrimonio, y ahí un traspaso vale cero:
+   * el dinero sigue siendo tuyo. Pero mirando unas cuantas, un traspaso que sale
+   * de una de ellas hacia fuera tiene que restar; si es el destino, suma lo que
+   * recibe. Entre dos del grupo vuelve a ser cero, que es la verdad.
+   *
+   * Las patas de un traspaso van en la divisa de su cuenta y no en la base: en
+   * la base solo está el cero del patrimonio. Con un traspaso entre divisas
+   * distintas la cifra queda aproximada, que es lo que ya hacía la cabecera del
+   * día desde el principio; convertir aquí pediría las tasas, y la ventana no
+   * las tiene.
    */
-  function effectOn(item: { type: TxType; amount: number; amountTo: number | null; amountInBase: number; accountId: number; toAccountId: number | null }): number {
-    if (accountIds.length === 0 || item.type !== 'transfer') return item.amountInBase
-    const sale = accountIds.includes(item.accountId)
-    const entra = item.toAccountId != null && accountIds.includes(item.toAccountId)
+  function efectoSobre(item: ConEfecto, ids: number[]): number {
+    if (ids.length === 0 || item.type !== 'transfer') return item.amountInBase
+    const sale = ids.includes(item.accountId)
+    const entra = item.toAccountId != null && ids.includes(item.toAccountId)
     if (sale && entra) return 0
     if (sale) return -item.amount
     if (entra) return item.amountTo ?? item.amount
     return 0
+  }
+
+  /** Lo que le hace a las cuentas elegidas, que es lo que mira la lista. */
+  function effectOn(item: ConEfecto): number {
+    return efectoSobre(item, accountIds)
   }
 
   const showingProjected = projected.length > 0
@@ -740,9 +777,19 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   const shownAccounts = accountIds.length
     ? accounts.filter((account) => accountIds.includes(account.id))
     : accounts.filter((account) => !account.excludeFromTotal)
+  /*
+   * Lo previsto se suma por lo que le hace a estas cuentas, no al patrimonio.
+   *
+   * Sumando `amountInBase` un traspaso valía cero —no mueve el patrimonio—, y
+   * con CaixaBank sola elegida los 350 € que se iban mañana a la Hucha no se
+   * restaban: la cifra grande decía 1978,78 € mientras su propia pastilla decía
+   * 1628,78 € y la cabecera de mañana, +1061,22 €. Tres cifras de la misma
+   * tarjeta contando cosas distintas.
+   */
+  const idsMostrados = shownAccounts.map((account) => account.id)
   const netWorth =
     shownAccounts.reduce((sum, account) => sum + account.balanceInBase, 0) +
-    (showingProjected ? projected.reduce((sum, item) => sum + item.amountInBase, 0) : 0)
+    projected.reduce((sum, item) => sum + efectoSobre(item, idsMostrados), 0)
   /*
    * El saldo cuenta hasta su nuevo valor cuando entra o sale dinero.
    *
@@ -801,20 +848,32 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      * El ritmo de gasto, que es lo que deja comparar un mes con otro de
      * distinta longitud.
      *
-     * Se reparte entre los días que han pasado de verdad, no entre los que mide
-     * el rango: a día 3 de mes, dividir entre 31 dice que gastas una tercera
-     * parte de lo que gastas. Cuando se está mirando lo que viene sí cuenta el
-     * rango entero, porque entonces el gasto de esos días futuros también está
-     * sumado arriba.
+     * Se reparte entre los días que el gasto sumado arriba abarca de verdad, no
+     * entre los que mide el rango: a día 3 de mes, dividir entre 31 dice que
+     * gastas una tercera parte de lo que gastas. Eso llega hasta hoy, y más
+     * allá solo si lo que viene trae gastos.
+     *
+     * Antes bastaba con asomar las programadas para contar el rango entero, y
+     * lo que viene no siempre trae gasto: con una nómina y un traspaso el 31,
+     * treinta días de gastos se repartían entre treinta y uno —55,72 € en vez
+     * de 57,58—, y a primeros de mes habría sido tres días entre treinta y uno.
+     * Un ingreso previsto no alarga los días entre los que se reparte el gasto.
      */
     // Sin rango elegido —«Todo»— los extremos los da la propia consulta, que ha
     // mirado todo: sacarlos de la lista cargada acortaba el periodo al trozo
     // que cupiera y disparaba la media.
-    const ultimaPrevista = projected.length ? projected[projected.length - 1].date : null
+    const ultimoGastoPrevisto = projected.reduce<string | null>(
+      (ultima, item) =>
+        item.type === 'expense' && (!ultima || item.date > ultima) ? item.date : ultima,
+      null
+    )
     const inicio = filter.from ?? sumas?.firstDate ?? null
-    const finRango = filter.to ?? (showingProjected ? ultimaPrevista : null) ?? sumas?.lastDate ?? null
-    const fin = !finRango ? null : showingProjected ? finRango : finRango > today() ? today() : finRango
-    if (inicio && fin && totals.expense > 0) {
+    // Hasta donde llega lo sumado: hoy, o el último gasto previsto si va más lejos.
+    const cubierto =
+      ultimoGastoPrevisto && ultimoGastoPrevisto > today() ? ultimoGastoPrevisto : today()
+    const finRango = filter.to ?? ultimoGastoPrevisto ?? sumas?.lastDate ?? null
+    const fin = !finRango ? null : finRango > cubierto ? cubierto : finRango
+    if (inicio && fin && inicio <= fin && totals.expense > 0) {
       const dias = Math.max(1, daysBetween(inicio, fin) + 1)
       lista.push({
         label: 'Gasto medio al día',
