@@ -7,6 +7,7 @@ import {
   reglaDeLaCategoria,
   aplicarRegla
 } from './transactions'
+import { loQueApartaria } from '@shared/ahorro'
 import { getSettings, rateMap } from './settings'
 import { convert } from '@shared/money'
 import { tituloProgramada } from '@shared/text'
@@ -963,6 +964,75 @@ export function settleDebtNow(id: number, date = today()): { amount: number } {
   })
 }
 
+/** Nombre y divisa de cada cuenta, para poder nombrar la hucha de una regla. */
+function cuentasPorId(): Map<number, { name: string; currency: string }> {
+  const filas = getDb().prepare('SELECT id, name, currency FROM accounts').all() as unknown as Array<{
+    id: number
+    name: string
+    currency: string
+  }>
+  return new Map(filas.map((fila) => [fila.id, { name: fila.name, currency: fila.currency }]))
+}
+
+/**
+ * El ahorro automático que va a acompañar a un ingreso previsto.
+ *
+ * La regla vive en la categoría y el traspaso nace en el momento en que el
+ * ingreso se registra, así que no está en la tabla de programadas y la
+ * proyección se lo saltaba entero: la nómina de mañana salía sola cuando de
+ * verdad va a traer dos movimientos. Aquí se calcula la pareja, con la misma
+ * cuenta que hace `aplicarRegla` al registrarla de verdad —si las dos dijeran
+ * cifras distintas, la previsión mentiría—.
+ *
+ * No lleva `isNext`: no se registra por su cuenta, sino al registrarse el
+ * ingreso del que sale.
+ */
+function ahorroPrevisto(
+  s: ScheduledView,
+  date: string,
+  amount: number,
+  huchas: Map<number, { name: string; currency: string }>,
+  rates: Record<string, number>
+): ProjectedTransaction | null {
+  if (s.type !== 'income') return null
+  const regla = reglaDeLaCategoria(s.categoryId)
+  // La misma puerta que al aplicarla: a la cuenta en la que ya ha entrado no se
+  // aparta nada, que eso no mueve dinero de sitio.
+  if (!regla || regla.accountId === s.accountId) return null
+  const apartado = loQueApartaria(regla, amount)
+  if (apartado <= 0) return null
+  const hucha = huchas.get(regla.accountId)
+  if (!hucha) return null
+
+  return {
+    scheduledId: s.id,
+    date,
+    type: 'transfer',
+    amount: apartado,
+    // Entre divisas distintas, lo que llegaría a la hucha; igual que al guardar.
+    amountTo:
+      hucha.currency === s.accountCurrency
+        ? null
+        : convert(apartado, s.accountCurrency, hucha.currency, rates),
+    // Un traspaso no mueve el patrimonio, como todos los demás.
+    amountInBase: 0,
+    accountId: s.accountId,
+    accountCurrency: s.accountCurrency,
+    accountName: s.accountName,
+    toAccountId: regla.accountId,
+    toAccountName: hucha.name,
+    categoryName: null,
+    categoryIcon: null,
+    categoryColor: null,
+    name: null,
+    payee: null,
+    note: 'Ahorro automático',
+    refundForScheduledId: null,
+    savedFromScheduledId: s.id,
+    isNext: false
+  }
+}
+
 /**
  * Proyecta las repeticiones que caen dentro de un rango, sin escribir nada.
  * Sirve para enseñar en la lista lo que está por venir; en cuanto la programada
@@ -978,6 +1048,7 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
   const projected: ProjectedTransaction[] = []
   const rates = rateMap()
   const base = getSettings().baseCurrency
+  const huchas = cuentasPorId()
 
   for (const row of rows) {
     const scheduled = toView(row)
@@ -1014,9 +1085,14 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
           payee: scheduled.payee,
           note: scheduled.note,
           refundForScheduledId: scheduled.refundForScheduledId,
+          savedFromScheduledId: null,
           isNext: first
         })
         first = false
+        // Y detrás, lo que la regla de su categoría vaya a apartar de él. Va
+        // pegado a su ingreso: la lista lo cuelga de ahí.
+        const ahorro = ahorroPrevisto(scheduled, date, scheduled.amount, huchas, rates)
+        if (ahorro) projected.push(ahorro)
       }
       date = nextOccurrence(date, scheduled.freq, scheduled.interval)
       guard++
@@ -1207,6 +1283,7 @@ export function occurrencesInRange(from: string, to: string): ScheduledOccurrenc
       payee: s.payee,
       note: s.note,
       refundForScheduledId: s.refundForScheduledId,
+      savedFromScheduledId: null,
       isNext: s.active && date === s.nextDate,
       status,
       transactionId: hecho?.id ?? null

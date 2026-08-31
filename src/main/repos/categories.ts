@@ -1,5 +1,6 @@
 import { getDb } from '../db'
-import type { Category, CategoryKind, ReglaDeAhorro } from '@shared/types'
+import type { Category, CategoryKind } from '@shared/types'
+import { reglaDeCategoria } from '@shared/ahorro'
 import { byName } from '@shared/text'
 
 interface CategoryRow {
@@ -68,40 +69,6 @@ interface CategoryInput {
   saveAmount?: number | null
   saveAccountId?: number | null
   saveGoalId?: number | null
-}
-
-/**
- * La regla de ahorro de una categoría, ya comprobada, o `null`.
- *
- * Se limpia en un solo sitio para que la base no guarde a medias lo que luego
- * hay que interpretar: una regla sin hucha, o del 0 %, o colgada de una
- * categoría de gasto, es una regla que no existe. Del 1 al 100, que apartar el
- * 150 % de un ingreso no significa nada.
- */
-export function reglaDeCategoria(input: {
-  kind: CategoryKind
-  savePercent?: number | null
-  saveAmount?: number | null
-  saveAccountId?: number | null
-  saveGoalId?: number | null
-}): ReglaDeAhorro | null {
-  if (input.kind !== 'income' || !input.saveAccountId) return null
-
-  // La cifra manda sobre el porcentaje: puestas las dos, gana la que se escribió
-  // como cifra, que es la más concreta de las dos.
-  const cifra = Math.round(Number(input.saveAmount ?? 0))
-  if (Number.isFinite(cifra) && cifra > 0) {
-    return { modo: 'cifra', valor: cifra, accountId: input.saveAccountId, goalId: input.saveGoalId ?? null }
-  }
-
-  const porciento = Math.round(Number(input.savePercent ?? 0))
-  if (!Number.isFinite(porciento) || porciento <= 0) return null
-  return {
-    modo: 'porciento',
-    valor: Math.min(100, porciento),
-    accountId: input.saveAccountId,
-    goalId: input.saveGoalId ?? null
-  }
 }
 
 export function saveCategory(input: CategoryInput): Category {

@@ -11,8 +11,15 @@ import {
   markSettlementNotified,
   debtSummary
 } from './repos/scheduled'
+import { reglaDeLaCategoria } from './repos/transactions'
+import { loQueApartaria } from '@shared/ahorro'
 import { pendingGoals, markGoalReached } from './repos/goals'
-import { listAccountsWithBalance, isLowBalanceWarned, setLowBalanceWarned } from './repos/accounts'
+import {
+  getAccount,
+  listAccountsWithBalance,
+  isLowBalanceWarned,
+  setLowBalanceWarned
+} from './repos/accounts'
 import { getSettings } from './repos/settings'
 import { tituloProgramada } from '@shared/text'
 import { registrar, registrarFallo } from './registro'
@@ -38,6 +45,24 @@ function amountOf(row: ScheduledView): string {
   return formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {
     sign: row.type !== 'transfer'
   })
+}
+
+/**
+ * Y lo que la regla de su categoría vaya a apartar de ese ingreso.
+ *
+ * Mañana no entra solo la nómina: detrás va el traspaso a la hucha, y el aviso
+ * que anuncia una cosa y calla la otra deja a medias lo que va a pasar. No es
+ * un aviso aparte —no hay nada que hacer con él, ocurre solo—, sino la misma
+ * línea diciendo entera la verdad.
+ */
+function apartadoDe(row: ScheduledView): string {
+  if (row.type !== 'income') return ''
+  const regla = reglaDeLaCategoria(row.categoryId)
+  if (!regla || regla.accountId === row.accountId) return ''
+  const apartado = loQueApartaria(regla, row.amount)
+  if (apartado <= 0) return ''
+  const hucha = getAccount(regla.accountId)
+  return ` · aparta ${formatMoney(apartado, row.accountCurrency)}${hucha ? ` a ${hucha.name}` : ''}`
 }
 
 /**
@@ -143,7 +168,7 @@ function checkReminders(icon: string, onClick: () => void): number {
         title: `Mañana: ${title(row)}`,
         // «Lo registras tú» solo cuando hay algo que hacer: decir que las demás
         // se registran solas es contar lo que ya se da por hecho.
-        body: `${amountOf(row)} · ${row.accountName}${row.autoPost ? '' : ' · lo registras tú'}`
+        body: `${amountOf(row)} · ${row.accountName}${apartadoDe(row)}${row.autoPost ? '' : ' · lo registras tú'}`
       })
     }
   } else {

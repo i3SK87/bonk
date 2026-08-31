@@ -392,6 +392,16 @@ export interface ProjectedTransaction {
   note: string | null
   /** Programada del gasto del que cuelga, para poder anidarla en la lista. */
   refundForScheduledId: number | null
+  /**
+   * Programada del ingreso del que sale este ahorro automático.
+   *
+   * Solo lo llevan los traspasos que fabrica la regla de una categoría, que no
+   * son programaciones de nadie: no están en la tabla, se calculan al vuelo
+   * junto al ingreso que los provoca. Sirve para colgarlos de él en la lista,
+   * igual que `refundForScheduledId` cuelga la devolución de su gasto, y para
+   * saber que esta fila no se registra por su cuenta.
+   */
+  savedFromScheduledId: number | null
   /** La primera pendiente se puede registrar de un clic; las siguientes, no. */
   isNext: boolean
 }

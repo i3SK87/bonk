@@ -4,7 +4,7 @@ import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
 import { addToGoalReserve } from './goals'
-import { reglaDeCategoria } from './categories'
+import { reglaDeCategoria, loQueApartaria } from '@shared/ahorro'
 import type {
   Transaction,
   TransactionView,
@@ -626,15 +626,6 @@ export function reglaDeLaCategoria(categoryId: number | null): ReglaDeAhorro | n
  * aparta a la misma cuenta en la que ha entrado —eso no mueve nada— ni un
  * importe de cero, que sería un movimiento vacío en la lista.
  */
-export function loQueApartaria(regla: ReglaDeAhorro | null, importe: number): number {
-  if (!regla || importe <= 0) return 0
-  // Al céntimo y sin redondear a euros: el 10 % de 1411,22 son 141,12. Y una
-  // cifra fija no puede pasar de lo que ha entrado: de un ingreso de 50 € no se
-  // apartan 100, se apartan 50.
-  const bruto = regla.modo === 'cifra' ? regla.valor : Math.round((importe * regla.valor) / 100)
-  return Math.min(bruto, importe)
-}
-
 export function aplicarRegla(
   regla: ReglaDeAhorro | null,
   ingreso: { id: number; accountId: number; amount: number; date: string },

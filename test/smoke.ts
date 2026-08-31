@@ -3243,6 +3243,31 @@ try {
   equal('con lo apartado', avisoDelAhorro?.amount, 14112)
   equal('y la divisa de la cuenta', avisoDelAhorro?.currency, 'EUR')
 
+  /*
+   * Y lo que está por venir se enseña acompañado: la nómina del mes que viene
+   * trae pegado el ahorro que va a apartar al registrarse. La regla no está en
+   * la tabla de programadas —es de la categoría—, así que la previsión se lo
+   * saltaba y enseñaba un movimiento donde iba a haber dos.
+   */
+  const previstas = scheduled.projectUpcoming(today(), addMonths(today(), 2))
+  const ahorroDeLaNomina = previstas.find(
+    (row) => row.savedFromScheduledId === nominaProgramada.id
+  )
+  check('la nómina prevista trae su ahorro', ahorroDeLaNomina != null)
+  equal('con lo que apartaría la regla', ahorroDeLaNomina?.amount, 14112)
+  equal('a la hucha de la regla', ahorroDeLaNomina?.toAccountId, huchaRegla.id)
+  equal('y cuelga de su ingreso', ahorroDeLaNomina?.scheduledId, nominaProgramada.id)
+  check('no se registra por su cuenta', ahorroDeLaNomina?.isNext === false)
+  equal('y no mueve el patrimonio', ahorroDeLaNomina?.amountInBase, 0)
+
+  // La lista de programadas y su calendario no lo enseñan: ahí solo va lo que
+  // está en la tabla, y el ahorro es una regla de la categoría.
+  const vueltasDeHoy = scheduled.occurrencesInRange(today(), today())
+  check(
+    'el calendario de programadas no lo enseña',
+    !vueltasDeHoy.some((row) => row.savedFromScheduledId != null)
+  )
+
   scheduled.deleteScheduled(nominaProgramada.id)
   accounts.deleteAccount(huchaRegla.id)
   accounts.deleteAccount(otraHucha.id)

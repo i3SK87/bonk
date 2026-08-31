@@ -1,5 +1,4 @@
 import { app } from 'electron'
-import { resolve } from 'node:path'
 
 /** Bandera que reciben tanto el arranque de Windows como quien la escriba a mano. */
 const HIDDEN_FLAG = '--hidden'
@@ -14,20 +13,24 @@ export function startedHidden(): boolean {
  * aparezca en la bandeja y no como una ventana encima de lo que estabas
  * haciendo.
  *
- * Sin empaquetar, el ejecutable es el motor de Electron y no sabe solo qué
- * abrir: hay que pasarle la carpeta del proyecto, que es justo como se lanza
- * BONK en este equipo desde que el Control inteligente de aplicaciones bloquea
- * su .exe.
+ * **Sin empaquetar no se toca.** La entrada del registro se reescribe en cada
+ * arranque para que se corrija sola si la aplicación cambia de sitio, y sin
+ * este freno bastaba un `npm run dev` para que la copia del proyecto se
+ * quedara con ella: a partir de ahí, el BONK que salía en la bandeja al
+ * encender el ordenador era el de `out/`, que a cualquier intento de
+ * actualizarse contesta que se ejecuta desde la carpeta del proyecto. Y como
+ * esa copia también reescribía la entrada al arrancar, se sostenía sola.
+ *
+ * Es el mismo enredo que ya se quitó de los accesos directos el 29/08/2026, en
+ * el otro sitio donde la copia de desarrollo suplantaba a la instalada. Aquí no
+ * hay nada que arreglar en su lugar: quien manda en el arranque de Windows es
+ * la aplicación instalada, y en desarrollo eso no se toca.
  */
 export function applyAutoLaunch(enabled: boolean): void {
-  const args = [HIDDEN_FLAG]
-  // Sin comillas: las pone Electron al escribir el registro, y ponerlas aquí
-  // acababa dejando la ruta entrecomillada dos veces y con la barra final
-  // escapada, que es una ruta que no existe.
-  if (!app.isPackaged) args.unshift(resolve(process.argv[1] ?? app.getAppPath()))
+  if (!app.isPackaged) return
 
   try {
-    app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args })
+    app.setLoginItemSettings({ openAtLogin: enabled, path: process.execPath, args: [HIDDEN_FLAG] })
   } catch (error) {
     console.error('No se pudo cambiar el arranque con Windows:', error)
   }

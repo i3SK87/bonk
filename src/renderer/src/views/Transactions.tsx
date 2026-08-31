@@ -84,14 +84,30 @@ function matchesSearch(row: ProjectedTransaction, needle: string): boolean {
   return typed != null && Math.abs(typed) === row.amount
 }
 
-/** Lo mismo con las previsiones: la devolución programada cuelga de su gasto. */
+/**
+ * Lo mismo con las previsiones: la devolución programada cuelga de su gasto, y
+ * el ahorro automático de su ingreso.
+ *
+ * Aquí manda el sitio que ocupa cada una en la lista y no el número de su
+ * programada, como en la de movimientos: el ahorro no es una programación
+ * aparte —sale de la de su ingreso y lleva su mismo número—, así que por número
+ * la madre y la hija serían la misma fila y no colgaría de nada.
+ */
 function nestProjected(
   list: ProjectedTransaction[]
 ): Array<{ row: ProjectedTransaction; nested: boolean; last: boolean }> {
+  const sitioDe = new Map(list.map((row, indice) => [row, indice]))
+  // La fila de la programada, que es la que no cuelga de otra: un ahorro lleva
+  // el número de su ingreso, y buscándolo a secas se encontraría a sí mismo.
+  const filaDe = (scheduledId: number): number =>
+    list.findIndex((row) => row.scheduledId === scheduledId && row.savedFromScheduledId == null)
   return nestByParent(
     list,
-    (row) => row.scheduledId,
-    (row) => (row.type === 'refund' ? row.refundForScheduledId : null)
+    (row) => sitioDe.get(row) ?? -1,
+    (row) => {
+      const madre = row.type === 'refund' ? row.refundForScheduledId : row.savedFromScheduledId
+      return madre == null ? null : filaDe(madre)
+    }
   )
 }
 
@@ -1440,7 +1456,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                   })}
                   {nestProjected(items.upcoming).map(({ row: item, nested, last }) => (
                     <ProjectedRow
-                      key={`${item.scheduledId}-${item.date}`}
+                      // El ahorro comparte programada y día con su ingreso: sin
+                      // distinguirlos, las dos filas serían la misma para React.
+                      key={`${item.scheduledId}-${item.date}${item.savedFromScheduledId != null ? '-ahorro' : ''}`}
                       row={item}
                       nested={nested}
                       lastChild={last}
