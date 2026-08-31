@@ -768,6 +768,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     return efectoSobre(item, accountIds)
   }
 
+  /**
+   * De qué lado del traspaso está la cuenta que se mira.
+   *
+   * Es lo mismo que cuenta `efectoSobre`, pero dicho para pintar la fila en vez
+   * de para sumarla: `sale` cuando el dinero se va de la cuenta elegida, `entra`
+   * cuando llega, y `null` cuando el traspaso ocurre entre dos cuentas del grupo
+   * —ahí ni resta ni suma— o cuando no es un traspaso.
+   */
+  function sentidoDelTraspaso(item: ConEfecto): 'sale' | 'entra' | null {
+    if (item.type !== 'transfer' || accountIds.length === 0) return null
+    const sale = accountIds.includes(item.accountId)
+    const entra = item.toAccountId != null && accountIds.includes(item.toAccountId)
+    if (sale && entra) return null
+    if (sale) return 'sale'
+    if (entra) return 'entra'
+    return null
+  }
+
   const showingProjected = projected.length > 0
   const nothingToShow = rows.length === 0 && projected.length === 0
   /*
@@ -1434,6 +1452,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       <TransactionRow
                         key={row.id}
                         row={row}
+                        sentido={sentidoDelTraspaso(row)}
                         onActivate={() => setEditing(row)}
                         family={family}
                         linkedTo={
@@ -1460,6 +1479,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       // distinguirlos, las dos filas serían la misma para React.
                       key={`${item.scheduledId}-${item.date}${item.savedFromScheduledId != null ? '-ahorro' : ''}`}
                       row={item}
+                      sentido={sentidoDelTraspaso(item)}
                       nested={nested}
                       lastChild={last}
                       onRegister={
@@ -1610,11 +1630,14 @@ function SaldoDeLaPastilla({
 
 function ProjectedRow({
   row,
+  sentido,
   onRegister,
   nested,
   lastChild
 }: {
   row: ProjectedTransaction
+  /** De qué lado del traspaso queda la cuenta que se está mirando. */
+  sentido?: 'sale' | 'entra' | null
   onRegister?: () => void
   nested?: boolean
   lastChild?: boolean
@@ -1624,6 +1647,30 @@ function ProjectedRow({
     ? `${row.accountName} → ${row.toAccountName ?? '—'}`
     : (row.categoryName ?? row.name ?? 'Sin categoría')
   const detail = row.name || row.note
+
+  const sale = isTransfer && sentido === 'sale'
+  const entra = isTransfer && sentido === 'entra'
+  const claseImporte = isTransfer
+    ? entra
+      ? 'positive'
+      : 'neutral'
+    : row.type === 'expense'
+      ? 'negative'
+      : 'positive'
+  /*
+   * La cifra va en la divisa de la cuenta de origen incluso mirando el destino:
+   * una previsión no lleva la divisa de la otra cuenta —`ProjectedTransaction`
+   * no la trae—, y con lo que hay es lo más cerca que se puede estar.
+   */
+  const importe = isTransfer
+    ? sale
+      ? formatMoney(-row.amount, row.accountCurrency, { sign: true })
+      : entra
+        ? formatMoney(row.amount, row.accountCurrency, { sign: true })
+        : formatMoney(row.amount, row.accountCurrency)
+    : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {
+        sign: true
+      })
 
   return (
     <div
@@ -1682,15 +1729,9 @@ function ProjectedRow({
       )}
 
       <div className="tx-amount">
-        {/* El traspaso va en verde como lo que entra: el dinero sigue siendo tuyo,
-            solo ha cambiado de cuenta. En gris parecía apagado, casi un error. */}
-        <span className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}>
-          {isTransfer
-            ? formatMoney(row.amount, row.accountCurrency)
-            : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {
-                sign: true
-              })}
-        </span>
+        {/* Lo mismo que en las de verdad: saliendo, en gris y con el menos;
+            llegando, en verde con el más. Ver la nota de TransactionRow. */}
+        <span className={`amount ${claseImporte}`}>{importe}</span>
       </div>
     </div>
   )
@@ -1698,6 +1739,7 @@ function ProjectedRow({
 
 function TransactionRow({
   row,
+  sentido,
   onActivate,
   family,
   linkedTo,
@@ -1712,6 +1754,8 @@ function TransactionRow({
   lastChild
 }: {
   row: TransactionView
+  /** De qué lado del traspaso queda la cuenta que se está mirando. */
+  sentido?: 'sale' | 'entra' | null
   /** Abre su ficha: con el clic, con Intro o con la barra espaciadora. */
   onActivate?: () => void
   /** Id del gasto que encabeza la familia gasto + devoluciones, si la hay. */
@@ -1759,6 +1803,42 @@ function TransactionRow({
       : undefined
 
   const muestraCuenta = !isTransfer && row.type !== 'refund'
+
+  /*
+   * El traspaso se pinta desde la cuenta que se está mirando.
+   *
+   * Saliendo va con el menos y en gris: de esa cuenta se va dinero, así que en
+   * verde y sin signo contaba lo contrario de lo que hace la cabecera del día
+   * —dos cifras de la misma pantalla restando y sumando lo mismo—. Pero en rojo
+   * diría que te lo has gastado, y no: sigue siendo tuyo. El gris es esa mezcla.
+   * Llegando sí es una entrada de las de verdad para esa cuenta, y va en verde.
+   */
+  const sale = isTransfer && sentido === 'sale'
+  const entra = isTransfer && sentido === 'entra'
+  const claseImporte = isTransfer
+    ? entra
+      ? 'positive'
+      : 'neutral'
+    : row.type === 'expense'
+      ? 'negative'
+      : 'positive'
+  const importe = isTransfer
+    ? sale
+      ? formatMoney(-row.amount, row.accountCurrency, { sign: true })
+      : entra
+        ? // Entre divisas distintas, lo que entra aquí es `amountTo` y en la
+          // divisa del destino; el importe de origen sería otra cifra.
+          formatMoney(
+            row.amountTo ?? row.amount,
+            row.toAccountCurrency ?? row.accountCurrency,
+            { sign: true }
+          )
+        : // Entre dos cuentas de las elegidas no se mueve nada del grupo: se
+          // dice el importe a secas, sin signo que no toca a ningún lado.
+          formatMoney(row.amount, row.accountCurrency)
+    : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, {
+        sign: true
+      })
 
   return (
     <div
@@ -1829,12 +1909,10 @@ function TransactionRow({
         </div>
       </div>
       <div className="tx-amount">
-        <span className={`amount ${row.type === 'expense' ? 'negative' : 'positive'}`}>
-          {isTransfer
-            ? formatMoney(row.amount, row.accountCurrency)
-            : formatMoney(row.type === 'expense' ? -row.amount : row.amount, row.accountCurrency, { sign: true })}
-        </span>
-        {row.amountTo && row.toAccountCurrency && (
+        <span className={`amount ${claseImporte}`}>{importe}</span>
+        {/* Mirando el destino, lo que llega ya es la cifra grande: repetirlo
+            debajo sería decir dos veces lo mismo. */}
+        {row.amountTo && row.toAccountCurrency && !entra && (
           <small>→ {formatMoney(row.amountTo, row.toAccountCurrency)}</small>
         )}
         {/* En un gasto con devoluciones, lo que de verdad ha costado. */}
