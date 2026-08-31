@@ -79,10 +79,49 @@ export function daysBetween(a: string, b: string): number {
   return Math.round(ms / 86400000)
 }
 
+/**
+ * El día del mes al que apunta de verdad una programada.
+ *
+ * Los meses no miden lo mismo, así que una del 31 tiene que caer en el 30 en
+ * noviembre. Lo que no puede es quedarse ahí: avanzando desde el día recortado,
+ * el 31 de agosto pasaba al 30 de septiembre y de ahí al 30 de octubre, y la
+ * nómina de fin de mes se mudaba al 30 para siempre. Basta con recordar de qué
+ * día viene.
+ *
+ * Y se recuerda sin guardarlo en ninguna columna: si la próxima cae en el
+ * último día de su mes, es que pudo venir recortada, y entonces manda el día
+ * más alto en el que esa misma programada ya cayó. Solo ahí se mira lo
+ * anterior: una que se movió al día 5 tiene su próxima a mitad de mes, no la
+ * última, y se queda con su 5.
+ *
+ * Sin nada anterior que mirar, el día es el que dice su próxima fecha: una
+ * recién creada para el 30 de septiembre es del 30, no de un 31 que nadie ha
+ * escrito.
+ */
+export function anclaDeCadencia(nextDate: string, lastPosted?: string | null): number {
+  const dia = Number(nextDate.slice(8, 10))
+  if (nextDate !== endOfMonth(nextDate) || !lastPosted) return dia
+  return Math.max(dia, Number(lastPosted.slice(8, 10)))
+}
+
+/**
+ * Devuelve el día al que apunta el ancla, recortado a lo que dé el mes.
+ * El 31 en noviembre es el 30, y en diciembre vuelve a ser el 31.
+ */
+function conAncla(iso: string, ancla?: number): string {
+  if (!ancla) return iso
+  const d = parseISO(iso)
+  const ultimo = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  d.setDate(Math.min(ancla, ultimo))
+  return toISO(d)
+}
+
 export function nextOccurrence(
   iso: string,
   freq: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly',
-  interval: number
+  interval: number,
+  /** El día del mes del que viene la serie, para no quedarse en un mes corto. */
+  ancla?: number
 ): string {
   const step = Math.max(1, interval)
   switch (freq) {
@@ -102,9 +141,9 @@ export function nextOccurrence(
     case 'weekly':
       return addDays(iso, step * 7)
     case 'monthly':
-      return addMonths(iso, step)
+      return conAncla(addMonths(iso, step), ancla)
     case 'yearly':
-      return addYears(iso, step)
+      return conAncla(addYears(iso, step), ancla)
   }
 }
 
@@ -115,15 +154,17 @@ export function nextOccurrence(
  * ya pasaron y la próxima fecha de la programada es del mes que viene, así que
  * hay que recorrer la cadencia hacia atrás para saber qué cayó y cuándo.
  *
- * No es del todo reversible en los meses, y no puede serlo: el 31 de marzo
- * hacia atrás es el 28 de febrero, y desde ahí hacia delante ya no se vuelve al
- * 31. Es el mismo recorte que hace `addMonths` yendo hacia delante, y el mismo
- * que ya arrastra la programada al avanzar.
+ * En los meses hay que decirle de qué día viene la serie, igual que a la de
+ * ida: el 31 de marzo hacia atrás es el 28 de febrero, y sin el ancla, desde
+ * ahí, ya no se vuelve al 31. Con ella, el recorrido hacia atrás del calendario
+ * enseña los mismos días que enseñará el de ida.
  */
 export function previousOccurrence(
   iso: string,
   freq: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly',
-  interval: number
+  interval: number,
+  /** El día del mes del que viene la serie, para no quedarse en un mes corto. */
+  ancla?: number
 ): string {
   const step = Math.max(1, interval)
   switch (freq) {
@@ -136,9 +177,9 @@ export function previousOccurrence(
     case 'weekly':
       return addDays(iso, -step * 7)
     case 'monthly':
-      return addMonths(iso, -step)
+      return conAncla(addMonths(iso, -step), ancla)
     case 'yearly':
-      return addYears(iso, -step)
+      return conAncla(addYears(iso, -step), ancla)
   }
 }
 

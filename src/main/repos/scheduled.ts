@@ -1,5 +1,11 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
-import { today, nextOccurrence, previousOccurrence, formatDate } from '@shared/dates'
+import {
+  today,
+  nextOccurrence,
+  previousOccurrence,
+  anclaDeCadencia,
+  formatDate
+} from '@shared/dates'
 import {
   saveTransaction,
   deleteTransaction,
@@ -604,13 +610,14 @@ export function debtProgress(reference = today()): DebtProgress[] {
 
     // Las que quedan: se cuentan las repeticiones desde la próxima hasta el fin.
     let leftCount: number | null = null
+    const ancla = anclaDeCadencia(debt.nextDate, debt.lastPosted)
     if (!debt.settledAt && debt.endDate) {
       leftCount = 0
       let date = debt.nextDate
       let guard = 0
       while (date <= debt.endDate && guard < 600) {
         leftCount++
-        date = nextOccurrence(date, debt.freq, debt.interval)
+        date = nextOccurrence(date, debt.freq, debt.interval, ancla)
         guard++
       }
     } else if (debt.settledAt) {
@@ -788,7 +795,14 @@ function post(row: Scheduled, date: string, consumed = date): void {
     }
   }
 
-  const upcoming = nextOccurrence(consumed, row.freq, row.interval)
+  // El día del que viene la serie, mirado antes de pisar `last_posted`: sin él,
+  // una del 31 que este mes cayó en el 30 se quedaría en el 30 para siempre.
+  const upcoming = nextOccurrence(
+    consumed,
+    row.freq,
+    row.interval,
+    anclaDeCadencia(consumed, row.lastPosted)
+  )
   // Esta era la última: la siguiente caería más allá del fin. Se apaga y se
   // sella, que es lo que la manda a Finalizadas y dispara la enhorabuena.
   const exhausted = row.endDate != null && upcoming > row.endDate
@@ -1058,6 +1072,7 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
     const amountInBase =
       scheduled.type === 'transfer' ? 0 : scheduled.type === 'expense' ? -converted : converted
 
+    const ancla = anclaDeCadencia(scheduled.nextDate, scheduled.lastPosted)
     let date = scheduled.nextDate
     let first = true
     // Tope por programada, para que una diaria a diez años no llene la lista.
@@ -1094,7 +1109,7 @@ export function projectUpcoming(from: string, to: string, limit = 300): Projecte
         const ahorro = ahorroPrevisto(scheduled, date, scheduled.amount, huchas, rates)
         if (ahorro) projected.push(ahorro)
       }
-      date = nextOccurrence(date, scheduled.freq, scheduled.interval)
+      date = nextOccurrence(date, scheduled.freq, scheduled.interval, ancla)
       guard++
       if (projected.length >= limit) return projected
     }
@@ -1151,11 +1166,12 @@ export function repeatTransaction(input: RepeatInput): ScheduledView {
    * que viene, no ocho meses atrás. El tope es el mismo que usa la proyección,
    * para que una diaria de hace años no se quede dando vueltas.
    */
-  let proxima = input.nextDate ?? nextOccurrence(movimiento.date, input.freq, input.interval)
+  const ancla = anclaDeCadencia(input.nextDate ?? movimiento.date, null)
+  let proxima = input.nextDate ?? nextOccurrence(movimiento.date, input.freq, input.interval, ancla)
   let guarda = 0
   // La que viene de fuera se respeta tal cual; solo se avanza la calculada.
   while (!input.nextDate && proxima <= hoy && guarda < 4000) {
-    proxima = nextOccurrence(proxima, input.freq, input.interval)
+    proxima = nextOccurrence(proxima, input.freq, input.interval, ancla)
     guarda++
   }
 
@@ -1315,11 +1331,12 @@ export function occurrencesInRange(from: string, to: string): ScheduledOccurrenc
     }
 
     // Hacia atrás desde la próxima, que es lo que faltaba.
-    let atras = previousOccurrence(s.nextDate, s.freq, s.interval)
+    const ancla = anclaDeCadencia(s.nextDate, s.lastPosted)
+    let atras = previousOccurrence(s.nextDate, s.freq, s.interval, ancla)
     let guarda = 0
     while (atras >= from && atras >= suelo && guarda < 400) {
       if (atras <= to && atras <= techo) anota(s, atras)
-      atras = previousOccurrence(atras, s.freq, s.interval)
+      atras = previousOccurrence(atras, s.freq, s.interval, ancla)
       guarda++
     }
 
@@ -1329,7 +1346,7 @@ export function occurrencesInRange(from: string, to: string): ScheduledOccurrenc
     guarda = 0
     while (alante <= to && alante <= techo && guarda < 400) {
       if (alante >= from) anota(s, alante)
-      alante = nextOccurrence(alante, s.freq, s.interval)
+      alante = nextOccurrence(alante, s.freq, s.interval, ancla)
       guarda++
     }
   }

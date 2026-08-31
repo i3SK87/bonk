@@ -23,7 +23,7 @@ import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, formatMoneyBreve, cabeEntero, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
-import { addMonths, addDays, nextOccurrence, previousOccurrence, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
+import { addMonths, addDays, nextOccurrence, previousOccurrence, anclaDeCadencia, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
 import { rangoDe, comparacionDe, NOMBRES_DE_RANGO, type RangoId } from '../src/shared/rangos'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
@@ -219,6 +219,26 @@ try {
   // El recorte de los meses cortos no es reversible, y no puede serlo: es el
   // mismo que ya hace la programada al avanzar.
   equal('marzo hacia atrás cae en el último de febrero', previousOccurrence('2026-03-31', 'monthly', 1), '2026-02-28')
+
+  /*
+   * Y el día del mes no se pierde por el camino.
+   *
+   * Una del 31 cae en el 30 de noviembre porque no hay 31, pero en diciembre
+   * vuelve al 31. Avanzando desde el día ya recortado se quedaba en el 30 para
+   * siempre: la nómina de fin de mes se mudaba sola al 30 al pasar por el
+   * primer mes corto.
+   */
+  equal('el 31 en un mes de 30 cae en el 30', nextOccurrence('2026-10-31', 'monthly', 1, 31), '2026-11-30')
+  equal('y al mes siguiente vuelve al 31', nextOccurrence('2026-11-30', 'monthly', 1, 31), '2026-12-31')
+  equal('sin ancla se quedaba en el 30', nextOccurrence('2026-11-30', 'monthly', 1), '2026-12-30')
+  equal('hacia atrás, lo mismo', previousOccurrence('2026-12-31', 'monthly', 1, 31), '2026-11-30')
+  equal('y el 29 de febrero, en año corriente, es el 28', nextOccurrence('2028-02-29', 'yearly', 1, 29), '2029-02-28')
+
+  // De dónde sale el ancla, que no se guarda en ninguna columna.
+  equal('la da la última que cayó', anclaDeCadencia('2026-09-30', '2026-08-31'), 31)
+  equal('una del 30 se queda en el 30', anclaDeCadencia('2026-09-30', '2026-08-30'), 30)
+  equal('sin nada anterior manda su próxima', anclaDeCadencia('2026-09-30', null), 30)
+  equal('y a mitad de mes no se mira atrás', anclaDeCadencia('2026-09-05', '2026-08-31'), 5)
 
   /*
    * Cuánto falta para que cambie el día, que es cuando el repaso de fondo
@@ -950,7 +970,18 @@ try {
   const trasCuota = scheduled.debtProgress(day).find((row) => row.scheduledId === plan.id)!
   equal('pagar la cuota apunta una cuota', trasCuota.paidCount, 1)
   equal('y deja tres por delante', trasCuota.leftCount, 3)
-  equal('la programada avanza al mes siguiente', scheduled.getScheduled(plan.id)!.nextDate, addMonths(day, 2))
+  /*
+   * Una vuelta más allá de la que tenía, y no «dos meses desde el día en que se
+   * creó»: desde un 31, sumar un mes dos veces no cae donde cae sumar dos meses
+   * de una vez, y escrito así la prueba fallaba los días 31.
+   */
+  const siguienteDelPlan = nextOccurrence(
+    plan.nextDate,
+    'monthly',
+    1,
+    anclaDeCadencia(plan.nextDate, null)
+  )
+  equal('la programada avanza al mes siguiente', scheduled.getScheduled(plan.id)!.nextDate, siguienteDelPlan)
   check('la programada sigue viva', scheduled.getScheduled(plan.id)!.settledAt == null)
   const cuotaEnLista = transactions
     .listTransactions({ limit: 500 })
@@ -1328,7 +1359,12 @@ try {
   equal(
     'y consume la repetición que tocaba, sin mover el día del mes',
     scheduled.getScheduled(adelantada.id)!.nextDate,
-    addMonths(day, 2)
+    nextOccurrence(
+      adelantada.nextDate,
+      'monthly',
+      1,
+      anclaDeCadencia(adelantada.nextDate, null)
+    )
   )
   transactions.deleteTransactions([adelantado.id])
   scheduled.deleteScheduled(adelantada.id)
@@ -2932,8 +2968,11 @@ try {
    * la del mes que viene: no ocho meses atrás, ni el mes siguiente a aquel.
    */
   check('la próxima vuelta cae por delante de hoy', serie.nextDate > today(), serie.nextDate)
-  let esperada = nextOccurrence(viejo.date, 'monthly', 1)
-  while (esperada <= today()) esperada = nextOccurrence(esperada, 'monthly', 1)
+  // Con su ancla, igual que la cuenta que echa `repeatTransaction`: de un
+  // recibo del 31, las vueltas siguen siendo del 31.
+  const anclaVieja = anclaDeCadencia(viejo.date, null)
+  let esperada = nextOccurrence(viejo.date, 'monthly', 1, anclaVieja)
+  while (esperada <= today()) esperada = nextOccurrence(esperada, 'monthly', 1, anclaVieja)
   equal('y es la que toca por cadencia, contando desde su día', serie.nextDate, esperada)
   equal('se lleva el importe del movimiento', serie.amount, 1999)
   equal('y su concepto', serie.note, 'Revista')
