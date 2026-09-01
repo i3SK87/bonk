@@ -181,16 +181,14 @@ export function ReportsView(): ReactNode {
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
   /*
-   * De qué cuenta va el informe. En nulo, de todas juntas.
+   * De qué cuenta va el informe.
    *
-   * Arranca en la principal y no en el total, que es lo que hacía hasta ahora:
-   * lo que se viene a mirar aquí es en qué se va el dinero del día a día, y la
-   * suma de todas mete por medio la hucha y lo que esté apartado. El total
-   * sigue estando a un clic, en su propia pastilla.
+   * Siempre de una, la principal al abrir. No hay «todas juntas»: un informe de
+   * todo mete por medio la hucha y lo apartado, y la cifra que sale no es de
+   * nadie. `null` es el caso degenerado de no tener ni una cuenta.
    *
-   * Se mira una cuenta cada vez, como en Movimientos: pulsar otra cambia de
-   * cuenta en vez de añadirla, y volver a pulsar la que ya está puesta no hace
-   * nada —quedarse sin ninguna es el estado que menos se busca—.
+   * Se mira una cada vez, como en Movimientos: pulsar otra cambia de cuenta, y
+   * volver a pulsar la que ya está puesta no hace nada.
    */
   const cuentaPrincipal = usePreferredAccountId()
   const [cuenta, setCuenta] = useState<number | null>(() => cuentaPrincipal || null)
@@ -585,28 +583,6 @@ export function ReportsView(): ReactNode {
           <div className="accounts-block">
             <div className="label">Cuentas</div>
             <div className="account-chips">
-              {/*
-                El total, que es como se veía el informe hasta ahora.
-                Sin cifra debajo a propósito: la suma de saldos que se enseña en
-                Movimientos deja fuera las cuentas apartadas del total, y aquí
-                «Todas» son todas. Un número que no case con lo que filtra la
-                pastilla es peor que no ponerlo.
-              */}
-              <button
-                className={`account-chip${cuenta == null ? ' active' : ''}`}
-                onClick={() => setCuenta(null)}
-                title={
-                  cuenta == null
-                    ? 'Estás viendo todas tus cuentas'
-                    : 'Ver todas tus cuentas juntas'
-                }
-              >
-                <Avatar icon="wallet" color="#8E8E93" size="small" />
-                <span className="chip-text">
-                  <span className="chip-name truncate">Todas</span>
-                </span>
-              </button>
-
               {accounts.map((account) => {
                 const activa = cuenta === account.id
                 const tono =
