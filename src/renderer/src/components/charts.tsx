@@ -81,7 +81,7 @@ function TooltipBox({ tooltip, width }: { tooltip: Tooltip; width: number }): Re
 }
 
 /* ============================================================
-   Ingresos y gastos mes a mes
+   Entradas y salidas mes a mes
    ============================================================ */
 
 export function MonthlyBars({
@@ -126,7 +126,7 @@ export function MonthlyBars({
 
   return (
     <div ref={ref} style={{ position: 'relative', width: '100%' }}>
-      <svg width={width} height={height} role="img" aria-label="Ingresos y gastos por mes">
+      <svg width={width} height={height} role="img" aria-label="Entradas y salidas por mes">
         {ticks.map((tick) => {
           const y = padding.top + plotHeight - scale(tick)
           return (
@@ -219,13 +219,13 @@ export function MonthlyBars({
                 <div style={{ fontWeight: 600, marginBottom: 4 }}>{formatMonth(hovered.month)}</div>
                 <div className="row tight">
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--series-income)' }} />
-                  <span className="muted">Ingresos</span>
+                  <span className="muted">Entradas</span>
                   <span className="spacer" />
                   <span className="amount">{formatMoney(hovered.income, currency)}</span>
                 </div>
                 <div className="row tight">
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--series-expense)' }} />
-                  <span className="muted">Gastos</span>
+                  <span className="muted">Salidas</span>
                   <span className="spacer" />
                   <span className="amount">{formatMoney(hovered.expense, currency)}</span>
                 </div>
@@ -244,8 +244,8 @@ export function MonthlyBars({
 
       <ChartLegend
         items={[
-          { label: 'Ingresos', color: 'var(--series-income)' },
-          { label: 'Gastos', color: 'var(--series-expense)' }
+          { label: 'Entradas', color: 'var(--series-income)' },
+          { label: 'Salidas', color: 'var(--series-expense)' }
         ]}
       />
     </div>

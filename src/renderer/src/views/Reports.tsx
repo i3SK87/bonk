@@ -431,7 +431,10 @@ export function ReportsView(): ReactNode {
 
   const cifras: Dato[] = [
     {
-      label: kind === 'expense' ? 'Gasto total' : 'Ingreso total',
+      // Salidas y entradas, no gastos e ingresos: con una cuenta elegida aquí
+      // dentro van también sus traspasos, y un traspaso no es ni una cosa ni la
+      // otra —el dinero sigue siendo tuyo, solo cambia de bolsillo—.
+      label: kind === 'expense' ? 'Total de salidas' : 'Total de entradas',
       value: euros(total),
       tone: kind === 'expense' ? 'negative' : 'positive',
       cambio: insignia(total, totalAntes, euros)
@@ -621,7 +624,9 @@ export function ReportsView(): ReactNode {
 
           <div className="card">
             <div className="card-header">
-              <h2>Reparto por categorías</h2>
+              {/* «Del periodo» y no «por categorías»: los traspasos entran aquí
+                  y categoría no tienen ninguna. */}
+              <h2>Reparto del periodo</h2>
               {/*
                 Contra qué se comparan las flechas, escrito y a la vista.
                 Estaba solo en el rótulo que sale al pasar por encima, y eso vale
@@ -650,8 +655,8 @@ export function ReportsView(): ReactNode {
                 value={kind}
                 onChange={setKind}
                 options={[
-                  { value: 'expense', label: 'Gastos', tone: 'expense' },
-                  { value: 'income', label: 'Ingresos', tone: 'income' }
+                  { value: 'expense', label: 'Salidas', tone: 'expense' },
+                  { value: 'income', label: 'Entradas', tone: 'income' }
                 ]}
               />
             </div>
@@ -666,7 +671,7 @@ export function ReportsView(): ReactNode {
                 <table className="table breakdown">
                   <thead>
                     <tr>
-                      <th>Categoría</th>
+                      <th>Concepto</th>
                       <th className="num">Movimientos</th>
                       <th className="num">Porcentaje</th>
                       <th className="num">Total</th>
@@ -786,7 +791,7 @@ export function ReportsView(): ReactNode {
           <div className="grid cols-2">
             <div className="card">
               <div className="card-header">
-                <h2>Ingresos y gastos por mes</h2>
+                <h2>Entradas y salidas por mes</h2>
               </div>
               <div className="card-body">
                 <MonthlyBars points={monthly} currency={currency} />
@@ -796,7 +801,7 @@ export function ReportsView(): ReactNode {
             <div className="card">
               <div className="card-header">
                 <h2>Balance mensual</h2>
-                <span className="small muted">Lo que queda cada mes tras restar los gastos.</span>
+                <span className="small muted">Lo que sube o baja la cuenta cada mes.</span>
               </div>
               <div className="card-body">
                 <NetLine points={monthly} currency={currency} />

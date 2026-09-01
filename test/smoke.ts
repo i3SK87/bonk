@@ -570,23 +570,41 @@ try {
     reports.categoryTotals(monthStart, day, 'expense', cash.id).find((row) => row.categoryId === food.id)!.total,
     2550 + 4000
   )
-  equal(
-    'y la cuenta sin gasto no reparte nada',
-    reports.categoryTotals(monthStart, day, 'expense', bank.id).length,
-    0
-  )
-  equal('el gasto de la cartera es todo el gasto', reports.totalFor('expense', monthStart, day, cash.id), 6550)
-  equal('y el del banco es ninguno', reports.totalFor('expense', monthStart, day, bank.id), 0)
-  equal('el ingreso está en el banco', reports.totalFor('income', monthStart, day, bank.id), 180000)
-  equal('y no en la cartera', reports.totalFor('income', monthStart, day, cash.id), 0)
+  equal('sin cuenta elegida, el traspaso sigue sin contar', reports.totalFor('expense', monthStart, day), 6550)
+
+  /*
+   * Y con una cuenta elegida, sus traspasos entran.
+   *
+   * No como gasto ni como ingreso —el dinero sigue siendo suyo—, sino como lo
+   * que le hacen al saldo de esa cuenta: salir de ella o entrar en ella. Del
+   * banco salieron dos traspasos (5.000 a la cartera y 10.000 a los dólares) y
+   * no se gastó nada; en la cartera pasa justo al revés.
+   */
+  const salidasDelBanco = reports.categoryTotals(monthStart, day, 'expense', bank.id)
+  equal('el banco no gasta, pero saca dinero', salidasDelBanco.length, 1)
+  equal('y esa fila son sus traspasos', salidasDelBanco[0].name, 'Traspasos')
+  equal('los dos que salieron', salidasDelBanco[0].count, 2)
+  equal('por lo que salió en total', salidasDelBanco[0].total, 5000 + 10000)
+  equal('que es el 100% de sus salidas', Math.round(salidasDelBanco[0].percent), 100)
+  check('la fila de traspasos no cuelga de ninguna categoría', !categories.listCategories().some((item) => item.id === salidasDelBanco[0].categoryId))
+  equal('el total de salidas del banco es ese', reports.totalFor('expense', monthStart, day, bank.id), 15000)
+  equal('y su ingreso no lo toca nadie', reports.totalFor('income', monthStart, day, bank.id), 180000)
+
+  equal('la salida de la cartera es solo lo que se gastó', reports.totalFor('expense', monthStart, day, cash.id), 6550)
+  equal('y su entrada es el traspaso que recibió', reports.totalFor('income', monthStart, day, cash.id), 5000)
+  // Lo que entra se cuenta con el importe que de verdad llega: 11.000 dólares,
+  // que al cambio guardado son los 10.000 euros que salieron.
+  equal('lo que entra en otra divisa se cuenta al cambio', reports.totalFor('income', monthStart, day, dollars.id), 10000)
+  equal('y una cuenta que solo recibe no reparte gasto', reports.categoryTotals(monthStart, day, 'expense', dollars.id).length, 0)
+
   const soloBanco = reports.monthlySeries(12, bank.id)
-  equal('la serie mensual también filtra el gasto', soloBanco[11].expense, 0)
-  equal('y conserva el ingreso de su cuenta', soloBanco[11].income, 180000)
+  equal('la serie mensual cuenta lo que sale de la cuenta', soloBanco[11].expense, 15000)
+  equal('y lo que entra en ella', soloBanco[11].income, 180000)
   equal('el histórico de una cuenta sale de sus movimientos', reports.transactionsSpan(cash.id)!.from, day)
   equal(
-    'y una cuenta que solo ha recibido traspasos no tiene histórico propio',
-    reports.transactionsSpan(dollars.id),
-    null
+    'y el de una que solo ha recibido traspasos, también',
+    reports.transactionsSpan(dollars.id)!.from,
+    day
   )
 
   section('Desglose por notas')

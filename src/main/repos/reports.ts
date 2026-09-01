@@ -23,8 +23,70 @@ function filtroDeCuenta(accountId: number | null): { sql: string; params: number
 }
 
 /**
+ * La fila de los traspasos, que no es una categoría de nadie.
+ *
+ * Un traspaso nunca lleva categoría —`saveTransaction` se la quita a
+ * propósito—, así que no hay bajo qué repartirlo. Va en una fila suya, con un
+ * identificador que no puede chocar con ninguna categoría real ni con el `-1`
+ * que la tabla usa para plegar «Sin categoría».
+ */
+const FILA_TRASPASOS = -2
+
+/**
+ * Lo que un traspaso le hace a la cuenta que se está mirando.
+ *
+ * Es el mismo criterio que la lista de Movimientos —`efectoSobre`—: sale por
+ * `account_id` y entra por `to_account_id`, y lo que entra va con su importe de
+ * destino cuando las divisas no coinciden. Las dos patas se leen en la divisa de
+ * su propia cuenta, que aquí es siempre la mirada, porque se filtra por una.
+ *
+ * No es un gasto ni un ingreso: el dinero sigue siendo tuyo y solo cambia de
+ * bolsillo. Pero del saldo de esta cuenta sale o entra, y eso es lo que cuenta
+ * un informe de una cuenta.
+ */
+function traspasosDe(
+  from: string,
+  to: string,
+  kind: CategoryKind,
+  accountId: number,
+  rates: Record<string, number>,
+  base: string
+): { total: number; count: number } {
+  const entrando = kind === 'income'
+  const lado = entrando ? 't.to_account_id' : 't.account_id'
+  const importe = entrando ? 'COALESCE(t.amount_to, t.amount)' : 't.amount'
+
+  const rows = getDb()
+    .prepare(
+      `SELECT a.currency      AS currency,
+              SUM(${importe}) AS total,
+              COUNT(*)        AS count
+         FROM transactions t
+         JOIN accounts a ON a.id = ${lado}
+        WHERE t.type = 'transfer' AND t.date >= ? AND t.date <= ? AND ${lado} = ?
+        GROUP BY a.currency`
+    )
+    .all(from, to, accountId) as unknown as Array<{
+    currency: string
+    total: number
+    count: number
+  }>
+
+  let total = 0
+  let count = 0
+  for (const row of rows) {
+    total += convert(Number(row.total ?? 0), row.currency, base, rates)
+    count += Number(row.count ?? 0)
+  }
+  return { total, count }
+}
+
+/**
  * Reparto por categorías en un rango. Se agrupa también por divisa de la cuenta
  * para poder convertir cada bloque con su tipo antes de sumar.
+ *
+ * Con una cuenta elegida entran además sus traspasos, en una fila aparte: en una
+ * hucha son lo único que pasa, y sin ellos el informe salía en blanco.
  */
 export function categoryTotals(
   from: string,
@@ -83,7 +145,25 @@ export function categoryTotals(
     merged.set(key, existing)
   }
 
-  const list = [...merged.values()].sort((a, b) => b.total - a.total)
+  const list = [...merged.values()]
+  if (accountId != null) {
+    const traspasos = traspasosDe(from, to, kind, accountId, rates, base)
+    // Sin ninguno no se enseña la fila: una línea a cero no dice nada.
+    if (traspasos.count > 0) {
+      list.push({
+        categoryId: FILA_TRASPASOS,
+        name: 'Traspasos',
+        icon: 'transfer',
+        // Gris, como en la lista de Movimientos: en rojo parecería gastado.
+        color: '#8E8E93',
+        total: traspasos.total,
+        count: traspasos.count,
+        percent: 0,
+        notes: []
+      })
+    }
+  }
+  list.sort((a, b) => b.total - a.total)
   const grandTotal = list.reduce((sum, item) => sum + item.total, 0)
   for (const item of list) item.percent = grandTotal > 0 ? (item.total / grandTotal) * 100 : 0
 
@@ -189,15 +269,23 @@ function noteTotals(
  * diaria sin sentido.
  */
 export function transactionsSpan(accountId: number | null = null): { from: string; to: string } | null {
-  const cuenta = filtroDeCuenta(accountId)
+  /*
+   * Las dos patas del traspaso, también aquí.
+   *
+   * Con solo `account_id`, el histórico de una hucha empezaba hoy: lo único que
+   * le pasa es recibir, y recibir se lee por `to_account_id`. «Todo» arrancaba
+   * entonces en un rango vacío y el informe salía en blanco.
+   */
+  const filtro = accountId == null ? '' : ' AND (t.account_id = ? OR t.to_account_id = ?)'
+  const params = accountId == null ? [] : [accountId, accountId]
   const row = getDb()
     .prepare(
       // El filtro se pega con AND, así que hace falta un WHERE del que colgar.
       `SELECT MIN(t.date) AS first, MAX(t.date) AS last
          FROM transactions t
-        WHERE 1 = 1${cuenta.sql}`
+        WHERE 1 = 1${filtro}`
     )
-    .get(...cuenta.params) as unknown as { first: string | null; last: string | null }
+    .get(...params) as unknown as { first: string | null; last: string | null }
   return row?.first && row?.last ? { from: row.first, to: row.last } : null
 }
 
@@ -240,6 +328,42 @@ export function monthlySeries(
     else point.expense += value
   }
 
+  /*
+   * Y los traspasos de la cuenta mirada, por el mismo criterio que el reparto:
+   * lo que sale de ella baja el mes y lo que entra lo sube. Sin esto, la cinta
+   * de arriba y la gráfica de abajo contarían cosas distintas de la misma
+   * pantalla, que es el fallo que ya se arregló una vez en Movimientos.
+   */
+  if (accountId != null) {
+    for (const entrando of [false, true]) {
+      const lado = entrando ? 't.to_account_id' : 't.account_id'
+      const importe = entrando ? 'COALESCE(t.amount_to, t.amount)' : 't.amount'
+      const traspasos = getDb()
+        .prepare(
+          `SELECT substr(t.date, 1, 7) AS month,
+                  a.currency            AS currency,
+                  SUM(${importe})       AS total
+             FROM transactions t
+             JOIN accounts a ON a.id = ${lado}
+            WHERE t.type = 'transfer' AND t.date >= ? AND t.date <= ? AND ${lado} = ?
+            GROUP BY month, a.currency`
+        )
+        .all(first, last, accountId) as unknown as Array<{
+        month: string
+        currency: string
+        total: number
+      }>
+
+      for (const row of traspasos) {
+        const point = points.get(row.month)
+        if (!point) continue
+        const value = convert(Number(row.total ?? 0), row.currency, base, rates)
+        if (entrando) point.income += value
+        else point.expense += value
+      }
+    }
+  }
+
   for (const point of points.values()) point.net = point.income - point.expense
   return [...points.values()]
 }
@@ -269,5 +393,12 @@ export function totalFor(
         GROUP BY a.currency`
     )
     .all(...types, from, to, ...cuenta.params) as unknown as Array<{ currency: string; total: number }>
-  return rows.reduce((sum, row) => sum + convert(Number(row.total ?? 0), row.currency, base, rates), 0)
+  const propio = rows.reduce(
+    (sum, row) => sum + convert(Number(row.total ?? 0), row.currency, base, rates),
+    0
+  )
+  // Con una cuenta elegida esto ya no es «lo gastado» sino lo que sale de ella,
+  // y de una cuenta también sale lo que se traspasa.
+  if (accountId == null) return propio
+  return propio + traspasosDe(from, to, type, accountId, rates, base).total
 }
