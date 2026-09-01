@@ -296,11 +296,15 @@ export function registerIpc(
   )
 
   // — Informes —
-  handle('reports:categories', (from: string, to: string, kind: CategoryKind) =>
-    reports.categoryTotals(from, to, kind)
+  handle(
+    'reports:categories',
+    (from: string, to: string, kind: CategoryKind, accountId: number | null) =>
+      reports.categoryTotals(from, to, kind, accountId)
   )
-  handle('reports:monthly', (months: number) => reports.monthlySeries(months))
-  handle('reports:span', () => reports.transactionsSpan())
+  handle('reports:monthly', (months: number, accountId: number | null) =>
+    reports.monthlySeries(months, accountId)
+  )
+  handle('reports:span', (accountId: number | null) => reports.transactionsSpan(accountId))
 
   // — Adjuntos —
   handle('attachments:list', (transactionId: number) => attachments.listAttachments(transactionId))
@@ -373,10 +377,21 @@ export function registerIpc(
     })
     if (result.canceled || !result.filePath) return null
 
+    /*
+     * El nombre de la cuenta, cuando el informe va de una sola.
+     *
+     * Se resuelve aquí y no en la pantalla porque el filtro viaja con ids: la
+     * llamada de Ajustes —«Exportar todo»— no trae ninguna, y ahí el documento
+     * es de todo y no dice nada.
+     */
+    const soloUna = filter.accountIds?.length === 1 ? filter.accountIds[0] : null
+    const cuenta = soloUna == null ? null : (accounts.getAccount(soloUna)?.name ?? null)
+
     const html = construirInformeHtml(filas, {
       from: desde,
       to: hasta,
       currency: settings.getSettings().baseCurrency,
+      cuenta,
       ingresos: sumas.income,
       gastos: sumas.expense,
       balance: sumas.net,

@@ -10,12 +10,31 @@ import type {
 } from '@shared/types'
 
 /**
+ * La cuenta que se está mirando, o `null` para todas juntas.
+ *
+ * Va como un trozo de SQL y sus parámetros porque las cuatro consultas de aquí
+ * lo pegan igual, y porque escribirlo suelto en cada una es cómo se acaba
+ * teniendo un informe que filtra y un desglose que no.
+ */
+function filtroDeCuenta(accountId: number | null): { sql: string; params: number[] } {
+  return accountId == null
+    ? { sql: '', params: [] }
+    : { sql: ' AND t.account_id = ?', params: [accountId] }
+}
+
+/**
  * Reparto por categorías en un rango. Se agrupa también por divisa de la cuenta
  * para poder convertir cada bloque con su tipo antes de sumar.
  */
-export function categoryTotals(from: string, to: string, kind: CategoryKind = 'expense'): CategoryTotal[] {
+export function categoryTotals(
+  from: string,
+  to: string,
+  kind: CategoryKind = 'expense',
+  accountId: number | null = null
+): CategoryTotal[] {
   const rates = rateMap()
   const base = getSettings().baseCurrency
+  const cuenta = filtroDeCuenta(accountId)
 
   // En los gastos, los reembolsos entran con signo negativo: rebajan lo gastado
   // en su categoría en lugar de figurar como ingreso aparte.
@@ -33,10 +52,10 @@ export function categoryTotals(from: string, to: string, kind: CategoryKind = 'e
          FROM transactions t
          JOIN accounts a        ON a.id = t.account_id
          LEFT JOIN categories c ON c.id = t.category_id
-        WHERE t.type IN (${types.map(() => '?').join(',')}) AND t.date >= ? AND t.date <= ?
+        WHERE t.type IN (${types.map(() => '?').join(',')}) AND t.date >= ? AND t.date <= ?${cuenta.sql}
         GROUP BY t.category_id, a.currency`
     )
-    .all(...types, from, to) as unknown as Array<{
+    .all(...types, from, to, ...cuenta.params) as unknown as Array<{
     categoryId: number | null
     name: string
     icon: string
@@ -70,7 +89,14 @@ export function categoryTotals(from: string, to: string, kind: CategoryKind = 'e
 
   // Sin los reembolsos: el desglose enseña en qué se ha ido el dinero, y una
   // devolución no es un sitio donde se haya ido nada. Ver `noteTotals`.
-  const byNote = noteTotals(from, to, types.filter((item) => item !== 'refund'), rates, base)
+  const byNote = noteTotals(
+    from,
+    to,
+    types.filter((item) => item !== 'refund'),
+    rates,
+    base,
+    accountId
+  )
   for (const item of list) {
     if (item.categoryId === null) continue
     item.notes = byNote.get(item.categoryId) ?? []
@@ -101,8 +127,10 @@ function noteTotals(
   to: string,
   types: string[],
   rates: Record<string, number>,
-  base: string
+  base: string,
+  accountId: number | null
 ): Map<number, NoteTotal[]> {
+  const cuenta = filtroDeCuenta(accountId)
   const rows = getDb()
     .prepare(
       `SELECT t.category_id AS categoryId,
@@ -115,10 +143,10 @@ function noteTotals(
          JOIN categories c ON c.id = t.category_id
         WHERE t.type IN (${types.map(() => '?').join(',')})
           AND t.date >= ? AND t.date <= ?
-          AND c.breakdown_by_note = 1
+          AND c.breakdown_by_note = 1${cuenta.sql}
         GROUP BY t.category_id, TRIM(t.note) COLLATE NOCASE, a.currency`
     )
-    .all(...types, from, to) as unknown as Array<{
+    .all(...types, from, to, ...cuenta.params) as unknown as Array<{
     categoryId: number
     noteText: string
     currency: string
@@ -160,16 +188,27 @@ function noteTotals(
  * elegir entre un año arbitrario o unas fechas absurdas que dejarían la media
  * diaria sin sentido.
  */
-export function transactionsSpan(): { from: string; to: string } | null {
+export function transactionsSpan(accountId: number | null = null): { from: string; to: string } | null {
+  const cuenta = filtroDeCuenta(accountId)
   const row = getDb()
-    .prepare('SELECT MIN(date) AS first, MAX(date) AS last FROM transactions')
-    .get() as unknown as { first: string | null; last: string | null }
+    .prepare(
+      // El filtro se pega con AND, así que hace falta un WHERE del que colgar.
+      `SELECT MIN(t.date) AS first, MAX(t.date) AS last
+         FROM transactions t
+        WHERE 1 = 1${cuenta.sql}`
+    )
+    .get(...cuenta.params) as unknown as { first: string | null; last: string | null }
   return row?.first && row?.last ? { from: row.first, to: row.last } : null
 }
 
-export function monthlySeries(months = 12, reference = today()): MonthlyPoint[] {
+export function monthlySeries(
+  months = 12,
+  accountId: number | null = null,
+  reference = today()
+): MonthlyPoint[] {
   const rates = rateMap()
   const base = getSettings().baseCurrency
+  const cuenta = filtroDeCuenta(accountId)
   const first = startOfMonth(addMonths(reference, -(months - 1)))
   const last = endOfMonth(reference)
 
@@ -181,10 +220,10 @@ export function monthlySeries(months = 12, reference = today()): MonthlyPoint[] 
               SUM(t.amount)        AS total
          FROM transactions t
          JOIN accounts a ON a.id = t.account_id
-        WHERE t.type IN ('expense','income','refund') AND t.date >= ? AND t.date <= ?
+        WHERE t.type IN ('expense','income','refund') AND t.date >= ? AND t.date <= ?${cuenta.sql}
         GROUP BY month, t.type, a.currency`
     )
-    .all(first, last) as unknown as Array<{ month: string; type: string; currency: string; total: number }>
+    .all(first, last, ...cuenta.params) as unknown as Array<{ month: string; type: string; currency: string; total: number }>
 
   const points = new Map<string, MonthlyPoint>()
   for (let i = 0; i < months; i++) {
@@ -209,9 +248,15 @@ export function monthlySeries(months = 12, reference = today()): MonthlyPoint[] 
  * Suma de un tipo de movimiento en un rango, en divisa base. El gasto va neto:
  * lo que te hayan reembolsado no cuenta como gastado.
  */
-export function totalFor(type: 'expense' | 'income', from: string, to: string): number {
+export function totalFor(
+  type: 'expense' | 'income',
+  from: string,
+  to: string,
+  accountId: number | null = null
+): number {
   const rates = rateMap()
   const base = getSettings().baseCurrency
+  const cuenta = filtroDeCuenta(accountId)
   const types = type === 'expense' ? ['expense', 'refund'] : ['income']
 
   const rows = getDb()
@@ -220,9 +265,9 @@ export function totalFor(type: 'expense' | 'income', from: string, to: string): 
               SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS total
          FROM transactions t
          JOIN accounts a ON a.id = t.account_id
-        WHERE t.type IN (${types.map(() => '?').join(',')}) AND t.date >= ? AND t.date <= ?
+        WHERE t.type IN (${types.map(() => '?').join(',')}) AND t.date >= ? AND t.date <= ?${cuenta.sql}
         GROUP BY a.currency`
     )
-    .all(...types, from, to) as unknown as Array<{ currency: string; total: number }>
+    .all(...types, from, to, ...cuenta.params) as unknown as Array<{ currency: string; total: number }>
   return rows.reduce((sum, row) => sum + convert(Number(row.total ?? 0), row.currency, base, rates), 0)
 }

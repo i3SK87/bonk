@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode
 } from 'react'
-import { useStore } from '../lib/store'
+import { useStore, usePreferredAccountId } from '../lib/store'
 import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
@@ -176,9 +176,24 @@ export function ReportsView(): ReactNode {
   // El catálogo de categorías, con su ficha completa. Se llama así y no
   // `categories` porque ese nombre ya lo lleva aquí el desglose del periodo,
   // que son totales y no fichas.
-  const { settings, categories: catalogo, revision, run, toast, fail, updateSettings } = useStore()
+  const { settings, accounts, categories: catalogo, revision, run, toast, fail, updateSettings } =
+    useStore()
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
+  /*
+   * De qué cuenta va el informe. En nulo, de todas juntas.
+   *
+   * Arranca en la principal y no en el total, que es lo que hacía hasta ahora:
+   * lo que se viene a mirar aquí es en qué se va el dinero del día a día, y la
+   * suma de todas mete por medio la hucha y lo que esté apartado. El total
+   * sigue estando a un clic, en su propia pastilla.
+   *
+   * Se mira una cuenta cada vez, como en Movimientos: pulsar otra cambia de
+   * cuenta en vez de añadirla, y volver a pulsar la que ya está puesta no hace
+   * nada —quedarse sin ninguna es el estado que menos se busca—.
+   */
+  const cuentaPrincipal = usePreferredAccountId()
+  const [cuenta, setCuenta] = useState<number | null>(() => cuentaPrincipal || null)
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   /*
@@ -232,8 +247,10 @@ export function ReportsView(): ReactNode {
   const [eligiendoTramo, setEligiendoTramo] = useState(false)
 
   useEffect(() => {
-    api.reports.span().then(setSpan).catch(fail('el histórico'))
-  }, [revision])
+    // También por cuenta: si no, «Todo» arrancaría en el primer movimiento de
+    // cualquier cuenta y el informe empezaría con meses vacíos por delante.
+    api.reports.span(cuenta).then(setSpan).catch(fail('el histórico'))
+  }, [cuenta, revision])
 
   const toggle = (categoryId: number): void => {
     setExpanded((current) => {
@@ -267,11 +284,11 @@ export function ReportsView(): ReactNode {
 
   useEffect(() => {
     Promise.all([
-      api.reports.categories(range.from, range.to, kind),
-      api.reports.monthly(12),
+      api.reports.categories(range.from, range.to, kind, cuenta),
+      api.reports.monthly(12, cuenta),
       // El de antes se pide igual: es la misma consulta con otras fechas.
       comparacion
-        ? api.reports.categories(comparacion.from, comparacion.to, kind)
+        ? api.reports.categories(comparacion.from, comparacion.to, kind, cuenta)
         : Promise.resolve([] as CategoryTotal[]),
     ])
       .then(([nextCategories, nextMonthly, nextAntes]) => {
@@ -281,7 +298,7 @@ export function ReportsView(): ReactNode {
       })
       .catch(fail('los informes'))
       .finally(() => setCargado(true))
-  }, [range, kind, comparacion, revision])
+  }, [range, kind, comparacion, cuenta, revision])
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
@@ -316,6 +333,10 @@ export function ReportsView(): ReactNode {
         from: range.from,
         to: range.to,
         categoryIds: [categoria.id],
+        // Y solo los de la cuenta que se está mirando, por lo mismo que el
+        // periodo: la fila cuenta esos, y arrastrar los de otra cuenta sería
+        // mover datos que no estaban delante.
+        accountIds: cuenta == null ? undefined : [cuenta],
         limit: 100000
       })
     )
@@ -520,7 +541,13 @@ export function ReportsView(): ReactNode {
               className="btn small mini contorno"
               onClick={async () => {
                 const result = await run(() =>
-                  api.informe.exportPdf({ from: range.from, to: range.to })
+                  api.informe.exportPdf({
+                    from: range.from,
+                    to: range.to,
+                    // El PDF es lo que hay en pantalla: si el informe va de una
+                    // cuenta, el documento va de esa cuenta.
+                    accountIds: cuenta == null ? undefined : [cuenta]
+                  })
                 )
                 if (result) toast(`${result.count} movimientos exportados`, 'success')
               }}
@@ -546,6 +573,67 @@ export function ReportsView(): ReactNode {
               }}
             />
           )}
+        </div>
+
+        {/*
+          De qué cuenta va todo lo de abajo.
+          Va en su propia fila y no con los periodos: son dos preguntas
+          distintas —cuándo y de dónde— y en el mismo renglón la cabecera se
+          partía en cuanto la ventana se estrechaba un poco.
+        */}
+        <div className="card-body">
+          <div className="accounts-block">
+            <div className="label">Cuentas</div>
+            <div className="account-chips">
+              {/*
+                El total, que es como se veía el informe hasta ahora.
+                Sin cifra debajo a propósito: la suma de saldos que se enseña en
+                Movimientos deja fuera las cuentas apartadas del total, y aquí
+                «Todas» son todas. Un número que no case con lo que filtra la
+                pastilla es peor que no ponerlo.
+              */}
+              <button
+                className={`account-chip${cuenta == null ? ' active' : ''}`}
+                onClick={() => setCuenta(null)}
+                title={
+                  cuenta == null
+                    ? 'Estás viendo todas tus cuentas'
+                    : 'Ver todas tus cuentas juntas'
+                }
+              >
+                <Avatar icon="wallet" color="#8E8E93" size="small" />
+                <span className="chip-text">
+                  <span className="chip-name truncate">Todas</span>
+                </span>
+              </button>
+
+              {accounts.map((account) => {
+                const activa = cuenta === account.id
+                const tono =
+                  account.balance < 0
+                    ? 'negative'
+                    : account.balance > 0
+                      ? 'positive'
+                      : 'neutral'
+                return (
+                  <button
+                    key={account.id}
+                    className={`account-chip${activa ? ' active' : ''}`}
+                    onClick={() => setCuenta(account.id)}
+                    title={activa ? `Estás viendo ${account.name}` : `Ver solo ${account.name}`}
+                  >
+                    <Avatar icon={account.icon} color={account.color} size="small" />
+                    <span className="chip-text">
+                      <span className="chip-name truncate">{account.name}</span>
+                      <span className={`chip-balance amount ${tono}`}>
+                        {formatMoney(account.balance, account.currency)}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

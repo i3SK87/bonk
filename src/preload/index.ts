@@ -137,10 +137,17 @@ const api = {
       call<ScheduledOccurrence[]>('scheduled:occurrences', from, to)
   },
   reports: {
-    categories: (from: string, to: string, kind: CategoryKind = 'expense') =>
-      call<CategoryTotal[]>('reports:categories', from, to, kind),
-    monthly: (months = 12) => call<MonthlyPoint[]>('reports:monthly', months),
-    span: () => call<{ from: string; to: string } | null>('reports:span')
+    /** `accountId` en nulo son todas las cuentas juntas, que es como iba antes. */
+    categories: (
+      from: string,
+      to: string,
+      kind: CategoryKind = 'expense',
+      accountId: number | null = null
+    ) => call<CategoryTotal[]>('reports:categories', from, to, kind, accountId),
+    monthly: (months = 12, accountId: number | null = null) =>
+      call<MonthlyPoint[]>('reports:monthly', months, accountId),
+    span: (accountId: number | null = null) =>
+      call<{ from: string; to: string } | null>('reports:span', accountId)
   },
   attachments: {
     list: (transactionId: number) => call<Attachment[]>('attachments:list', transactionId),

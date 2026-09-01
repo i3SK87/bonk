@@ -562,6 +562,33 @@ try {
   equal('la serie mensual trae doce puntos', series.length, 12)
   equal('el último mes acumula el gasto', series[11].expense, 6550)
 
+  // El informe de una sola cuenta. Todo el gasto del mes está en la cartera y
+  // todo el ingreso en el banco, así que cada filtro deja al otro a cero: si
+  // alguna consulta se olvidara de filtrar, saldría el total de siempre.
+  equal(
+    'el reparto por categorías se puede pedir de una cuenta',
+    reports.categoryTotals(monthStart, day, 'expense', cash.id).find((row) => row.categoryId === food.id)!.total,
+    2550 + 4000
+  )
+  equal(
+    'y la cuenta sin gasto no reparte nada',
+    reports.categoryTotals(monthStart, day, 'expense', bank.id).length,
+    0
+  )
+  equal('el gasto de la cartera es todo el gasto', reports.totalFor('expense', monthStart, day, cash.id), 6550)
+  equal('y el del banco es ninguno', reports.totalFor('expense', monthStart, day, bank.id), 0)
+  equal('el ingreso está en el banco', reports.totalFor('income', monthStart, day, bank.id), 180000)
+  equal('y no en la cartera', reports.totalFor('income', monthStart, day, cash.id), 0)
+  const soloBanco = reports.monthlySeries(12, bank.id)
+  equal('la serie mensual también filtra el gasto', soloBanco[11].expense, 0)
+  equal('y conserva el ingreso de su cuenta', soloBanco[11].income, 180000)
+  equal('el histórico de una cuenta sale de sus movimientos', reports.transactionsSpan(cash.id)!.from, day)
+  equal(
+    'y una cuenta que solo ha recibido traspasos no tiene histórico propio',
+    reports.transactionsSpan(dollars.id),
+    null
+  )
+
   section('Desglose por notas')
   const debt = categories.saveCategory({
     name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30'
@@ -1316,6 +1343,15 @@ try {
     from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 0, balance: 0, generado: day
   })
   check('un periodo vacío lo dice', sinNada.includes('No hay ningún movimiento en este periodo'))
+  // De qué cuenta es el documento, que es lo que distingue dos informes del
+  // mismo mes. Y el nombre pasa por el escapador como cualquier otro texto.
+  const deUnaCuenta = construirInformeHtml([], {
+    from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 0, balance: 0, generado: day,
+    cuenta: 'Cuenta & <b>'
+  })
+  const rotuloDe = (html: string): string => html.split('<p class="periodo">')[1].split('</p>')[0]
+  check('el informe de una cuenta la nombra', rotuloDe(deUnaCuenta).includes('<b>Cuenta &amp; &lt;b&gt;</b>'))
+  check('y el de todas no nombra ninguna', !rotuloDe(sinNada).includes('<b>'))
 
   section('Programadas')
   const recurring = scheduled.saveScheduled({

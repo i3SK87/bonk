@@ -27,6 +27,14 @@ export interface DatosInforme {
   to: string
   /** Divisa en la que se dan los totales. */
   currency: string
+  /**
+   * De qué cuenta va el informe, cuando va de una sola.
+   *
+   * Sin esto, el de una cuenta y el de todas se archivan iguales: mismo título,
+   * mismo periodo y unos totales que no hay forma de saber a qué se refieren.
+   * En nulo, el documento es de todo.
+   */
+  cuenta?: string | null
   ingresos: number
   gastos: number
   balance: number
@@ -103,7 +111,7 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Movimientos ${escaparHtml(formatDate(datos.from))} – ${escaparHtml(formatDate(datos.to))}</title>
+<title>Movimientos${datos.cuenta ? ` · ${escaparHtml(datos.cuenta)}` : ''} ${escaparHtml(formatDate(datos.from))} – ${escaparHtml(formatDate(datos.to))}</title>
 <style>
   @page { size: A4; margin: 16mm 14mm; }
   * { box-sizing: border-box; }
@@ -117,6 +125,8 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
   header { border-bottom: 2px solid #14161a; padding-bottom: 10px; margin-bottom: 16px; }
   h1 { margin: 0 0 2px; font-size: 17pt; letter-spacing: -0.01em; }
   .periodo { margin: 0; color: #5b6068; font-size: 10pt; }
+  /* El nombre de la cuenta, que es lo que distingue un informe de otro. */
+  .periodo b { color: #14161a; font-weight: 600; }
   .generado { margin: 3px 0 0; color: #8a9099; font-size: 8.5pt; }
 
   /* Los tres totales, en fila y con la misma pinta que en la pantalla. */
@@ -159,7 +169,7 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
 <body>
   <header>
     <h1>Movimientos</h1>
-    <p class="periodo">Del ${escaparHtml(formatDate(datos.from))} al ${escaparHtml(formatDate(datos.to))} · ${filas.length} ${filas.length === 1 ? 'movimiento' : 'movimientos'}</p>
+    <p class="periodo">Del ${escaparHtml(formatDate(datos.from))} al ${escaparHtml(formatDate(datos.to))}${datos.cuenta ? ` · <b>${escaparHtml(datos.cuenta)}</b>` : ''} · ${filas.length} ${filas.length === 1 ? 'movimiento' : 'movimientos'}</p>
     <p class="generado">BONK · generado el ${escaparHtml(formatDate(datos.generado))}</p>
   </header>
 
