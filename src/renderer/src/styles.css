@@ -4445,6 +4445,18 @@ body.recolocando * {
 /* Ni la última fila la suya, por lo mismo. */
 .cal-rejilla > *:nth-last-child(-n + 7) { border-bottom: none; }
 
+/* Y las dos esquinas de abajo van redondeadas como el canto de la tarjeta, que
+   es quien las recorta: sin esto, el recuadro del día elegido llega a la
+   esquina en ángulo recto y se ve cortado contra la curva. Un pelo menos que la
+   tarjeta, que su borde de 1 px va por fuera. */
+.cal-rejilla > *:nth-last-child(7) {
+  border-bottom-left-radius: calc(var(--radius-lg) - 1px);
+}
+
+.cal-rejilla > *:last-child {
+  border-bottom-right-radius: calc(var(--radius-lg) - 1px);
+}
+
 /*
  * El rótulo va pegado a su cifra, no en la otra punta.
  *
