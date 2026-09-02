@@ -779,24 +779,18 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX idx_tx_saved_from ON transactions(saved_from_id);
   `,
 
-  // v33 — una devolución programada puede colgar de un movimiento ya registrado.
+  // v33 — una columna que ya no lee nadie, y que aun así tiene que quedarse.
   //
-  // Hasta aquí una devolución programada solo sabía señalar a *otra programada*
-  // —el gasto recurrente que se devuelve todos los meses—, y eso deja fuera el
-  // caso corriente: un gasto suelto que ya está apuntado y cuyo dinero vuelve a
-  // plazos durante las semanas siguientes. Compras un teclado y lo vas
-  // recuperando vendiendo cosas; cada venta es una devolución de *ese* gasto, y
-  // ninguna ha pasado todavía.
+  // La estrenó la 2.25.0 para que una devolución programada pudiera colgar de un
+  // gasto ya registrado. Esa función se retiró en la 2.27.0 —ver el revert—, pero
+  // la migración no se puede retirar con ella: quien ya la aplicó tiene la base en
+  // la versión 33, y borrar esta entrada dejaría la lista en 32. La siguiente
+  // migración que se escriba ocuparía ese hueco y esas bases se la saltarían,
+  // porque para ellas la 33 ya está hecha.
   //
-  // Sin esto solo había dos salidas, las dos malas: apuntar el reembolso con
-  // fecha futura —y el saldo, que no mira fechas, daba el dinero por cobrado
-  // antes de tiempo— o dejarlo suelto en su categoría, sin que el gasto llegara
-  // a saber nunca lo que de verdad había costado.
-  //
-  // Se borra a NULL y no en cascada, igual que `transactions.refund_for_id`: si
-  // el gasto desaparece, el dinero que viene de camino sigue siendo real y entra
-  // como una devolución suelta de su categoría, que es lo que ya pasa con los
-  // reembolsos ya registrados.
+  // Así que se queda, callada, como `is_recurring` y las tres de ahorro de la v31.
+  // Una columna que nadie lee no molesta a nadie; una migración que no se aplica,
+  // sí.
   `
   ALTER TABLE scheduled ADD COLUMN refund_for_tx_id INTEGER REFERENCES transactions(id) ON DELETE SET NULL;
   CREATE INDEX idx_scheduled_refund_for_tx ON scheduled(refund_for_tx_id);

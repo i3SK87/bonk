@@ -380,21 +380,14 @@ export function TransactionForm({
      * salir de la cuenta. Lo que todavía no ha pasado es algo que va a pasar, y
      * eso ya tiene su sitio: se registra solo el día que le toca.
      *
-     * Dos cosas se quedan como movimiento, y el aviso lo dice para que no
-     * parezca que la regla falla a ratos: las facturas, que cuelgan de un
-     * movimiento y se irían con él, y el reembolso que no cuelga de ningún
-     * gasto —el que solo lleva categoría—, porque no hay enlace que conservar.
-     *
-     * El reembolso que sí señala a un gasto viaja como los demás: la programada
-     * se lleva apuntado cuál es y lo estrena el día que se registra. Es el caso
-     * del gasto que se va recuperando a plazos —vendes cosas y el dinero llega
-     * durante las semanas siguientes—, donde apuntarlo hoy dejaba el saldo
-     * cobrado antes de tiempo.
+     * Dos cosas no pueden hacer el viaje, y por eso se quedan como movimiento:
+     * las facturas cuelgan de un movimiento y se irían con él, y un reembolso
+     * apunta a un gasto concreto que una programada no sabe señalar. En ambos
+     * casos el aviso lo dice, que si no parecería que la regla falla a ratos.
      */
     const futuro = date > today()
     const conFacturas = pending.length > 0 || attachments.length > 0
-    const reembolsoSuelto = type === 'refund' && refundForId == null
-    if (futuro && !reembolsoSuelto && !conFacturas) {
+    if (futuro && type !== 'refund' && !conFacturas) {
       setSaving(true)
       const programada = await run(
         () =>
@@ -408,9 +401,6 @@ export function TransactionForm({
             categoryId: type === 'transfer' ? null : categoryId,
             amount,
             note: note || null,
-            // El gasto al que devuelve el dinero viaja con ella y se estrena el
-            // día que la programada se registre.
-            refundForId: type === 'refund' ? refundForId : null,
             // Marcado como cíclico, la programada nace con su cadencia y empieza
             // ese día; suelto, es de una vez y se acaba ahí.
             cadencia: repite ? { freq, interval, endDate: endDate || null } : null,
@@ -447,7 +437,7 @@ export function TransactionForm({
       futuro
         ? conFacturas
           ? 'Lleva facturas, así que se queda como movimiento'
-          : 'Una devolución suelta no se programa: se queda como movimiento'
+          : 'Un reembolso no se puede programar: se queda como movimiento'
         : existing
           ? 'Movimiento actualizado'
           : 'Movimiento guardado'

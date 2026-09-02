@@ -762,9 +762,6 @@ export function ScheduleModal({
       remind,
       active: schedule?.active ?? true,
       refundForScheduledId: type === 'refund' ? refundForScheduledId : null,
-      // El gasto ya apuntado del que cuelga no se elige aquí, pero tiene que
-      // sobrevivir a que se le cambie el importe o la fecha desde esta ficha.
-      refundForTxId: type === 'refund' ? (schedule?.refundForTxId ?? null) : null,
       goalId: hucha ? goalId : null,
       lender: esDeuda ? lender || null : null,
       isDebt: esDeuda,
@@ -810,26 +807,7 @@ export function ScheduleModal({
           </div>
         )}
 
-        {/* Colgada de un gasto ya registrado no hay nada que elegir: ese gasto es
-            el que es. Se enseña para saber de qué cuelga, y el enlace viaja
-            intacto en cada guardado. */}
-        {type === 'refund' && schedule?.refundForTxId != null && (
-          <div className="refund-banner">
-            <Icon name="refund" size={18} />
-            <div style={{ minWidth: 0 }}>
-              <strong>Devolución de un gasto ya apuntado</strong>
-              <div className="small muted truncate">
-                {schedule.refundForTxNote || schedule.categoryName || 'Sin categoría'}
-                {schedule.refundForTxDate ? ` · ${formatDate(schedule.refundForTxDate)}` : ''}
-                {schedule.refundForTxAmount != null
-                  ? ` · ${formatMoney(schedule.refundForTxAmount, schedule.accountCurrency)}`
-                  : ''}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {type === 'refund' && schedule?.refundForTxId == null && (
+        {type === 'refund' && (
           <Field
             label="Devolución de esta programada"
             hint="Se engancha sola al movimiento de esa programación."
