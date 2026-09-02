@@ -671,12 +671,39 @@ try {
     debtRow.notes.every((item) => item.percent <= 100)
   )
 
+  // Y lo devuelto, que va aparte: no compite con las notas ni por el sitio ni
+  // por el porcentaje, pero está, y es lo que hace que la cuenta cierre.
+  equal('la categoría dice cuánto le han devuelto', debtRow.refunded, 1500)
+  equal('agrupado por el concepto de cada devolución', debtRow.refunds.length, 2)
+  equal('la mayor primero', debtRow.refunds[0].note, 'Kindle')
+  equal('con su importe en positivo', debtRow.refunds[0].total, 1000)
+  equal('la que no lleva concepto se llama Devuelto', debtRow.refunds[1].note, 'Devuelto')
+  check(
+    'y ninguna se cuela como nota del desglose',
+    debtRow.notes.every((item) => item.note !== 'Devuelto')
+  )
+  equal(
+    'notas menos devoluciones cuadra con el total de la categoría',
+    debtRow.notes.reduce((sum, item) => sum + item.total, 0) -
+      debtRow.refunds.reduce((sum, item) => sum + item.total, 0),
+    debtRow.total
+  )
+  check(
+    'lo devuelto no se cuenta como ingreso de nadie',
+    reports
+      .categoryTotals(monthStart, day, 'income')
+      .every((row) => row.refunded === 0 && row.refunds.length === 0)
+  )
+
   categories.saveCategory({ ...debt, breakdownByNote: false })
   const flat = reports
     .categoryTotals(monthStart, day, 'expense')
     .find((row) => row.categoryId === debt.id)!
   equal('una categoría fija no trae desglose', flat.notes.length, 0)
   equal('apagar el desglose no cambia el total', flat.total, debtRow.total)
+  // Pero lo devuelto se sigue pudiendo mirar: no es un concepto suyo, así que
+  // la casilla del desglose no manda sobre ello.
+  equal('y aun así enseña lo devuelto', flat.refunds.length, 2)
   categories.saveCategory({ ...debt, breakdownByNote: true })
 
   section('Planes de ahorro')

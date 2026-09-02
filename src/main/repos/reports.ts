@@ -110,6 +110,7 @@ export function categoryTotals(
               COALESCE(c.color, '#8E8E93') AS color,
               a.currency               AS currency,
               SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS total,
+              SUM(CASE WHEN t.type = 'refund' THEN t.amount ELSE 0 END) AS refunded,
               SUM(CASE WHEN t.type = 'refund' THEN 0 ELSE 1 END) AS count
          FROM transactions t
          JOIN accounts a        ON a.id = t.account_id
@@ -124,6 +125,7 @@ export function categoryTotals(
     color: string
     currency: string
     total: number
+    refunded: number
     count: number
   }>
 
@@ -138,9 +140,12 @@ export function categoryTotals(
       total: 0,
       count: 0,
       percent: 0,
-      notes: []
+      notes: [],
+      refunded: 0,
+      refunds: []
     }
     existing.total += convert(Number(row.total ?? 0), row.currency, base, rates)
+    existing.refunded += convert(Number(row.refunded ?? 0), row.currency, base, rates)
     existing.count += Number(row.count ?? 0)
     merged.set(key, existing)
   }
@@ -159,7 +164,9 @@ export function categoryTotals(
         total: traspasos.total,
         count: traspasos.count,
         percent: 0,
-        notes: []
+        notes: [],
+        refunded: 0,
+        refunds: []
       })
     }
   }
@@ -177,11 +184,99 @@ export function categoryTotals(
     base,
     accountId
   )
+  /*
+   * Y detrás, lo devuelto, agrupado por su concepto.
+   *
+   * Va aparte y no dentro de `notes` a propósito. El 28 de agosto de 2026 los
+   * reembolsos salieron del desglose por notas porque se colaban como una nota
+   * más —«Sin nota −60,00 €», en rojo y con cero movimientos— y descuadraban los
+   * porcentajes. Eso sigue igual: las notas son en qué se ha ido el dinero, y
+   * ninguna sale en negativo.
+   *
+   * Lo que faltaba era la otra mitad: al abrir Compras, el desglose sumaba
+   * 232,46 mientras la categoría decía 182,46, sin nada que explicara la
+   * diferencia. Estas líneas son esa explicación, y con ellas la cuenta cierra.
+   */
+  const byRefund = refundNotes(from, to, kind, rates, base, accountId)
   for (const item of list) {
     if (item.categoryId === null) continue
     item.notes = byNote.get(item.categoryId) ?? []
+    item.refunds = byRefund.get(item.categoryId) ?? []
   }
   return list
+}
+
+/**
+ * Lo devuelto en cada categoría, agrupado por el concepto del reembolso.
+ *
+ * Por su propio concepto y no por el del gasto: lo que devuelve el dinero suele
+ * llamarse de otra manera que lo que se compró —vendes un sintetizador para
+ * pagar un teclado— y es justo lo que se quiere leer. Sin concepto se llama
+ * «Devuelto», que es lo único que se sabe de él; «Sin nota» sonaba a cajón de
+ * gastos sin clasificar, que es lo que no es.
+ *
+ * Sin mirar `breakdown_by_note`: esa casilla dice si una categoría se abre por
+ * conceptos, y esto no es un concepto suyo. Una categoría fija que reciba una
+ * devolución también tiene algo que contar —el alquiler y la parte del otro— y
+ * se puede abrir para verlo.
+ */
+function refundNotes(
+  from: string,
+  to: string,
+  kind: CategoryKind,
+  rates: Record<string, number>,
+  base: string,
+  accountId: number | null
+): Map<number, NoteTotal[]> {
+  const result = new Map<number, NoteTotal[]>()
+  // Solo los gastos llevan devoluciones: un ingreso no se reembolsa.
+  if (kind !== 'expense') return result
+
+  const cuenta = filtroDeCuenta(accountId)
+  const rows = getDb()
+    .prepare(
+      `SELECT t.category_id AS categoryId,
+              COALESCE(NULLIF(TRIM(t.note), ''), '') AS noteText,
+              a.currency     AS currency,
+              SUM(t.amount)  AS total,
+              COUNT(*)       AS count
+         FROM transactions t
+         JOIN accounts a ON a.id = t.account_id
+        WHERE t.type = 'refund' AND t.category_id IS NOT NULL
+          AND t.date >= ? AND t.date <= ?${cuenta.sql}
+        GROUP BY t.category_id, TRIM(t.note) COLLATE NOCASE, a.currency`
+    )
+    .all(from, to, ...cuenta.params) as unknown as Array<{
+    categoryId: number
+    noteText: string
+    currency: string
+    total: number
+    count: number
+  }>
+
+  const grouped = new Map<number, Map<string, NoteTotal>>()
+  for (const row of rows) {
+    const categoryId = Number(row.categoryId)
+    const bucket = grouped.get(categoryId) ?? new Map<string, NoteTotal>()
+    const key = noteKey(row.noteText)
+    const entry = bucket.get(key) ?? {
+      note: row.noteText.trim() || 'Devuelto',
+      total: 0,
+      count: 0,
+      // El porcentaje se queda en cero: lo devuelto no es una parte de lo
+      // gastado, y darle un tanto por ciento sería medirlo contra otra cosa.
+      percent: 0
+    }
+    entry.total += convert(Number(row.total ?? 0), row.currency, base, rates)
+    entry.count += Number(row.count ?? 0)
+    bucket.set(key, entry)
+    grouped.set(categoryId, bucket)
+  }
+
+  for (const [categoryId, bucket] of grouped) {
+    result.set(categoryId, [...bucket.values()].sort((a, b) => b.total - a.total))
+  }
+  return result
 }
 
 /** Clave con la que dos notas cuentan como la misma: sin mayúsculas ni espacios de más. */

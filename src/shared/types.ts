@@ -642,6 +642,21 @@ export interface CategoryTotal {
   percent: number
   /** Desglose por nota; vacío en las categorías fijas o sin notas. */
   notes: NoteTotal[]
+  /**
+   * Lo que se devolvió en el periodo, en positivo. Ya está descontado de
+   * `total`: se guarda aparte para poder decir *cuánto* volvió, que mirando el
+   * neto no se sabe si son 232 gastados o 282 con 50 de vuelta.
+   */
+  refunded: number
+  /**
+   * Y de dónde volvió, agrupado por su concepto.
+   *
+   * No son notas del desglose y por eso no van en `notes`: una devolución no es
+   * un sitio donde se haya ido el dinero, así que no compite por el porcentaje
+   * ni ensucia lo que costó cada cosa. Va detrás, en su propio grupo, y es lo
+   * que hace que el desglose cuadre con el total de la categoría.
+   */
+  refunds: NoteTotal[]
 }
 
 export interface MonthlyPoint {

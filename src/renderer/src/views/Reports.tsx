@@ -40,7 +40,11 @@ const PERIODS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'all', 'custom']
  * misma cifra otra vez no aporta nada.
  */
 function hasBreakdown(row: CategoryTotal): boolean {
-  if (row.categoryId === null || row.notes.length === 0) return false
+  if (row.categoryId === null) return false
+  // Lo devuelto abre la categoría por sí solo, aunque no tenga conceptos: es lo
+  // que explica por qué el total dice menos de lo que suman sus gastos.
+  if (row.refunds.length > 0) return true
+  if (row.notes.length === 0) return false
   return row.notes.length > 1 || row.notes[0].note !== 'Sin nota'
 }
 
@@ -739,8 +743,17 @@ export function ReportsView(): ReactNode {
                               </div>
                             </td>
                             <td className="num muted">{row.count}</td>
-                            <td className="num muted">{row.percent.toFixed(1)}%</td>
-                            <td className="num amount">{formatMoney(row.total, currency)}</td>
+                            {/* Una categoría en negativo —el mes en que vuelve
+                                dinero de algo que se compró antes— no tiene
+                                porcentaje que enseñar: no es una parte de lo
+                                gastado este mes, es lo contrario. Un «−8,3 %»
+                                ahí no significa nada. */}
+                            <td className="num muted">
+                              {row.total < 0 ? '—' : `${row.percent.toFixed(1)}%`}
+                            </td>
+                            <td className={`num amount${row.total < 0 ? ' positive' : ''}`}>
+                              {formatMoney(row.total, currency)}
+                            </td>
                             {comparacion && (
                               <td className="balance">
                                 <Cambio
@@ -776,6 +789,30 @@ export function ReportsView(): ReactNode {
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
                                 {/* El desglose por concepto no se compara: no
                                     hay un «antes» suyo que consultar. */}
+                                {comparacion && <td />}
+                              </tr>
+                            ))}
+
+                          {/* Y al final, lo que volvió. En verde y con el menos:
+                              en esta tabla cada línea suma al total de su
+                              categoría, y esta es la única que resta. Sin barra
+                              y sin porcentaje, que no es una parte de lo
+                              gastado sino lo contrario. */}
+                          {open &&
+                            row.refunds.map((devuelto) => (
+                              <tr className="subrow" key={`${key}-devuelto-${devuelto.note}`}>
+                                <td>
+                                  <div className="row tight">
+                                    <Icon name="refund" size={13} />
+                                    <span className="note-name">{devuelto.note}</span>
+                                    <span className="pill reembolso">Devuelto</span>
+                                  </div>
+                                </td>
+                                <td className="num muted">{devuelto.count}</td>
+                                <td className="num muted">—</td>
+                                <td className="num amount positive">
+                                  {formatMoney(-devuelto.total, currency)}
+                                </td>
                                 {comparacion && <td />}
                               </tr>
                             ))}
