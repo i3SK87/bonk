@@ -49,6 +49,7 @@ interface ScheduledRow {
   last_posted: string | null
   created_at: string
   refund_for_scheduled_id: number | null
+  refund_for_tx_id: number | null
   goal_id: number | null
   debt_extra_count: number | null
   debt_last_amount: number | null
@@ -69,6 +70,9 @@ interface ScheduledViewRow extends ScheduledRow {
   category_name: string | null
   category_icon: string | null
   category_color: string | null
+  refund_for_tx_note: string | null
+  refund_for_tx_date: string | null
+  refund_for_tx_amount: number | null
 }
 
 function mapScheduled(row: ScheduledRow): Scheduled {
@@ -92,6 +96,7 @@ function mapScheduled(row: ScheduledRow): Scheduled {
     lastPosted: row.last_posted,
     createdAt: row.created_at,
     refundForScheduledId: row.refund_for_scheduled_id,
+    refundForTxId: row.refund_for_tx_id,
     goalId: row.goal_id,
     debtExtraCount: row.debt_extra_count,
     debtLastAmount: row.debt_last_amount,
@@ -112,11 +117,16 @@ const VIEW_SELECT = `
          d.name     AS to_account_name,
          c.name     AS category_name,
          c.icon     AS category_icon,
-         c.color    AS category_color
+         c.color    AS category_color,
+         rt.note    AS refund_for_tx_note,
+         rt.date    AS refund_for_tx_date,
+         rt.amount  AS refund_for_tx_amount
     FROM scheduled s
     JOIN accounts a        ON a.id = s.account_id
     LEFT JOIN accounts d   ON d.id = s.to_account_id
     LEFT JOIN categories c ON c.id = s.category_id
+    -- El gasto ya registrado del que cuelga una devolución, para poder nombrarlo.
+    LEFT JOIN transactions rt ON rt.id = s.refund_for_tx_id
 `
 
 function toView(row: ScheduledViewRow): ScheduledView {
@@ -127,7 +137,10 @@ function toView(row: ScheduledViewRow): ScheduledView {
     toAccountName: row.to_account_name,
     categoryName: row.category_name,
     categoryIcon: row.category_icon,
-    categoryColor: row.category_color
+    categoryColor: row.category_color,
+    refundForTxNote: row.refund_for_tx_note,
+    refundForTxDate: row.refund_for_tx_date,
+    refundForTxAmount: row.refund_for_tx_amount
   }
 }
 
@@ -160,6 +173,8 @@ interface ScheduledInput {
   autoPost: boolean
   active?: boolean
   refundForScheduledId?: number | null
+  /** O el movimiento ya registrado al que devuelve el dinero. Excluyente con la anterior. */
+  refundForTxId?: number | null
   /** Plan de ahorro al que va, cuando es un traspaso que entra en una hucha. */
   goalId?: number | null
   /** Quién cobra, cuando es una deuda. */
@@ -224,8 +239,18 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
   // un traspaso o la cuenta de un ingreso. Igual que en los movimientos.
   const entra = isTransfer ? toAccountId : input.type === 'income' ? input.accountId : null
   const goalId = entra != null ? (input.goalId ?? null) : null
+  /*
+   * De qué cuelga la devolución: de un movimiento ya registrado, o de otra
+   * programada. Nunca de las dos.
+   *
+   * El movimiento manda cuando llegan los dos: señalar un gasto concreto es más
+   * preciso que señalar el plan que lo genera, y es lo que pide quien viene
+   * desde la ficha de ese gasto. Guardar ambas dejaría el resultado a merced de
+   * cuál se mirase primero al registrarse.
+   */
+  const refundForTxId = input.type === 'refund' ? (input.refundForTxId ?? null) : null
   const refundForScheduledId =
-    input.type === 'refund' && input.refundForScheduledId !== input.id
+    input.type === 'refund' && refundForTxId == null && input.refundForScheduledId !== input.id
       ? (input.refundForScheduledId ?? null)
       : null
 
@@ -234,7 +259,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       `UPDATE scheduled
           SET name = ?, type = ?, account_id = ?, to_account_id = ?, category_id = ?, amount = ?,
               amount_to = ?, payee = ?, note = ?, freq = ?, interval = ?, next_date = ?, end_date = ?,
-              auto_post = ?, active = ?, refund_for_scheduled_id = ?, goal_id = ?, remind = ?,
+              auto_post = ?, active = ?, refund_for_scheduled_id = ?, refund_for_tx_id = ?, goal_id = ?, remind = ?,
               lender = ?, is_debt = ?
         WHERE id = ?`
     ).run(
@@ -254,6 +279,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.autoPost ? 1 : 0,
       input.active === false ? 0 : 1,
       bind(refundForScheduledId),
+      bind(refundForTxId),
       bind(goalId),
       input.remind === false ? 0 : 1,
       bind(input.lender?.trim() || null),
@@ -268,9 +294,10 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
     .prepare(
       `INSERT INTO scheduled
          (name, type, account_id, to_account_id, category_id, amount, amount_to, payee, note,
-          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id, goal_id, remind,
+          freq, interval, next_date, end_date, auto_post, active, created_at, refund_for_scheduled_id,
+          refund_for_tx_id, goal_id, remind,
           lender, is_debt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       bind(input.name?.trim() || null),
@@ -290,6 +317,7 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       input.active === false ? 0 : 1,
       nowISO(),
       bind(refundForScheduledId),
+      bind(refundForTxId),
       bind(goalId),
       input.remind === false ? 0 : 1,
       bind(input.lender?.trim() || null),
@@ -323,8 +351,13 @@ export interface FromTransactionInput extends TransactionInput {
  * vez en la lista y otra esperando— o desaparecido del todo.
  *
  * Lo que no puede viajar se queda donde está y por eso no se llama desde la
- * ficha en esos casos: las facturas cuelgan de un movimiento, y un reembolso
- * apunta a un gasto concreto que una programada no sabe señalar.
+ * ficha en ese caso: las facturas cuelgan de un movimiento y se irían con él.
+ *
+ * Un reembolso sí viaja desde que la programada sabe señalar al gasto que
+ * devuelve (`refundForTxId`): el enlace se lo lleva puesto y lo estrena el día
+ * que se registra. Lo que no viaja es el reembolso que no cuelga de nada —el que
+ * solo lleva categoría—, porque ahí no hay enlace que conservar y ya se apunta
+ * igual de bien como devolución suelta.
  */
 export function scheduleFromTransaction(input: FromTransactionInput): ScheduledView {
   if (input.date <= today()) {
@@ -344,6 +377,9 @@ export function scheduleFromTransaction(input: FromTransactionInput): ScheduledV
       payee: input.payee ?? null,
       note: input.note ?? null,
       goalId: input.goalId ?? null,
+      // El gasto que devuelve se lo lleva puesto: es lo que la convierte en la
+      // devolución de *ese* teclado y no en un ingreso más de su categoría.
+      refundForTxId: input.type === 'refund' ? (input.refundForId ?? null) : null,
       freq: input.cadencia?.freq ?? 'once',
       interval: input.cadencia?.interval ?? 1,
       // Empieza el día que se puso en la ficha, no una vuelta después: esa fecha
@@ -762,9 +798,19 @@ function post(row: Scheduled, date: string, consumed = date): void {
     scheduledId: row.id,
     // El plan viaja con el movimiento: al registrarse, la reserva sube sola.
     goalId: row.goalId,
+    /*
+     * De qué gasto cuelga lo que se acaba de registrar.
+     *
+     * Colgada de un movimiento, ese mismo y sin más vueltas. Colgada de otra
+     * programada, hay que averiguar cuál de sus movimientos toca: el que esa
+     * programada dejó ese día. Y si el gasto se borró por el camino, la columna
+     * se quedó en NULL y esto entra como una devolución suelta de su categoría,
+     * igual que le pasa a un reembolso ya registrado cuando borras su gasto.
+     */
     refundForId:
-      row.type === 'refund' && row.refundForScheduledId
-        ? postedByScheduled(row.refundForScheduledId, date)
+      row.type === 'refund'
+        ? (row.refundForTxId ??
+          (row.refundForScheduledId ? postedByScheduled(row.refundForScheduledId, date) : null))
         : null
   })
 

@@ -1830,6 +1830,70 @@ try {
     .find((item) => item.scheduledId === suelta.id)!
   equal('una devolución programada sin enlazar entra suelta', sueltaPuesta.refundForId, null)
 
+  /*
+   * Y el gasto suelto que se va recuperando a plazos.
+   *
+   * Compras un teclado y lo pagas entero hoy; el dinero vuelve durante las
+   * semanas siguientes, a trozos, según se vayan vendiendo cosas. Cada trozo es
+   * una devolución de *ese* gasto y ninguno ha pasado todavía, así que la
+   * programada tiene que saber señalar un movimiento ya registrado.
+   */
+  const teclado = transactions.saveTransaction({
+    type: 'expense', date: addDays(day, -1), accountId: bank.id, categoryId: subs.id,
+    amount: 25900, note: 'Teclado'
+  })
+  const venta = scheduled.scheduleFromTransaction({
+    type: 'refund', date: addDays(day, 3), accountId: bank.id, categoryId: subs.id,
+    amount: 9000, note: 'Venta del monitor', refundForId: teclado.id
+  })
+  equal('la devolución programada señala al gasto ya registrado', venta.refundForTxId, teclado.id)
+  equal('y no cuelga de ninguna programada', venta.refundForScheduledId, null)
+  equal('nace de una vez', venta.freq, 'once')
+  equal('y su ficha sabe nombrar el gasto', venta.refundForTxNote, 'Teclado')
+
+  // Tocarle el importe desde su ficha no puede soltarle el gasto.
+  const tocada = scheduled.saveScheduled({ ...venta, amount: 9500 })
+  equal('cambiarle el importe no le suelta el gasto', tocada.refundForTxId, teclado.id)
+  // Y los dos enlaces son excluyentes: manda el movimiento, que es más preciso.
+  const conLosDos = scheduled.saveScheduled({ ...tocada, refundForScheduledId: alquiler.id })
+  equal('con los dos enlaces puestos manda el movimiento', conLosDos.refundForTxId, teclado.id)
+  equal('y el de la programada se cae', conLosDos.refundForScheduledId, null)
+
+  // El día que entra el dinero, la devolución nace colgada de su gasto.
+  scheduled.postDue(addDays(day, 3))
+  const laVenta = transactions
+    .listTransactions({ from: addDays(day, 3), to: addDays(day, 3) })
+    .find((item) => item.scheduledId === venta.id)!
+  equal('al registrarse cuelga del gasto que devuelve', laVenta.refundForId, teclado.id)
+  equal(
+    'y el teclado ya sabe lo que ha recuperado',
+    transactions.getTransaction(teclado.id)!.refundedTotal,
+    9500
+  )
+
+  // Borrado el gasto, lo que viene de camino sigue siendo dinero real: la
+  // programada se queda sin enlace y entra como devolución suelta de su
+  // categoría, igual que le pasa a un reembolso ya registrado.
+  const otraVenta = scheduled.scheduleFromTransaction({
+    type: 'refund', date: addDays(day, 10), accountId: bank.id, categoryId: subs.id,
+    amount: 4000, note: 'Venta del ratón', refundForId: teclado.id
+  })
+  transactions.deleteTransactions([teclado.id])
+  equal(
+    'borrado el gasto, la programada se queda sin enlace',
+    scheduled.getScheduled(otraVenta.id)!.refundForTxId,
+    null
+  )
+  scheduled.postDue(addDays(day, 10))
+  const huerfana = transactions
+    .listTransactions({ from: addDays(day, 10), to: addDays(day, 10) })
+    .find((item) => item.scheduledId === otraVenta.id)!
+  equal('y aun así el dinero entra', huerfana.refundForId, null)
+  equal('como devolución de su categoría', huerfana.categoryId, subs.id)
+
+  for (const id of [venta.id, otraVenta.id]) scheduled.deleteScheduled(id)
+  transactions.deleteTransactions([laVenta.id, huerfana.id])
+
   for (const id of [alquiler.id, suParte.id, suelta.id]) scheduled.deleteScheduled(id)
   transactions.deleteTransactions(
     transactions

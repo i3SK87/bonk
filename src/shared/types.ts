@@ -319,6 +319,18 @@ export interface Scheduled {
   createdAt: string
   /** Programada del gasto que esta devolución reembolsa, si cuelga de otra. */
   refundForScheduledId: number | null
+  /**
+   * Movimiento ya registrado que esta devolución reembolsa.
+   *
+   * La otra mitad de `refundForScheduledId`, para el gasto que no es de nadie:
+   * uno suelto, ya apuntado, cuyo dinero vuelve más adelante —lo que se compró y
+   * se va recuperando a plazos—. Al registrarse, el movimiento que nace cuelga
+   * de ese gasto igual que si se hubiera apuntado a mano el día que llegó.
+   *
+   * Excluyentes: una devolución cuelga de una programada o de un movimiento,
+   * nunca de las dos.
+   */
+  refundForTxId: number | null
   /** Plan de ahorro al que va este traspaso, cuando entra en una hucha. */
   goalId: number | null
   /**
@@ -363,6 +375,14 @@ export interface ScheduledView extends Scheduled {
   categoryName: string | null
   categoryIcon: string | null
   categoryColor: string | null
+  /**
+   * Cómo se llama y de cuándo es el gasto que devuelve, cuando cuelga de un
+   * movimiento ya registrado. Solo para poder nombrarlo en su ficha: el título
+   * de un movimiento es su nota, y si no la lleva, el de su categoría.
+   */
+  refundForTxNote: string | null
+  refundForTxDate: string | null
+  refundForTxAmount: number | null
 }
 
 /**
