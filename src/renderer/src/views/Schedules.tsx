@@ -715,6 +715,13 @@ export function ScheduleModal({
   )
   const hucha = destino?.type === 'savings' && planes.length > 0
 
+  // Esconder la casilla no basta: `save` guarda `isDebt` mire lo que mire el
+  // formulario, así que marcándola en un gasto y cambiando luego a ingreso se
+  // colaba una deuda que ya no se veía por ninguna parte.
+  useEffect(() => {
+    if (type !== 'expense') setEsDeuda(false)
+  }, [type])
+
   useEffect(() => {
     api.goals
       .progress()
@@ -958,12 +965,13 @@ export function ScheduleModal({
             hint="Requiere los avisos encendidos en Ajustes."
           />
 
-          {/* Un traspaso no se debe a nadie, y un reembolso es dinero que vuelve.
-              Y creando una deuda desde su pestaña la casilla sobra: preguntarle a
-              quien acaba de pulsar «Nueva deuda» si esto es una deuda es hacerle
-              repetir lo que ya dijo. Editando sí sale, que ahí se puede cambiar
-              de idea. */}
-          {type !== 'transfer' && type !== 'refund' && !(deudaPorDefecto && !schedule) && (
+          {/* Solo en los gastos, igual que en la ficha del movimiento: no se debe
+              dinero cobrándolo, un traspaso no se debe a nadie y un reembolso es
+              dinero que vuelve. Y creando una deuda desde su pestaña la casilla
+              sobra: preguntarle a quien acaba de pulsar «Nueva deuda» si esto es
+              una deuda es hacerle repetir lo que ya dijo. Editando sí sale, que
+              ahí se puede cambiar de idea. */}
+          {type === 'expense' && !(deudaPorDefecto && !schedule) && (
             <div className="col" style={{ gap: 6 }}>
               <Checkbox
                 checked={esDeuda}
