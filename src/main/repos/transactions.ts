@@ -886,6 +886,21 @@ function hijosDelAhorro(id: number): Array<{
   }))
 }
 
+/**
+ * Las devoluciones que cuelgan de un gasto.
+ *
+ * Se leen antes de borrarlo porque después ya no se sabría de quién colgaban: la
+ * columna dice `ON DELETE SET NULL`, así que la base las dejaría vivas y con el
+ * enlace a nulo. Solo hacen falta su número y su cuenta, que es lo que hay que
+ * borrar y lo que hay que volver a mirar por si queda en descubierto.
+ */
+function reembolsosDe(id: number): Array<{ id: number; accountId: number }> {
+  const filas = getDb()
+    .prepare(`SELECT id, account_id FROM transactions WHERE type = 'refund' AND refund_for_id = ?`)
+    .all(id) as unknown as Array<{ id: number; account_id: number }>
+  return filas.map((fila) => ({ id: fila.id, accountId: fila.account_id }))
+}
+
 export function deleteTransactions(ids: number[]): number {
   if (ids.length === 0) return 0
   return atomic(() => {
@@ -910,6 +925,23 @@ export function deleteTransactions(ids: number[]): number {
       for (const hijo of hijosDelAhorro(id)) {
         affected.push(hijo.accountId, hijo.toAccountId)
         if (hijo.goalId) addToGoalReserve(hijo.goalId, -(hijo.amountTo ?? hijo.amount))
+      }
+
+      /*
+       * Y la devolución de lo que se borra se va con él, como el ahorro con su
+       * ingreso.
+       *
+       * Dejarla viva la convertía en un dinero sin origen: seguía sumando en la
+       * cuenta y seguía restando gasto en la categoría que heredó de un gasto
+       * que ya no está, con lo que la categoría acababa en negativo. Un
+       * reembolso solo cuelga de un gasto —`refundCandidates` no ofrece otra
+       * cosa—, así que no hay cadena que seguir: un nivel y se acabó. Y no
+       * aparta dinero en ningún plan, que eso solo pasa con lo que entra a
+       * propósito, así que no hay reserva que deshacer.
+       */
+      for (const devolucion of reembolsosDe(id)) {
+        affected.push(devolucion.accountId)
+        stmt.run(devolucion.id)
       }
 
       stmt.run(id)

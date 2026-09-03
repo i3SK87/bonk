@@ -811,22 +811,33 @@ try {
   }
   check('un reembolso sin gasto ni categoría se rechaza', refundRejected)
 
-  // Si se borra el gasto, las devoluciones siguen existiendo y siguen restando
-  // de su categoría: el dinero volvió de verdad a la cuenta.
+  /*
+   * Borrar el gasto se lleva sus devoluciones por delante.
+   *
+   * Antes sobrevivían: la clave ajena las dejaba vivas con el enlace a nulo, y
+   * quedaba un dinero sin origen —sumando en la cuenta y restando gasto en la
+   * categoría del gasto que ya no estaba, que acababa en negativo—. Es el mismo
+   * trato que recibe el ahorro automático al borrar su ingreso.
+   */
   transactions.deleteTransaction(premium.id)
-  const orphanRefunds = transactions
-    .listTransactions({ types: ['refund'], from: day, to: day })
-    .filter((row) => row.categoryId === subs.id)
-  equal('las devoluciones sobreviven al borrado del gasto', orphanRefunds.length, 3)
-  equal('y se quedan sin gasto al que apuntar', orphanRefunds[0].refundForId, null)
   equal(
-    'la categoría queda en negativo porque ya solo hay devoluciones',
-    reports.categoryTotals(monthStart, day, 'expense').find((row) => row.categoryId === subs.id)!.total,
-    -900
+    'borrar el gasto se lleva sus devoluciones',
+    transactions
+      .listTransactions({ types: ['refund'], from: day, to: day })
+      .filter((row) => row.categoryId === subs.id).length,
+    0
   )
-
-  // Se deshace para no arrastrar el descuadre al resto de comprobaciones.
-  transactions.deleteTransactions(orphanRefunds.map((row) => row.id))
+  equal(
+    'la cuenta vuelve a como estaba antes del gasto',
+    accounts.listAccountsWithBalance().find((a) => a.id === bank.id)!.balance,
+    bankBeforeSubs
+  )
+  equal(
+    'y la categoría no se queda en negativo',
+    reports.categoryTotals(monthStart, day, 'expense').find((row) => row.categoryId === subs.id)?.total ?? 0,
+    0
+  )
+  equal('el gasto del mes vuelve a su sitio', reports.totalFor('expense', monthStart, day), expenseBeforeSubs)
 
   section('La cuota sabe que es una cuota')
   /*
