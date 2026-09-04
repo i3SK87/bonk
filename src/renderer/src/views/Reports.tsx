@@ -431,10 +431,16 @@ export function ReportsView(): ReactNode {
 
   const cifras: Dato[] = [
     {
-      // Salidas y entradas, no gastos e ingresos: con una cuenta elegida aquí
-      // dentro van también sus traspasos, y un traspaso no es ni una cosa ni la
-      // otra —el dinero sigue siendo tuyo, solo cambia de bolsillo—.
-      label: kind === 'expense' ? 'Total de salidas' : 'Total de entradas',
+      // Gasto e ingreso, aunque con una cuenta elegida aquí dentro vayan también
+      // sus traspasos.
+      //
+      // La 2.24.0 los llamó salidas y entradas por eso mismo, porque un traspaso
+      // no es ni una cosa ni la otra: el dinero sigue siendo tuyo y solo cambia
+      // de bolsillo. Duró tres días. Leído en la pantalla no ayudaba —«salidas»
+      // no es como se piensa el gasto de un mes—, y el matiz que ganaba el
+      // rótulo no compensaba lo que costaba entenderlo. La cuenta que hay
+      // debajo no ha cambiado: el traspaso sigue contando.
+      label: kind === 'expense' ? 'Gasto total' : 'Ingreso total',
       value: euros(total),
       tone: kind === 'expense' ? 'negative' : 'positive',
       cambio: insignia(total, totalAntes, euros)
@@ -655,8 +661,8 @@ export function ReportsView(): ReactNode {
                 value={kind}
                 onChange={setKind}
                 options={[
-                  { value: 'expense', label: 'Salidas', tone: 'expense' },
-                  { value: 'income', label: 'Entradas', tone: 'income' }
+                  { value: 'expense', label: 'Gastos', tone: 'expense' },
+                  { value: 'income', label: 'Ingresos', tone: 'income' }
                 ]}
               />
             </div>
@@ -791,7 +797,7 @@ export function ReportsView(): ReactNode {
           <div className="grid cols-2">
             <div className="card">
               <div className="card-header">
-                <h2>Entradas y salidas por mes</h2>
+                <h2>Ingresos y gastos por mes</h2>
               </div>
               <div className="card-body">
                 <MonthlyBars points={monthly} currency={currency} />
