@@ -20,12 +20,14 @@ import {
   Baby,
   Banknote,
   Bath,
+  BatteryCharging,
   Bed,
   Bike,
   Book,
   Briefcase,
   Building2,
   Bus,
+  Cable,
   Cake,
   Calendar,
   Camera,
@@ -53,20 +55,26 @@ import {
   GraduationCap,
   Hammer,
   HandCoins,
+  HardDrive,
   Headphones,
+  Headset,
   Heart,
   HeartPulse,
   Hospital,
   House,
+  Joystick,
   Key,
+  Keyboard,
   Landmark,
   Laptop,
   Leaf,
   Lightbulb,
   Luggage,
   Map,
+  MemoryStick,
   Monitor,
   Mountain,
+  Mouse,
   Newspaper,
   Package,
   Paintbrush,
@@ -77,15 +85,19 @@ import {
   Pill,
   Pizza,
   Plane,
+  Plug,
   Popcorn,
   Printer,
+  Projector,
   Receipt,
   Recycle,
   Rocket,
+  Router,
   Salad,
   Scale,
   School,
   Scissors,
+  Server,
   Shield,
   Ship,
   Shirt,
@@ -95,9 +107,11 @@ import {
   Snowflake,
   Sofa,
   Sparkles,
+  Speaker,
   Sprout,
   Stethoscope,
   Store,
+  Tablet,
   Tag,
   Target,
   Ticket,
@@ -111,8 +125,11 @@ import {
   Umbrella,
   Undo2,
   University,
+  Usb,
   Utensils,
   Wallet,
+  Watch,
+  Webcam,
   Wifi,
   Wine,
   Wrench,
@@ -223,6 +240,25 @@ const LUCIDE: Record<string, LucideIcon> = {
   juguetes: ToyBrick,
   trofeo: Trophy,
   propina: HandCoins,
+  teclado: Keyboard,
+  raton: Mouse,
+  cascos: Headset,
+  altavoz: Speaker,
+  webcam: Webcam,
+  tablet: Tablet,
+  reloj: Watch,
+  // La palanca y no otro mando: «Videojuegos» ya es el de consola, y los dos
+  // salen seguidos en la rejilla.
+  mando: Joystick,
+  proyector: Projector,
+  router: Router,
+  servidor: Server,
+  disco: HardDrive,
+  usb: Usb,
+  memoria: MemoryStick,
+  enchufe: Plug,
+  cargador: BatteryCharging,
+  cable: Cable,
 }
 
 const PATHS: Record<string, JSX.Element> = {
@@ -468,11 +504,11 @@ export const MONEY_ICONS: string[] = [
 export const ACCOUNT_ICONS: string[] = MONEY_ICONS
 
 /**
- * Los cien iconos, repartidos en ocho familias y con nombre en castellano.
+ * Los iconos, repartidos en nueve familias y con nombre en castellano.
  *
- * Cien en una rejilla plana son tres pantallas de muro donde encontrar el del
+ * Más de cien en una rejilla plana son tres pantallas de muro donde encontrar el del
  * perro es cuestión de suerte. Con las familias, quien busca «algo de casa»
- * mira dieciocho iconos y no cien; con el nombre, quien ya sabe cuál quiere lo
+ * mira dieciocho iconos y no ciento veinte; con el nombre, quien ya sabe cuál quiere lo
  * escribe. Las claves ('bolleria', 'fuel') no se tocan: son las que tienen
  * guardadas las categorías y las cuentas de verdad.
  */
@@ -523,8 +559,17 @@ export const ICON_GROUPS: IconGroup[] = [
   {
     label: 'Trabajo y estudios',
     icons: [
-      'trabajo', 'education', 'colegio', 'universidad', 'ordenador', 'portatil',
-      'monitor', 'impresora', 'idea', 'justicia', 'shield'
+      'trabajo', 'education', 'colegio', 'universidad', 'idea', 'justicia',
+      'shield'
+    ]
+  },
+  {
+    label: 'Tecnología',
+    icons: [
+      'ordenador', 'portatil', 'monitor', 'teclado', 'raton', 'cascos',
+      'altavoz', 'webcam', 'impresora', 'tablet', 'reloj', 'mando',
+      'proyector', 'router', 'servidor', 'disco', 'usb', 'memoria',
+      'enchufe', 'cargador', 'cable'
     ]
   },
   {
@@ -572,9 +617,15 @@ export const ICON_LABELS: Record<string, string> = {
   prensa: 'Prensa', foto: 'Foto',
 
   trabajo: 'Trabajo', education: 'Estudios', colegio: 'Colegio',
-  universidad: 'Universidad', ordenador: 'Ordenador', portatil: 'Portátil',
-  monitor: 'Monitor', impresora: 'Impresora', idea: 'Idea',
-  justicia: 'Justicia', shield: 'Protección',
+  universidad: 'Universidad', idea: 'Idea', justicia: 'Justicia',
+  shield: 'Protección',
+
+  ordenador: 'Ordenador', portatil: 'Portátil', monitor: 'Monitor',
+  teclado: 'Teclado', raton: 'Ratón', cascos: 'Cascos', altavoz: 'Altavoz',
+  webcam: 'Webcam', impresora: 'Impresora', tablet: 'Tablet',
+  reloj: 'Reloj', mando: 'Mando', proyector: 'Proyector', router: 'Router',
+  servidor: 'Servidor', disco: 'Disco duro', usb: 'USB', memoria: 'Memoria',
+  enchufe: 'Enchufe', cargador: 'Cargador', cable: 'Cable',
 
   pet: 'Mascota', perro: 'Perro', gato: 'Gato', bebe: 'Bebé', juguetes: 'Juguetes',
   gift: 'Regalo', corazon: 'Corazón', phone: 'Móvil', calendar: 'Calendario',
@@ -674,7 +725,24 @@ const ICON_ALIASES: Record<string, string> = {
   corazon: 'amor pareja',
   phone: 'teléfono móvil tarifa',
   calendar: 'fecha agenda',
-  nube: 'suscripción almacenamiento'
+  nube: 'suscripción almacenamiento',
+  teclado: 'teclas mecánico periférico',
+  raton: 'mouse periférico',
+  cascos: 'auriculares micrófono headset diadema',
+  altavoz: 'sonido altavoces audio bafle',
+  webcam: 'cámara videollamada streaming',
+  tablet: 'tableta ipad',
+  reloj: 'smartwatch pulsera hora',
+  mando: 'consola videojuegos joystick palanca',
+  proyector: 'proyección cine en casa',
+  router: 'wifi fibra internet módem',
+  servidor: 'hosting dominio nas',
+  disco: 'duro ssd almacenamiento copia de seguridad',
+  usb: 'puerto conector pendrive',
+  memoria: 'tarjeta sd pendrive ram almacenamiento',
+  enchufe: 'corriente electricidad toma',
+  cargador: 'batería pilas carga',
+  cable: 'cables hdmi conexión'
 }
 
 

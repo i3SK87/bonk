@@ -589,7 +589,7 @@ function BotonIcono({
 }
 
 /**
- * Cien iconos no caben en una rejilla plana sin volverse un muro, así que van
+ * Ciento veinte iconos no caben en una rejilla plana sin volverse un muro, así que van
  * repartidos por familias, con el rótulo pegado arriba mientras se baja, y con
  * un buscador que filtra por nombre, familia o sinónimo. Los que el formulario
  * ofrezca y no estén en ninguna familia caen en «Otros»: así, si algún día se
