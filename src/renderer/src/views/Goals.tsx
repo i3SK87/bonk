@@ -768,7 +768,10 @@ function CompraDelPlan({
         </Field>
       )}
 
-      <Field label="De qué es la compra" hint="Se queda puesta para el siguiente plan que archives.">
+      {/* «De qué es el gasto» y no «de qué es la compra»: con la categoría
+          «Compras» dentro, el rótulo decía compra y el campo contestaba
+          Compras. */}
+      <Field label="De qué es el gasto" hint="Se queda puesta para el siguiente plan que archives.">
         <select
           className="select"
           value={categoryId ?? ''}
