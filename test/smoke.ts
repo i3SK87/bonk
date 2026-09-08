@@ -93,6 +93,14 @@ try {
   equal('la lista de cuentas va y vuelve', settings.getSettings().widgetAccountIds.join(','), '7,12')
   settings.updateSettings({ widgetAccountIds: [] })
   equal('y vaciarla la deja vacía', settings.getSettings().widgetAccountIds.length, 0)
+
+  // La categoría de la última compra de un plan: se recuerda para dejarla puesta
+  // la próxima vez, y sin ella no se adivina ningún nombre de categoría.
+  equal('sin compras previas no hay categoría que recordar', settings.getSettings().ultimaCategoriaDeCompra, null)
+  settings.updateSettings({ ultimaCategoriaDeCompra: 3 })
+  equal('la categoría de la compra se recuerda', settings.getSettings().ultimaCategoriaDeCompra, 3)
+  settings.updateSettings({ ultimaCategoriaDeCompra: null })
+  equal('y se puede dejar en ninguna', settings.getSettings().ultimaCategoriaDeCompra, null)
   // Un valor a mano o corrupto no puede tumbar la lectura de los ajustes.
   settings.setSetting('widgetAccountIds', 'a,,7,-3,x')
   equal('de una lista rota se salva lo que vale', settings.getSettings().widgetAccountIds.join(','), '7')
@@ -733,6 +741,50 @@ try {
   goals.deleteGoal(pc.id)
   goals.deleteGoal(viaje.id)
   equal('borrar un plan no deja rastro', goals.listGoals().length, 0)
+
+  /*
+   * Archivar un plan cumplido es comprarse lo que se estaba ahorrando: el dinero
+   * vuelve de la hucha a la cuenta desde la que se paga, y desde ahí se gasta.
+   * Dos apuntes, los dos por la meta del plan, y la hucha baja de verdad.
+   */
+  const saldoDe = (id: number): number =>
+    accounts.listAccountsWithBalance().find((item) => item.id === id)!.balance
+  const teclado = goals.saveGoal({ name: 'Teclado', accountId: bote.id, targetAmount: 8000 })
+  goals.setGoalReserves([{ id: teclado.id, amount: 8000 }])
+  const boteAntes = saldoDe(bote.id)
+  const bancoAntes = saldoDe(bank.id)
+  const compra = transactions.comprarPlan({
+    goalId: teclado.id, accountId: bank.id, categoryId: food.id, date: day
+  })
+  equal('la hucha baja por la meta del plan', saldoDe(bote.id), boteAntes - 8000)
+  equal('y la cuenta donde se paga se queda como estaba', saldoDe(bank.id), bancoAntes)
+  equal('la compra sale de esa cuenta', compra.accountId, bank.id)
+  equal('por el importe del plan', compra.amount, 8000)
+  equal('y se llama como el plan', compra.note, 'Teclado')
+  check('archivarlo lo da por cumplido', goals.getGoal(teclado.id)!.achievedAt != null)
+  equal('y el plan ya no retiene nada', goals.getGoal(teclado.id)!.reserved, 0)
+  check(
+    'el traspaso queda apuntado entre las dos cuentas',
+    transactions
+      .listTransactions({ types: ['transfer'], accountIds: [bote.id] })
+      .some((item) => item.toAccountId === bank.id && item.amount === 8000)
+  )
+
+  // Reabrirlo no deshace nada: la misma compra puede quererse dos veces en la
+  // vida, y la de la primera vez ya se hizo.
+  goals.setGoalAchieved(teclado.id, false, day)
+  check('reabrir el plan no borra su compra', transactions.getTransaction(compra.id) != null)
+  equal('y vuelve a empezar de cero', goals.goalProgress(day).find((i) => i.id === teclado.id)!.saved, 0)
+
+  let mismaCuenta = false
+  try {
+    transactions.comprarPlan({ goalId: teclado.id, accountId: bote.id, categoryId: null, date: day })
+  } catch {
+    mismaCuenta = true
+  }
+  check('no se paga desde la propia hucha del plan', mismaCuenta)
+
+  goals.deleteGoal(teclado.id)
 
   section('Reembolsos')
   // El caso real: pagas una suscripción de 11,99 € y otras tres personas te

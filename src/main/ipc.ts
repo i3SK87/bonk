@@ -245,6 +245,13 @@ export function registerIpc(
   })
   handle('goals:delete', (id: number) => goals.deleteGoal(id))
   handle('goals:achieved', (id: number, achieved: boolean) => goals.setGoalAchieved(id, achieved))
+  // Archivar un plan cumplido deja el traspaso y la compra; los crea quien sabe
+  // crear movimientos.
+  handle(
+    'goals:buy',
+    (input: { goalId: number; accountId: number; categoryId?: number | null; date: string }) =>
+      transactions.comprarPlan(input)
+  )
   // Devuelve cuántos ha tocado y no nada: la ventana necesita algo con lo que
   // distinguir el guardado bueno del que se quedó por el camino.
   handle('goals:reserve', (entries: Array<{ id: number; amount: number }>) => {

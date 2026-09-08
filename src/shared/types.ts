@@ -483,6 +483,17 @@ export interface Settings {
    * mano cuando se quiera.
    */
   buscarActualizaciones: boolean
+
+  /**
+   * La categoría con la que se apuntó la última compra de un plan de ahorro.
+   *
+   * No es una preferencia que se toque en Ajustes: es lo que el aviso de
+   * archivar un plan deja puesto la próxima vez. Cada uno tiene la suya —quien
+   * la llame «Compras», quien reparta cada plan en la que le toque— y la
+   * aplicación no tiene por qué adivinar ningún nombre; con recordar la última
+   * basta.
+   */
+  ultimaCategoriaDeCompra: number | null
 }
 
 /**

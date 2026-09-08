@@ -107,7 +107,10 @@ const api = {
     reserve: (entries: Array<{ id: number; amount: number }>) => call<number>('goals:reserve', entries),
     save: (input: unknown) => call<Goal>('goals:save', input),
     remove: (id: number) => call<void>('goals:delete', id),
-    setAchieved: (id: number, achieved: boolean) => call<Goal>('goals:achieved', id, achieved)
+    setAchieved: (id: number, achieved: boolean) => call<Goal>('goals:achieved', id, achieved),
+    /** Archiva un plan cumplido dejando su traspaso y su compra. */
+    buy: (input: { goalId: number; accountId: number; categoryId?: number | null; date: string }) =>
+      call<TransactionView>('goals:buy', input)
   },
   scheduled: {
     list: () => call<ScheduledView[]>('scheduled:list'),

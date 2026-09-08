@@ -124,11 +124,19 @@ const FALLBACK_SETTINGS: Settings = {
   widgetAccountIds: [],
   lastMonthlySummary: null,
   lastBackupAt: null,
-  buscarActualizaciones: true
+  buscarActualizaciones: true,
+  ultimaCategoriaDeCompra: null
 }
 
 /** Ajustes que solo cambian cómo se ve algo, no lo que dicen los datos. */
-const SOLO_ASPECTO: Array<keyof Settings> = ['theme', 'palette', 'balanceEn']
+// La categoría que se recuerda para la próxima compra de un plan tampoco cambia
+// ningún dato: se guarda justo después de archivar uno, que ya ha recargado todo.
+const SOLO_ASPECTO: Array<keyof Settings> = [
+  'theme',
+  'palette',
+  'balanceEn',
+  'ultimaCategoriaDeCompra'
+]
 
 export function StoreProvider({ children }: { children: ReactNode }): ReactNode {
   const [ready, setReady] = useState(false)

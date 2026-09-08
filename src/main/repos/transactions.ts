@@ -3,7 +3,7 @@ import { convert, currencyDecimals } from '@shared/money'
 import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
-import { addToGoalReserve } from './goals'
+import { addToGoalReserve, getGoal, setGoalAchieved, setGoalReserves } from './goals'
 import { reglaDeCategoria, loQueApartaria } from '@shared/ahorro'
 import type {
   Transaction,
@@ -845,6 +845,65 @@ export function saveTransaction(input: TransactionInput): TransactionView {
     }
 
     return getTransaction(id)!
+  })
+}
+
+/**
+ * Archivar un plan de ahorro cumplido: al final, un plan es una compra.
+ *
+ * Deja los dos apuntes que reconocerías en el extracto del banco, y en ese
+ * orden: el dinero vuelve de la hucha a la cuenta desde la que pagas, y desde
+ * ahí se gasta. Ni el saldo baja por arte de magia ni la compra se queda sin
+ * aparecer en los informes.
+ *
+ * El importe es la meta del plan y no se pregunta: un plan para un teclado de
+ * 80 € es un plan de 80 €, y ese es el movimiento.
+ *
+ * Reabrir el plan después no deshace nada. Los movimientos son historia —el
+ * teclado se compró—; reabrirlo es querer comprarse otro, y ese vuelve a
+ * ahorrarse desde cero.
+ *
+ * Vive aquí y no en `goals` porque quien crea movimientos es este módulo, y
+ * `goals` ya se lee desde él: al revés serían dos módulos importándose.
+ */
+export function comprarPlan(input: {
+  goalId: number
+  /** La cuenta desde la que se paga: la principal del banco, o la que se diga. */
+  accountId: number
+  categoryId?: number | null
+  date: string
+}): TransactionView {
+  const goal = getGoal(input.goalId)
+  if (!goal) throw new Error('Ese plan ya no existe')
+  if (input.accountId === goal.accountId) {
+    throw new Error('La cuenta donde pagas no puede ser la misma hucha del plan')
+  }
+
+  return atomic(() => {
+    const traspaso = saveTransaction({
+      type: 'transfer',
+      date: input.date,
+      accountId: goal.accountId,
+      toAccountId: input.accountId,
+      amount: goal.targetAmount,
+      note: goal.name
+    })
+
+    // Lo que de verdad llega a la otra cuenta, que con divisas distintas no es
+    // lo que salió: la compra se paga con lo que hay allí, no con lo de aquí.
+    const compra = saveTransaction({
+      type: 'expense',
+      date: input.date,
+      accountId: input.accountId,
+      categoryId: input.categoryId ?? null,
+      amount: traspaso.amountTo ?? traspaso.amount,
+      note: goal.name
+    })
+
+    // El dinero ya no está en la hucha, así que el plan no retiene nada.
+    setGoalReserves([{ id: goal.id, amount: 0 }])
+    setGoalAchieved(goal.id, true, input.date)
+    return compra
   })
 }
 

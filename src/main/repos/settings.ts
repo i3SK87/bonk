@@ -57,7 +57,10 @@ export function getSettings(): Settings {
     lastBackupAt: map.get('lastBackupAt') || null,
     // Encendido salvo que se diga lo contrario: quien no toca nada quiere estar
     // al día, y es lo que evita que se quede en la versión con la que empezó.
-    buscarActualizaciones: map.get('buscarActualizaciones') !== '0'
+    buscarActualizaciones: map.get('buscarActualizaciones') !== '0',
+    // Por «ids» y no por «numero»: así una categoría borrada, un texto o un cero
+    // se quedan en «ninguna» en vez de en un id que no existe.
+    ultimaCategoriaDeCompra: ids(map.get('ultimaCategoriaDeCompra'))[0] ?? null
   }
 }
 

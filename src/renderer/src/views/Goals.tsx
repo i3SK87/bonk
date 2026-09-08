@@ -35,7 +35,7 @@ const PASO = 2500
 // Una etiqueta que repite en palabras lo que se ve al lado es ruido.
 
 export function GoalsView(): ReactNode {
-  const { settings, accounts, revision, run, fail } = useStore()
+  const { settings, accounts, revision, run, fail, updateSettings } = useStore()
   const [goals, setGoals] = useState<GoalProgress[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<GoalProgress | null>(null)
@@ -47,6 +47,8 @@ export function GoalsView(): ReactNode {
   const [borrando, setBorrando] = useState<GoalProgress | null>(null)
   /** El plan al que se le está escribiendo cuánto lleva ahorrado. */
   const [ahorrando, setAhorrando] = useState<GoalProgress | null>(null)
+  /** El plan cumplido que se va a archivar, con su traspaso y su compra. */
+  const [comprando, setComprando] = useState<GoalProgress | null>(null)
   // La hucha principal es la marcada de su tipo; si no hay ninguna, la primera.
   const [potId, setPotId] = useState<number | null>(
     accounts.find((account) => account.type === 'savings' && account.isPrimary)?.id ?? null
@@ -145,7 +147,7 @@ export function GoalsView(): ReactNode {
                   goal={goal}
                   currency={settings.baseCurrency}
                   techo={Math.min(goal.targetAmount, goal.reserved + porRepartir)}
-                  onAchieve={() => run(() => api.goals.setAchieved(goal.id, true), 'Plan cumplido')}
+                  onAchieve={() => setComprando(goal)}
                   onReserve={(amount) =>
                     run(() => api.goals.reserve([{ id: goal.id, amount }]))
                   }
@@ -271,6 +273,26 @@ export function GoalsView(): ReactNode {
           onGuardar={(amount) =>
             run(() => api.goals.reserve([{ id: ahorrando.id, amount }]), 'Ahorro actualizado')
           }
+        />
+      )}
+
+      {comprando && (
+        <CompraDelPlan
+          goal={comprando}
+          onClose={() => setComprando(null)}
+          onConfirmar={async (datos) => {
+            const hecho = await run(
+              () => api.goals.buy({ goalId: comprando.id, ...datos }),
+              'Plan archivado y compra apuntada'
+            )
+            if (!hecho) return
+            // La categoría se recuerda solo si la compra ha entrado: si el
+            // movimiento falla, no hay nada que aprender de lo que se eligió.
+            if (datos.categoryId !== settings.ultimaCategoriaDeCompra) {
+              await updateSettings({ ultimaCategoriaDeCompra: datos.categoryId })
+            }
+            setComprando(null)
+          }}
         />
       )}
 
@@ -438,7 +460,7 @@ function GoalCard({
           </div>
         </div>
         {falta === 0 && (
-          <button className="btn small" onClick={onAchieve} title="Darlo por cumplido y archivarlo">
+          <button className="btn small" onClick={onAchieve} title="Archivarlo: el dinero vuelve del ahorro y se apunta la compra">
             <Icon name="paquete" size={15} />
           </button>
         )}
@@ -621,6 +643,152 @@ function AhorroModal({
           />
         </Field>
       </div>
+    </Modal>
+  )
+}
+
+/**
+ * El aviso de archivar un plan cumplido.
+ *
+ * Un plan de ahorro es, al final, una compra: se junta el dinero en la hucha,
+ * vuelve a la cuenta desde la que pagas y se gasta. Archivarlo deja esos dos
+ * apuntes, que son los que reconocerías en el extracto del banco.
+ *
+ * Y lo deja avisando. Podría hacerse en silencio —el importe es la meta del
+ * plan y no hay nada que preguntar—, pero dos movimientos que aparecen solos en
+ * dos cuentas son mucha magia para una aplicación que avisa hasta cuando la
+ * regla de ahorro aparta cien euros por su cuenta. Aquí se ve lo que va a pasar
+ * antes de que pase.
+ *
+ * La categoría se elige aquí, cada vez, y viene puesta la de la última compra.
+ * Adivinarla no se puede: la aplicación no sabe cómo llama cada uno a la
+ * categoría donde caen sus compras —«Compras», «Caprichos», o la que le toque a
+ * cada plan—, y dar por hecho un nombre concreto solo acierta con quien lo tenga
+ * escrito igual. Recordando la última, la primera vez se elige y las demás se
+ * confirma.
+ *
+ * El desplegable de la cuenta casi nunca sale: es la salida para cuando no hay
+ * ninguna cuenta del banco marcada como principal.
+ */
+function CompraDelPlan({
+  goal,
+  onClose,
+  onConfirmar
+}: {
+  goal: GoalProgress
+  onClose: () => void
+  onConfirmar: (datos: {
+    accountId: number
+    categoryId: number | null
+    date: string
+  }) => Promise<void>
+}): ReactNode {
+  const { accounts, categories, settings } = useStore()
+  const hucha = accounts.find((item) => item.id === goal.accountId)
+  const currency = hucha?.currency ?? settings.baseCurrency
+
+  // La principal del banco, que es la misma que viene marcada al apuntar un
+  // movimiento a mano. De la hucha no se paga: es de donde sale el dinero.
+  const principal = accounts.find((item) => item.type === 'bank' && item.isPrimary)
+  const gastos = categories.filter((item) => item.kind === 'expense')
+  // La última que se usó, si sigue existiendo: una categoría borrada o
+  // archivada desde entonces no puede venir puesta.
+  const recordada = gastos.find((item) => item.id === settings.ultimaCategoriaDeCompra)
+
+  const [accountId, setAccountId] = useState<number | null>(principal?.id ?? null)
+  const [categoryId, setCategoryId] = useState<number | null>(recordada?.id ?? null)
+  const [enviando, setEnviando] = useState(false)
+
+  const destino = accounts.find((item) => item.id === accountId) ?? null
+  const importe = formatMoney(goal.targetAmount, currency)
+
+  const confirmar = async (): Promise<void> => {
+    if (accountId == null || enviando) return
+    setEnviando(true)
+    try {
+      await onConfirmar({ accountId, categoryId, date: today() })
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <Modal
+      title="Archivar el plan"
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="btn primary"
+            onClick={confirmar}
+            disabled={accountId == null || enviando}
+          >
+            Archivar y apuntar
+          </button>
+        </>
+      }
+    >
+      <p className="small" style={{ margin: 0 }}>
+        «{goal.name}» ya está completo. Al archivarlo se apuntan dos movimientos con fecha de hoy:
+      </p>
+
+      <ul className="small" style={{ margin: '10px 0 0', paddingLeft: 18, display: 'grid', gap: 5 }}>
+        <li>
+          Un traspaso de <strong>{importe}</strong> de {hucha?.name ?? 'la hucha'} a{' '}
+          {destino?.name ?? 'la cuenta que elijas'}.
+        </li>
+        <li>
+          Una compra de <strong>{importe}</strong> en {destino?.name ?? 'esa cuenta'}
+          {categoryId != null ? `, en ${categories.find((item) => item.id === categoryId)?.name}` : ' y sin categoría'}
+          , a nombre de «{goal.name}».
+        </li>
+      </ul>
+
+      {/* Solo si no hay ninguna cuenta principal del banco. Lo normal es que la
+          haya y no haya nada que elegir aquí. */}
+      {principal == null && (
+        <Field label="Desde qué cuenta pagas" hint="No tienes ninguna cuenta del banco marcada como principal.">
+          <select
+            className="select"
+            value={accountId ?? ''}
+            onChange={(event) => setAccountId(event.target.value ? Number(event.target.value) : null)}
+          >
+            <option value="">Elige una…</option>
+            {accounts
+              .filter((item) => item.id !== goal.accountId)
+              .map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {formatMoney(item.balance, item.currency)}
+                </option>
+              ))}
+          </select>
+        </Field>
+      )}
+
+      <Field label="De qué es la compra" hint="Se queda puesta para el siguiente plan que archives.">
+        <select
+          className="select"
+          value={categoryId ?? ''}
+          onChange={(event) => setCategoryId(event.target.value ? Number(event.target.value) : null)}
+        >
+          <option value="">Sin categoría</option>
+          {gastos.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <p className="small muted" style={{ margin: 0 }}>
+        {hucha?.name ?? 'La hucha'} se queda en{' '}
+        {formatMoney(Math.max(0, (hucha?.balance ?? 0) - goal.targetAmount), currency)}. Si más
+        adelante reabres el plan, estos dos movimientos se quedan donde están: la compra ya se
+        hizo.
+      </p>
     </Modal>
   )
 }
