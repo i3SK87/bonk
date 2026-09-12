@@ -163,6 +163,18 @@ export function createWidget(isDev: boolean): void {
     // Ni en la barra de tareas ni en Alt+Tab: no es una ventana a la que se
     // vuelva, es algo que está ahí puesto.
     skipTaskbar: true,
+    /*
+     * Que no se active nunca, ni al pulsarlo.
+     *
+     * La ventana que recibe un clic pasa a ser la activa, y Windows sube la
+     * activa por encima de todas. El doble clic que abre BONK empieza por un
+     * clic, así que el widget se ponía el primero de la pila y la aplicación
+     * salía de la barra de tareas por detrás de él, aunque el ajuste dijera
+     * «detrás», hasta pulsar la ventana. Sin activarse, Windows lo deja donde
+     * estaba y los clics le siguen llegando igual. No tiene nada en lo que
+     * escribir, así que el foco no le hace falta para nada.
+     */
+    focusable: false,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
