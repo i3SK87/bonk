@@ -16,7 +16,17 @@ import { formatMoney, currencySymbol } from '@shared/money'
 import { today, daysBetween, formatDate } from '@shared/dates'
 import { CalendarioDeTramo } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
-import { NOMBRES_DE_RANGO, rangoDe, comparacionDe, type RangoId } from '@shared/rangos'
+import {
+  NOMBRES_DE_RANGO,
+  rangoDe,
+  comparacionDe,
+  comparacionDelMes,
+  esDeUnMes,
+  mesesAnteriores,
+  nombreDeMes,
+  type RangoId
+} from '@shared/rangos'
+import { repartoComparado } from '@shared/reparto'
 import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
@@ -243,6 +253,17 @@ export function ReportsView(): ReactNode {
   const [customTo, setCustomTo] = useState<string | null>(null)
   /** El calendario del tramo está abierto. Lo abre «Personalizado» y nada más. */
   const [eligiendoTramo, setEligiendoTramo] = useState(false)
+  /*
+   * El mes contra el que se compara, cuando no es el de justo antes.
+   *
+   * `null` es la comparación de siempre, y a ella se vuelve al cambiar de
+   * pastilla: julio elegido mirando septiembre no significa nada mirando «Mes
+   * pasado». Cambiar de cuenta no lo toca, que ahí se sigue queriendo ver lo
+   * mismo de otra cuenta. Solo lo leen las pastillas de un mes.
+   */
+  const [contraMes, setContraMes] = useState<string | null>(null)
+  /** Dónde se abre la lista de meses, o `null` si está cerrada. */
+  const [listaDeMeses, setListaDeMeses] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     // También por cuenta: si no, «Todo» arrancaría en el primer movimiento de
@@ -276,8 +297,15 @@ export function ReportsView(): ReactNode {
     return rangoDe(period) ?? { from: today(), to: today() }
   }, [period, span, customFrom, customTo])
   // Con qué se compara y hasta dónde. «Todo» no tiene un antes.
-  const comparacion = useMemo(() => comparacionDe(period, range), [period, range])
-  const contra = CONTRA[period] ?? 'antes'
+  const mesElegido = esDeUnMes(period) ? contraMes : null
+  const comparacion = useMemo(
+    () => (mesElegido ? comparacionDelMes(mesElegido) : comparacionDe(period, range)),
+    [period, range, mesElegido]
+  )
+  // «el mes pasado» cuando es el de siempre; «julio» cuando se ha elegido otro.
+  const contra = mesElegido ? nombreDeMes(mesElegido, range.from) : (CONTRA[period] ?? 'antes')
+  // En el rótulo de al pasar por encima va detrás de una cifra: «399 € en julio».
+  const contraEnPista = mesElegido ? `en ${contra}` : contra
   const currency = settings.baseCurrency
 
   useEffect(() => {
@@ -301,11 +329,11 @@ export function ReportsView(): ReactNode {
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
 
-  /** Cada categoría de este periodo con lo que llevaba en el anterior al lado. */
-  const filas = useMemo(() => {
-    const previos = new Map(antes.map((item) => [item.categoryId, item.total]))
-    return categories.map((item) => ({ row: item, antes: previos.get(item.categoryId) ?? 0 }))
-  }, [categories, antes])
+  /**
+   * Cada categoría de este periodo con lo que llevaba en el anterior al lado, y
+   * a cero las que solo salen en el anterior.
+   */
+  const filas = useMemo(() => repartoComparado(categories, antes), [categories, antes])
 
   /*
    * Los movimientos que se van a mudar de categoría.
@@ -420,7 +448,7 @@ export function ReportsView(): ReactNode {
         kind={kind}
         unidad={balanceEn}
         formatea={formatea}
-        pista={`${formatea(ahora)} ahora · ${formatea(valorAntes)} ${contra}`}
+        pista={`${formatea(ahora)} ahora · ${formatea(valorAntes)} ${contraEnPista}`}
       />
     ) : undefined
 
@@ -496,6 +524,9 @@ export function ReportsView(): ReactNode {
                 key={id}
                 className={`btn small${period === id ? ' primary' : ' ghost'}`}
                 onClick={() => {
+                  // Otra pastilla vuelve a la comparación de siempre. La misma
+                  // otra vez no cambia nada, así que tampoco lo elegido.
+                  if (id !== period) setContraMes(null)
                   setPeriod(id)
                   // «Personalizado» no dice nada por sí solo: lo que se pide al
                   // pulsarlo es elegir los dos días, así que el calendario sale
@@ -643,9 +674,7 @@ export function ReportsView(): ReactNode {
               */}
               {/* En qué se lee la diferencia, aquí y en la cinta de arriba: las
                   dos comparan contra lo mismo, así que no pueden medirla cada una
-                  a su manera. Contra qué se compara lo dice el rótulo de la
-                  columna al pasar por encima; escrito además aquí al lado era la
-                  misma frase dos veces en la misma tarjeta. */}
+                  a su manera. */}
               {comparacion && (
                 <Segmented
                   value={balanceEn}
@@ -655,6 +684,32 @@ export function ReportsView(): ReactNode {
                     { value: 'valor', label: currencySymbol(currency) }
                   ]}
                 />
+              )}
+              {/*
+                Contra qué mes, en las pastillas de un mes.
+                Cada periodo se comparaba solo con el de justo detrás, así que
+                septiembre contra julio no había forma de verlo. Va aquí, al lado
+                del % / €, porque manda en lo mismo que él: las flechas de la tabla
+                y la cinta de arriba. En las demás pastillas no sale, y ahí contra
+                qué se compara lo sigue diciendo el rótulo de la columna.
+              */}
+              {comparacion && esDeUnMes(period) && (
+                <div className="row tight">
+                  <span className="small muted">frente a</span>
+                  <button
+                    type="button"
+                    className="btn small contorno"
+                    aria-haspopup="menu"
+                    aria-expanded={listaDeMeses != null}
+                    onClick={(event) => {
+                      const caja = event.currentTarget.getBoundingClientRect()
+                      setListaDeMeses({ x: caja.left, y: caja.bottom + 6 })
+                    }}
+                  >
+                    {nombreDeMes(comparacion.from, range.from)}
+                    <Icon name="chevronDown" size={14} />
+                  </button>
+                </div>
               )}
               <div className="spacer" />
               <Segmented
@@ -667,7 +722,10 @@ export function ReportsView(): ReactNode {
               />
             </div>
             <div className="card-body">
-              {categories.length === 0 ? (
+              {/* Con las del periodo de antes también: un mes sin gastos todavía
+                  frente a otro que sí los tuvo dice algo, y es justo lo que se
+                  ha venido a mirar. */}
+              {filas.length === 0 ? (
                 <EmptyState
                   icon="chart"
                   title="Sin datos en este periodo"
@@ -823,6 +881,24 @@ export function ReportsView(): ReactNode {
           ve que algo está mal clasificado —una fila que no debería pesar tanto,
           o que no debería existir— y hasta ahora había que irse a la lista,
           buscar sus movimientos y cambiarlos de uno en uno. */}
+      {listaDeMeses && comparacion && (
+        <MenuContextual
+          x={listaDeMeses.x}
+          y={listaDeMeses.y}
+          opciones={mesesAnteriores(range.from, span?.from ?? null).map((mes, indice) => {
+            const nombre = nombreDeMes(mes, range.from)
+            return {
+              etiqueta: nombre.charAt(0).toUpperCase() + nombre.slice(1),
+              marcada: mes === comparacion.from,
+              // El primero es el de siempre: se dice, y elegirlo es volver a él.
+              pista: indice === 0 ? CONTRA[period] : undefined,
+              onElegir: () => setContraMes(indice === 0 ? null : mes)
+            }
+          })}
+          onCerrar={() => setListaDeMeses(null)}
+        />
+      )}
+
       {menu && (
         <MenuContextual
           x={menu.x}

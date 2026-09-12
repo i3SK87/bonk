@@ -16,7 +16,15 @@ import { Icon } from './Icon'
 
 export interface OpcionMenu {
   etiqueta: string
-  icono: string
+  /**
+   * Sin icono se le guarda el hueco, para que las etiquetas queden alineadas
+   * con la que lleva la marca de `marcada`.
+   */
+  icono?: string
+  /** La que está puesta, con la marca delante: para menús que eligen entre varias. */
+  marcada?: boolean
+  /** Una aclaración pequeña al otro lado, como «el mes pasado». */
+  pista?: string
   onElegir: () => void
   /** En rojo y separada del resto: borrar no se pulsa sin querer. */
   peligrosa?: boolean
@@ -89,9 +97,11 @@ export function MenuContextual({
     })
   }, [x, y])
 
-  // El primero enfocado: así Escape y las flechas funcionan sin tocar el ratón.
+  // El primero enfocado —o el marcado, si lo hay—: así Escape y las flechas
+  // funcionan sin tocar el ratón, y se arranca desde lo que ya está puesto.
   useEffect(() => {
-    caja.current?.querySelector('button')?.focus()
+    const marcada = caja.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')
+    ;(marcada ?? caja.current?.querySelector('button'))?.focus()
   }, [])
 
   /*
@@ -113,6 +123,12 @@ export function MenuContextual({
       }
       onCerrar()
     }
+    // La rueda cierra, salvo dentro del propio menú: una lista larga se
+    // desplaza con ella, y cerrarla al intentarlo la haría imposible de recorrer.
+    const rueda = (evento: WheelEvent): void => {
+      if (caja.current?.contains(evento.target as Node)) return
+      onCerrar()
+    }
     const tecla = (evento: KeyboardEvent): void => {
       if (evento.key === 'Escape') {
         evento.stopPropagation()
@@ -123,13 +139,13 @@ export function MenuContextual({
     window.addEventListener('contextmenu', fuera, true)
     window.addEventListener('keydown', tecla, true)
     window.addEventListener('resize', onCerrar)
-    window.addEventListener('wheel', onCerrar, true)
+    window.addEventListener('wheel', rueda, true)
     return () => {
       window.removeEventListener('pointerdown', fuera, true)
       window.removeEventListener('contextmenu', fuera, true)
       window.removeEventListener('keydown', tecla, true)
       window.removeEventListener('resize', onCerrar)
-      window.removeEventListener('wheel', onCerrar, true)
+      window.removeEventListener('wheel', rueda, true)
     }
   }, [onCerrar])
 
@@ -155,15 +171,25 @@ export function MenuContextual({
         <button
           key={opcion.etiqueta}
           type="button"
-          role="menuitem"
-          className={`menu-contextual-opcion${opcion.peligrosa ? ' peligrosa' : ''}`}
+          role={opcion.marcada == null ? 'menuitem' : 'menuitemradio'}
+          aria-checked={opcion.marcada}
+          className={`menu-contextual-opcion${opcion.peligrosa ? ' peligrosa' : ''}${
+            opcion.marcada ? ' marcada' : ''
+          }`}
           onClick={() => {
             onCerrar()
             opcion.onElegir()
           }}
         >
-          <Icon name={opcion.icono} size={15} />
+          {opcion.marcada ? (
+            <Icon name="check" size={15} />
+          ) : opcion.icono ? (
+            <Icon name={opcion.icono} size={15} />
+          ) : (
+            <span className="menu-contextual-hueco" />
+          )}
           {opcion.etiqueta}
+          {opcion.pista && <span className="menu-contextual-pista">{opcion.pista}</span>}
         </button>
       ))}
     </div>,

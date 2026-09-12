@@ -134,3 +134,53 @@ export function comparacionDe(
 
   return { from, to }
 }
+
+/**
+ * Las pastillas de un mes, las únicas en las que se elige contra qué comparar.
+ *
+ * Un mes contra otro mes se entiende solo; tres meses contra otros tres
+ * cualesquiera, o un tramo a mano contra otro tramo, ya es otra pantalla. En las
+ * demás la comparación sigue siendo la de siempre, la de justo detrás.
+ */
+export function esDeUnMes(id: RangoId): boolean {
+  return id === 'month' || id === 'prev'
+}
+
+/**
+ * Los meses contra los que se puede comparar uno, del más cercano al más lejano.
+ *
+ * Hasta el del primer movimiento y no más: un mes de antes de empezar a apuntar
+ * no tiene nada, y compararse con él sale todo «nuevo». El de justo antes va
+ * siempre, haya datos o no, porque es la comparación de siempre y el menú no
+ * puede quedarse sin ella.
+ */
+export function mesesAnteriores(mes: string, primerMovimiento: string | null): string[] {
+  const tope = startOfMonth(primerMovimiento ?? mes)
+  const meses: string[] = []
+  let actual = startOfMonth(addMonths(mes, -1))
+  do {
+    meses.push(actual)
+    actual = startOfMonth(addMonths(actual, -1))
+  } while (actual >= tope)
+  return meses
+}
+
+/** Un mes entero, para compararse con él. */
+export function comparacionDelMes(mes: string): Comparacion {
+  return { from: startOfMonth(mes), to: endOfMonth(mes) }
+}
+
+const nombreDeMesFmt = new Intl.DateTimeFormat('es-ES', { month: 'long' })
+
+/**
+ * «julio», y «julio de 2025» si no es del año del mes que se mira.
+ *
+ * En minúscula porque va dentro de una frase —«frente a julio»—; quien lo
+ * ponga suelto, en una lista, le sube la inicial. El año se compara con el del
+ * mes mirado y no con el de hoy: mirando enero, el diciembre de antes es de
+ * otro año aunque hoy también lo sea.
+ */
+export function nombreDeMes(mes: string, mirado: string): string {
+  const nombre = nombreDeMesFmt.format(new Date(`${mes.slice(0, 10)}T12:00:00`))
+  return mes.slice(0, 4) === mirado.slice(0, 4) ? nombre : `${nombre} de ${mes.slice(0, 4)}`
+}

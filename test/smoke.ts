@@ -18,13 +18,23 @@ import * as settings from '../src/main/repos/settings'
 import * as tags from '../src/main/repos/tags'
 import * as csv from '../src/main/repos/csv'
 import { construirInformeHtml, escaparHtml } from '../src/main/repos/informe'
-import type { DebtProgress } from '../src/shared/types'
+import type { CategoryTotal, DebtProgress } from '../src/shared/types'
 import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, formatMoneyBreve, cabeEntero, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
 import { addMonths, addDays, nextOccurrence, previousOccurrence, anclaDeCadencia, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
-import { rangoDe, comparacionDe, NOMBRES_DE_RANGO, type RangoId } from '../src/shared/rangos'
+import {
+  rangoDe,
+  comparacionDe,
+  comparacionDelMes,
+  esDeUnMes,
+  mesesAnteriores,
+  nombreDeMes,
+  NOMBRES_DE_RANGO,
+  type RangoId
+} from '../src/shared/rangos'
+import { repartoComparado } from '../src/shared/reparto'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
 let passed = 0
@@ -385,6 +395,58 @@ try {
   equal('y acaba la víspera del suyo', compMano.to, '2026-08-09')
 
   equal('«Todo» no tiene con qué compararse', comparacionDe('all', { from: '2026-01-01', to: enAgosto }), null)
+
+  /*
+   * Contra qué mes, en las pastillas de un mes.
+   *
+   * La lista va del de justo antes, que es el de siempre, hasta el del primer
+   * movimiento. Y el de justo antes sale aunque no haya nada: el menú no puede
+   * quedarse sin la comparación de siempre.
+   */
+  section('Comparar con otro mes')
+  check('solo eligen mes las pastillas de un mes', esDeUnMes('month') && esDeUnMes('prev'))
+  check(
+    'las demás siguen con la de siempre',
+    !esDeUnMes('quarter') && !esDeUnMes('year') && !esDeUnMes('custom') && !esDeUnMes('all')
+  )
+  const deSeptiembre = mesesAnteriores('2026-09-01', '2026-04-07')
+  equal('de septiembre hacia atrás, hasta abril', deSeptiembre.join(' '), '2026-08-01 2026-07-01 2026-06-01 2026-05-01 2026-04-01')
+  equal('el primero es el de siempre', deSeptiembre[0], comparacionDe('month', rangoDe('month', '2026-09-12')!)!.from)
+  equal('sin movimientos antes, queda el de justo antes', mesesAnteriores('2026-09-01', '2026-09-03').join(' '), '2026-08-01')
+  equal('sin movimientos en absoluto, también', mesesAnteriores('2026-09-01', null).join(' '), '2026-08-01')
+  equal('cruza de año sin tropezar', mesesAnteriores('2027-02-01', '2026-11-20').join(' '), '2027-01-01 2026-12-01 2026-11-01')
+  const julioEntero = comparacionDelMes('2026-07-01')
+  equal('un mes elegido va entero desde el 1', julioEntero.from, '2026-07-01')
+  equal('hasta el último día', julioEntero.to, '2026-07-31')
+  equal('del mismo año, solo el mes', nombreDeMes('2026-07-01', '2026-09-01'), 'julio')
+  equal('de otro año, con el año', nombreDeMes('2025-12-01', '2026-01-01'), 'diciembre de 2025')
+
+  section('Reparto con lo de antes al lado')
+  const fila = (categoryId: number | null, name: string, total: number): CategoryTotal => ({
+    categoryId,
+    name,
+    icon: 'tag',
+    color: '#888888',
+    total,
+    count: 1,
+    percent: 0,
+    notes: [{ note: 'algo', total, count: 1, percent: 100 }]
+  })
+  const comparado = repartoComparado(
+    [fila(1, 'Alquiler', 37600), fila(2, 'Compras', 23246)],
+    [fila(2, 'Compras', 68729), fila(3, 'Ropa', 6099), fila(4, 'Bienestar', 1339), fila(1, 'Alquiler', 37600), fila(5, 'Vacía', 0)]
+  )
+  equal(
+    'las de este periodo primero, y detrás las que solo tuvo el otro, de mayor a menor',
+    comparado.map((f) => f.row.name).join(', '),
+    'Alquiler, Compras, Ropa, Bienestar'
+  )
+  equal('cada una con lo que llevaba antes', comparado[1].antes, 68729)
+  const ropa = comparado[2]
+  check('la que solo estaba antes entra a cero', ropa.row.total === 0 && ropa.row.count === 0 && ropa.row.percent === 0)
+  equal('con lo que llevaba antes', ropa.antes, 6099)
+  equal('y sin el desglose del otro periodo', ropa.row.notes.length, 0)
+  equal('sin comparación no se añade nada', repartoComparado([fila(1, 'Alquiler', 37600)], []).length, 1)
 
   section('Cuentas y saldos')
   const cash = accounts.saveAccount({

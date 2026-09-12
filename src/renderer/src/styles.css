@@ -3390,6 +3390,10 @@ button.list-row:focus-visible {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   animation: menu-contextual 0.1s ease both;
+  /* La lista de meses de Informes crece con los años que lleves apuntando: más
+     alta que la ventana, se desplaza dentro en vez de salirse. */
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
 }
 
 /* Corto y sin desplazamiento: sale donde has pulsado y ahí tiene que estar ya. */
@@ -3414,6 +3418,20 @@ button.list-row:focus-visible {
 }
 
 .menu-contextual-opcion svg { flex: none; color: var(--fg-muted); }
+
+/* El sitio del icono en las opciones que no llevan: sin él, la que lleva la
+   marca se saldría de la columna de las demás. */
+.menu-contextual-hueco { flex: none; width: 15px; }
+
+.menu-contextual-opcion.marcada { background: var(--bg-sunken); }
+
+.menu-contextual-pista {
+  margin-left: auto;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--fg-subtle);
+  white-space: nowrap;
+}
 
 .menu-contextual-opcion:hover,
 .menu-contextual-opcion:focus-visible {
