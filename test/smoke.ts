@@ -2227,6 +2227,33 @@ try {
   check('reutiliza las cuentas existentes por nombre', result.createdAccounts.length === 0)
 
   /*
+   * El tramo de importe de Movimientos, con un solo extremo puesto: «más de
+   * 70 €» sin saber cuánto exactamente. Los extremos entran, y se compara el
+   * importe sin signo, que es como se guarda.
+   */
+  const desde70 = transactions.listTransactions({ minAmount: 7000 })
+  check(
+    'con solo el mínimo, trae lo de ese importe o más',
+    desde70.length > 0 && desde70.every((row) => row.amount >= 7000),
+    desde70.map((row) => row.amount).join(', ')
+  )
+  check(
+    'el mínimo entra en el tramo',
+    transactions.listTransactions({ minAmount: 150000 }).some((row) => row.id === importedRow?.id)
+  )
+  const hasta1230 = transactions.listTransactions({ maxAmount: 1230 })
+  check(
+    'con solo el máximo, trae lo de ese importe o menos, y el máximo entra',
+    hasta1230.every((row) => row.amount <= 1230) && hasta1230.some((row) => row.amount === 1230),
+    hasta1230.map((row) => row.amount).join(', ')
+  )
+  equal(
+    'los totales cuentan el mismo tramo que la lista',
+    transactions.totalsForFilter({ minAmount: 7000 }).count,
+    transactions.countTransactions({ minAmount: 7000 })
+  )
+
+  /*
    * «Concepto» es como llaman a esta columna los extractos de los bancos de
    * aquí, y no estaba en la lista: la cabecera entraba sin reconocer y los
    * movimientos se importaban con el título en blanco, sin decir nada. Un

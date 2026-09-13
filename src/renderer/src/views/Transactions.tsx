@@ -14,7 +14,8 @@ import { ScheduleModal } from './Schedules'
 import { ImportModal, type OrigenCsv } from '../components/ImportCsv'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import { AccionCabecera } from '../components/ui'
-import { formatMoney, parseAmount } from '@shared/money'
+import { currencySymbol, formatMoney, parseAmount } from '@shared/money'
+import { keepNumericChars } from '@shared/numbers'
 import { byName } from '@shared/text'
 import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
 import { today, addMonths, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
@@ -134,7 +135,17 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * cuentas y lo que estabas buscando. Ahora viven en el almacén, que dura lo
    * que dura la ventana y muere con ella.
    */
-  const { range, customFrom, customTo, search, types, categoryIds, uncategorized } = filtros
+  const {
+    range,
+    customFrom,
+    customTo,
+    search,
+    types,
+    categoryIds,
+    uncategorized,
+    importeDesde,
+    importeHasta
+  } = filtros
   const setRange = (value: RangoId): void => ponFiltros({ range: value })
   const setSearch = (value: string): void => ponFiltros({ search: value })
   const setTypes = (value: TxType[]): void => ponFiltros({ types: value })
@@ -146,6 +157,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
 
   /** Lo que se teclea se muestra al momento; la consulta espera a que pares. */
   const [settledSearch, setSettledSearch] = useState(filtros.search)
+  /** Lo mismo con el tramo de importe: «7» camino de «70» no es una consulta. */
+  const [importesAsentados, setImportesAsentados] = useState({
+    desde: filtros.importeDesde,
+    hasta: filtros.importeHasta
+  })
 
   /**
    * La cuenta principal viene elegida: es la que se mira al abrir, y con ella
@@ -461,6 +477,35 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     return () => window.clearTimeout(id)
   }, [search])
 
+  useEffect(() => {
+    const id = window.setTimeout(
+      () => setImportesAsentados({ desde: importeDesde, hasta: importeHasta }),
+      250
+    )
+    return () => window.clearTimeout(id)
+  }, [importeDesde, importeHasta])
+
+  /*
+   * El importe se escribe en la divisa de la cuenta que se mira.
+   *
+   * Es la que enseña cada fila y la que guarda la columna por la que filtra la
+   * consulta. Se mira una cuenta cada vez, así que no hay dos divisas que
+   * mezclar; sin ninguna elegida la lista está vacía y da igual cuál sea.
+   */
+  const divisaDelImporte =
+    accounts.find((account) => account.id === accountIds[0])?.currency ?? settings.baseCurrency
+
+  /**
+   * Un extremo del tramo en céntimos, o nada si está en blanco o no se lee.
+   * Sin signo, como se guardan los importes: el sentido lo pone el tipo.
+   */
+  const cotaDe = (texto: string): number | undefined => {
+    const leido = parseAmount(texto, divisaDelImporte, { grouping: false })
+    return leido == null ? undefined : Math.abs(leido)
+  }
+  const minAmount = cotaDe(importesAsentados.desde)
+  const maxAmount = cotaDe(importesAsentados.hasta)
+
   const filter = useMemo<TransactionFilter>(() => {
     /*
      * «Personalizado» sin tramo todavía enseña el mes en curso.
@@ -485,9 +530,23 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       accountIds: accountIds.length ? accountIds : [-1],
       categoryIds: categoryIds.length ? categoryIds : undefined,
       uncategorized: uncategorized || undefined,
+      minAmount,
+      maxAmount,
       limit
     }
-  }, [range, customFrom, customTo, settledSearch, types, accountIds, categoryIds, uncategorized, limit])
+  }, [
+    range,
+    customFrom,
+    customTo,
+    settledSearch,
+    types,
+    accountIds,
+    categoryIds,
+    uncategorized,
+    minAmount,
+    maxAmount,
+    limit
+  ])
 
   useEffect(() => {
     let cancelled = false
@@ -543,7 +602,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               (accountIds.length === 0 ||
                 accountIds.includes(item.accountId) ||
                 (item.toAccountId != null && accountIds.includes(item.toAccountId))) &&
-              matchesSearch(item, settledSearch)
+              matchesSearch(item, settledSearch) &&
+              // El importe también, que se sabe de antemano igual que en uno real.
+              (minAmount == null || item.amount >= minAmount) &&
+              (maxAmount == null || item.amount <= maxAmount)
           )
         )
       })
@@ -551,7 +613,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     return () => {
       cancelled = true
     }
-  }, [canProject, filter.from, filter.to, types, accountIds, settledSearch, revision])
+  }, [canProject, filter.from, filter.to, types, accountIds, settledSearch, minAmount, maxAmount, revision])
 
   // Agrupación por día, con el saldo del día para leer de un vistazo cómo fue la
   // jornada. Las proyecciones se cuelgan del mismo día pero no suman en el total.
@@ -681,11 +743,24 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * que sin él estaría entera; esto elige de qué cuenta es la lista, que es
    * otra cosa y vive arriba, en su cinta.
    */
-  const activeFilters = types.length + activeCategories + (uncategorized ? 1 : 0)
+  /*
+   * El tramo de importe cuenta como uno, tenga puesto un extremo o los dos: es
+   * una sola fila del panel. Se mira lo tecleado y no lo asentado, para que el
+   * contador no vaya un cuarto de segundo por detrás del campo.
+   */
+  const conImporte = cotaDe(importeDesde) != null || cotaDe(importeHasta) != null
+  const activeFilters =
+    types.length + activeCategories + (uncategorized ? 1 : 0) + (conImporte ? 1 : 0)
 
   /** Deja la lista sin filtros. Lo escrito en el buscador se queda. */
   function clearFilters(): void {
-    ponFiltros({ types: [], categoryIds: [], uncategorized: false })
+    ponFiltros({
+      types: [],
+      categoryIds: [],
+      uncategorized: false,
+      importeDesde: '',
+      importeHasta: ''
+    })
   }
 
   function toggle<T>(list: T[], value: T, setter: (next: T[]) => void): void {
@@ -1385,7 +1460,28 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               </div>
             </div>
 
-
+            {/* Para buscar lo que no se recuerda al céntimo: «más de 70 €» es
+                solo el primer campo. Los extremos entran —70 € está en «desde
+                70»—, y el que se deja en blanco no pone tope. */}
+            <div>
+              <div className="small muted" style={{ marginBottom: 6 }}>
+                Importe
+              </div>
+              <div className="row wrap">
+                <CampoDeCota
+                  rotulo="Desde"
+                  valor={importeDesde}
+                  divisa={divisaDelImporte}
+                  onChange={(valor) => ponFiltros({ importeDesde: valor })}
+                />
+                <CampoDeCota
+                  rotulo="Hasta"
+                  valor={importeHasta}
+                  divisa={divisaDelImporte}
+                  onChange={(valor) => ponFiltros({ importeHasta: valor })}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -1600,6 +1696,63 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
  * Repetición futura de una programada. Va apagada porque todavía no ha pasado:
  * se ve venir, pero no cuenta en ningún total hasta que se registre.
  */
+/**
+ * Un extremo del tramo de importe del panel de filtros.
+ *
+ * No es el `AmountInput` de los formularios porque aquel siempre vale algo —en
+ * blanco se queda en «0,00»— y aquí el blanco es una respuesta: «sin tope».
+ * Guarda el texto tal cual y quien filtra lo lee.
+ */
+function CampoDeCota({
+  rotulo,
+  valor,
+  divisa,
+  onChange
+}: {
+  rotulo: string
+  valor: string
+  divisa: string
+  onChange: (valor: string) => void
+}): ReactNode {
+  return (
+    // La letra pequeña solo en el rótulo: el campo la heredaría —los campos van
+    // con `font: inherit`— y saldría más chico que el buscador de arriba.
+    <label className="row tight">
+      <span className="small muted">{rotulo}</span>
+      <span style={{ position: 'relative', display: 'flex' }}>
+        <input
+          className="input"
+          inputMode="decimal"
+          placeholder="—"
+          style={{
+            width: 110,
+            paddingRight: 26,
+            textAlign: 'right',
+            fontVariantNumeric: 'tabular-nums'
+          }}
+          value={valor}
+          onChange={(event) =>
+            onChange(keepNumericChars(event.target.value, { decimals: true, negative: false }))
+          }
+          onKeyDown={(event) => event.key === 'Escape' && onChange('')}
+        />
+        <span
+          style={{
+            position: 'absolute',
+            right: 10,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--fg-subtle)',
+            pointerEvents: 'none'
+          }}
+        >
+          {currencySymbol(divisa)}
+        </span>
+      </span>
+    </label>
+  )
+}
+
 /**
  * El saldo de una pastilla de cuenta, que cuenta hasta su nuevo valor.
  *

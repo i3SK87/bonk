@@ -53,6 +53,17 @@ export interface FiltrosMovimientos {
   accountIds: number[] | null
   categoryIds: number[]
   uncategorized: boolean
+  /**
+   * El tramo de importe, tal como se ha tecleado. En blanco es «sin tope» por
+   * ese lado.
+   *
+   * Se guarda el texto y no los céntimos: lo que se escribe va en la divisa de
+   * la cuenta que se mira, y cuántos céntimos son «70» depende de cuál sea.
+   * Además, al volver de otra pestaña el campo tiene que decir lo que escribiste,
+   * «70» y no «70,00».
+   */
+  importeDesde: string
+  importeHasta: string
   /** Añadir a la lista las programadas que aún no han pasado. */
   programados: boolean
 }
@@ -67,6 +78,8 @@ function filtrosIniciales(): FiltrosMovimientos {
     accountIds: null,
     categoryIds: [],
     uncategorized: false,
+    importeDesde: '',
+    importeHasta: '',
     programados: false
   }
 }
