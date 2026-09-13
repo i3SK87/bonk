@@ -269,6 +269,9 @@ export function App(): ReactNode {
           </button>
         ))}
 
+        {/* Arriba, las pantallas de las cuentas; abajo, las herramientas. */}
+        <div className="sidebar-separador" role="separator" />
+
         {/* No lleva estado activo: abre un cuadro y la pestaña de debajo sigue
             siendo la que estaba. Encenderla diría que has cambiado de pantalla. */}
         <button
