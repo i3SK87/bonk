@@ -1537,6 +1537,27 @@ try {
   check('el informe de una cuenta la nombra', rotuloDe(deUnaCuenta).includes('<b>Cuenta &amp; &lt;b&gt;</b>'))
   check('y el de todas no nombra ninguna', !rotuloDe(sinNada).includes('<b>'))
 
+  // La columna de cuenta repite lo mismo en cada fila si el informe va de una
+  // sola cuenta: el nombre ya está en la cabecera, así que es ruido visual.
+  section('Columna de cuenta en el informe')
+  const movs = transactions.listTransactions({ limit: 5 })
+  const sumasMov = transactions.totalsForFilter({})
+  // Informe de todas las cuentas: debe mostrar la columna.
+  const todoCuentas = construirInformeHtml(movs, {
+    from: day, to: day, currency: 'EUR', ingresos: sumasMov.income, gastos: sumasMov.expense,
+    balance: sumasMov.net, generado: day, cuenta: null
+  })
+  check('en movimientos de todas las cuentas sale el encabezado Cuenta', todoCuentas.includes('<th>Cuenta</th>'))
+  check('y cada fila tiene la columna de cuenta', (todoCuentas.match(/<td class="cuenta">/g) ?? []).length === movs.length)
+  // Informe de una sola cuenta: debe ocultar la columna.
+  const unaCuenta = construirInformeHtml(movs, {
+    from: day, to: day, currency: 'EUR', ingresos: sumasMov.income, gastos: sumasMov.expense,
+    balance: sumasMov.net, generado: day, cuenta: 'Banco'
+  })
+  check('en un informe de una cuenta no sale el encabezado Cuenta', !unaCuenta.includes('<th>Cuenta</th>'))
+  check('y ninguna fila tiene la columna de cuenta', (unaCuenta.match(/<td class="cuenta">/g) ?? []).length === 0)
+  check('los colspan se ajustan de 5 a 4 cuando se oculta', unaCuenta.includes('colspan="4"'))
+
   section('Programadas')
   const recurring = scheduled.saveScheduled({
     type: 'expense',

@@ -53,6 +53,17 @@ export function escaparHtml(valor: string | null | undefined): string {
 }
 
 /**
+ * Si la columna de cuenta debe mostrarse en la tabla.
+ *
+ * En un informe de una sola cuenta, el nombre ya está en la cabecera, así que
+ * la columna que repite lo mismo en cada fila es ruido visual. En Movimientos
+ * o cuando hay varias cuentas, identifica de dónde viene cada línea.
+ */
+export function mostrarColumnaCuenta(datos: DatosInforme): boolean {
+  return datos.cuenta == null
+}
+
+/**
  * El importe de una fila con su signo, como se lee en la lista.
  *
  * Un traspaso no lleva signo: no entra ni sale dinero del patrimonio, solo
@@ -72,6 +83,8 @@ function detalleDe(tx: TransactionView): string {
 
 export function construirInformeHtml(filas: TransactionView[], datos: DatosInforme): string {
   const euros = (valor: number): string => formatMoney(valor, datos.currency)
+  const mostrarCuenta = mostrarColumnaCuenta(datos)
+  const colspanEncabezado = mostrarCuenta ? 5 : 4
 
   /*
    * Las filas se agrupan por día, como en la pantalla.
@@ -89,14 +102,14 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
 
   const cuerpo = [...porDia.entries()]
     .map(([dia, lista]) => {
-      const encabezado = `<tr class="dia"><th colspan="5">${escaparHtml(formatDate(dia))}</th></tr>`
+      const encabezado = `<tr class="dia"><th colspan="${colspanEncabezado}">${escaparHtml(formatDate(dia))}</th></tr>`
       const celdas = lista
         .map(
           (tx) => `<tr>
         <td class="tipo">${TYPE_LABEL[tx.type]}</td>
         <td>${escaparHtml(tx.categoryName ?? '—')}</td>
         <td class="detalle">${escaparHtml(detalleDe(tx))}</td>
-        <td class="cuenta">${escaparHtml(tx.accountName)}</td>
+        ${mostrarCuenta ? `<td class="cuenta">${escaparHtml(tx.accountName)}</td>` : ''}
         <td class="importe ${tx.type}">${escaparHtml(importeDe(tx))}</td>
       </tr>`
         )
@@ -105,7 +118,7 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
     })
     .join('')
 
-  const vacio = `<tr><td class="vacio" colspan="5">No hay ningún movimiento en este periodo.</td></tr>`
+  const vacio = `<tr><td class="vacio" colspan="${colspanEncabezado}">No hay ningún movimiento en este periodo.</td></tr>`
 
   return `<!doctype html>
 <html lang="es">
@@ -182,7 +195,7 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
   <table>
     <thead>
       <tr>
-        <th>Tipo</th><th>Categoría</th><th>Detalle</th><th>Cuenta</th><th class="importe">Importe</th>
+        <th>Tipo</th><th>Categoría</th><th>Detalle</th>${mostrarCuenta ? '<th>Cuenta</th>' : ''}<th class="importe">Importe</th>
       </tr>
     </thead>
     <tbody>${cuerpo || vacio}</tbody>
