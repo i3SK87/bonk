@@ -29,6 +29,7 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
     build: {
+      minify: 'esbuild',
       rollupOptions: {
         // Dos ventanas, dos entradas: la aplicación y el widget del escritorio.
         // Comparten la hoja de estilos y el puente, no el árbol de React.
