@@ -411,6 +411,7 @@ export function registerIpc(
       to: hasta,
       currency: settings.getSettings().baseCurrency,
       cuenta,
+      cuentaId: soloUna,
       ingresos,
       gastos,
       balance: ingresos - gastos,

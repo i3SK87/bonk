@@ -35,6 +35,13 @@ export interface DatosInforme {
    * En nulo, el documento es de todo.
    */
   cuenta?: string | null
+  /**
+   * Id de la cuenta, solo cuando el informe va de una sola.
+   *
+   * Se usa para saber el sentido de un traspaso: si entra o sale. Sin la columna
+   * de cuenta visible, hay que decirlo en el detalle del traspaso.
+   */
+  cuentaId?: number | null
   ingresos: number
   gastos: number
   balance: number
@@ -75,9 +82,24 @@ function importeDe(tx: TransactionView): string {
   return `${tx.type === 'expense' ? '−' : '+'}${texto}`
 }
 
-/** El destino de un traspaso, o la nota del movimiento; lo que haya. */
-function detalleDe(tx: TransactionView): string {
-  if (tx.type === 'transfer' && tx.toAccountName) return `→ ${tx.toAccountName}`
+/**
+ * El destino de un traspaso, o la nota del movimiento; lo que haya.
+ *
+ * Cuando se oculta la columna de cuenta (informe de una sola), un traspaso que
+ * entra en esa cuenta aparecería con `→ <nombre>` siendo ese el nombre de la
+ * propia cuenta, lo que no dice nada. Por eso se invierte a `← <origen>`.
+ */
+function detalleDe(tx: TransactionView, cuentaId?: number | null): string {
+  if (tx.type === 'transfer') {
+    // Si no sabemos de qué cuenta es el informe, o no hay cuenta destino, lo de siempre
+    if (!cuentaId || !tx.toAccountName) return tx.toAccountName ? `→ ${tx.toAccountName}` : ''
+    // Si el traspaso entra en la cuenta del informe: mostrar el origen
+    if (tx.toAccountId === cuentaId && tx.accountName) return `← ${tx.accountName}`
+    // Si el traspaso sale: mostrar el destino (lo de siempre)
+    if (tx.accountId === cuentaId) return `→ ${tx.toAccountName}`
+    // Caso extraño, pero vale con lo que haya
+    return `→ ${tx.toAccountName}`
+  }
   return tx.note ?? ''
 }
 
@@ -108,7 +130,7 @@ export function construirInformeHtml(filas: TransactionView[], datos: DatosInfor
           (tx) => `<tr>
         <td class="tipo">${TYPE_LABEL[tx.type]}</td>
         <td>${escaparHtml(tx.categoryName ?? '—')}</td>
-        <td class="detalle">${escaparHtml(detalleDe(tx))}</td>
+        <td class="detalle">${escaparHtml(detalleDe(tx, datos.cuentaId))}</td>
         ${mostrarCuenta ? `<td class="cuenta">${escaparHtml(tx.accountName)}</td>` : ''}
         <td class="importe ${tx.type}">${escaparHtml(importeDe(tx))}</td>
       </tr>`

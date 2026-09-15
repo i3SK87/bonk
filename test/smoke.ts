@@ -1538,7 +1538,9 @@ try {
   check('y el de todas no nombra ninguna', !rotuloDe(sinNada).includes('<b>'))
 
   // La columna de cuenta repite lo mismo en cada fila si el informe va de una
-  // sola cuenta: el nombre ya está en la cabecera, así que es ruido visual.
+  // sola cuenta: el nombre ya está en la cabecera, así que es ruido visual. Pero
+  // sin ella, un traspaso que entra pierde el origen: hay que invertir la flecha
+  // en el detalle.
   section('Columna de cuenta en el informe')
   const movs = transactions.listTransactions({ limit: 5 })
   const sumasMov = transactions.totalsForFilter({})
@@ -1552,11 +1554,37 @@ try {
   // Informe de una sola cuenta: debe ocultar la columna.
   const unaCuenta = construirInformeHtml(movs, {
     from: day, to: day, currency: 'EUR', ingresos: sumasMov.income, gastos: sumasMov.expense,
-    balance: sumasMov.net, generado: day, cuenta: 'Banco'
+    balance: sumasMov.net, generado: day, cuenta: 'Banco', cuentaId: bank.id
   })
   check('en un informe de una cuenta no sale el encabezado Cuenta', !unaCuenta.includes('<th>Cuenta</th>'))
   check('y ninguna fila tiene la columna de cuenta', (unaCuenta.match(/<td class="cuenta">/g) ?? []).length === 0)
   check('los colspan se ajustan de 5 a 4 cuando se oculta', unaCuenta.includes('colspan="4"'))
+
+  // Traspasos: uno saliente y uno entrante en la cuenta mirada.
+  const traspasoSale = transactions.saveTransaction({
+    type: 'transfer', date: day, accountId: bank.id, toAccountId: cash.id, amount: 3000
+  })
+  const traspasoEntra = transactions.saveTransaction({
+    type: 'transfer', date: day, accountId: cash.id, toAccountId: bank.id, amount: 2000
+  })
+  const conTraspasos = transactions.listTransactions({ types: ['transfer'], from: day, to: day, limit: 10 })
+
+  // En un informe de todas las cuentas, los traspasos tienen columna y detalle de siempre.
+  const traspasosTodo = construirInformeHtml(conTraspasos, {
+    from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 0, balance: 0, generado: day, cuenta: null
+  })
+  check('en movimientos, un traspaso saliente dice → destino', traspasosTodo.includes('→ Cartera'))
+  check('cada traspaso tiene columna de cuenta con su origen', (traspasosTodo.match(/<td class="cuenta">/g) ?? []).length === conTraspasos.length)
+
+  // En un informe de una sola cuenta (el banco).
+  const traspasosBanco = construirInformeHtml(conTraspasos.filter((t) => t.accountId === bank.id || t.toAccountId === bank.id), {
+    from: day, to: day, currency: 'EUR', ingresos: 0, gastos: 0, balance: 0, generado: day, cuenta: 'Banco', cuentaId: bank.id
+  })
+  check('un traspaso que sale del banco dice → destino', traspasosBanco.includes('→ Cartera'))
+  check('un traspaso que entra en el banco dice ← origen', traspasosBanco.includes('← Cartera'))
+  check('sin columna visible, los traspasos no tienen <td class="cuenta">', (traspasosBanco.match(/<td class="cuenta">/g) ?? []).length === 0)
+
+  transactions.deleteTransactions([traspasoSale.id, traspasoEntra.id])
 
   section('Programadas')
   const recurring = scheduled.saveScheduled({
