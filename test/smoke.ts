@@ -1463,6 +1463,47 @@ try {
   check('con una fila por movimiento', (informe.match(/<td class="tipo">/g) ?? []).length === paraInforme.length, `${paraInforme.length} movimientos`)
   check('los totales van en la cabecera', informe.includes('Ingresos') && informe.includes('Gastos') && informe.includes('Balance'))
   check('y la cabecera de la tabla se repite en cada hoja', informe.includes('display: table-header-group'))
+
+  /*
+   * El PDF de una sola cuenta cuenta sus traspasos en la cabecera, igual que
+   * la pantalla de Informes.
+   *
+   * `totalsForFilter` es el de Movimientos y los deja fuera a propósito,
+   * porque un traspaso no mueve el patrimonio; pero de esta cuenta sí salió y
+   * entró dinero de verdad, y es `reports.totalFor` —la misma cuenta que hace
+   * la pantalla— quien tiene que decirlo. La cartera recibió 5.000 del banco
+   * este mes: sin este cálculo el papel diría que no entró nada.
+   */
+  const filasCartera = transactions.listTransactions({
+    accountIds: [cash.id], from: monthStart, to: day, limit: 1000
+  })
+  const sumasCartera = transactions.totalsForFilter({ accountIds: [cash.id], from: monthStart, to: day })
+  const ingresosCartera = reports.totalFor('income', monthStart, day, cash.id)
+  const gastosCartera = reports.totalFor('expense', monthStart, day, cash.id)
+  check(
+    'Movimientos deja fuera el traspaso que recibió la cartera',
+    sumasCartera.income === 0,
+    `Movimientos dice ${sumasCartera.income}`
+  )
+  check(
+    'pero el informe de esa cuenta lo cuenta, como Informes',
+    ingresosCartera === 5000,
+    `el informe dice ${ingresosCartera}`
+  )
+  const informeDeCartera = construirInformeHtml(filasCartera, {
+    from: monthStart,
+    to: day,
+    currency: 'EUR',
+    cuenta: cash.name,
+    ingresos: ingresosCartera,
+    gastos: gastosCartera,
+    balance: ingresosCartera - gastosCartera,
+    generado: day
+  })
+  check(
+    'y el PDF de la cartera enseña ese traspaso en la cabecera, no un cero',
+    informeDeCartera.includes(`<b>${escaparHtml(formatMoney(ingresosCartera, 'EUR'))}</b>`)
+  )
   // Las notas las escribe quien sea: un menor que en una nota no puede abrir una
   // etiqueta dentro del documento.
   const conVeneno = transactions.saveTransaction({

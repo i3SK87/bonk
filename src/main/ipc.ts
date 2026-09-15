@@ -394,14 +394,26 @@ export function registerIpc(
     const soloUna = filter.accountIds?.length === 1 ? filter.accountIds[0] : null
     const cuenta = soloUna == null ? null : (accounts.getAccount(soloUna)?.name ?? null)
 
+    /*
+     * Los totales de la cabecera.
+     *
+     * De una sola cuenta, los mismos que enseña Informes —«Gasto total» e
+     * «Ingreso total»—: `reports.totalFor` mete dentro los traspasos de esa
+     * cuenta, que sí mueven su saldo aunque no muevan el patrimonio. `sumas`
+     * es el de Movimientos, que se queda para «Exportar todo»: ahí no hay una
+     * cuenta de la que salga o entre nada, y un traspaso sigue sin contar.
+     */
+    const ingresos = soloUna == null ? sumas.income : reports.totalFor('income', desde, hasta, soloUna)
+    const gastos = soloUna == null ? sumas.expense : reports.totalFor('expense', desde, hasta, soloUna)
+
     const html = construirInformeHtml(filas, {
       from: desde,
       to: hasta,
       currency: settings.getSettings().baseCurrency,
       cuenta,
-      ingresos: sumas.income,
-      gastos: sumas.expense,
-      balance: sumas.net,
+      ingresos,
+      gastos,
+      balance: ingresos - gastos,
       generado: hoy
     })
 
