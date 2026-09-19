@@ -302,13 +302,16 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      * Viene de otro día: primero se muda y luego se ordena, de una vez.
      *
      * El que llega no está en `reales` —esa lista es la del día de destino—, así
-     * que se cuela a mano donde se ha soltado. Sus devoluciones no viajan con él:
-     * se quedan en la fecha en que volvió el dinero, y la lista ya sabe enseñar
-     * un gasto y su devolución en días distintos.
+     * que se cuela a mano donde se ha soltado, con lo que le cuelga en su día:
+     * el repositorio se lo lleva también, y así llega en el mismo orden.
      */
     if (movido.date !== dia) {
+      const deDondeSale = gruposRef.current.find(([fecha]) => fecha === movido.date)?.[1].real ?? []
+      const suyo = bloquesDe(deDondeSale).find((bloque) => bloque[0].id === movido.id) ?? [
+        { id: movido.id }
+      ]
       const orden = bloques.map((bloque) => bloque.map((fila) => fila.id))
-      orden.splice(hasta, 0, [movido.id])
+      orden.splice(hasta, 0, suyo.map((fila) => fila.id))
       await run(
         () => api.transactions.moveToDay(movido.id, dia, orden.flat()),
         `Fecha cambiada al ${formatDate(dia)}`
@@ -1562,7 +1565,13 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         marcada={menu?.row.id === row.id}
                         // Una devolución no se recoloca: va donde vaya su gasto.
                         arrastrable={!nested}
-                        arrastrando={arrastrado?.id === row.id}
+                        arrastrando={
+                          arrastrado != null &&
+                          (arrastrado.id === row.id ||
+                            (nested &&
+                              arrastrado.id ===
+                                (row.type === 'refund' ? row.refundForId : row.savedFromId)))
+                        }
                         destino={destino === row.id}
                         nested={nested}
                         lastChild={last}

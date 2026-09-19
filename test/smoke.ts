@@ -1445,6 +1445,55 @@ try {
   }
   check('no se muda lo que no existe', /ya no existe/i.test(mudanzaFantasma), mudanzaFantasma)
 
+  /*
+   * Un gasto con su devolución del mismo día se muda entero: en la lista son una
+   * sola fila con su hija colgando. La devolución de otro día se queda en su
+   * fecha, que es la del día en que volvió el dinero.
+   */
+  const conHija = transactions.saveTransaction({
+    type: 'expense',
+    date: diaSuelto,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 900,
+    note: 'Con hija'
+  })
+  const hijaDelDia = transactions.saveTransaction({
+    type: 'refund',
+    date: diaSuelto,
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 300,
+    note: 'Hija del día',
+    refundForId: conHija.id
+  })
+  const hijaDeOtroDia = transactions.saveTransaction({
+    type: 'refund',
+    date: addDays(diaSuelto, 3),
+    accountId: bank.id,
+    categoryId: food.id,
+    amount: 200,
+    note: 'Hija de otro día',
+    refundForId: conHija.id
+  })
+  transactions.moveTransactionToDay(conHija.id, vispera, [
+    conHija.id,
+    hijaDelDia.id,
+    deOtroDia.id
+  ])
+  equal(
+    'la devolución del mismo día se muda con su gasto',
+    deLaVispera().join(','),
+    'Con hija,Hija del día,De otro día'
+  )
+  equal(
+    'y la de otro día se queda en su fecha',
+    transactions.getTransaction(hijaDeOtroDia.id)?.date ?? '',
+    addDays(diaSuelto, 3)
+  )
+  equal('sin dejar nada colgando en el día del que sale', delDia().join(','), 'Primero,Nuevo,Segundo,Tercero')
+
+  transactions.deleteTransactions([hijaDelDia.id, hijaDeOtroDia.id, conHija.id])
   transactions.deleteTransactions([elprimero, elsegundo, eltercero, recienLlegado, deOtroDia.id])
 
   section('El informe en PDF')

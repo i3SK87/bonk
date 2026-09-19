@@ -362,11 +362,11 @@ export function reorderTransactions(ids: number[]): number {
  * son un solo gesto —arrastrar la fila hasta otro día— y a medio hacer dejarían
  * el movimiento mudado pero puesto donde no se soltó.
  *
- * Se mueve solo el que se arrastra. Sus devoluciones se quedan en su fecha: la
- * fecha de una devolución es el día en que volvió el dinero, no una consecuencia
- * de dónde esté el gasto, y arrastrarlas detrás sería cambiar en silencio datos
- * que no se han tocado. La lista ya sabe enseñar un gasto y su devolución en
- * días distintos.
+ * Lo que cuelga de él en su mismo día —sus devoluciones y el traspaso que
+ * apartó la regla de ahorro— viaja con él. En la lista son una sola cosa, y
+ * dejarlas atrás las desenganchaba del gasto a la vista: se quedaban colgando
+ * solas en el día viejo. Las de otros días no se tocan, porque esa fecha sí
+ * dice algo —el día en que volvió el dinero— y ya se enseñaban separadas.
  */
 export function moveTransactionToDay(id: number, date: string, orden: number[]): number {
   return atomic(() => {
@@ -376,9 +376,14 @@ export function moveTransactionToDay(id: number, date: string, orden: number[]):
       | undefined
     if (!fila) throw new Error('Ese movimiento ya no existe')
     if (fila.date !== date) {
+      const ahora = nowISO()
+      db.prepare(
+        `UPDATE transactions SET date = ?, updated_at = ?
+          WHERE date = ? AND ((type = 'refund' AND refund_for_id = ?) OR saved_from_id = ?)`
+      ).run(date, ahora, fila.date, id, id)
       db.prepare('UPDATE transactions SET date = ?, updated_at = ? WHERE id = ?').run(
         date,
-        nowISO(),
+        ahora,
         id
       )
     }
