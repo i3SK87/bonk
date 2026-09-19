@@ -665,32 +665,19 @@ export function ReportsView(): ReactNode {
                   y categoría no tienen ninguna. */}
               <h2>Reparto del periodo</h2>
               {/*
-                Contra qué se comparan las flechas, escrito y a la vista.
-                Estaba solo en el rótulo que sale al pasar por encima, y eso vale
-                para salir de dudas pero no para no tenerlas: mirando la tabla no
-                había forma de saber que un mes en curso se mide contra el mismo
-                trozo del anterior. Una categoría con lo mismo en los dos meses
-                enteros puede llevar flecha, y sin esta línea parece un error.
+                Los mandos, todos juntos a la derecha.
+                El % / € iba justo detrás del título y quedaba flotando a media
+                tarjeta, ni centrado ni pegado a nada. Ahora el título tiene la
+                izquierda para él y los mandos se leen de corrido: contra qué mes,
+                en qué unidad, y de qué.
               */}
-              {/* En qué se lee la diferencia, aquí y en la cinta de arriba: las
-                  dos comparan contra lo mismo, así que no pueden medirla cada una
-                  a su manera. */}
-              {comparacion && (
-                <Segmented
-                  value={balanceEn}
-                  onChange={(value) => updateSettings({ balanceEn: value })}
-                  options={[
-                    { value: 'porcentaje', label: '%' },
-                    { value: 'valor', label: currencySymbol(currency) }
-                  ]}
-                />
-              )}
+              <div className="spacer" />
               {/*
                 Contra qué mes, en las pastillas de un mes.
                 Cada periodo se comparaba solo con el de justo detrás, así que
-                septiembre contra julio no había forma de verlo. Va aquí, al lado
-                del % / €, porque manda en lo mismo que él: las flechas de la tabla
-                y la cinta de arriba. En las demás pastillas no sale, y ahí contra
+                septiembre contra julio no había forma de verlo. Va al lado del
+                % / €, porque manda en lo mismo que él: las flechas de la tabla y
+                la cinta de arriba. En las demás pastillas no sale, y ahí contra
                 qué se compara lo sigue diciendo el rótulo de la columna.
               */}
               {comparacion && esDeUnMes(period) && (
@@ -711,7 +698,19 @@ export function ReportsView(): ReactNode {
                   </button>
                 </div>
               )}
-              <div className="spacer" />
+              {/* En qué se lee la diferencia, aquí y en la cinta de arriba: las
+                  dos comparan contra lo mismo, así que no pueden medirla cada una
+                  a su manera. */}
+              {comparacion && (
+                <Segmented
+                  value={balanceEn}
+                  onChange={(value) => updateSettings({ balanceEn: value })}
+                  options={[
+                    { value: 'porcentaje', label: '%' },
+                    { value: 'valor', label: currencySymbol(currency) }
+                  ]}
+                />
+              )}
               <Segmented
                 value={kind}
                 onChange={setKind}
