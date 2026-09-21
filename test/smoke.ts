@@ -35,6 +35,7 @@ import {
   type RangoId
 } from '../src/shared/rangos'
 import { repartoComparado } from '../src/shared/reparto'
+import { porcentajeDeTecho, escalonDeAviso, tocaAvisar, marcaDeAviso, AVISO_CERCA } from '../src/shared/techos'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
 let passed = 0
@@ -3655,6 +3656,83 @@ try {
   scheduled.deleteScheduled(nominaProgramada.id)
   accounts.deleteAccount(huchaRegla.id)
   accounts.deleteAccount(otraHucha.id)
+
+
+  section('Techos de gasto')
+
+  // La cuenta pelada, sin base de datos delante.
+  equal('medio techo es el 50 %', porcentajeDeTecho(3000, 6000), 50)
+  equal('pasarse se dice con más de cien', porcentajeDeTecho(9000, 6000), 150)
+  equal('sin techo no hay porcentaje', porcentajeDeTecho(3000, 0), 0)
+  // Devuelto más de lo gastado: el techo está sin tocar, no al -20 %.
+  equal('lo devuelto de más no baja de cero', porcentajeDeTecho(-1200, 6000), 0)
+  // La barra se pinta de rojo en la misma raya en la que salta el aviso: una
+  // sola cifra para las dos cosas, para que no puedan discrepar.
+  equal('la raya del aviso y la del rojo son la misma', AVISO_CERCA, 80)
+  equal('por debajo del 80 % no se avisa', escalonDeAviso(79), null)
+  equal('al 80 % se avisa de que queda poco', escalonDeAviso(80), 80)
+  equal('y al pasarse, de que te has pasado', escalonDeAviso(140), 100)
+  check('sin marca previa siempre toca avisar', tocaAvisar(null, '2026-09', 80))
+  check('dos veces del mismo escalón, no', !tocaAvisar('2026-09:80', '2026-09', 80))
+  check('pero del techo entero, sí', tocaAvisar('2026-09:80', '2026-09', 100))
+  check('y el mes siguiente vuelve a avisar', tocaAvisar('2026-09:100', '2026-10', 80))
+
+  const tabaco = categories.saveCategory({
+    name: 'Tabaco de prueba', kind: 'expense', icon: 'tag', color: '#8E8E93', spendLimit: 6000
+  })
+  equal('la categoría guarda su techo', tabaco.spendLimit, 6000)
+
+  const sinTecho = categories.techosDelMes(day).find((row) => row.categoryId === tabaco.id)!
+  check('un techo recién puesto ya sale', sinTecho != null)
+  equal('sin gastos, a cero', sinTecho.spent, 0)
+
+  const cajetilla = transactions.saveTransaction({
+    type: 'expense', date: day, accountId: bank.id, categoryId: tabaco.id, amount: 4800
+  })
+  const alOchenta = categories.techosDelMes(day).find((row) => row.categoryId === tabaco.id)!
+  equal('lo gastado del mes sube', alOchenta.spent, 4800)
+  equal('y su porcentaje', alOchenta.percent, 80)
+
+  // Lo mismo que en Informes: un reembolso rebaja lo gastado, no figura aparte.
+  transactions.saveTransaction({
+    type: 'refund', date: day, accountId: bank.id, categoryId: tabaco.id,
+    amount: 1800, refundForId: cajetilla.id
+  })
+  const conDevolucion = categories.techosDelMes(day).find((row) => row.categoryId === tabaco.id)!
+  equal('lo devuelto baja del techo', conDevolucion.spent, 3000)
+  equal('y con él el porcentaje', conDevolucion.percent, 50)
+
+  // El mes que viene es otra cuenta: el gasto de este no cuenta allí.
+  const otroMes = categories.techosDelMes(addMonths(day, 1)).find((row) => row.categoryId === tabaco.id)!
+  equal('cada mes empieza de cero', otroMes.spent, 0)
+
+  // La marca del aviso: la pone el repaso, y cambiar el techo la borra.
+  categories.marcarTechoAvisado(tabaco.id, marcaDeAviso(day.slice(0, 7), 80))
+  equal('queda dicho que ya se avisó', categories.marcasDeTecho().get(tabaco.id), `${day.slice(0, 7)}:80`)
+  categories.saveCategory({ ...tabaco, spendLimit: 3000 })
+  equal('bajar el techo vuelve a armar el aviso', categories.marcasDeTecho().get(tabaco.id), null)
+  categories.marcarTechoAvisado(tabaco.id, marcaDeAviso(day.slice(0, 7), 80))
+  categories.saveCategory({ ...tabaco, spendLimit: 3000, color: '#c0271c' })
+  equal('cambiar el color no la borra', categories.marcasDeTecho().get(tabaco.id), `${day.slice(0, 7)}:80`)
+
+  // Una categoría archivada conserva su techo pero deja de contar: ni barra ni
+  // aviso de algo con lo que ya no cuentas.
+  categories.saveCategory({ ...tabaco, spendLimit: 3000, archived: true })
+  check(
+    'la archivada se cae de la lista',
+    !categories.techosDelMes(day).some((row) => row.categoryId === tabaco.id)
+  )
+  categories.saveCategory({ ...tabaco, spendLimit: 3000, archived: false })
+
+  // Y un ingreso no tiene techo aunque se lo manden: no hay de qué pasarse.
+  const paga = categories.saveCategory({
+    name: 'Paga de prueba', kind: 'income', icon: 'tag', color: '#8E8E93', spendLimit: 5000
+  })
+  equal('un ingreso no guarda techo', paga.spendLimit, null)
+  categories.deleteCategory(paga.id)
+
+  transactions.deleteTransaction(cajetilla.id)
+  categories.deleteCategory(tabaco.id)
 
 
   transactions.deleteTransaction(sueltoDeDosMeses.id)

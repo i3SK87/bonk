@@ -8,7 +8,8 @@ import {
   ColorPicker,
   Confirm,
   Segmented,
-  Checkbox
+  Checkbox,
+  AmountInput
 } from './ui'
 import { useStore } from '../lib/store'
 import { formatMoney } from '@shared/money'
@@ -38,6 +39,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [archived, setArchived] = useState(category?.archived ?? false)
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
+  const [spendLimit, setSpendLimit] = useState(category?.spendLimit ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [linked, setLinked] = useState(0)
@@ -59,6 +61,10 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       archived,
       breakdownByNote,
       keepsInvoices,
+      // En las de ingreso ni se pregunta ni se manda: un ingreso no se pasa de
+      // ningún techo, y el que hubiera quedado de cuando era de gasto se va con
+      // el cambio de tipo.
+      spendLimit: kind === 'expense' ? spendLimit : null,
       // La regla de ahorro viaja intacta: se cambia en Planes Ahorro, y no
       // mandarla aquí la borraría cada vez que se toca el nombre o el icono.
       savePercent: category?.savePercent ?? null,
@@ -126,6 +132,25 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         <Field label="Color">
           <ColorPicker value={color} onChange={setColor} />
         </Field>
+
+        {/*
+          El techo, solo en las de gasto y opcional: en blanco —o a cero— la
+          categoría no tiene techo, que es como están todas hasta que alguien
+          decide lo contrario. Va aquí, en la ficha, porque es de la categoría
+          como lo son su color o su nombre: dicho una vez, vale todos los meses.
+        */}
+        {kind === 'expense' && (
+          <Field
+            label="Techo de gasto al mes"
+            hint="Avisa al llegar al 80 % y al pasarte. A cero, sin techo."
+          >
+            <AmountInput
+              value={spendLimit}
+              currency={settings.baseCurrency}
+              onChange={setSpendLimit}
+            />
+          </Field>
+        )}
 
         {/* Cada casilla con su renglón de ayuda, como las de las demás fichas:
             dicen qué cambia en otra pantalla —el formulario de movimientos, la

@@ -12,6 +12,8 @@ import {
   debtSummary
 } from './repos/scheduled'
 import { reglaDeLaCategoria } from './repos/transactions'
+import { techosDelMes, marcasDeTecho, marcarTechoAvisado } from './repos/categories'
+import { escalonDeAviso, tocaAvisar, marcaDeAviso } from '@shared/techos'
 import { loQueApartaria } from '@shared/ahorro'
 import { pendingGoals, markGoalReached } from './repos/goals'
 import {
@@ -290,6 +292,51 @@ export function checkLowBalance(icon: string, onClick: () => void): number {
   return avisadas
 }
 
+/**
+ * Avisa cuando una categoría se acerca a su techo del mes, y cuando lo cruza.
+ *
+ * Dos avisos como mucho por categoría y mes: uno al pasar del 80 % y otro al
+ * pasarse. La marca guarda de qué mes y de qué escalón fue el último —la misma
+ * idea que `low_balance_warned` en cuentas—, así que el repaso de cada media
+ * hora no lo repite, y el día 1 la cuenta empieza de cero sola.
+ *
+ * El aviso del 80 % dice lo que queda y no lo gastado, que es lo que se va a
+ * mirar: «te quedan doce euros» se entiende antes que «llevas cuarenta y ocho».
+ */
+export function checkSpendLimits(icon: string, onClick: () => void): number {
+  if (!getSettings().remindersEnabled) return 0
+
+  const mes = today().slice(0, 7)
+  const marcas = marcasDeTecho()
+  let avisados = 0
+
+  for (const techo of techosDelMes()) {
+    const escalon = escalonDeAviso(techo.percent)
+    if (escalon == null) continue
+    if (!tocaAvisar(marcas.get(techo.categoryId) ?? null, mes, escalon)) continue
+
+    marcarTechoAvisado(techo.categoryId, marcaDeAviso(mes, escalon))
+    avisados++
+
+    if (!Notification.isSupported()) continue
+    const base = getSettings().baseCurrency
+    const gastado = formatMoney(techo.spent, base)
+    const tope = formatMoney(techo.limit, base)
+    notify(categoryImage(icon, techo.categoryId), onClick, {
+      title:
+        escalon === 100
+          ? `${techo.name} se ha pasado del techo`
+          : `${techo.name} va por el ${techo.percent} % de su techo`,
+      body:
+        escalon === 100
+          ? `${gastado} de ${tope} este mes.`
+          : `${gastado} de ${tope}: quedan ${formatMoney(techo.limit - techo.spent, base)}.`
+    })
+  }
+
+  return avisados
+}
+
 /** «agosto de 2025», para contar desde cuándo se pagaba. */
 function monthOf(date: string | null): string {
   if (!date) return 'el principio'
@@ -420,6 +467,13 @@ export function startBackgroundWork(
       checkLowBalance(icon, onClick)
     } catch (error) {
       console.error('No se pudo comprobar el saldo:', error)
+    }
+    try {
+      // Un techo se cruza estando la aplicación cerrada: una programada que
+      // entra sola el día 1 puede llevarse medio techo por delante.
+      checkSpendLimits(icon, onClick)
+    } catch (error) {
+      console.error('No se pudieron comprobar los techos:', error)
     }
     try {
       checkReminders(icon, onClick)

@@ -8,9 +8,10 @@ import {
 } from 'react'
 import { useStore, usePreferredAccountId } from '../lib/store'
 import { Icon } from '../components/Icon'
-import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
+import { Segmented, Loading, EmptyState, Avatar, ProgressBar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
+import { TechoRapido } from '../components/TechoRapido'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
 import { today, daysBetween, formatDate } from '@shared/dates'
@@ -27,7 +28,8 @@ import {
   type RangoId
 } from '@shared/rangos'
 import { repartoComparado } from '@shared/reparto'
-import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
+import { AVISO_CERCA } from '@shared/techos'
+import type { Category, CategoryKind, CategoryTotal, MonthlyPoint, EstadoTecho } from '@shared/types'
 
 const api = window.bonk
 
@@ -182,6 +184,100 @@ function Cambio({
   )
 }
 
+/**
+ * Los techos del mes, cada uno con lo que llevas gastado.
+ *
+ * Solo sale en las pastillas de un mes, porque un techo es mensual: en «Este
+ * año» o en un tramo a mano no significa nada. Con el mes pasado elegido
+ * también vale, y entonces cuenta lo que pasó, no lo que va a pasar.
+ */
+function TechosDelMes({
+  techos,
+  mes,
+  referencia,
+  currency,
+  variasCuentas
+}: {
+  techos: EstadoTecho[]
+  mes: string
+  referencia: string
+  currency: string
+  variasCuentas: boolean
+}): ReactNode {
+  /*
+   * Lo rojo late solo mientras el mes siga abierto: en uno cerrado es un parte
+   * de lo que pasó, y no hay nada que hacer con él.
+   */
+  const enCurso = mes === today().slice(0, 7)
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        {/* Con inicial, que va suelto en un título y no dentro de una frase. */}
+        <h2>
+          Techos de {nombreDeMes(`${mes}-01`, referencia).replace(/^./, (letra) => letra.toUpperCase())}
+        </h2>
+        <div className="spacer" />
+        {/*
+          El informe es de una cuenta; el techo, de todas.
+          Un techo es lo que te pusiste de gastar al mes, no lo que te pusiste
+          de gastar desde CaixaBank, así que cuenta todo. Con una sola cuenta
+          esto no hace falta decirlo.
+        */}
+        {variasCuentas && <span className="small muted">de todas tus cuentas</span>}
+      </div>
+
+      <div className="card-body">
+        <div className="tira-techos">
+          {techos.map((techo) => {
+            return (
+              <div className="tarjeta-techo" key={techo.categoryId}>
+                <div className="row tight">
+                  <Avatar icon={techo.icon} color={techo.color} size="small" />
+                  <span className="truncate" style={{ flex: 1, fontWeight: 550 }}>
+                    {techo.name}
+                  </span>
+                  {/*
+                    Cuánto te falta o cuánto te has pasado, en dinero y con la
+                    misma insignia que el resto del informe. El porcentaje ya lo
+                    dice la barra: repetirlo en cifra era decir dos veces lo
+                    mismo y ninguna de las dos en euros, que es lo que se gasta.
+                  */}
+                  <Cambio
+                    ahora={techo.spent}
+                    antes={techo.limit}
+                    kind="expense"
+                    unidad="valor"
+                    formatea={(valor) => formatMoney(valor, currency)}
+                    pista={`${formatMoney(techo.spent, currency)} gastados · techo de ${formatMoney(techo.limit, currency)}`}
+                  />
+                </div>
+
+                {/* Rojo a partir del 80 %, que es la misma raya en la que salta
+                    el aviso: lo que hay pasado de ahí es el margen que te has
+                    comido, y se ve tal cual de grande que es. */}
+                <ProgressBar
+                  percent={techo.percent}
+                  color={techo.color}
+                  rojoDesde={AVISO_CERCA}
+                  late={enCurso}
+                />
+
+                {/* Lo gastado y el techo. Lo que queda ya lo dice la flecha de
+                    arriba, y decirlo otra vez aquí era la misma cifra dos
+                    veces en la misma tarjeta. */}
+                <span className="small subtle">
+                  {formatMoney(techo.spent, currency)} de {formatMoney(techo.limit, currency)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ReportsView(): ReactNode {
   // El catálogo de categorías, con su ficha completa. Se llama así y no
   // `categories` porque ese nombre ya lo lleva aquí el desglose del periodo,
@@ -205,6 +301,14 @@ export function ReportsView(): ReactNode {
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   /*
+   * Los techos del mes que se está mirando.
+   *
+   * No son parte del reparto ni se piden con él: el reparto es de una cuenta y
+   * de un periodo cualquiera, y un techo es de todas las cuentas y solo de un
+   * mes. Se piden aparte, y en los periodos que no son un mes ni se piden.
+   */
+  const [techos, setTechos] = useState<EstadoTecho[]>([])
+  /*
    * Solo se enseña el cargando la primera vez.
    *
    * Cualquier recarga posterior —cambiar de periodo, mover una categoría—
@@ -226,6 +330,14 @@ export function ReportsView(): ReactNode {
    */
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
+  /*
+   * La categoría a la que se le está poniendo techo.
+   *
+   * Aquí es donde se ve que un techo aprieta de más o se queda corto —la
+   * tarjeta de arriba lo está diciendo—, así que es donde tiene que poder
+   * cambiarse, sin irse a Categorías a buscar la ficha.
+   */
+  const [poniendoTecho, setPoniendoTecho] = useState<Category | null>(null)
   /*
    * En qué se miden las diferencias: la columna Balance y la cinta de arriba.
    *
@@ -325,6 +437,22 @@ export function ReportsView(): ReactNode {
       .catch(fail('los informes'))
       .finally(() => setCargado(true))
   }, [range, kind, comparacion, cuenta, revision])
+
+  /*
+   * Y los techos del mes mirado, si lo que se mira es un mes.
+   *
+   * Solo en gastos: no hay techo que pasarse en los ingresos. Si falla, la
+   * tarjeta no sale y el informe se ve igual —los techos son un añadido, no
+   * son de lo que se viene a ver aquí—.
+   */
+  const mesDeLosTechos = esDeUnMes(period) && kind === 'expense' ? range.from.slice(0, 7) : null
+  useEffect(() => {
+    if (!mesDeLosTechos) return setTechos([])
+    api.categories
+      .techos(mesDeLosTechos)
+      .then(setTechos)
+      .catch(() => setTechos([]))
+  }, [mesDeLosTechos, revision])
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
@@ -659,6 +787,18 @@ export function ReportsView(): ReactNode {
         <>
           <Teletipo datos={cifras} />
 
+          {/* Antes del reparto: lo que te pusiste se mira antes que en qué se
+              ha ido el mes. Sin techos puestos no hay tarjeta. */}
+          {mesDeLosTechos && techos.length > 0 && (
+            <TechosDelMes
+              techos={techos}
+              mes={mesDeLosTechos}
+              referencia={range.from}
+              currency={currency}
+              variasCuentas={accounts.length > 1}
+            />
+          )}
+
           <div className="card">
             <div className="card-header">
               {/* «Del periodo» y no «por categorías»: los traspasos entran aquí
@@ -908,11 +1048,25 @@ export function ReportsView(): ReactNode {
                 etiqueta: 'Cambiar categoría',
                 icono: 'tag',
                 onElegir: () => abrirMudanza(menu.categoria)
-              }
+              },
+              // Solo en las de gasto: en un ingreso no hay techo que poner.
+              ...(menu.categoria.kind === 'expense'
+                ? [
+                    {
+                      etiqueta: menu.categoria.spendLimit ? 'Cambiar el techo' : 'Poner un techo',
+                      icono: 'chart',
+                      onElegir: () => setPoniendoTecho(menu.categoria)
+                    }
+                  ]
+                : [])
             ] satisfies OpcionMenu[]
           }
           onCerrar={() => setMenu(null)}
         />
+      )}
+
+      {poniendoTecho && (
+        <TechoRapido category={poniendoTecho} onClose={() => setPoniendoTecho(null)} />
       )}
 
       {moviendo && (

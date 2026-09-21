@@ -181,9 +181,12 @@ export function App(): ReactNode {
       window.bonk.transactions.totals({ from: anterior, to: endOfMonth(anterior) }),
       // Lo que queda por pagar es de hoy, no del mes contado: una deuda no se
       // cierra a final de mes, se cierra cuando se acaba.
-      window.bonk.scheduled.debts()
+      window.bonk.scheduled.debts(),
+      // Y los techos, contados sobre ese mes cerrado. Son los de ahora: si uno
+      // se puso a mitad de camino, lo que cuenta es la raya que hay hoy.
+      window.bonk.categories.techos(mes.slice(0, 7))
     ])
-      .then(([sumas, gastos, ingresos, sumasAntes, deudas]) => {
+      .then(([sumas, gastos, ingresos, sumasAntes, deudas, techos]) => {
         if (cancelado) return
         if (sumas.count === 0) {
           updateSettings({ lastMonthlySummary: mes.slice(0, 7) })
@@ -211,7 +214,18 @@ export function App(): ReactNode {
           gastosAntes: sumasAntes.expense,
           ingresosAntes: sumasAntes.income,
           porGasto: cinco(gastos),
-          porIngreso: cinco(ingresos)
+          porIngreso: cinco(ingresos),
+          // Los pasados primero, que es lo que se ha venido a mirar; y de esos,
+          // el que más se pasó.
+          techos: [...techos]
+            .sort((a, b) => b.percent - a.percent)
+            .map((techo) => ({
+              name: techo.name,
+              icon: techo.icon,
+              color: techo.color,
+              spent: techo.spent,
+              limit: techo.limit
+            }))
         })
       })
       .catch(() => {

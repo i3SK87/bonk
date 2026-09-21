@@ -1,7 +1,11 @@
 import { getDb } from '../db'
-import type { Category, CategoryKind } from '@shared/types'
+import type { Category, CategoryKind, EstadoTecho } from '@shared/types'
 import { reglaDeCategoria } from '@shared/ahorro'
+import { porcentajeDeTecho } from '@shared/techos'
 import { byName } from '@shared/text'
+import { convert } from '@shared/money'
+import { startOfMonth, endOfMonth, today } from '@shared/dates'
+import { getSettings, rateMap } from './settings'
 
 interface CategoryRow {
   id: number
@@ -18,6 +22,8 @@ interface CategoryRow {
   save_amount: number | null
   save_account_id: number | null
   save_goal_id: number | null
+  spend_limit: number | null
+  limit_warned: string | null
 }
 
 function mapCategory(row: CategoryRow): Category {
@@ -35,8 +41,16 @@ function mapCategory(row: CategoryRow): Category {
     savePercent: row.save_percent,
     saveAmount: row.save_amount,
     saveAccountId: row.save_account_id,
-    saveGoalId: row.save_goal_id
+    saveGoalId: row.save_goal_id,
+    spendLimit: row.spend_limit
   }
+}
+
+/** El techo que se guarda de verdad: solo en gastos, y cero es no tener. */
+function techoDe(input: { kind: CategoryKind; spendLimit?: number | null }): number | null {
+  if (input.kind !== 'expense') return null
+  const techo = Math.round(Number(input.spendLimit ?? 0))
+  return Number.isFinite(techo) && techo > 0 ? techo : null
 }
 
 
@@ -69,6 +83,8 @@ interface CategoryInput {
   saveAmount?: number | null
   saveAccountId?: number | null
   saveGoalId?: number | null
+  /** El techo de gasto del mes; `null` o 0 es no tener. */
+  spendLimit?: number | null
 }
 
 export function saveCategory(input: CategoryInput): Category {
@@ -82,11 +98,24 @@ export function saveCategory(input: CategoryInput): Category {
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
+    /*
+     * Un techo nuevo es una cuenta nueva: se borra la marca del último aviso.
+     *
+     * Si no, bajar el techo a la mitad a mitad de mes no avisaría de nada —ya
+     * constaba avisado el 80 % de aquel otro techo— y te enterarías el día 1
+     * del mes que viene. Solo cuando cambia: retocar el icono no tiene por qué
+     * devolverte un aviso que ya leíste.
+     */
+    const antes = getCategory(input.id)
+    const techo = techoDe(input)
+    const cambia = (antes?.spendLimit ?? null) !== techo
+
     db.prepare(
       `UPDATE categories
           SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?,
               breakdown_by_note = ?, keeps_invoices = ?,
-              save_percent = ?, save_amount = ?, save_account_id = ?, save_goal_id = ?
+              save_percent = ?, save_amount = ?, save_account_id = ?, save_goal_id = ?,
+              spend_limit = ?, limit_warned = CASE WHEN ? = 1 THEN NULL ELSE limit_warned END
         WHERE id = ?`
     ).run(
       input.name.trim(),
@@ -101,6 +130,8 @@ export function saveCategory(input: CategoryInput): Category {
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,
       regla?.goalId ?? null,
+      techo,
+      cambia ? 1 : 0,
       input.id
     )
     return getCategory(input.id)!
@@ -113,8 +144,8 @@ export function saveCategory(input: CategoryInput): Category {
     .prepare(
       `INSERT INTO categories
          (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices,
-          save_percent, save_amount, save_account_id, save_goal_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          save_percent, save_amount, save_account_id, save_goal_id, spend_limit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name.trim(),
@@ -128,7 +159,8 @@ export function saveCategory(input: CategoryInput): Category {
       regla?.modo === 'porciento' ? regla.valor : null,
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,
-      regla?.goalId ?? null
+      regla?.goalId ?? null,
+      techoDe(input)
     )
   return getCategory(Number(result.lastInsertRowid))!
 }
@@ -136,6 +168,92 @@ export function saveCategory(input: CategoryInput): Category {
 export function deleteCategory(id: number): void {
   // Los movimientos sobreviven al borrado y pasan a figurar como "Sin categoría".
   getDb().prepare('DELETE FROM categories WHERE id = ?').run(id)
+}
+
+/**
+ * Cómo van los techos en un mes: lo gastado contra lo que te pusiste.
+ *
+ * Neto y en divisa base, el mismo criterio que Informes: un reembolso rebaja lo
+ * gastado en su categoría. Si no, devolver una compra dejaba el mes arruinado
+ * en la barra aunque el dinero hubiera vuelto.
+ *
+ * Las archivadas se quedan fuera aunque conserven su techo: archivar una
+ * categoría es dejar de contar con ella, y un aviso de algo que ya no usas es
+ * ruido.
+ */
+export function techosDelMes(mes: string = today()): EstadoTecho[] {
+  const rates = rateMap()
+  const base = getSettings().baseCurrency
+  const desde = startOfMonth(mes)
+  const hasta = endOfMonth(mes)
+
+  // El LEFT JOIN es lo que hace que una categoría con techo y sin un solo gasto
+  // este mes salga igual, con su barra a cero: es justo el mes que mejor va, y
+  // sin esto era el único que no se veía.
+  const rows = getDb()
+    .prepare(
+      `SELECT c.id          AS categoryId,
+              c.name        AS name,
+              c.icon        AS icon,
+              c.color       AS color,
+              c.spend_limit AS techo,
+              a.currency    AS currency,
+              SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS spent
+         FROM categories c
+         LEFT JOIN transactions t
+                ON t.category_id = c.id
+               AND t.type IN ('expense', 'refund')
+               AND t.date >= ? AND t.date <= ?
+         LEFT JOIN accounts a ON a.id = t.account_id
+        WHERE c.kind = 'expense' AND c.archived = 0
+          AND c.spend_limit IS NOT NULL AND c.spend_limit > 0
+        GROUP BY c.id, a.currency`
+    )
+    .all(desde, hasta) as unknown as Array<{
+    categoryId: number
+    name: string
+    icon: string
+    color: string
+    techo: number
+    currency: string | null
+    spent: number | null
+  }>
+
+  const merged = new Map<number, EstadoTecho>()
+  for (const row of rows) {
+    const estado = merged.get(row.categoryId) ?? {
+      categoryId: Number(row.categoryId),
+      name: row.name,
+      icon: row.icon,
+      color: row.color,
+      limit: Number(row.techo),
+      spent: 0,
+      percent: 0
+    }
+    // Sin divisa no hay movimientos que sumar: es la fila vacía del LEFT JOIN.
+    if (row.currency) {
+      estado.spent += convert(Number(row.spent ?? 0), row.currency, base, rates)
+    }
+    merged.set(row.categoryId, estado)
+  }
+
+  const techos = [...merged.values()]
+  for (const techo of techos) techo.percent = porcentajeDeTecho(techo.spent, techo.limit)
+  // El que peor va, primero: es el que se puso el techo para mirar.
+  return techos.sort((a, b) => b.percent - a.percent || byName.compare(a.name, b.name))
+}
+
+/** De qué mes y escalón fue el último aviso de cada techo. Para no repetirlo. */
+export function marcasDeTecho(): Map<number, string | null> {
+  const rows = getDb()
+    .prepare('SELECT id, limit_warned FROM categories WHERE spend_limit IS NOT NULL AND spend_limit > 0')
+    .all() as unknown as Array<{ id: number; limit_warned: string | null }>
+  return new Map(rows.map((row) => [Number(row.id), row.limit_warned]))
+}
+
+/** Deja dicho que de este techo ya se avisó, y de qué escalón. */
+export function marcarTechoAvisado(id: number, marca: string): void {
+  getDb().prepare('UPDATE categories SET limit_warned = ? WHERE id = ?').run(marca, id)
 }
 
 export function countCategoryTransactions(id: number): number {

@@ -2086,6 +2086,80 @@ p { margin: 0; }
   transition: width 0.3s ease;
 }
 
+/*
+ * Lo que va más allá de la raya de aviso, en rojo y encima del relleno.
+ *
+ * Solo ese tramo: el margen que ibas gastando bien se queda de su color, y lo
+ * rojo mide exactamente lo que te has comido de más. Una barra roja entera
+ * decía «mal» sin decir cuánto.
+ */
+.progress-exceso {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--negative);
+}
+
+/*
+ * La raya del límite: dónde empieza lo rojo.
+ *
+ * Negra en los dos temas, y a escuadra. Donde de verdad hace falta que se vea
+ * —a partir del 80 %— tiene el relleno a un lado y el rojo al otro, y contra
+ * esos dos el negro es lo que más corta. Va por encima de los dos, que es una
+ * referencia y no parte de lo medido.
+ */
+.progress-marca {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #000;
+  border-radius: 0;
+}
+
+/*
+ * El relleno, cortado a escuadra cuando lleva rojo detrás.
+ *
+ * Con la punta redondeada quedaba una muesca justo donde tiene que ir la raya,
+ * y el color parecía encogerse antes de llegar a ella.
+ */
+.progress-fill.a-escuadra {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* Y lo mismo dentro del resumen del mes, donde la regla de la barra redondea
+   por defecto todo lo que lleva dentro. */
+.resumen-barra .progress-exceso,
+.resumen-barra .progress-marca,
+.resumen-barra > div.a-escuadra {
+  border-radius: 0;
+}
+
+/*
+ * Y late, mientras el mes siga abierto.
+ *
+ * De opacidad y no de encendido y apagado: un parpadeo duro en algo que está
+ * en pantalla todo el rato cansa a los diez segundos, y lo que hace falta es
+ * que el ojo vaya solo, no que no se pueda mirar otra cosa. Dos segundos y
+ * medio por latido, más despacio que un pulso.
+ */
+.progress-exceso.late {
+  animation: latido-techo 2.5s ease-in-out infinite;
+}
+
+@keyframes latido-techo {
+  50% { opacity: 0.35; }
+}
+
+/* Quien pide menos movimiento se queda con el rojo, que es lo que informa; el
+   latido solo llamaba la atención sobre él. */
+@media (prefers-reduced-motion: reduce) {
+  .progress-exceso.late { animation: none; }
+}
+
 .progress-pace {
   position: absolute;
   top: -2px;
@@ -2518,6 +2592,26 @@ p { margin: 0; }
 .cat-bar > div {
   height: 100%;
   border-radius: 3px;
+}
+
+/* ---------- Techos de gasto ---------- */
+
+/* Tantas como quepan, y a partir de 230 px una más: con cuatro techos caben en
+   una fila, y con uno solo no se estira a lo ancho de la pantalla. */
+.tira-techos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+
+/* Sin fondo propio: va dentro de una tarjeta que ya lo pone, y el borde solo
+   basta para separar una de otra. */
+.tarjeta-techo {
+  display: grid;
+  gap: 7px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 /* ---------- Utilidades ---------- */
@@ -3167,9 +3261,29 @@ button.list-row:focus-visible {
 
 /* En el resumen del mes no hay columna que cuadrar: el hueco fijo que salva la
    alineación de la tabla aquí solo dejaría un vacío tras el importe. */
-.resumen-columna-cabecera .cambio {
+.resumen-columna-cabecera .cambio,
+.resumen-techos .cambio {
   display: inline;
   min-width: 0;
+}
+
+/* Los techos, debajo de las dos columnas y separados por una raya, como la
+   deuda restante: son otra forma de contar el mismo mes. */
+.resumen-techos {
+  width: 100%;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 9px;
+}
+
+.resumen-techos .label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
 }
 
 .resumen-lista {
@@ -3204,6 +3318,7 @@ button.list-row:focus-visible {
 
 .resumen-barra {
   grid-column: 1 / -1;
+  position: relative;
   height: 4px;
   border-radius: 999px;
   background: var(--bg-sunken);

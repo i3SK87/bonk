@@ -25,7 +25,8 @@ import {
   setCategoryIcons,
   announceSettlements,
   announceGoals,
-  checkLowBalance
+  checkLowBalance,
+  checkSpendLimits
 } from './reminders'
 import type { TransactionFilter, CategoryKind, Settings, DebtAdjust } from '@shared/types'
 
@@ -44,6 +45,7 @@ const SOLO_LEEN = new Set([
   'accounts:count',
   'categories:list',
   'categories:count',
+  'categories:techos',
   'tx:list',
   'tx:count',
   'tx:totals',
@@ -142,6 +144,10 @@ export function registerIpc(
     // No es una celebración, pero se entera en el mismo momento y por el mismo
     // camino: acabas de mover dinero y la cuenta del día a día se ha quedado corta.
     checkLowBalance(notifications.icon, notifications.onClick)
+    // Y por lo mismo: el gasto que acabas de apuntar puede ser justo el que
+    // cruza el techo de su categoría, y ese aviso vale por llegar ahora y no
+    // dentro de media hora.
+    checkSpendLimits(notifications.icon, notifications.onClick)
   }
 
   // — Ajustes —
@@ -177,6 +183,7 @@ export function registerIpc(
   handle('categories:save', (input) => categories.saveCategory(input))
   handle('categories:delete', (id: number) => categories.deleteCategory(id))
   handle('categories:count', (id: number) => categories.countCategoryTransactions(id))
+  handle('categories:techos', (mes?: string) => categories.techosDelMes(mes))
 
   // — Movimientos —
   handle('tx:list', (filter: TransactionFilter) => transactions.listTransactions(filter))

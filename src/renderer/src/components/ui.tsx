@@ -761,18 +761,54 @@ export function Segmented<T extends string>({ value, options, onChange }: Segmen
 export function ProgressBar({
   percent,
   color,
-  pacePercent
+  pacePercent,
+  rojoDesde,
+  late
 }: {
   percent: number
   color: string
   pacePercent?: number
+  /**
+   * Desde qué tanto por ciento el relleno pasa a rojo. Solo ese tramo, no la
+   * barra entera: lo que se ha comido del margen se ve en rojo y lo que iba
+   * bien se sigue viendo de su color, que es lo que dice cuánto te has salido.
+   */
+  rojoDesde?: number
+  /** Y si ese tramo rojo late. */
+  late?: boolean
 }): ReactNode {
+  const tope = Math.min(100, Math.max(0, percent))
+  /*
+   * El color se planta en la raya y no sigue por debajo del rojo.
+   *
+   * Dibujar la barra entera de su color y el rojo encima daba lo mismo a la
+   * vista, pero en cuanto el rojo late se veía el color asomando por detrás en
+   * cada latido. Así lo que hay pasada la raya es rojo y nada más.
+   */
+  const lleno = rojoDesde != null ? Math.min(tope, rojoDesde) : tope
+  const exceso = rojoDesde != null && tope > rojoDesde ? tope - rojoDesde : 0
+
   return (
     <div className="progress">
       <div
-        className="progress-fill"
-        style={{ width: `${Math.min(100, Math.max(0, percent))}%`, background: color }}
+        className={exceso > 0 ? 'progress-fill a-escuadra' : 'progress-fill'}
+        style={{ width: `${lleno}%`, background: color }}
       />
+      {exceso > 0 && (
+        <div
+          className={late ? 'progress-exceso late' : 'progress-exceso'}
+          style={{ left: `${rojoDesde}%`, width: `${exceso}%` }}
+        />
+      )}
+      {/* La raya, siempre que haya una: puesta desde el principio dice dónde
+          está el límite antes de llegar a él, que es cuando sirve de algo. */}
+      {rojoDesde != null && rojoDesde > 0 && rojoDesde < 100 && (
+        <div
+          className="progress-marca"
+          style={{ left: `${rojoDesde}%` }}
+          title={`El ${rojoDesde} % del techo`}
+        />
+      )}
       {pacePercent != null && pacePercent > 0 && pacePercent < 100 && (
         <div className="progress-pace" style={{ left: `${pacePercent}%` }} title="Ritmo previsto para hoy" />
       )}

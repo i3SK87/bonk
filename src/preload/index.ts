@@ -8,6 +8,7 @@ import type {
   Category,
   CategoryKind,
   CategoryTotal,
+  EstadoTecho,
   MonthlyPoint,
   ProjectedTransaction,
   ScheduledOccurrence,
@@ -56,7 +57,12 @@ const api = {
     list: (includeArchived = false) => call<Category[]>('categories:list', includeArchived),
     save: (input: unknown) => call<Category>('categories:save', input),
     remove: (id: number) => call<void>('categories:delete', id),
-    countTransactions: (id: number) => call<number>('categories:count', id)
+    countTransactions: (id: number) => call<number>('categories:count', id),
+    /**
+     * Cómo van los techos de gasto en un mes —el de hoy si no se dice otro—.
+     * Vacío si no hay ninguno puesto.
+     */
+    techos: (mes?: string) => call<EstadoTecho[]>('categories:techos', mes)
   },
   transactions: {
     list: (filter: TransactionFilter = {}) => call<TransactionView[]>('tx:list', filter),

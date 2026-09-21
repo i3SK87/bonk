@@ -3,6 +3,7 @@ import { useStore } from '../lib/store'
 import { Avatar, Segmented, AccionCabecera, Confirm } from '../components/ui'
 import { MenuContextual } from '../components/MenuContextual'
 import { CategoryModal } from '../components/CategoryForm'
+import { TechoRapido } from '../components/TechoRapido'
 import type { Category, CategoryKind } from '@shared/types'
 
 const api = window.bonk
@@ -21,6 +22,8 @@ export function CategoriesView(): ReactNode {
    */
   const [menu, setMenu] = useState<{ category: Category; x: number; y: number } | null>(null)
   const [borrando, setBorrando] = useState<Category | null>(null)
+  /** La categoría a la que se le está poniendo techo desde el clic derecho. */
+  const [poniendoTecho, setPoniendoTecho] = useState<Category | null>(null)
   const [enUso, setEnUso] = useState(0)
 
   // Cuántos movimientos se quedarían sin categoría. Igual que en la ficha: sin
@@ -83,6 +86,16 @@ export function CategoriesView(): ReactNode {
           x={menu.x}
           y={menu.y}
           opciones={[
+            // Solo en las de gasto: en un ingreso no hay techo que poner.
+            ...(menu.category.kind === 'expense'
+              ? [
+                  {
+                    etiqueta: menu.category.spendLimit ? 'Cambiar el techo' : 'Poner un techo',
+                    icono: 'chart',
+                    onElegir: () => setPoniendoTecho(menu.category)
+                  }
+                ]
+              : []),
             {
               etiqueta: 'Eliminar',
               icono: 'trash',
@@ -110,6 +123,10 @@ export function CategoriesView(): ReactNode {
             setBorrando(null)
           }}
         />
+      )}
+
+      {poniendoTecho && (
+        <TechoRapido category={poniendoTecho} onClose={() => setPoniendoTecho(null)} />
       )}
 
       {(creating || editing) && (

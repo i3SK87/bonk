@@ -2,6 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Avatar } from './ui'
 import { formatMoney } from '@shared/money'
 import { today as todayISO } from '@shared/dates'
+import { porcentajeDeTecho, AVISO_CERCA } from '@shared/techos'
 import type { Settlement, GoalReached } from '@shared/types'
 
 /**
@@ -347,6 +348,15 @@ export interface LineaResumen {
   color: string
 }
 
+/** Un techo dentro del resumen del mes: lo que te pusiste y lo que gastaste. */
+export interface LineaTecho {
+  name: string
+  icon: string
+  color: string
+  spent: number
+  limit: number
+}
+
 /** Cómo fue un mes, con todo lo que hace falta para contarlo. */
 export interface ResumenMes {
   /** El primer día del mes contado, como «2026-07-01». */
@@ -363,6 +373,8 @@ export interface ResumenMes {
   /** Hasta cinco de cada, de mayor a menor. */
   porGasto: LineaResumen[]
   porIngreso: LineaResumen[]
+  /** Los techos que tenías puestos, y cómo salió el mes con ellos. */
+  techos: LineaTecho[]
 }
 
 /** «Julio», y con el año si no es el de ahora. */
@@ -498,6 +510,71 @@ export function MonthlySummary({
           kind="income"
         />
       </div>
+
+      {/*
+        Cómo fue el mes con lo que te habías puesto.
+        Va debajo de las dos columnas y no dentro de la de gastos: un techo no
+        es una categoría más del reparto, es la raya que tú pusiste, y la
+        gracia de verlo aquí es el mes ya cerrado —ni ritmo ni proyección, lo
+        que pasó—. Sin techos puestos, ni sale.
+      */}
+      {resumen.techos.length > 0 && (
+        <div className="resumen-techos">
+          <span className="label">Techos</span>
+          <ul className="resumen-lista">
+            {resumen.techos.map((techo) => {
+              const delta = techo.spent - techo.limit
+              const pasado = delta > 0
+              const porcentaje = porcentajeDeTecho(techo.spent, techo.limit)
+              const lleno = Math.min(100, porcentaje)
+              // La misma raya que en Informes: en rojo lo que pasó del 80 %, y
+              // solo eso. Aquí no late: el mes ya está cerrado y no hay nada
+              // que corregir, es un parte de cómo fue.
+              const exceso = lleno > AVISO_CERCA ? lleno - AVISO_CERCA : 0
+              return (
+                <li key={techo.name}>
+                  <Avatar icon={techo.icon} color={techo.color} size="small" />
+                  <span className="resumen-nombre">
+                    {techo.name}
+                    <span className="small muted">
+                      {' '}
+                      de {formatMoney(techo.limit, resumen.currency)}
+                    </span>
+                  </span>
+                  <span className="amount">
+                    {formatMoney(techo.spent, resumen.currency)}
+                    {delta !== 0 && (
+                      <span
+                        className={`cambio ${pasado ? 'negative' : 'positive'}`}
+                        title={`${formatMoney(techo.spent, resumen.currency)} gastados · techo de ${formatMoney(techo.limit, resumen.currency)}`}
+                      >
+                        {' '}
+                        {pasado ? '▲' : '▼'} {formatMoney(Math.abs(delta), resumen.currency)}
+                      </span>
+                    )}
+                  </span>
+                  {/* La misma barra que en Informes: el color se planta en la
+                      raya, lo de más allá es rojo, y la raya negra dice dónde
+                      estaba el límite. Sin latido, que el mes ya pasó. */}
+                  <div className="resumen-barra">
+                    <div
+                      className={exceso > 0 ? 'a-escuadra' : undefined}
+                      style={{ width: `${Math.min(lleno, AVISO_CERCA)}%`, background: techo.color }}
+                    />
+                    {exceso > 0 && (
+                      <div
+                        className="progress-exceso"
+                        style={{ left: `${AVISO_CERCA}%`, width: `${exceso}%` }}
+                      />
+                    )}
+                    <div className="progress-marca" style={{ left: `${AVISO_CERCA}%` }} />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {resumen.deudaRestante > 0 && (
         <p className="resumen-deuda">
