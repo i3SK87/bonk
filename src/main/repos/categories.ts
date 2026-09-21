@@ -184,8 +184,19 @@ export function deleteCategory(id: number): void {
 export function presupuestosDelMes(mes: string = today()): EstadoPresupuesto[] {
   const rates = rateMap()
   const base = getSettings().baseCurrency
-  const desde = startOfMonth(mes)
-  const hasta = endOfMonth(mes)
+  /*
+   * Vale «2026-09» y vale «2026-09-21»: el día sobra, pero quien llama piensa
+   * en meses y manda meses.
+   *
+   * Sin esto, un «2026-09» pelado se colaba entero hasta `startOfMonth`, que
+   * corta por el carácter ocho y pega «01»: salía «2026-0901», ninguna fecha
+   * de la tabla era mayor que eso, y las barras aparecían a cero con el mes
+   * lleno de gastos. Las pruebas no lo cazaron porque llamaban con la fecha
+   * completa; la ventana llama con el mes.
+   */
+  const dia = mes.length === 7 ? `${mes}-01` : mes
+  const desde = startOfMonth(dia)
+  const hasta = endOfMonth(dia)
 
   // El LEFT JOIN es lo que hace que una categoría con presupuesto y sin un solo gasto
   // este mes salga igual, con su barra a cero: es justo el mes que mejor va, y

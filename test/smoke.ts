@@ -3693,6 +3693,20 @@ try {
   equal('lo gastado del mes sube', alOchenta.spent, 4800)
   equal('y su porcentaje', alOchenta.percent, 80)
 
+  /*
+   * Y lo mismo pidiéndolo por el mes a secas, que es como lo pide la ventana.
+   *
+   * Aquí estaba el fallo de la 2.33.1: un «2026-09» pelado llegaba a
+   * `startOfMonth`, que corta por el carácter ocho y pega «01» —«2026-0901»—,
+   * así que la consulta no encontraba nada y las barras salían vacías con el
+   * mes lleno de gastos. Las pruebas llamaban con la fecha completa y no lo
+   * veían.
+   */
+  const porMesCorto = categories
+    .presupuestosDelMes(day.slice(0, 7))
+    .find((row) => row.categoryId === tabaco.id)!
+  equal('pidiendo solo el mes cuenta lo mismo', porMesCorto.spent, 4800)
+
   // Lo mismo que en Informes: un reembolso rebaja lo gastado, no figura aparte.
   transactions.saveTransaction({
     type: 'refund', date: day, accountId: bank.id, categoryId: tabaco.id,
