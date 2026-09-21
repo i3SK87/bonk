@@ -114,8 +114,8 @@ export interface Category {
   saveAccountId: number | null
   saveGoalId: number | null
   /**
-   * El techo de gasto del mes, en la divisa base y sin decimales de más.
-   * `null` es que esta categoría no tiene techo, que es lo normal.
+   * El presupuesto de gasto del mes, en la divisa base y sin decimales de más.
+   * `null` es que esta categoría no tiene presupuesto, que es lo normal.
    *
    * Solo en las de gasto: un ingreso no se pasa de nada.
    */
@@ -631,21 +631,21 @@ export interface NoteTotal {
 }
 
 /**
- * Cómo va un techo este mes: lo gastado de verdad contra lo que te pusiste.
+ * Cómo va un presupuesto este mes: lo gastado de verdad contra lo que te pusiste.
  *
  * Lo gastado viene neto y en divisa base, igual que en Informes: un reembolso
  * rebaja lo gastado en su categoría en vez de figurar aparte.
  */
-export interface EstadoTecho {
+export interface EstadoPresupuesto {
   categoryId: number
   name: string
   icon: string
   color: string
-  /** El techo del mes. */
+  /** El presupuesto del mes. */
   limit: number
   /** Lo gastado en el mes en curso. */
   spent: number
-  /** Lo gastado sobre el techo, en tanto por ciento; puede pasar de cien. */
+  /** Lo gastado sobre el presupuesto, en tanto por ciento; puede pasar de cien. */
   percent: number
 }
 

@@ -1,7 +1,7 @@
 import { getDb } from '../db'
-import type { Category, CategoryKind, EstadoTecho } from '@shared/types'
+import type { Category, CategoryKind, EstadoPresupuesto } from '@shared/types'
 import { reglaDeCategoria } from '@shared/ahorro'
-import { porcentajeDeTecho } from '@shared/techos'
+import { porcentajeDePresupuesto } from '@shared/presupuestos'
 import { byName } from '@shared/text'
 import { convert } from '@shared/money'
 import { startOfMonth, endOfMonth, today } from '@shared/dates'
@@ -46,11 +46,11 @@ function mapCategory(row: CategoryRow): Category {
   }
 }
 
-/** El techo que se guarda de verdad: solo en gastos, y cero es no tener. */
-function techoDe(input: { kind: CategoryKind; spendLimit?: number | null }): number | null {
+/** El presupuesto que se guarda de verdad: solo en gastos, y cero es no tener. */
+function presupuestoDe(input: { kind: CategoryKind; spendLimit?: number | null }): number | null {
   if (input.kind !== 'expense') return null
-  const techo = Math.round(Number(input.spendLimit ?? 0))
-  return Number.isFinite(techo) && techo > 0 ? techo : null
+  const presupuesto = Math.round(Number(input.spendLimit ?? 0))
+  return Number.isFinite(presupuesto) && presupuesto > 0 ? presupuesto : null
 }
 
 
@@ -83,7 +83,7 @@ interface CategoryInput {
   saveAmount?: number | null
   saveAccountId?: number | null
   saveGoalId?: number | null
-  /** El techo de gasto del mes; `null` o 0 es no tener. */
+  /** El presupuesto de gasto del mes; `null` o 0 es no tener. */
   spendLimit?: number | null
 }
 
@@ -99,16 +99,16 @@ export function saveCategory(input: CategoryInput): Category {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
     /*
-     * Un techo nuevo es una cuenta nueva: se borra la marca del último aviso.
+     * Un presupuesto nuevo es una cuenta nueva: se borra la marca del último aviso.
      *
-     * Si no, bajar el techo a la mitad a mitad de mes no avisaría de nada —ya
-     * constaba avisado el 80 % de aquel otro techo— y te enterarías el día 1
+     * Si no, bajar el presupuesto a la mitad a mitad de mes no avisaría de nada —ya
+     * constaba avisado el 80 % de aquel otro presupuesto— y te enterarías el día 1
      * del mes que viene. Solo cuando cambia: retocar el icono no tiene por qué
      * devolverte un aviso que ya leíste.
      */
     const antes = getCategory(input.id)
-    const techo = techoDe(input)
-    const cambia = (antes?.spendLimit ?? null) !== techo
+    const presupuesto = presupuestoDe(input)
+    const cambia = (antes?.spendLimit ?? null) !== presupuesto
 
     db.prepare(
       `UPDATE categories
@@ -130,7 +130,7 @@ export function saveCategory(input: CategoryInput): Category {
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,
       regla?.goalId ?? null,
-      techo,
+      presupuesto,
       cambia ? 1 : 0,
       input.id
     )
@@ -160,7 +160,7 @@ export function saveCategory(input: CategoryInput): Category {
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,
       regla?.goalId ?? null,
-      techoDe(input)
+      presupuestoDe(input)
     )
   return getCategory(Number(result.lastInsertRowid))!
 }
@@ -171,23 +171,23 @@ export function deleteCategory(id: number): void {
 }
 
 /**
- * Cómo van los techos en un mes: lo gastado contra lo que te pusiste.
+ * Cómo van los presupuestos en un mes: lo gastado contra lo que te pusiste.
  *
  * Neto y en divisa base, el mismo criterio que Informes: un reembolso rebaja lo
  * gastado en su categoría. Si no, devolver una compra dejaba el mes arruinado
  * en la barra aunque el dinero hubiera vuelto.
  *
- * Las archivadas se quedan fuera aunque conserven su techo: archivar una
+ * Las archivadas se quedan fuera aunque conserven su presupuesto: archivar una
  * categoría es dejar de contar con ella, y un aviso de algo que ya no usas es
  * ruido.
  */
-export function techosDelMes(mes: string = today()): EstadoTecho[] {
+export function presupuestosDelMes(mes: string = today()): EstadoPresupuesto[] {
   const rates = rateMap()
   const base = getSettings().baseCurrency
   const desde = startOfMonth(mes)
   const hasta = endOfMonth(mes)
 
-  // El LEFT JOIN es lo que hace que una categoría con techo y sin un solo gasto
+  // El LEFT JOIN es lo que hace que una categoría con presupuesto y sin un solo gasto
   // este mes salga igual, con su barra a cero: es justo el mes que mejor va, y
   // sin esto era el único que no se veía.
   const rows = getDb()
@@ -196,7 +196,7 @@ export function techosDelMes(mes: string = today()): EstadoTecho[] {
               c.name        AS name,
               c.icon        AS icon,
               c.color       AS color,
-              c.spend_limit AS techo,
+              c.spend_limit AS presupuesto,
               a.currency    AS currency,
               SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS spent
          FROM categories c
@@ -214,19 +214,19 @@ export function techosDelMes(mes: string = today()): EstadoTecho[] {
     name: string
     icon: string
     color: string
-    techo: number
+    presupuesto: number
     currency: string | null
     spent: number | null
   }>
 
-  const merged = new Map<number, EstadoTecho>()
+  const merged = new Map<number, EstadoPresupuesto>()
   for (const row of rows) {
     const estado = merged.get(row.categoryId) ?? {
       categoryId: Number(row.categoryId),
       name: row.name,
       icon: row.icon,
       color: row.color,
-      limit: Number(row.techo),
+      limit: Number(row.presupuesto),
       spent: 0,
       percent: 0
     }
@@ -237,22 +237,22 @@ export function techosDelMes(mes: string = today()): EstadoTecho[] {
     merged.set(row.categoryId, estado)
   }
 
-  const techos = [...merged.values()]
-  for (const techo of techos) techo.percent = porcentajeDeTecho(techo.spent, techo.limit)
-  // El que peor va, primero: es el que se puso el techo para mirar.
-  return techos.sort((a, b) => b.percent - a.percent || byName.compare(a.name, b.name))
+  const presupuestos = [...merged.values()]
+  for (const presupuesto of presupuestos) presupuesto.percent = porcentajeDePresupuesto(presupuesto.spent, presupuesto.limit)
+  // El que peor va, primero: es el que se puso el presupuesto para mirar.
+  return presupuestos.sort((a, b) => b.percent - a.percent || byName.compare(a.name, b.name))
 }
 
-/** De qué mes y escalón fue el último aviso de cada techo. Para no repetirlo. */
-export function marcasDeTecho(): Map<number, string | null> {
+/** De qué mes y escalón fue el último aviso de cada presupuesto. Para no repetirlo. */
+export function marcasDePresupuesto(): Map<number, string | null> {
   const rows = getDb()
     .prepare('SELECT id, limit_warned FROM categories WHERE spend_limit IS NOT NULL AND spend_limit > 0')
     .all() as unknown as Array<{ id: number; limit_warned: string | null }>
   return new Map(rows.map((row) => [Number(row.id), row.limit_warned]))
 }
 
-/** Deja dicho que de este techo ya se avisó, y de qué escalón. */
-export function marcarTechoAvisado(id: number, marca: string): void {
+/** Deja dicho que de este presupuesto ya se avisó, y de qué escalón. */
+export function marcarPresupuestoAvisado(id: number, marca: string): void {
   getDb().prepare('UPDATE categories SET limit_warned = ? WHERE id = ?').run(marca, id)
 }
 

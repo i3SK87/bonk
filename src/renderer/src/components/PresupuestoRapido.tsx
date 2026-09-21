@@ -1,14 +1,14 @@
 /**
- * Poner, cambiar o quitar el techo de una categoría sin abrir su ficha.
+ * Poner, cambiar o quitar el presupuesto de una categoría sin abrir su ficha.
  *
- * El techo es lo único de una categoría que se retoca a menudo —se prueba con
+ * El presupuesto es lo único de una categoría que se retoca a menudo —se prueba con
  * sesenta, se ve que aprieta de más, se sube a setenta y cinco—, y para eso
  * había que abrir la ficha entera, con su icono, su color y sus casillas. Aquí
  * hay un campo y un botón, y se llega por el clic derecho desde donde se está
  * mirando: la lista de categorías o el informe del mes.
  *
  * Lo demás de la categoría viaja tal cual venía, incluida la regla de ahorro:
- * es lo que hace que cambiar el techo no borre nada de lo otro.
+ * es lo que hace que cambiar el presupuesto no borre nada de lo otro.
  */
 import { useState, type ReactNode } from 'react'
 import { Modal, AmountInput, Field } from './ui'
@@ -17,7 +17,7 @@ import type { Category } from '@shared/types'
 
 const api = window.bonk
 
-export function TechoRapido({
+export function PresupuestoRapido({
   category,
   onClose
 }: {
@@ -25,20 +25,20 @@ export function TechoRapido({
   onClose: () => void
 }): ReactNode {
   const { settings, run } = useStore()
-  const [techo, setTecho] = useState(category.spendLimit ?? 0)
+  const [presupuesto, setPresupuesto] = useState(category.spendLimit ?? 0)
   const tenia = (category.spendLimit ?? 0) > 0
 
   const guardar = async (): Promise<void> => {
     await run(
-      () => api.categories.save({ ...category, spendLimit: techo }),
-      techo > 0 ? 'Techo guardado' : 'Techo quitado'
+      () => api.categories.save({ ...category, spendLimit: presupuesto }),
+      presupuesto > 0 ? 'Presupuesto guardado' : 'Presupuesto quitado'
     )
     onClose()
   }
 
   return (
     <Modal
-      title={tenia ? 'Cambiar el techo' : 'Poner un techo'}
+      title={tenia ? 'Cambiar el presupuesto' : 'Poner un presupuesto'}
       onClose={onClose}
       footer={
         <>
@@ -58,17 +58,17 @@ export function TechoRapido({
       </p>
 
       <Field
-        label="Techo al mes"
+        label="Presupuesto mensual"
         hint={
           tenia
-            ? 'Avisa al llegar al 80 % y al pasarte. A cero, se quita el techo.'
-            : 'Avisa al llegar al 80 % y al pasarte. A cero, sin techo.'
+            ? 'Avisa al llegar al 80 % y al pasarte. A cero, se quita el presupuesto.'
+            : 'Avisa al llegar al 80 % y al pasarte. A cero, sin presupuesto.'
         }
       >
         <AmountInput
-          value={techo}
+          value={presupuesto}
           currency={settings.baseCurrency}
-          onChange={setTecho}
+          onChange={setPresupuesto}
           autoFocus
         />
       </Field>

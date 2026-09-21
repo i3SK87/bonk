@@ -796,20 +796,26 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX idx_scheduled_refund_for_tx ON scheduled(refund_for_tx_id);
   `,
 
-  // v34 — el techo de gasto del mes, por categoría.
+  // v34 — el presupuesto de gasto del mes, por categoría.
   //
-  // No resucita la tabla `budgets` de la v6, y a propósito: aquello era un
-  // presupuesto con nombre propio, su periodo y sus categorías dentro, tres
-  // tablas para decir «no más de sesenta euros de tabaco al mes». Puesto en la
-  // categoría se dice una vez, donde ya se mira, y las que no tienen techo ni
-  // se enteran. La tabla vieja sigue donde estaba, vacía: borrarla tampoco
-  // aporta nada hoy.
+  // Sí, hay una tabla `budgets` vacía desde la v6 y esto se llama igual. No es
+  // un descuido: aquello eran presupuestos con nombre propio, su periodo y sus
+  // categorías dentro —tres tablas para decir «no más de sesenta euros de
+  // tabaco al mes»— y por eso se retiraron. Esto es la misma idea dicha en una
+  // columna: puesta en la categoría se dice una vez, donde ya se mira, y las
+  // que no tienen presupuesto ni se enteran. La tabla vieja se queda donde
+  // está, vacía; borrarla tampoco aporta nada hoy.
+  //
+  // El nombre de las columnas es el de antes de que la función se llamara así
+  // —`spend_limit`, `limit_warned`—, y ahí se queda: renombrar una columna en
+  // SQLite es reconstruir la tabla entera, y una migración que toca datos por
+  // una palabra no compensa.
   //
   // `limit_warned` es de qué mes y de qué escalón fue el último aviso
   // —«2026-09:80»—, y hace el mismo papel que `low_balance_warned` en cuentas:
   // que el repaso de cada media hora no repita lo ya dicho. Mes nuevo, o
-  // escalón más alto, vuelve a avisar; cambiar el techo lo borra, porque un
-  // techo nuevo es una cuenta nueva.
+  // escalón más alto, vuelve a avisar; cambiar el presupuesto lo borra, porque
+  // un presupuesto nuevo es una cuenta nueva.
   `
   ALTER TABLE categories ADD COLUMN spend_limit INTEGER;
   ALTER TABLE categories ADD COLUMN limit_warned TEXT;

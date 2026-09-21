@@ -45,7 +45,7 @@ const SOLO_LEEN = new Set([
   'accounts:count',
   'categories:list',
   'categories:count',
-  'categories:techos',
+  'categories:presupuestos',
   'tx:list',
   'tx:count',
   'tx:totals',
@@ -145,7 +145,7 @@ export function registerIpc(
     // camino: acabas de mover dinero y la cuenta del día a día se ha quedado corta.
     checkLowBalance(notifications.icon, notifications.onClick)
     // Y por lo mismo: el gasto que acabas de apuntar puede ser justo el que
-    // cruza el techo de su categoría, y ese aviso vale por llegar ahora y no
+    // cruza el presupuesto de su categoría, y ese aviso vale por llegar ahora y no
     // dentro de media hora.
     checkSpendLimits(notifications.icon, notifications.onClick)
   }
@@ -183,7 +183,7 @@ export function registerIpc(
   handle('categories:save', (input) => categories.saveCategory(input))
   handle('categories:delete', (id: number) => categories.deleteCategory(id))
   handle('categories:count', (id: number) => categories.countCategoryTransactions(id))
-  handle('categories:techos', (mes?: string) => categories.techosDelMes(mes))
+  handle('categories:presupuestos', (mes?: string) => categories.presupuestosDelMes(mes))
 
   // — Movimientos —
   handle('tx:list', (filter: TransactionFilter) => transactions.listTransactions(filter))

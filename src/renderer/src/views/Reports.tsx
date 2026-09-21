@@ -11,7 +11,7 @@ import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar, ProgressBar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
-import { TechoRapido } from '../components/TechoRapido'
+import { PresupuestoRapido } from '../components/PresupuestoRapido'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
 import { today, daysBetween, formatDate } from '@shared/dates'
@@ -28,8 +28,8 @@ import {
   type RangoId
 } from '@shared/rangos'
 import { repartoComparado } from '@shared/reparto'
-import { AVISO_CERCA } from '@shared/techos'
-import type { Category, CategoryKind, CategoryTotal, MonthlyPoint, EstadoTecho } from '@shared/types'
+import { AVISO_CERCA } from '@shared/presupuestos'
+import type { Category, CategoryKind, CategoryTotal, MonthlyPoint, EstadoPresupuesto } from '@shared/types'
 
 const api = window.bonk
 
@@ -185,24 +185,31 @@ function Cambio({
 }
 
 /**
- * Los techos del mes, cada uno con lo que llevas gastado.
+ * Los presupuestos del mes, cada uno con lo que llevas gastado.
  *
- * Solo sale en las pastillas de un mes, porque un techo es mensual: en «Este
+ * Solo sale en las pastillas de un mes, porque un presupuesto es mensual: en «Este
  * año» o en un tramo a mano no significa nada. Con el mes pasado elegido
  * también vale, y entonces cuenta lo que pasó, no lo que va a pasar.
  */
-function TechosDelMes({
-  techos,
+function TarjetaPresupuestos({
+  presupuestos,
   mes,
   referencia,
   currency,
-  variasCuentas
+  variasCuentas,
+  marcada,
+  onAbrir,
+  onMenu
 }: {
-  techos: EstadoTecho[]
+  presupuestos: EstadoPresupuesto[]
   mes: string
   referencia: string
   currency: string
   variasCuentas: boolean
+  /** La categoría cuyo menú está abierto, para dejar su tarjeta encendida. */
+  marcada: number | null
+  onAbrir: (categoryId: number) => void
+  onMenu: (categoryId: number, x: number, y: number) => void
 }): ReactNode {
   /*
    * Lo rojo late solo mientras el mes siga abierto: en uno cerrado es un parte
@@ -213,29 +220,52 @@ function TechosDelMes({
   return (
     <div className="card">
       <div className="card-header">
-        {/* Con inicial, que va suelto en un título y no dentro de una frase. */}
-        <h2>
-          Techos de {nombreDeMes(`${mes}-01`, referencia).replace(/^./, (letra) => letra.toUpperCase())}
-        </h2>
+        {/*
+          «Presupuestos» a secas, sin el mes.
+          El presupuesto no es de septiembre: es la raya que te pusiste y sigue ahí
+          mes tras mes hasta que la cambies. De qué mes son las cifras lo dice
+          la pastilla del periodo, que está dos dedos más arriba, y ponerlo
+          también aquí hacía parecer que cada mes se empieza de nuevo.
+        */}
+        <h2>Presupuestos</h2>
         <div className="spacer" />
         {/*
-          El informe es de una cuenta; el techo, de todas.
-          Un techo es lo que te pusiste de gastar al mes, no lo que te pusiste
+          El informe es de una cuenta; el presupuesto, de todas.
+          Un presupuesto es lo que te pusiste de gastar al mes, no lo que te pusiste
           de gastar desde CaixaBank, así que cuenta todo. Con una sola cuenta
           esto no hace falta decirlo.
         */}
-        {variasCuentas && <span className="small muted">de todas tus cuentas</span>}
+        <span className="small muted">
+          {nombreDeMes(`${mes}-01`, referencia)}
+          {variasCuentas && ' · de todas tus cuentas'}
+        </span>
       </div>
 
       <div className="card-body">
-        <div className="tira-techos">
-          {techos.map((techo) => {
+        <div className="tira-presupuestos">
+          {presupuestos.map((presupuesto) => {
             return (
-              <div className="tarjeta-techo" key={techo.categoryId}>
+              <div
+                className={`tarjeta-presupuesto${marcada === presupuesto.categoryId ? ' marcada' : ''}`}
+                key={presupuesto.categoryId}
+                role="button"
+                tabIndex={0}
+                title={`${presupuesto.name}: cambiar el presupuesto`}
+                onClick={() => onAbrir(presupuesto.categoryId)}
+                onKeyDown={(evento) => {
+                  if (evento.key !== 'Enter' && evento.key !== ' ') return
+                  evento.preventDefault()
+                  onAbrir(presupuesto.categoryId)
+                }}
+                onContextMenu={(evento) => {
+                  evento.preventDefault()
+                  onMenu(presupuesto.categoryId, evento.clientX, evento.clientY)
+                }}
+              >
                 <div className="row tight">
-                  <Avatar icon={techo.icon} color={techo.color} size="small" />
+                  <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
                   <span className="truncate" style={{ flex: 1, fontWeight: 550 }}>
-                    {techo.name}
+                    {presupuesto.name}
                   </span>
                   {/*
                     Cuánto te falta o cuánto te has pasado, en dinero y con la
@@ -244,12 +274,12 @@ function TechosDelMes({
                     mismo y ninguna de las dos en euros, que es lo que se gasta.
                   */}
                   <Cambio
-                    ahora={techo.spent}
-                    antes={techo.limit}
+                    ahora={presupuesto.spent}
+                    antes={presupuesto.limit}
                     kind="expense"
                     unidad="valor"
                     formatea={(valor) => formatMoney(valor, currency)}
-                    pista={`${formatMoney(techo.spent, currency)} gastados · techo de ${formatMoney(techo.limit, currency)}`}
+                    pista={`${formatMoney(presupuesto.spent, currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, currency)}`}
                   />
                 </div>
 
@@ -257,17 +287,17 @@ function TechosDelMes({
                     el aviso: lo que hay pasado de ahí es el margen que te has
                     comido, y se ve tal cual de grande que es. */}
                 <ProgressBar
-                  percent={techo.percent}
-                  color={techo.color}
+                  percent={presupuesto.percent}
+                  color={presupuesto.color}
                   rojoDesde={AVISO_CERCA}
                   late={enCurso}
                 />
 
-                {/* Lo gastado y el techo. Lo que queda ya lo dice la flecha de
+                {/* Lo gastado y el presupuesto. Lo que queda ya lo dice la flecha de
                     arriba, y decirlo otra vez aquí era la misma cifra dos
                     veces en la misma tarjeta. */}
                 <span className="small subtle">
-                  {formatMoney(techo.spent, currency)} de {formatMoney(techo.limit, currency)}
+                  {formatMoney(presupuesto.spent, currency)} de {formatMoney(presupuesto.limit, currency)}
                 </span>
               </div>
             )
@@ -301,13 +331,13 @@ export function ReportsView(): ReactNode {
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   /*
-   * Los techos del mes que se está mirando.
+   * Los presupuestos del mes que se está mirando.
    *
    * No son parte del reparto ni se piden con él: el reparto es de una cuenta y
-   * de un periodo cualquiera, y un techo es de todas las cuentas y solo de un
+   * de un periodo cualquiera, y un presupuesto es de todas las cuentas y solo de un
    * mes. Se piden aparte, y en los periodos que no son un mes ni se piden.
    */
-  const [techos, setTechos] = useState<EstadoTecho[]>([])
+  const [presupuestos, setPresupuestos] = useState<EstadoPresupuesto[]>([])
   /*
    * Solo se enseña el cargando la primera vez.
    *
@@ -331,13 +361,17 @@ export function ReportsView(): ReactNode {
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
   /*
-   * La categoría a la que se le está poniendo techo.
+   * La categoría a la que se le está poniendo presupuesto.
    *
-   * Aquí es donde se ve que un techo aprieta de más o se queda corto —la
+   * Aquí es donde se ve que un presupuesto aprieta de más o se queda corto —la
    * tarjeta de arriba lo está diciendo—, así que es donde tiene que poder
    * cambiarse, sin irse a Categorías a buscar la ficha.
    */
-  const [poniendoTecho, setPoniendoTecho] = useState<Category | null>(null)
+  const [poniendoPresupuesto, setPoniendoPresupuesto] = useState<Category | null>(null)
+  /** El menú del botón derecho sobre una tarjeta de presupuesto. */
+  const [menuPresupuesto, setMenuPresupuesto] = useState<{ categoria: Category; x: number; y: number } | null>(
+    null
+  )
   /*
    * En qué se miden las diferencias: la columna Balance y la cinta de arriba.
    *
@@ -439,20 +473,36 @@ export function ReportsView(): ReactNode {
   }, [range, kind, comparacion, cuenta, revision])
 
   /*
-   * Y los techos del mes mirado, si lo que se mira es un mes.
+   * Y los presupuestos del mes mirado, si lo que se mira es un mes.
    *
-   * Solo en gastos: no hay techo que pasarse en los ingresos. Si falla, la
-   * tarjeta no sale y el informe se ve igual —los techos son un añadido, no
+   * Solo en gastos: no hay presupuesto que pasarse en los ingresos. Si falla, la
+   * tarjeta no sale y el informe se ve igual —los presupuestos son un añadido, no
    * son de lo que se viene a ver aquí—.
    */
-  const mesDeLosTechos = esDeUnMes(period) && kind === 'expense' ? range.from.slice(0, 7) : null
+  const mesDeLosPresupuestos = esDeUnMes(period) && kind === 'expense' ? range.from.slice(0, 7) : null
   useEffect(() => {
-    if (!mesDeLosTechos) return setTechos([])
+    if (!mesDeLosPresupuestos) return setPresupuestos([])
     api.categories
-      .techos(mesDeLosTechos)
-      .then(setTechos)
-      .catch(() => setTechos([]))
-  }, [mesDeLosTechos, revision])
+      .presupuestos(mesDeLosPresupuestos)
+      .then(setPresupuestos)
+      .catch(() => setPresupuestos([]))
+  }, [mesDeLosPresupuestos, revision])
+
+  /** La ficha de la categoría de un presupuesto, que es lo que se guarda y se edita. */
+  const categoriaDelPresupuesto = (categoryId: number): Category | undefined =>
+    catalogo.find((item) => item.id === categoryId)
+
+  /*
+   * Quitar el presupuesto es guardar la categoría sin él.
+   *
+   * No borra nada más: la categoría se queda con su nombre, su color y sus
+   * movimientos, y lo único que se va es la raya. De ahí que se llame «quitar
+   * el presupuesto» y no «eliminar», que al lado de una categoría suena a otra cosa
+   * bastante peor.
+   */
+  const quitarPresupuesto = async (categoria: Category): Promise<void> => {
+    await run(() => api.categories.save({ ...categoria, spendLimit: null }), 'Presupuesto quitado')
+  }
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
@@ -788,14 +838,23 @@ export function ReportsView(): ReactNode {
           <Teletipo datos={cifras} />
 
           {/* Antes del reparto: lo que te pusiste se mira antes que en qué se
-              ha ido el mes. Sin techos puestos no hay tarjeta. */}
-          {mesDeLosTechos && techos.length > 0 && (
-            <TechosDelMes
-              techos={techos}
-              mes={mesDeLosTechos}
+              ha ido el mes. Sin presupuestos puestos no hay tarjeta. */}
+          {mesDeLosPresupuestos && presupuestos.length > 0 && (
+            <TarjetaPresupuestos
+              presupuestos={presupuestos}
+              mes={mesDeLosPresupuestos}
               referencia={range.from}
               currency={currency}
               variasCuentas={accounts.length > 1}
+              marcada={menuPresupuesto?.categoria.id ?? null}
+              onAbrir={(categoryId) => {
+                const categoria = categoriaDelPresupuesto(categoryId)
+                if (categoria) setPoniendoPresupuesto(categoria)
+              }}
+              onMenu={(categoryId, x, y) => {
+                const categoria = categoriaDelPresupuesto(categoryId)
+                if (categoria) setMenuPresupuesto({ categoria, x, y })
+              }}
             />
           )}
 
@@ -1049,13 +1108,13 @@ export function ReportsView(): ReactNode {
                 icono: 'tag',
                 onElegir: () => abrirMudanza(menu.categoria)
               },
-              // Solo en las de gasto: en un ingreso no hay techo que poner.
+              // Solo en las de gasto: en un ingreso no hay presupuesto que poner.
               ...(menu.categoria.kind === 'expense'
                 ? [
                     {
-                      etiqueta: menu.categoria.spendLimit ? 'Cambiar el techo' : 'Poner un techo',
+                      etiqueta: menu.categoria.spendLimit ? 'Cambiar el presupuesto' : 'Poner un presupuesto',
                       icono: 'chart',
-                      onElegir: () => setPoniendoTecho(menu.categoria)
+                      onElegir: () => setPoniendoPresupuesto(menu.categoria)
                     }
                   ]
                 : [])
@@ -1065,8 +1124,31 @@ export function ReportsView(): ReactNode {
         />
       )}
 
-      {poniendoTecho && (
-        <TechoRapido category={poniendoTecho} onClose={() => setPoniendoTecho(null)} />
+      {menuPresupuesto && (
+        <MenuContextual
+          x={menuPresupuesto.x}
+          y={menuPresupuesto.y}
+          opciones={
+            [
+              {
+                etiqueta: 'Cambiar el presupuesto',
+                icono: 'chart',
+                onElegir: () => setPoniendoPresupuesto(menuPresupuesto.categoria)
+              },
+              {
+                etiqueta: 'Quitar el presupuesto',
+                icono: 'trash',
+                peligrosa: true,
+                onElegir: () => void quitarPresupuesto(menuPresupuesto.categoria)
+              }
+            ] satisfies OpcionMenu[]
+          }
+          onCerrar={() => setMenuPresupuesto(null)}
+        />
+      )}
+
+      {poniendoPresupuesto && (
+        <PresupuestoRapido category={poniendoPresupuesto} onClose={() => setPoniendoPresupuesto(null)} />
       )}
 
       {moviendo && (

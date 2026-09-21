@@ -62,7 +62,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       breakdownByNote,
       keepsInvoices,
       // En las de ingreso ni se pregunta ni se manda: un ingreso no se pasa de
-      // ningún techo, y el que hubiera quedado de cuando era de gasto se va con
+      // ningún presupuesto, y el que hubiera quedado de cuando era de gasto se va con
       // el cambio de tipo.
       spendLimit: kind === 'expense' ? spendLimit : null,
       // La regla de ahorro viaja intacta: se cambia en Planes Ahorro, y no
@@ -134,15 +134,15 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         </Field>
 
         {/*
-          El techo, solo en las de gasto y opcional: en blanco —o a cero— la
-          categoría no tiene techo, que es como están todas hasta que alguien
+          El presupuesto, solo en las de gasto y opcional: en blanco —o a cero— la
+          categoría no tiene presupuesto, que es como están todas hasta que alguien
           decide lo contrario. Va aquí, en la ficha, porque es de la categoría
           como lo son su color o su nombre: dicho una vez, vale todos los meses.
         */}
         {kind === 'expense' && (
           <Field
-            label="Techo de gasto al mes"
-            hint="Avisa al llegar al 80 % y al pasarte. A cero, sin techo."
+            label="Presupuesto mensual"
+            hint="Avisa al llegar al 80 % y al pasarte. A cero, sin presupuesto."
           >
             <AmountInput
               value={spendLimit}

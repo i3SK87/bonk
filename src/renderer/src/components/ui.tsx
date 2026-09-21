@@ -806,7 +806,7 @@ export function ProgressBar({
         <div
           className="progress-marca"
           style={{ left: `${rojoDesde}%` }}
-          title={`El ${rojoDesde} % del techo`}
+          title={`El ${rojoDesde} % del presupuesto`}
         />
       )}
       {pacePercent != null && pacePercent > 0 && pacePercent < 100 && (

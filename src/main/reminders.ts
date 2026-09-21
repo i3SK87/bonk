@@ -12,8 +12,8 @@ import {
   debtSummary
 } from './repos/scheduled'
 import { reglaDeLaCategoria } from './repos/transactions'
-import { techosDelMes, marcasDeTecho, marcarTechoAvisado } from './repos/categories'
-import { escalonDeAviso, tocaAvisar, marcaDeAviso } from '@shared/techos'
+import { presupuestosDelMes, marcasDePresupuesto, marcarPresupuestoAvisado } from './repos/categories'
+import { escalonDeAviso, tocaAvisar, marcaDeAviso } from '@shared/presupuestos'
 import { loQueApartaria } from '@shared/ahorro'
 import { pendingGoals, markGoalReached } from './repos/goals'
 import {
@@ -293,7 +293,7 @@ export function checkLowBalance(icon: string, onClick: () => void): number {
 }
 
 /**
- * Avisa cuando una categoría se acerca a su techo del mes, y cuando lo cruza.
+ * Avisa cuando una categoría se acerca a su presupuesto del mes, y cuando lo cruza.
  *
  * Dos avisos como mucho por categoría y mes: uno al pasar del 80 % y otro al
  * pasarse. La marca guarda de qué mes y de qué escalón fue el último —la misma
@@ -307,30 +307,30 @@ export function checkSpendLimits(icon: string, onClick: () => void): number {
   if (!getSettings().remindersEnabled) return 0
 
   const mes = today().slice(0, 7)
-  const marcas = marcasDeTecho()
+  const marcas = marcasDePresupuesto()
   let avisados = 0
 
-  for (const techo of techosDelMes()) {
-    const escalon = escalonDeAviso(techo.percent)
+  for (const presupuesto of presupuestosDelMes()) {
+    const escalon = escalonDeAviso(presupuesto.percent)
     if (escalon == null) continue
-    if (!tocaAvisar(marcas.get(techo.categoryId) ?? null, mes, escalon)) continue
+    if (!tocaAvisar(marcas.get(presupuesto.categoryId) ?? null, mes, escalon)) continue
 
-    marcarTechoAvisado(techo.categoryId, marcaDeAviso(mes, escalon))
+    marcarPresupuestoAvisado(presupuesto.categoryId, marcaDeAviso(mes, escalon))
     avisados++
 
     if (!Notification.isSupported()) continue
     const base = getSettings().baseCurrency
-    const gastado = formatMoney(techo.spent, base)
-    const tope = formatMoney(techo.limit, base)
-    notify(categoryImage(icon, techo.categoryId), onClick, {
+    const gastado = formatMoney(presupuesto.spent, base)
+    const tope = formatMoney(presupuesto.limit, base)
+    notify(categoryImage(icon, presupuesto.categoryId), onClick, {
       title:
         escalon === 100
-          ? `${techo.name} se ha pasado del techo`
-          : `${techo.name} va por el ${techo.percent} % de su techo`,
+          ? `${presupuesto.name} se ha pasado del presupuesto`
+          : `${presupuesto.name} va por el ${presupuesto.percent} % de su presupuesto`,
       body:
         escalon === 100
           ? `${gastado} de ${tope} este mes.`
-          : `${gastado} de ${tope}: quedan ${formatMoney(techo.limit - techo.spent, base)}.`
+          : `${gastado} de ${tope}: quedan ${formatMoney(presupuesto.limit - presupuesto.spent, base)}.`
     })
   }
 
@@ -469,11 +469,11 @@ export function startBackgroundWork(
       console.error('No se pudo comprobar el saldo:', error)
     }
     try {
-      // Un techo se cruza estando la aplicación cerrada: una programada que
-      // entra sola el día 1 puede llevarse medio techo por delante.
+      // Un presupuesto se cruza estando la aplicación cerrada: una programada que
+      // entra sola el día 1 puede llevarse medio presupuesto por delante.
       checkSpendLimits(icon, onClick)
     } catch (error) {
-      console.error('No se pudieron comprobar los techos:', error)
+      console.error('No se pudieron comprobar los presupuestos:', error)
     }
     try {
       checkReminders(icon, onClick)

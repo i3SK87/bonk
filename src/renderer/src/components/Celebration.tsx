@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { Avatar } from './ui'
 import { formatMoney } from '@shared/money'
 import { today as todayISO } from '@shared/dates'
-import { porcentajeDeTecho, AVISO_CERCA } from '@shared/techos'
+import { porcentajeDePresupuesto, AVISO_CERCA } from '@shared/presupuestos'
 import type { Settlement, GoalReached } from '@shared/types'
 
 /**
@@ -348,8 +348,8 @@ export interface LineaResumen {
   color: string
 }
 
-/** Un techo dentro del resumen del mes: lo que te pusiste y lo que gastaste. */
-export interface LineaTecho {
+/** Un presupuesto dentro del resumen del mes: lo que te pusiste y lo que gastaste. */
+export interface LineaPresupuesto {
   name: string
   icon: string
   color: string
@@ -373,8 +373,8 @@ export interface ResumenMes {
   /** Hasta cinco de cada, de mayor a menor. */
   porGasto: LineaResumen[]
   porIngreso: LineaResumen[]
-  /** Los techos que tenías puestos, y cómo salió el mes con ellos. */
-  techos: LineaTecho[]
+  /** Los presupuestos que tenías puestos, y cómo salió el mes con ellos. */
+  presupuestos: LineaPresupuesto[]
 }
 
 /** «Julio», y con el año si no es el de ahora. */
@@ -513,40 +513,40 @@ export function MonthlySummary({
 
       {/*
         Cómo fue el mes con lo que te habías puesto.
-        Va debajo de las dos columnas y no dentro de la de gastos: un techo no
+        Va debajo de las dos columnas y no dentro de la de gastos: un presupuesto no
         es una categoría más del reparto, es la raya que tú pusiste, y la
         gracia de verlo aquí es el mes ya cerrado —ni ritmo ni proyección, lo
-        que pasó—. Sin techos puestos, ni sale.
+        que pasó—. Sin presupuestos puestos, ni sale.
       */}
-      {resumen.techos.length > 0 && (
-        <div className="resumen-techos">
-          <span className="label">Techos</span>
+      {resumen.presupuestos.length > 0 && (
+        <div className="resumen-presupuestos">
+          <span className="label">Presupuestos</span>
           <ul className="resumen-lista">
-            {resumen.techos.map((techo) => {
-              const delta = techo.spent - techo.limit
+            {resumen.presupuestos.map((presupuesto) => {
+              const delta = presupuesto.spent - presupuesto.limit
               const pasado = delta > 0
-              const porcentaje = porcentajeDeTecho(techo.spent, techo.limit)
+              const porcentaje = porcentajeDePresupuesto(presupuesto.spent, presupuesto.limit)
               const lleno = Math.min(100, porcentaje)
               // La misma raya que en Informes: en rojo lo que pasó del 80 %, y
               // solo eso. Aquí no late: el mes ya está cerrado y no hay nada
               // que corregir, es un parte de cómo fue.
               const exceso = lleno > AVISO_CERCA ? lleno - AVISO_CERCA : 0
               return (
-                <li key={techo.name}>
-                  <Avatar icon={techo.icon} color={techo.color} size="small" />
+                <li key={presupuesto.name}>
+                  <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
                   <span className="resumen-nombre">
-                    {techo.name}
+                    {presupuesto.name}
                     <span className="small muted">
                       {' '}
-                      de {formatMoney(techo.limit, resumen.currency)}
+                      de {formatMoney(presupuesto.limit, resumen.currency)}
                     </span>
                   </span>
                   <span className="amount">
-                    {formatMoney(techo.spent, resumen.currency)}
+                    {formatMoney(presupuesto.spent, resumen.currency)}
                     {delta !== 0 && (
                       <span
                         className={`cambio ${pasado ? 'negative' : 'positive'}`}
-                        title={`${formatMoney(techo.spent, resumen.currency)} gastados · techo de ${formatMoney(techo.limit, resumen.currency)}`}
+                        title={`${formatMoney(presupuesto.spent, resumen.currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, resumen.currency)}`}
                       >
                         {' '}
                         {pasado ? '▲' : '▼'} {formatMoney(Math.abs(delta), resumen.currency)}
@@ -559,7 +559,7 @@ export function MonthlySummary({
                   <div className="resumen-barra">
                     <div
                       className={exceso > 0 ? 'a-escuadra' : undefined}
-                      style={{ width: `${Math.min(lleno, AVISO_CERCA)}%`, background: techo.color }}
+                      style={{ width: `${Math.min(lleno, AVISO_CERCA)}%`, background: presupuesto.color }}
                     />
                     {exceso > 0 && (
                       <div

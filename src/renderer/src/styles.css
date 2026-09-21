@@ -2141,17 +2141,20 @@ p { margin: 0; }
 /*
  * Y late, mientras el mes siga abierto.
  *
- * De opacidad y no de encendido y apagado: un parpadeo duro en algo que está
- * en pantalla todo el rato cansa a los diez segundos, y lo que hace falta es
- * que el ojo vaya solo, no que no se pueda mirar otra cosa. Dos segundos y
- * medio por latido, más despacio que un pulso.
+ * Hasta desaparecer del todo, que es lo que hace que se vea el canal vacío por
+ * debajo: quedándose a media opacidad nunca llegaba a irse y el latido no se
+ * leía como un latido, sino como un rojo que cambiaba de tono. El ciclo se
+ * queda en dos segundos y medio —más despacio que un pulso—, y con las paradas
+ * arriba y abajo para que sea un respirar y no un parpadeo de alarma.
  */
 .progress-exceso.late {
-  animation: latido-techo 2.5s ease-in-out infinite;
+  animation: latido-presupuesto 2.5s ease-in-out infinite;
 }
 
-@keyframes latido-techo {
-  50% { opacity: 0.35; }
+@keyframes latido-presupuesto {
+  0%, 22% { opacity: 1; }
+  50%, 60% { opacity: 0; }
+  88%, 100% { opacity: 1; }
 }
 
 /* Quien pide menos movimiento se queda con el rojo, que es lo que informa; el
@@ -2594,11 +2597,11 @@ p { margin: 0; }
   border-radius: 3px;
 }
 
-/* ---------- Techos de gasto ---------- */
+/* ---------- Presupuestos de gasto ---------- */
 
-/* Tantas como quepan, y a partir de 230 px una más: con cuatro techos caben en
+/* Tantas como quepan, y a partir de 230 px una más: con cuatro presupuestos caben en
    una fila, y con uno solo no se estira a lo ancho de la pantalla. */
-.tira-techos {
+.tira-presupuestos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 10px;
@@ -2606,12 +2609,43 @@ p { margin: 0; }
 
 /* Sin fondo propio: va dentro de una tarjeta que ya lo pone, y el borde solo
    basta para separar una de otra. */
-.tarjeta-techo {
+/* Se abre entera para cambiar su presupuesto, y el botón derecho da las dos
+   opciones. De ahí que se encienda al pasar por encima: una tarjeta que hace
+   algo al pulsarla tiene que decirlo antes de que la pulses. */
+.tarjeta-presupuesto {
   display: grid;
   gap: 7px;
   padding: 12px 13px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.tarjeta-presupuesto:hover {
+  background: var(--bg-sunken);
+  border-color: var(--border-strong);
+}
+
+/*
+ * El foco se dice con un cerco, no con el fondo del hover.
+ *
+ * Pintado igual que el hover, una tarjeta que se quedaba con el foco después
+ * de pulsarla parecía tener el ratón encima para siempre. Son dos cosas
+ * distintas —dónde está el puntero y dónde está el teclado— y ahora se ven
+ * distintas.
+ */
+.tarjeta-presupuesto:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Con su menú abierto se queda encendida, como la fila de un movimiento: el
+   menú sale bajo el puntero y sin esto no se sabe de qué presupuesto es. */
+.tarjeta-presupuesto.marcada {
+  background: var(--bg-sunken);
+  border-color: var(--border-strong);
 }
 
 /* ---------- Utilidades ---------- */
@@ -3262,14 +3296,14 @@ button.list-row:focus-visible {
 /* En el resumen del mes no hay columna que cuadrar: el hueco fijo que salva la
    alineación de la tabla aquí solo dejaría un vacío tras el importe. */
 .resumen-columna-cabecera .cambio,
-.resumen-techos .cambio {
+.resumen-presupuestos .cambio {
   display: inline;
   min-width: 0;
 }
 
-/* Los techos, debajo de las dos columnas y separados por una raya, como la
+/* Los presupuestos, debajo de las dos columnas y separados por una raya, como la
    deuda restante: son otra forma de contar el mismo mes. */
-.resumen-techos {
+.resumen-presupuestos {
   width: 100%;
   margin-top: 6px;
   padding-top: 12px;
@@ -3278,7 +3312,7 @@ button.list-row:focus-visible {
   gap: 9px;
 }
 
-.resumen-techos .label {
+.resumen-presupuestos .label {
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: 0.06em;
