@@ -41,18 +41,38 @@ export function marcaDeAviso(mes: string, escalon: number): string {
   return `${mes}:${escalon}`
 }
 
-/**
- * Si con la marca que hay guardada toca dar ese aviso.
- *
- * Dos reglas, y las dos son la misma idea: no repetir lo ya dicho. Un mes nuevo
- * empieza la cuenta de cero —el gasto se reinicia, el aviso también—, y dentro
- * del mismo mes solo se avisa al subir de escalón: pasado el 80 % se dice una
- * vez, y no se vuelve a decir nada hasta cruzar el presupuesto entero.
- */
-export function tocaAvisar(marca: string | null, mes: string, escalon: number): boolean {
-  if (!marca) return true
+/** En qué escalón quedó el último aviso de este mes; 0 si no hubo o es de otro. */
+function nivelDe(marca: string | null, mes: string): number {
+  if (!marca) return 0
   const [mesMarcado, nivel] = marca.split(':')
-  if (mesMarcado !== mes) return true
-  return escalon > Number(nivel)
+  return mesMarcado === mes ? Number(nivel) || 0 : 0
+}
+
+/**
+ * Qué hacer con un presupuesto al repasarlo: si avisar, y qué marca dejar.
+ *
+ * Se avisa al **subir** de escalón, nunca al quedarse: cruzas el 80 % y se
+ * dice una vez, cruzas el presupuesto entero y se dice otra, y mientras sigas
+ * por encima no se repite.
+ *
+ * Y la marca sigue al escalón de ahora, no al más alto que hubo. Eso es lo que
+ * hace que el aviso se vuelva a armar solo, como el del saldo bajo: si una
+ * devolución —o el movimiento que apuntaste mal y corriges— te devuelve por
+ * debajo, la marca baja con él, y volver a pasarte vuelve a avisar. Porque
+ * pasarse otra vez es pasarse otra vez, aunque ya hubiera ocurrido este mes.
+ *
+ * Por debajo del 80 % no queda marca ninguna: no hay nada que recordar.
+ */
+export function repasoDePresupuesto(
+  marca: string | null,
+  mes: string,
+  porcentaje: number
+): { avisar: 80 | 100 | null; marca: string | null } {
+  const escalon = escalonDeAviso(porcentaje)
+  const nivel = nivelDe(marca, mes)
+  return {
+    avisar: escalon != null && escalon > nivel ? escalon : null,
+    marca: escalon == null ? null : marcaDeAviso(mes, escalon)
+  }
 }
 

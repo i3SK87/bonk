@@ -920,9 +920,9 @@ export function ReportsView(): ReactNode {
               />
             </div>
             <div className="card-body">
-              {/* Con las del periodo de antes también: un mes sin gastos todavía
-                  frente a otro que sí los tuvo dice algo, y es justo lo que se
-                  ha venido a mirar. */}
+              {/* Solo lo que ha tenido movimiento en el periodo: las categorías
+                  que este mes no han visto un euro no salen, aunque lo tuvieran
+                  en el mes de al lado. Ver `repartoComparado`. */}
               {filas.length === 0 ? (
                 <EmptyState
                   icon="chart"

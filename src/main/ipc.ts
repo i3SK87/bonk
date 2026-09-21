@@ -144,10 +144,17 @@ export function registerIpc(
     // No es una celebración, pero se entera en el mismo momento y por el mismo
     // camino: acabas de mover dinero y la cuenta del día a día se ha quedado corta.
     checkLowBalance(notifications.icon, notifications.onClick)
-    // Y por lo mismo: el gasto que acabas de apuntar puede ser justo el que
-    // cruza el presupuesto de su categoría, y ese aviso vale por llegar ahora y no
-    // dentro de media hora.
-    checkSpendLimits(notifications.icon, notifications.onClick)
+    /*
+     * Y por lo mismo: el gasto que acabas de apuntar puede ser justo el que
+     * cruza el presupuesto de su categoría, y ese aviso vale por llegar ahora
+     * y no dentro de media hora.
+     *
+     * Los que se pasan del presupuesto entero los cuenta la ventana, que es
+     * donde estás: acabas de escribir ese gasto. Los del 80 % siguen saliendo
+     * por Windows, que no son para pararte lo que estás haciendo.
+     */
+    const pasados = checkSpendLimits(notifications.icon, notifications.onClick, true)
+    if (pasados.length > 0) getWindow()?.webContents.send('presupuesto:pasado', pasados)
   }
 
   // — Ajustes —

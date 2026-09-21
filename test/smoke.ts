@@ -35,7 +35,7 @@ import {
   type RangoId
 } from '../src/shared/rangos'
 import { repartoComparado } from '../src/shared/reparto'
-import { porcentajeDePresupuesto, escalonDeAviso, tocaAvisar, marcaDeAviso, AVISO_CERCA } from '../src/shared/presupuestos'
+import { porcentajeDePresupuesto, escalonDeAviso, repasoDePresupuesto, marcaDeAviso, AVISO_CERCA } from '../src/shared/presupuestos'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
 let passed = 0
@@ -438,16 +438,19 @@ try {
     [fila(2, 'Compras', 68729), fila(3, 'Ropa', 6099), fila(4, 'Bienestar', 1339), fila(1, 'Alquiler', 37600), fila(5, 'Vacía', 0)]
   )
   equal(
-    'las de este periodo primero, y detrás las que solo tuvo el otro, de mayor a menor',
+    'solo las de este periodo, en su orden',
     comparado.map((f) => f.row.name).join(', '),
-    'Alquiler, Compras, Ropa, Bienestar'
+    'Alquiler, Compras'
   )
   equal('cada una con lo que llevaba antes', comparado[1].antes, 68729)
-  const ropa = comparado[2]
-  check('la que solo estaba antes entra a cero', ropa.row.total === 0 && ropa.row.count === 0 && ropa.row.percent === 0)
-  equal('con lo que llevaba antes', ropa.antes, 6099)
-  equal('y sin el desglose del otro periodo', ropa.row.notes.length, 0)
-  equal('sin comparación no se añade nada', repartoComparado([fila(1, 'Alquiler', 37600)], []).length, 1)
+  // Las que solo tuvieron algo en el otro periodo no entran: serían filas con
+  // cero movimientos, cero por ciento y cero euros de este mes.
+  check(
+    'las que solo tuvo el otro periodo se quedan fuera',
+    !comparado.some((f) => ['Ropa', 'Bienestar', 'Vacía'].includes(f.row.name))
+  )
+  equal('sin comparación sale lo mismo', repartoComparado([fila(1, 'Alquiler', 37600)], []).length, 1)
+  equal('y sin nada que mirar, nada', repartoComparado([], [fila(3, 'Ropa', 6099)]).length, 0)
 
   section('Cuentas y saldos')
   const cash = accounts.saveAccount({
@@ -3672,10 +3675,32 @@ try {
   equal('por debajo del 80 % no se avisa', escalonDeAviso(79), null)
   equal('al 80 % se avisa de que queda poco', escalonDeAviso(80), 80)
   equal('y al pasarse, de que te has pasado', escalonDeAviso(140), 100)
-  check('sin marca previa siempre toca avisar', tocaAvisar(null, '2026-09', 80))
-  check('dos veces del mismo escalón, no', !tocaAvisar('2026-09:80', '2026-09', 80))
-  check('pero del presupuesto entero, sí', tocaAvisar('2026-09:80', '2026-09', 100))
-  check('y el mes siguiente vuelve a avisar', tocaAvisar('2026-09:100', '2026-10', 80))
+  // El repaso: si avisar y qué marca queda. Se avisa al subir de escalón, y la
+  // marca sigue al escalón de ahora, que es lo que rearma el aviso al bajar.
+  const repasar = (marca: string | null, porcentaje: number): { avisar: number | null; marca: string | null } =>
+    repasoDePresupuesto(marca, '2026-09', porcentaje)
+
+  equal('sin marca, cruzar el 80 % avisa', repasar(null, 85).avisar, 80)
+  equal('y deja dicho en qué escalón anda', repasar(null, 85).marca, '2026-09:80')
+  equal('quedarse en el mismo escalón no repite', repasar('2026-09:80', 92).avisar, null)
+  equal('pasar del presupuesto entero sí avisa', repasar('2026-09:80', 105).avisar, 100)
+  equal('y pasado, tampoco se repite', repasar('2026-09:100', 140).avisar, null)
+
+  /*
+   * Lo que pidió él: pasarse otra vez tiene que volver a avisar.
+   *
+   * Una devolución —o un movimiento mal apuntado y corregido— puede devolverte
+   * por debajo del presupuesto. Entonces la marca baja con el gasto, y el
+   * siguiente cruce vuelve a avisar, como el aviso de saldo bajo cuando la
+   * cuenta remonta.
+   */
+  equal('una devolución baja la marca al escalón de ahora', repasar('2026-09:100', 85).marca, '2026-09:80')
+  equal('bajar no avisa de nada', repasar('2026-09:100', 85).avisar, null)
+  equal('y volver a pasarse avisa otra vez', repasar('2026-09:80', 110).avisar, 100)
+  equal('por debajo del 80 % no queda marca', repasar('2026-09:100', 40).marca, null)
+  equal('y desde ahí se vuelve a avisar entero', repasar(null, 130).avisar, 100)
+
+  equal('la marca de otro mes no cuenta', repasar('2026-08:100', 90).avisar, 80)
 
   const tabaco = categories.saveCategory({
     name: 'Tabaco de prueba', kind: 'expense', icon: 'tag', color: '#8E8E93', spendLimit: 6000

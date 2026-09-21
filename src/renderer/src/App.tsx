@@ -8,6 +8,7 @@ import { Contencion } from './components/Contencion'
 import {
   Celebration,
   GoalCelebration,
+  PresupuestoPasadoAviso,
   MonthlySummary,
   type LineaResumen,
   type ResumenMes
@@ -24,7 +25,7 @@ import { SettingsView } from './views/Settings'
 import { formatMoney, formatMoneyBreve, cabeEntero } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { useActualizacion, hayNovedad } from './lib/actualizacion'
-import type { CategoryTotal, Settlement, GoalReached } from '@shared/types'
+import type { CategoryTotal, Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -87,6 +88,8 @@ export function App(): ReactNode {
   const [reiniciando, setReiniciando] = useState(false)
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [reached, setReached] = useState<GoalReached[]>([])
+  /** Los presupuestos que un movimiento recién guardado acaba de cruzar. */
+  const [pasados, setPasados] = useState<PresupuestoPasado[]>([])
   /** El resumen del mes que se acaba de cerrar, cuando toca enseñarlo. */
   const [resumen, setResumen] = useState<ResumenMes | null>(null)
 
@@ -122,6 +125,16 @@ export function App(): ReactNode {
         refresh()
       }
     })
+    /*
+     * Pasarse de un presupuesto no se celebra, pero se cuenta igual y por el
+     * mismo camino: lo manda el proceso principal justo después de guardar el
+     * movimiento que lo cruzó. Sin `refresh`, que ya lo hizo quien guardó.
+     */
+    const offPasados = window.bonk.events.on('presupuesto:pasado', (detail) => {
+      if (Array.isArray(detail) && detail.length > 0) {
+        setPasados((current) => [...current, ...(detail as PresupuestoPasado[])])
+      }
+    })
     const onKey = (event: KeyboardEvent): void => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'n') {
         event.preventDefault()
@@ -147,6 +160,8 @@ export function App(): ReactNode {
       offFailed()
       offSettled()
       offReached()
+      offPasados()
+      offPasados()
       window.removeEventListener('keydown', sinTabulador, true)
       window.removeEventListener('keydown', onKey)
     }
@@ -467,12 +482,19 @@ export function App(): ReactNode {
           settlement={settlements[0]}
           onClose={() => setSettlements((current) => current.slice(1))}
         />
+      ) : ready && reached.length > 0 ? (
+        <GoalCelebration
+          goal={reached[0]}
+          onClose={() => setReached((current) => current.slice(1))}
+        />
       ) : (
+        /* Y detrás de lo que se celebra, lo que no: una enhorabuena y un «te
+           has pasado» a la vez, primero la enhorabuena. */
         ready &&
-        reached.length > 0 && (
-          <GoalCelebration
-            goal={reached[0]}
-            onClose={() => setReached((current) => current.slice(1))}
+        pasados.length > 0 && (
+          <PresupuestoPasadoAviso
+            presupuesto={pasados[0]}
+            onClose={() => setPasados((current) => current.slice(1))}
           />
         )
       )}

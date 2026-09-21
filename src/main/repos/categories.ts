@@ -262,8 +262,13 @@ export function marcasDePresupuesto(): Map<number, string | null> {
   return new Map(rows.map((row) => [Number(row.id), row.limit_warned]))
 }
 
-/** Deja dicho que de este presupuesto ya se avisó, y de qué escalón. */
-export function marcarPresupuestoAvisado(id: number, marca: string): void {
+/**
+ * Deja dicho en qué escalón anda este presupuesto, o borra la marca con `null`.
+ *
+ * Borrarla es lo que rearma el aviso: sin marca, volver a cruzar la raya vuelve
+ * a avisar. Ver `repasoDePresupuesto`.
+ */
+export function marcarPresupuestoAvisado(id: number, marca: string | null): void {
   getDb().prepare('UPDATE categories SET limit_warned = ? WHERE id = ?').run(marca, id)
 }
 

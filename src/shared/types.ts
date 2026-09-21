@@ -649,6 +649,24 @@ export interface EstadoPresupuesto {
   percent: number
 }
 
+/**
+ * Un presupuesto que se acaba de cruzar con el movimiento recién apuntado.
+ *
+ * Va del proceso principal a la ventana para que el aviso salga donde estás
+ * mirando: acabas de escribir el gasto que te pasa de la raya y te enteras
+ * ahí mismo, no en un aviso de Windows que compite con lo que tienes delante.
+ */
+export interface PresupuestoPasado {
+  categoryId: number
+  name: string
+  icon: string
+  color: string
+  /** Lo gastado en el mes, ya con este movimiento dentro. */
+  spent: number
+  limit: number
+  currency: string
+}
+
 export interface CategoryTotal {
   categoryId: number | null
   name: string

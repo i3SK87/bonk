@@ -210,6 +210,7 @@ const api = {
         | 'scheduled:failed'
         | 'debt:settled'
         | 'goal:reached'
+        | 'presupuesto:pasado'
         // Cada paso del actualizador: encontrada, descargando, lista.
         | 'updates:changed'
         // Solo le llega al widget: es como se entera de que ha cambiado la

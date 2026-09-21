@@ -13,7 +13,7 @@ import {
 } from './repos/scheduled'
 import { reglaDeLaCategoria } from './repos/transactions'
 import { presupuestosDelMes, marcasDePresupuesto, marcarPresupuestoAvisado } from './repos/categories'
-import { escalonDeAviso, tocaAvisar, marcaDeAviso } from '@shared/presupuestos'
+import { repasoDePresupuesto } from '@shared/presupuestos'
 import { loQueApartaria } from '@shared/ahorro'
 import { pendingGoals, markGoalReached } from './repos/goals'
 import {
@@ -25,7 +25,7 @@ import {
 import { getSettings } from './repos/settings'
 import { tituloProgramada } from '@shared/text'
 import { registrar, registrarFallo } from './registro'
-import type { ScheduledView, Settlement, GoalReached } from '@shared/types'
+import type { ScheduledView, Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
 
 /**
  * Avisos del día antes de cada movimiento programado.
@@ -303,38 +303,72 @@ export function checkLowBalance(icon: string, onClick: () => void): number {
  * El aviso del 80 % dice lo que queda y no lo gastado, que es lo que se va a
  * mirar: «te quedan doce euros» se entiende antes que «llevas cuarenta y ocho».
  */
-export function checkSpendLimits(icon: string, onClick: () => void): number {
-  if (!getSettings().remindersEnabled) return 0
+export function checkSpendLimits(
+  icon: string,
+  onClick: () => void,
+  /*
+   * Si quien pregunta tiene la ventana delante.
+   *
+   * Lo dice `celebrate`, que corre justo después de guardar un movimiento: si
+   * acabas de escribir el gasto que te pasa de la raya, el aviso tiene que
+   * salir donde estás mirando y no en una esquina de Windows compitiendo con
+   * la propia aplicación. Los que se devuelven son los que la ventana va a
+   * contar, así que aquí se callan; el del 80 % sigue saliendo por Windows,
+   * que ese no merece pararte lo que estás haciendo.
+   */
+  enPantalla = false
+): PresupuestoPasado[] {
+  if (!getSettings().remindersEnabled) return []
 
   const mes = today().slice(0, 7)
   const marcas = marcasDePresupuesto()
-  let avisados = 0
+  const base = getSettings().baseCurrency
+  const pasados: PresupuestoPasado[] = []
 
   for (const presupuesto of presupuestosDelMes()) {
-    const escalon = escalonDeAviso(presupuesto.percent)
-    if (escalon == null) continue
-    if (!tocaAvisar(marcas.get(presupuesto.categoryId) ?? null, mes, escalon)) continue
+    const marcaGuardada = marcas.get(presupuesto.categoryId) ?? null
+    const { avisar, marca } = repasoDePresupuesto(marcaGuardada, mes, presupuesto.percent)
 
-    marcarPresupuestoAvisado(presupuesto.categoryId, marcaDeAviso(mes, escalon))
-    avisados++
+    /*
+     * La marca se guarda aunque no haya nada que avisar.
+     *
+     * Es lo que rearma el aviso cuando una devolución te devuelve por debajo:
+     * si solo se escribiera al avisar, la marca se quedaría clavada en «ya te
+     * avisé de que te pasaste» y volver a pasarte no diría nada.
+     */
+    if (marca !== marcaGuardada) marcarPresupuestoAvisado(presupuesto.categoryId, marca)
+    if (avisar == null) continue
+
+    const loCuentaLaVentana = enPantalla && avisar === 100
+    if (loCuentaLaVentana) {
+      pasados.push({
+        categoryId: presupuesto.categoryId,
+        name: presupuesto.name,
+        icon: presupuesto.icon,
+        color: presupuesto.color,
+        spent: presupuesto.spent,
+        limit: presupuesto.limit,
+        currency: base
+      })
+      continue
+    }
 
     if (!Notification.isSupported()) continue
-    const base = getSettings().baseCurrency
     const gastado = formatMoney(presupuesto.spent, base)
     const tope = formatMoney(presupuesto.limit, base)
     notify(categoryImage(icon, presupuesto.categoryId), onClick, {
       title:
-        escalon === 100
+        avisar === 100
           ? `${presupuesto.name} se ha pasado del presupuesto`
           : `${presupuesto.name} va por el ${presupuesto.percent} % de su presupuesto`,
       body:
-        escalon === 100
+        avisar === 100
           ? `${gastado} de ${tope} este mes.`
           : `${gastado} de ${tope}: quedan ${formatMoney(presupuesto.limit - presupuesto.spent, base)}.`
     })
   }
 
-  return avisados
+  return pasados
 }
 
 /** «agosto de 2025», para contar desde cuándo se pagaba. */

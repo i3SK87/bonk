@@ -3,7 +3,7 @@ import { Avatar } from './ui'
 import { formatMoney } from '@shared/money'
 import { today as todayISO } from '@shared/dates'
 import { porcentajeDePresupuesto, AVISO_CERCA } from '@shared/presupuestos'
-import type { Settlement, GoalReached } from '@shared/types'
+import type { Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
 
 /**
  * La enhorabuena por una deuda saldada.
@@ -339,6 +339,56 @@ export function GoalCelebration({
   )
 }
 
+
+/**
+ * Te acabas de pasar de un presupuesto.
+ *
+ * No pregunta nada ni deja nada a medias: el movimiento ya está guardado y esto
+ * es el parte. Un «¿seguro que quieres pasarte?» antes de guardar convertiría
+ * cada compra grande en un trámite, y además llegaría tarde —el presupuesto lo
+ * cruzan tres cafés tanto como una compra de doscientos euros—.
+ *
+ * Sale una vez por categoría y mes, la misma marca que gobierna el aviso de
+ * Windows: pasarse dos veces del mismo presupuesto en el mismo mes no es una
+ * noticia nueva.
+ */
+export function PresupuestoPasadoAviso({
+  presupuesto,
+  onClose
+}: {
+  presupuesto: PresupuestoPasado
+  onClose: () => void
+}): ReactNode {
+  const exceso = presupuesto.spent - presupuesto.limit
+  const veces = presupuesto.limit > 0 ? presupuesto.spent / presupuesto.limit : 0
+
+  return (
+    <Party
+      title={`Te has pasado en ${presupuesto.name}`}
+      lede={
+        veces >= 2
+          ? `Llevas más del doble de lo que te pusiste para este mes.`
+          : `Lo que te pusiste para este mes ya está gastado, y quedan días por delante.`
+      }
+      adorno={null}
+      tono="neutra"
+      boton="Vale"
+      sello={
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}
+             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 3.5L21 19.5H3z" />
+          <path d="M12 10v4M12 17.2v.1" />
+        </svg>
+      }
+      stats={[
+        { value: formatMoney(presupuesto.spent, presupuesto.currency), label: 'gastado' },
+        { value: formatMoney(presupuesto.limit, presupuesto.currency), label: 'de presupuesto' },
+        { value: formatMoney(exceso, presupuesto.currency), label: 'de más' }
+      ]}
+      onClose={onClose}
+    />
+  )
+}
 
 /** Una categoría dentro del resumen del mes. */
 export interface LineaResumen {
