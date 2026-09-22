@@ -60,7 +60,8 @@ export function getSettings(): Settings {
     buscarActualizaciones: map.get('buscarActualizaciones') !== '0',
     // Por «ids» y no por «numero»: así una categoría borrada, un texto o un cero
     // se quedan en «ninguna» en vez de en un id que no existe.
-    ultimaCategoriaDeCompra: ids(map.get('ultimaCategoriaDeCompra'))[0] ?? null
+    ultimaCategoriaDeCompra: ids(map.get('ultimaCategoriaDeCompra'))[0] ?? null,
+    ultimoHalloween: map.get('ultimoHalloween') || null
   }
 }
 

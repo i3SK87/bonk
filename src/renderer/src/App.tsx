@@ -26,6 +26,8 @@ import { formatMoney, formatMoneyBreve, cabeEntero } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { useActualizacion, hayNovedad } from './lib/actualizacion'
 import type { CategoryTotal, Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
+import { Murcielagos, MarcaCalabaza } from './components/Halloween'
+import { esHalloween } from '@shared/halloween'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -92,6 +94,8 @@ export function App(): ReactNode {
   const [pasados, setPasados] = useState<PresupuestoPasado[]>([])
   /** El resumen del mes que se acaba de cerrar, cuando toca enseñarlo. */
   const [resumen, setResumen] = useState<ResumenMes | null>(null)
+  /** Si los murciélagos están cruzando la pantalla ahora mismo. */
+  const [murcielagos, setMurcielagos] = useState(false)
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
@@ -179,6 +183,28 @@ export function App(): ReactNode {
    * instalación recién estrenada no hay nada que resumir, y saltaría un cuadro
    * hablando de ceros.
    */
+  /*
+   * La semana de Halloween, del 25 al 31 de octubre.
+   *
+   * Los murciélagos salen **una vez al día**, la primera que abras: lo mismo
+   * que hace el resumen del mes con `lastMonthlySummary`, pero con el día
+   * entero. Una gracia que sale cada vez que abres deja de serlo al tercer día,
+   * y esta aplicación se abre a diario.
+   *
+   * Quien tenga pedido menos movimiento no la ve: esto no es información, es
+   * una broma, y es lo primero que sobra cuando alguien pide que las cosas se
+   * estén quietas.
+   */
+  const dia = today()
+  const halloween = esHalloween(dia)
+  useEffect(() => {
+    if (!ready || !halloween) return
+    if (settings.ultimoHalloween === dia) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    setMurcielagos(true)
+    updateSettings({ ultimoHalloween: dia })
+  }, [ready, halloween, dia, settings.ultimoHalloween, updateSettings])
+
   useEffect(() => {
     if (!ready) return
 
@@ -281,7 +307,11 @@ export function App(): ReactNode {
     <div className="app">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <img className="mark" src={markUrl} alt="" width={28} height={28} />
+          {halloween ? (
+            <MarcaCalabaza />
+          ) : (
+            <img className="mark" src={markUrl} alt="" width={28} height={28} />
+          )}
           BONK
         </div>
 
@@ -498,6 +528,9 @@ export function App(): ReactNode {
           />
         )
       )}
+      {/* Lo último del árbol y transparente al ratón: pasa por encima de todo
+          sin quitarle el sitio a nada. */}
+      {murcielagos && <Murcielagos onFin={() => setMurcielagos(false)} />}
       <Toasts />
     </div>
   )

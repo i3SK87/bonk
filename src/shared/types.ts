@@ -501,6 +501,15 @@ export interface Settings {
    * basta.
    */
   ultimaCategoriaDeCompra: number | null
+
+  /**
+   * El último día en que ya salieron los murciélagos, como «2026-10-28».
+   *
+   * Es lo que hace que la broma sea de una vez al día y no de cada vez que
+   * abres: la misma idea que `lastMonthlySummary`, con el día entero en vez del
+   * mes. Fuera de la semana de Halloween no se mira ni se toca.
+   */
+  ultimoHalloween: string | null
 }
 
 /**

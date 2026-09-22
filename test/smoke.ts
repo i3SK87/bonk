@@ -36,6 +36,7 @@ import {
 } from '../src/shared/rangos'
 import { repartoComparado } from '../src/shared/reparto'
 import { porcentajeDePresupuesto, escalonDeAviso, repasoDePresupuesto, marcaDeAviso, AVISO_CERCA } from '../src/shared/presupuestos'
+import { esHalloween } from '../src/shared/halloween'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
 
 let passed = 0
@@ -3773,6 +3774,18 @@ try {
   transactions.deleteTransaction(cajetilla.id)
   categories.deleteCategory(tabaco.id)
 
+
+  section('La semana de Halloween')
+
+  check('el 25 de octubre ya cuenta', esHalloween('2026-10-25'))
+  check('el 31 también, que es el día', esHalloween('2026-10-31'))
+  check('y un día de en medio', esHalloween('2026-10-28'))
+  check('el 24 todavía no', !esHalloween('2026-10-24'))
+  check('el 1 de noviembre ya no', !esHalloween('2026-11-01'))
+  // El mismo día de otro mes: es lo que cazaría comparar solo el número del día.
+  check('el 28 de septiembre no', !esHalloween('2026-09-28'))
+  check('ni el 31 de diciembre', !esHalloween('2026-12-31'))
+  check('da igual el año', esHalloween('2031-10-30'))
 
   transactions.deleteTransaction(sueltoDeDosMeses.id)
   transactions.deleteTransaction(viejo.id)

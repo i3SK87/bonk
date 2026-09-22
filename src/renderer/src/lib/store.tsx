@@ -138,7 +138,8 @@ const FALLBACK_SETTINGS: Settings = {
   lastMonthlySummary: null,
   lastBackupAt: null,
   buscarActualizaciones: true,
-  ultimaCategoriaDeCompra: null
+  ultimaCategoriaDeCompra: null,
+  ultimoHalloween: null
 }
 
 /** Ajustes que solo cambian cómo se ve algo, no lo que dicen los datos. */
@@ -148,7 +149,9 @@ const SOLO_ASPECTO: Array<keyof Settings> = [
   'theme',
   'palette',
   'balanceEn',
-  'ultimaCategoriaDeCompra'
+  'ultimaCategoriaDeCompra',
+  // La marca de que los murciélagos ya salieron hoy: no cambia ningún dato.
+  'ultimoHalloween'
 ]
 
 export function StoreProvider({ children }: { children: ReactNode }): ReactNode {
