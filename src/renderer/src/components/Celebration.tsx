@@ -219,7 +219,15 @@ function Party({
   adorno?: 'papelillo' | 'estrellas' | null
   sello?: ReactNode
   boton?: string
-  tono?: 'buena' | 'neutra'
+  /**
+   * De qué color va el sello.
+   *
+   * `buena` es el verde del dinero, `neutra` lo apaga —el resumen de un mes no
+   * siempre trae buenas noticias— y `aviso` lo pone en rojo. El rojo se reserva
+   * para lo que has cruzado tú: pasarse de un presupuesto es una raya que te
+   * pusiste y te has saltado, y ahí el sello sí puede decirlo.
+   */
+  tono?: 'buena' | 'neutra' | 'aviso'
   /** A lo ancho, para lo que no cabe en la caja estrecha de una enhorabuena. */
   ancha?: boolean
 }): ReactNode {
@@ -239,7 +247,7 @@ function Party({
         className={`celebration${ancha ? ' ancha' : ''}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className={`celebration-seal${tono === 'neutra' ? ' neutra' : ''}`}>
+        <div className={`celebration-seal${tono && tono !== 'buena' ? ` ${tono}` : ''}`}>
           {sello ?? (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}
                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -371,7 +379,7 @@ export function PresupuestoPasadoAviso({
           : `Lo que te pusiste para este mes ya está gastado, y quedan días por delante.`
       }
       adorno={null}
-      tono="neutra"
+      tono="aviso"
       boton="Vale"
       sello={
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}

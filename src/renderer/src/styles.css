@@ -3236,6 +3236,21 @@ button.list-row:focus-visible {
   animation: celebrate 0.4s 0.05s ease both;
 }
 
+/*
+ * El sello en rojo, para el aviso de que te has pasado de un presupuesto.
+ *
+ * Aquí sí va en rojo, al contrario que en el resumen del mes: un mes que cierra
+ * en negativo es lo que ha salido, y pasarse de un presupuesto es una raya que
+ * te pusiste tú. Es el mismo rojo de las cifras que se van, para que el cuadro
+ * y el número digan lo mismo.
+ */
+.celebration-seal.aviso {
+  background: var(--negative-soft);
+  color: var(--negative);
+  /* Sin el brinco, igual que la neutra: esto se lee, no se celebra. */
+  animation: celebrate 0.4s 0.05s ease both;
+}
+
 .celebration-seal svg { width: 30px; height: 30px; }
 
 .celebration h2 { font-size: 23px; font-weight: 700; text-wrap: balance; }
