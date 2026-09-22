@@ -12,6 +12,7 @@ import { Segmented, Loading, EmptyState, Avatar, ProgressBar } from '../componen
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { PresupuestoRapido } from '../components/PresupuestoRapido'
+import { NuevoPresupuesto } from '../components/NuevoPresupuesto'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
 import { today, daysBetween, formatDate } from '@shared/dates'
@@ -199,7 +200,8 @@ function TarjetaPresupuestos({
   variasCuentas,
   marcada,
   onAbrir,
-  onMenu
+  onMenu,
+  onNuevo
 }: {
   presupuestos: EstadoPresupuesto[]
   mes: string
@@ -210,6 +212,7 @@ function TarjetaPresupuestos({
   marcada: number | null
   onAbrir: (categoryId: number) => void
   onMenu: (categoryId: number, x: number, y: number) => void
+  onNuevo: () => void
 }): ReactNode {
   /*
    * Lo rojo late solo mientras el mes siga abierto: en uno cerrado es un parte
@@ -239,70 +242,89 @@ function TarjetaPresupuestos({
           {nombreDeMes(`${mes}-01`, referencia)}
           {variasCuentas && ' · de todas tus cuentas'}
         </span>
+        {/*
+          Poner uno nuevo se pide desde aquí y no desde el clic derecho: el menú
+          se abre sobre una tarjeta, y para estrenar el primero no hay ninguna
+          sobre la que pulsar.
+        */}
+        <button className="btn small ghost" onClick={onNuevo} style={{ marginLeft: 10 }}>
+          <Icon name="plus" size={14} />
+          Nuevo presupuesto
+        </button>
       </div>
 
       <div className="card-body">
-        <div className="tira-presupuestos">
-          {presupuestos.map((presupuesto) => {
-            return (
-              <div
-                className={`tarjeta-presupuesto${marcada === presupuesto.categoryId ? ' marcada' : ''}`}
-                key={presupuesto.categoryId}
-                role="button"
-                tabIndex={0}
-                title={`${presupuesto.name}: cambiar el presupuesto`}
-                onClick={() => onAbrir(presupuesto.categoryId)}
-                onKeyDown={(evento) => {
-                  if (evento.key !== 'Enter' && evento.key !== ' ') return
-                  evento.preventDefault()
-                  onAbrir(presupuesto.categoryId)
-                }}
-                onContextMenu={(evento) => {
-                  evento.preventDefault()
-                  onMenu(presupuesto.categoryId, evento.clientX, evento.clientY)
-                }}
-              >
-                <div className="row tight">
-                  <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
-                  <span className="truncate" style={{ flex: 1, fontWeight: 550 }}>
-                    {presupuesto.name}
-                  </span>
-                  {/*
-                    Cuánto te falta o cuánto te has pasado, en dinero y con la
-                    misma insignia que el resto del informe. El porcentaje ya lo
-                    dice la barra: repetirlo en cifra era decir dos veces lo
-                    mismo y ninguna de las dos en euros, que es lo que se gasta.
-                  */}
-                  <Cambio
-                    ahora={presupuesto.spent}
-                    antes={presupuesto.limit}
-                    kind="expense"
-                    unidad="valor"
-                    formatea={(valor) => formatMoney(valor, currency)}
-                    pista={`${formatMoney(presupuesto.spent, currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, currency)}`}
+        {/* Sin ninguno puesto la tarjeta se queda igualmente, que es lo que deja
+            el botón a mano; lo que se va es la tira. */}
+        {presupuestos.length === 0 ? (
+          <EmptyState
+            icon="target"
+            title="Aún no tienes presupuestos"
+            message="Ponle una raya al mes a una categoría de gasto y aquí verás cuánto llevas gastado de ella."
+          />
+        ) : (
+          <div className="tira-presupuestos">
+            {presupuestos.map((presupuesto) => {
+              return (
+                <div
+                  className={`tarjeta-presupuesto${marcada === presupuesto.categoryId ? ' marcada' : ''}`}
+                  key={presupuesto.categoryId}
+                  role="button"
+                  tabIndex={0}
+                  title={`${presupuesto.name}: cambiar el presupuesto`}
+                  onClick={() => onAbrir(presupuesto.categoryId)}
+                  onKeyDown={(evento) => {
+                    if (evento.key !== 'Enter' && evento.key !== ' ') return
+                    evento.preventDefault()
+                    onAbrir(presupuesto.categoryId)
+                  }}
+                  onContextMenu={(evento) => {
+                    evento.preventDefault()
+                    onMenu(presupuesto.categoryId, evento.clientX, evento.clientY)
+                  }}
+                >
+                  <div className="row tight">
+                    <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
+                    <span className="truncate" style={{ flex: 1, fontWeight: 550 }}>
+                      {presupuesto.name}
+                    </span>
+                    {/*
+                      Cuánto te falta o cuánto te has pasado, en dinero y con la
+                      misma insignia que el resto del informe. El porcentaje ya lo
+                      dice la barra: repetirlo en cifra era decir dos veces lo
+                      mismo y ninguna de las dos en euros, que es lo que se gasta.
+                    */}
+                    <Cambio
+                      ahora={presupuesto.spent}
+                      antes={presupuesto.limit}
+                      kind="expense"
+                      unidad="valor"
+                      formatea={(valor) => formatMoney(valor, currency)}
+                      pista={`${formatMoney(presupuesto.spent, currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, currency)}`}
+                    />
+                  </div>
+
+                  {/* Rojo a partir del 80 %, que es la misma raya en la que salta
+                      el aviso: lo que hay pasado de ahí es el margen que te has
+                      comido, y se ve tal cual de grande que es. */}
+                  <ProgressBar
+                    percent={presupuesto.percent}
+                    color={presupuesto.color}
+                    rojoDesde={AVISO_CERCA}
+                    late={enCurso}
                   />
+
+                  {/* Lo gastado y el presupuesto. Lo que queda ya lo dice la flecha de
+                      arriba, y decirlo otra vez aquí era la misma cifra dos
+                      veces en la misma tarjeta. */}
+                  <span className="small subtle">
+                    {formatMoney(presupuesto.spent, currency)} de {formatMoney(presupuesto.limit, currency)}
+                  </span>
                 </div>
-
-                {/* Rojo a partir del 80 %, que es la misma raya en la que salta
-                    el aviso: lo que hay pasado de ahí es el margen que te has
-                    comido, y se ve tal cual de grande que es. */}
-                <ProgressBar
-                  percent={presupuesto.percent}
-                  color={presupuesto.color}
-                  rojoDesde={AVISO_CERCA}
-                  late={enCurso}
-                />
-
-                {/* Lo gastado y el presupuesto. Lo que queda ya lo dice la flecha de
-                    arriba, y decirlo otra vez aquí era la misma cifra dos
-                    veces en la misma tarjeta. */}
-                <span className="small subtle">
-                  {formatMoney(presupuesto.spent, currency)} de {formatMoney(presupuesto.limit, currency)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -368,6 +390,8 @@ export function ReportsView(): ReactNode {
    * cambiarse, sin irse a Categorías a buscar la ficha.
    */
   const [poniendoPresupuesto, setPoniendoPresupuesto] = useState<Category | null>(null)
+  /** Si está abierto el cuadro de estrenar un presupuesto en una categoría sin él. */
+  const [nuevoPresupuesto, setNuevoPresupuesto] = useState(false)
   /** El menú del botón derecho sobre una tarjeta de presupuesto. */
   const [menuPresupuesto, setMenuPresupuesto] = useState<{ categoria: Category; x: number; y: number } | null>(
     null
@@ -838,8 +862,9 @@ export function ReportsView(): ReactNode {
           <Teletipo datos={cifras} />
 
           {/* Antes del reparto: lo que te pusiste se mira antes que en qué se
-              ha ido el mes. Sin presupuestos puestos no hay tarjeta. */}
-          {mesDeLosPresupuestos && presupuestos.length > 0 && (
+              ha ido el mes. La tarjeta sale aunque no haya ninguno puesto, que es
+              desde donde se pone el primero. */}
+          {mesDeLosPresupuestos && (
             <TarjetaPresupuestos
               presupuestos={presupuestos}
               mes={mesDeLosPresupuestos}
@@ -855,6 +880,7 @@ export function ReportsView(): ReactNode {
                 const categoria = categoriaDelPresupuesto(categoryId)
                 if (categoria) setMenuPresupuesto({ categoria, x, y })
               }}
+              onNuevo={() => setNuevoPresupuesto(true)}
             />
           )}
 
@@ -1146,6 +1172,8 @@ export function ReportsView(): ReactNode {
           onCerrar={() => setMenuPresupuesto(null)}
         />
       )}
+
+      {nuevoPresupuesto && <NuevoPresupuesto onClose={() => setNuevoPresupuesto(false)} />}
 
       {poniendoPresupuesto && (
         <PresupuestoRapido category={poniendoPresupuesto} onClose={() => setPoniendoPresupuesto(null)} />
