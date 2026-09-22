@@ -1,4 +1,6 @@
 /**
+ * Las fechas de octubre, que es el único mes en que BONK se disfraza.
+ *
  * La semana de Halloween: del 25 al 31 de octubre.
  *
  * Una semana y no el mes entero porque la gracia se gasta. Y no solo el 31
@@ -24,4 +26,17 @@ export const HALLOWEEN_HASTA = '10-31'
 export function esHalloween(fecha: string): boolean {
   const dia = fecha.slice(5, 10)
   return dia >= HALLOWEEN_DESDE && dia <= HALLOWEEN_HASTA
+}
+
+/**
+ * El día de la niebla: el 24 de octubre, la víspera.
+ *
+ * Un solo día, y ese entero: no es una broma que salga y se vaya, es el tiempo
+ * que hace esa mañana. Va justo antes de la semana de los murciélagos, así que
+ * los dos nunca coinciden.
+ */
+export const DIA_DE_NIEBLA = '10-24'
+
+export function esDiaDeNiebla(fecha: string): boolean {
+  return fecha.slice(5, 10) === DIA_DE_NIEBLA
 }

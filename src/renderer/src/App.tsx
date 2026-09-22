@@ -27,7 +27,8 @@ import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { useActualizacion, hayNovedad } from './lib/actualizacion'
 import type { CategoryTotal, Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
 import { Murcielagos, MarcaCalabaza } from './components/Halloween'
-import { esHalloween } from '@shared/halloween'
+import { Niebla } from './components/Niebla'
+import { esHalloween, esDiaDeNiebla } from '@shared/halloween'
 import markUrl from '../../../resources/icon.ico'
 
 type ViewId =
@@ -197,6 +198,8 @@ export function App(): ReactNode {
    */
   const dia = today()
   const halloween = esHalloween(dia)
+  /* El 24, la víspera: niebla todo el día. Nunca cae en la semana de los murciélagos. */
+  const niebla = esDiaDeNiebla(dia) && !window.matchMedia(`(prefers-reduced-motion: reduce)`).matches
   useEffect(() => {
     if (!ready || !halloween) return
     if (settings.ultimoHalloween === dia) return
@@ -530,6 +533,7 @@ export function App(): ReactNode {
       )}
       {/* Lo último del árbol y transparente al ratón: pasa por encima de todo
           sin quitarle el sitio a nada. */}
+      {niebla && <Niebla />}
       {murcielagos && <Murcielagos onFin={() => setMurcielagos(false)} />}
       <Toasts />
     </div>

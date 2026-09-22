@@ -3171,6 +3171,23 @@ button.list-row:focus-visible {
  * eran los bordes. Delante no molesta —el lienzo no recoge clics— y se ve
  * entera.
  */
+/*
+ * La niebla del 24 de octubre.
+ *
+ * Por delante de todo, diálogos incluidos: ese día la niebla es la
+ * protagonista y no un fondo de pantalla. Por debajo se quedan solo los avisos
+ * flotantes y el menú del clic derecho (200), que son cosas de un momento y
+ * hay que poder leerlas. Transparente al ratón, que solo la mira pasar.
+ */
+.niebla {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 150;
+}
+
 .confetti {
   position: fixed;
   inset: 0;
