@@ -198,7 +198,7 @@ export function App(): ReactNode {
    */
   const dia = today()
   const halloween = esHalloween(dia)
-  /* El 24, la víspera: niebla todo el día. Nunca cae en la semana de los murciélagos. */
+  /* El 24 de septiembre: niebla todo el día. Nunca cae en la semana de los murciélagos. */
   const niebla = esDiaDeNiebla(dia) && !window.matchMedia(`(prefers-reduced-motion: reduce)`).matches
   useEffect(() => {
     if (!ready || !halloween) return

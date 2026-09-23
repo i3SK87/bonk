@@ -1,7 +1,7 @@
 /**
- * La niebla del 24 de octubre.
+ * La niebla del 24 de septiembre, el día del Silent Hill nuevo.
  *
- * Un día al año BONK amanece con un mar de niebla que va subiendo, y que se
+ * Ese día BONK amanece con un mar de niebla que va subiendo, y que se
  * aparta a donde pasas el ratón. No hay nada que pulsar ni nada que cerrar: la
  * capa es transparente al ratón y se queda ahí todo el día.
  *

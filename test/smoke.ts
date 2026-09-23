@@ -3787,12 +3787,12 @@ try {
   check('ni el 31 de diciembre', !esHalloween('2026-12-31'))
   check('da igual el año', esHalloween('2031-10-30'))
 
-  // La víspera: un solo día, y nunca dentro de la semana de los murciélagos.
-  check('el 24 es el día de la niebla', esDiaDeNiebla('2026-10-24'))
-  check('el 23 no', !esDiaDeNiebla('2026-10-23'))
-  check('el 25 tampoco', !esDiaDeNiebla('2026-10-25'))
-  check('ni el 24 de otro mes', !esDiaDeNiebla('2026-11-24'))
-  check('la niebla y los murciélagos nunca coinciden', !(esDiaDeNiebla('2026-10-24') && esHalloween('2026-10-24')))
+  // El día del Silent Hill: uno solo, y nunca dentro de la semana de los murciélagos.
+  check('el 24 de septiembre es el día de la niebla', esDiaDeNiebla('2026-09-24'))
+  check('el 23 no', !esDiaDeNiebla('2026-09-23'))
+  check('el 25 tampoco', !esDiaDeNiebla('2026-09-25'))
+  check('ni el 24 de octubre', !esDiaDeNiebla('2026-10-24'))
+  check('la niebla y los murciélagos nunca coinciden', !(esDiaDeNiebla('2026-09-24') && esHalloween('2026-09-24')))
 
   transactions.deleteTransaction(sueltoDeDosMeses.id)
   transactions.deleteTransaction(viejo.id)
