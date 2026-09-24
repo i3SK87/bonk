@@ -65,6 +65,7 @@ export function CategoriesView(): ReactNode {
               className={`list-row clickable recuadrada${
                 menu?.category.id === category.id ? ' marcada' : ''
               }`}
+              data-fila
               onClick={() => setEditing(category)}
               onContextMenu={(event) => {
                 event.preventDefault()
@@ -100,6 +101,7 @@ export function CategoriesView(): ReactNode {
               etiqueta: 'Eliminar',
               icono: 'trash',
               peligrosa: true,
+              suprimir: true,
               onElegir: () => setBorrando(menu.category)
             }
           ]}

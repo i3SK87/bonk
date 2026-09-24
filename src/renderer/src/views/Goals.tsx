@@ -188,6 +188,8 @@ export function GoalsView(): ReactNode {
                 key={goal.id}
                 className={`list-row finished clickable${menu?.goal.id === goal.id ? ' marcada' : ''}`}
                 role="button"
+                tabIndex={0}
+                data-fila
                 onClick={() => setEditing(goal)}
                 onContextMenu={(event) => {
                   event.preventDefault()
@@ -254,6 +256,7 @@ export function GoalsView(): ReactNode {
               etiqueta: 'Eliminar',
               icono: 'trash',
               peligrosa: true,
+              suprimir: true,
               onElegir: () => setBorrando(menu.goal)
             }
           ]}
@@ -422,6 +425,8 @@ function GoalCard({
   return (
     <div
       className={`plan-ahorro${onAbrir ? ' clicable' : ''}${marcada ? ' marcada' : ''}`}
+      tabIndex={onAbrir ? 0 : undefined}
+      data-fila={onAbrir ? '' : undefined}
       onClick={abrir}
       onContextMenu={(event) => {
         if (!onMenu) return
@@ -1034,6 +1039,7 @@ function AhorroAutomatico({
             <button
               key={categoria.id}
               className={`list-row clickable${menu?.categoria.id === categoria.id ? ' marcada' : ''}`}
+              data-fila
               onClick={() => onEditar(categoria)}
               onContextMenu={(event) => {
                 event.preventDefault()

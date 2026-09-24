@@ -4699,3 +4699,186 @@ body.recolocando * {
 .cal-pie .amount { font-size: 16px; }
 
 
+
+/* ---------- El foco del teclado ---------- */
+
+/*
+ * Los botones no llevan cerco.
+ *
+ * Con el tabulador de vuelta, Chromium remataba cada botón enfocado con su aro
+ * de sistema, un amarillo que no sale en ninguna paleta de aquí. En su lugar,
+ * el botón con el foco se ve igual que con el ratón encima: es la misma
+ * pregunta —«¿qué se pulsa si pulso ahora?»— y así tiene la misma respuesta.
+ *
+ * Las filas sí conservan el suyo, del color de la paleta (`.tx-row`,
+ * `button.list-row` y compañía, más arriba, que pesan más que esto): una fila
+ * con el ratón encima y una fila elegida con las flechas son dos cosas, y en
+ * una lista hay que ver cuál es la elegida aunque el puntero esté en otra.
+ */
+button:focus-visible,
+a:focus-visible,
+.modal:focus-visible {
+  outline: none;
+}
+
+.nav-item:focus-visible {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.aviso-version:not(:disabled):focus-visible {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
+}
+
+.aviso-version.lista:not(:disabled):focus-visible {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.btn:focus-visible { background: var(--bg-sunken); }
+.btn.primary:focus-visible { background: color-mix(in srgb, var(--accent-strong) 88%, #000); }
+.btn.danger:focus-visible { background: color-mix(in srgb, var(--negative) 88%, #000); }
+
+.btn.ghost:focus-visible,
+.btn.contorno:focus-visible {
+  background: var(--bg-sunken);
+  color: var(--fg);
+}
+
+.btn.ghost.danger:focus-visible {
+  background: color-mix(in srgb, var(--negative) 14%, transparent);
+  color: var(--negative);
+}
+
+.btn.acento:focus-visible { background: var(--accent-soft); }
+
+.input-clear:focus-visible,
+.fecha-boton:focus-visible {
+  background-color: var(--bg-sunken);
+  color: var(--fg);
+}
+
+.account-chip:focus-visible,
+.calendario-dia:focus-visible,
+.calc-key:focus-visible {
+  background: var(--bg-sunken);
+}
+
+.calc-key.igual:focus-visible:not(:disabled) {
+  background: var(--accent-strong);
+  filter: brightness(1.08);
+}
+
+.ancla:focus-visible { background: var(--border-strong); }
+.pill button:focus-visible { opacity: 1; }
+.link:focus-visible { text-decoration: underline; }
+.palette-card:focus-visible { border-color: var(--border-strong); }
+
+/* Al pasar por encima solo se aviva el trazo, que con el puntero delante
+   basta; con el teclado hace falta el fondo para encontrarlo en la rejilla. */
+.icon-grid button:focus-visible {
+  color: var(--fg);
+  background: var(--bg-sunken);
+}
+
+.icon-grid button.cat-new:focus-visible {
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+/* El segmentado y las muestras no tienen hover: el foco se dice a su manera,
+   sin llegar a parecer el elegido. */
+.segmented button:not(.active):focus-visible {
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+  color: var(--fg);
+}
+
+.swatch:not(.active):focus-visible {
+  transform: scale(1.12);
+  box-shadow: var(--shadow-sm);
+}
+
+/* La casilla, como los campos: es algo que se rellena, no algo que se pulsa. */
+.checkbox input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Las filas que son una caja y no un botón, con el mismo cerco que las demás. */
+.list-row[data-fila]:focus-visible,
+.tarjeta-clicable:focus-visible,
+.plan-ahorro:focus-visible,
+.table.breakdown tr[data-fila]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ---------- La chuleta de los atajos ---------- */
+
+.atajos {
+  display: grid;
+  gap: 18px;
+}
+
+.atajos h3 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--fg-subtle);
+}
+
+.atajos dl { margin: 0; }
+
+.atajo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.atajo:last-child { border-bottom: none; }
+
+.atajo dt {
+  flex: 0 0 170px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atajo dd {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 13px;
+}
+
+.atajo-combinacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.atajo-o {
+  color: var(--fg-subtle);
+  font-size: 12px;
+  margin-right: 3px;
+}
+
+.atajos kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 6px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--bg-sunken);
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}

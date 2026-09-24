@@ -60,22 +60,55 @@ export function Modal({
 
   const dialog = useRef<HTMLDivElement>(null)
 
-  const focusableInside = (): HTMLElement[] => {
+  const enfocables = (): HTMLElement[] => {
     const node = dialog.current
     if (!node) return []
     const selector = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])'
-    return [...node.querySelectorAll<HTMLElement>(selector)].filter(
-      // La cabecera no cuenta para el foco de entrada: su primer botón es el de
-      // cerrar, y abrir un diálogo con el aspa señalada es abrirlo enseñando la
-      // salida. El foco tiene que caer en lo primero que hay que contestar.
-      (el) => el.offsetParent !== null && !el.closest('.modal-header')
-    )
+    return [...node.querySelectorAll<HTMLElement>(selector)].filter((el) => el.offsetParent !== null)
+  }
+
+  // La cabecera no cuenta para el foco de entrada: su primer botón es el de
+  // cerrar, y abrir un diálogo con el aspa señalada es abrirlo enseñando la
+  // salida. El foco tiene que caer en lo primero que hay que contestar.
+  const focusableInside = (): HTMLElement[] => enfocables().filter((el) => !el.closest('.modal-header'))
+
+  /** Si este es el cuadro de más arriba: las teclas son suyas y de nadie más. */
+  const esElDeArriba = (): boolean => {
+    const velos = document.querySelectorAll('.overlay')
+    return velos.length <= 1 || velos[velos.length - 1] === dialog.current?.parentElement
   }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
-      // Escape y nada más: el tabulador está apagado en toda la aplicación, así
-      // que no hay foco que se escape del diálogo ni vueltas que darle.
+      /*
+       * El tabulador da vueltas dentro del cuadro.
+       *
+       * Del último campo vuelve al primero, y con Mayús al revés, en vez de
+       * irse a la lista de detrás, que el velo tapa y no se puede usar. Aquí
+       * sí entra la cabecera: al aspa se llega, aunque no se empiece en ella.
+       * El cuadro flotante no encierra nada: la calculadora se usa mirando lo
+       * de detrás, y ahí tiene que poder irse el foco.
+       */
+      if (event.key === 'Tab') {
+        if (flotante || !esElDeArriba() || document.querySelector('.calendario-velo, .menu-contextual')) return
+        const lista = enfocables()
+        if (lista.length === 0) return
+        const primero = lista[0]
+        const ultimo = lista[lista.length - 1]
+        const activo = document.activeElement as HTMLElement | null
+        const dentro = activo != null && dialog.current?.contains(activo) && activo !== dialog.current
+        if (!dentro) {
+          event.preventDefault()
+          ;(event.shiftKey ? ultimo : primero).focus()
+        } else if (event.shiftKey && activo === primero) {
+          event.preventDefault()
+          ultimo.focus()
+        } else if (!event.shiftKey && activo === ultimo) {
+          event.preventDefault()
+          primero.focus()
+        }
+        return
+      }
       if (event.key !== 'Escape') return
       /*
        * Con el calendario delante, Escape es suyo.
@@ -96,17 +129,24 @@ export function Modal({
        * vez de fiarlo a que uno pare el evento antes que el otro, que depende
        * del orden en que se montaron.
        */
-      const velos = document.querySelectorAll('.overlay')
-      if (velos.length > 1 && velos[velos.length - 1] !== dialog.current?.parentElement) return
+      if (!esElDeArriba()) return
       onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, flotante])
+
+  /*
+   * Dónde estaba el foco antes de abrir, apuntado en el primer pintado.
+   *
+   * En el efecto llegaba tarde: un campo con `autoFocus` —el importe de la
+   * ficha— ya se había llevado el foco, y al cerrar se devolvía a ese campo, que
+   * ya no existe. El foco se perdía y la fila de la que se venía también.
+   */
+  const [previous] = useState(() => document.activeElement as HTMLElement | null)
 
   // Al abrir, el foco entra; al cerrar, vuelve a donde estaba.
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
     const node = dialog.current
     if (node && !node.contains(document.activeElement)) {
       ;(focusableInside()[0] ?? node).focus()

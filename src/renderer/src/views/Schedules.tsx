@@ -175,6 +175,7 @@ export function SchedulesView(): ReactNode {
       etiqueta: 'Eliminar',
       icono: 'trash',
       peligrosa: true,
+      suprimir: true,
       onElegir: () => setBorrando(row)
     })
     return lista
@@ -312,6 +313,8 @@ export function SchedulesView(): ReactNode {
                   .filter(Boolean)
                   .join(' ')}
                 role="button"
+                tabIndex={0}
+                data-fila
                 onClick={() => setEditing(row)}
                 onContextMenu={(event) => {
                   event.preventDefault()
@@ -442,6 +445,8 @@ export function SchedulesView(): ReactNode {
               key={row.id}
               className={`list-row finished ${row.isDebt ? 'inerte' : 'clickable'}`}
               role={row.isDebt ? undefined : 'button'}
+              tabIndex={row.isDebt ? undefined : 0}
+              data-fila={row.isDebt ? undefined : ''}
               onClick={row.isDebt ? undefined : () => setEditing(row)}
             >
               <Avatar icon={row.categoryIcon ?? 'repeat'} color={row.categoryColor ?? '#8E8E93'} />

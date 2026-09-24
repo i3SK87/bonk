@@ -262,6 +262,7 @@ export function CalendarioProgramadas({ programadas, onAbrir }: Props): ReactNod
                 className={`list-row${ficha ? ' clickable' : ''}${apunte.status === 'done' ? ' finished' : ''}`}
                 role={ficha ? 'button' : undefined}
                 tabIndex={ficha ? 0 : undefined}
+                data-fila={ficha ? '' : undefined}
                 onClick={ficha ? () => onAbrir(ficha) : undefined}
                 onKeyDown={
                   ficha

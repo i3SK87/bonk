@@ -1130,6 +1130,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       etiqueta: 'Eliminar',
       icono: 'trash',
       peligrosa: true,
+      suprimir: true,
       onElegir: () => setBorrando(row)
     })
     return lista
@@ -1309,6 +1310,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                 className="input"
                 style={{ paddingLeft: 30, paddingRight: search ? 30 : 12, width: '100%' }}
                 placeholder="Buscar…"
+                data-buscador
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 onKeyDown={(event) => event.key === 'Escape' && setSearch('')}
@@ -2028,6 +2030,7 @@ function TransactionRow({
        * lo que lee: sin ellos tendría que mantener un mapa de nodos a
        * movimientos y volver a rehacerlo en cada repintado.
        */
+      data-fila
       data-tx-id={row.id}
       data-tx-date={row.date}
       data-arrastrable={arrastrable ? 'si' : undefined}

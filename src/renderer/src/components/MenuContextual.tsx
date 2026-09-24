@@ -28,6 +28,13 @@ export interface OpcionMenu {
   onElegir: () => void
   /** En rojo y separada del resto: borrar no se pulsa sin querer. */
   peligrosa?: boolean
+  /**
+   * La que hace la tecla Supr sobre la fila, sin enseñar el menú.
+   *
+   * Solo las que preguntan antes de borrar: Supr se pulsa sin querer más que
+   * un clic en rojo, y lo que haga tiene que poder deshacerse con Esc.
+   */
+  suprimir?: boolean
 }
 
 /** Cuánto se le deja al menú respirar contra el borde de la ventana. */
@@ -65,6 +72,40 @@ function tragarSiguienteClic(): void {
   }
 }
 
+/**
+ * El menú de una fila, pedido desde el teclado.
+ *
+ * Se le hace a la fila el mismo clic derecho que haría el ratón, puesto justo
+ * debajo de su esquina: así cada pantalla sigue montando su menú como siempre y
+ * no hay que enseñarle a ninguna que existe el teclado.
+ *
+ * Con `suprimir`, el menú no llega a verse: al montarse elige él solo su opción
+ * de borrar, antes de pintarse. Si la fila no tiene menú —nadie para el clic—,
+ * el encargo se retira, que si no se lo llevaría el siguiente clic derecho.
+ */
+let encargoSuprimir = false
+let pedidoPorTeclado = 0
+
+export function abrirMenuDe(fila: HTMLElement, { suprimir = false } = {}): void {
+  const caja = fila.getBoundingClientRect()
+  encargoSuprimir = suprimir
+  pedidoPorTeclado = performance.now()
+  const evento = new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    button: 2,
+    clientX: Math.round(caja.left + Math.min(40, caja.width / 2)),
+    clientY: Math.round(caja.bottom - 4)
+  })
+  const abierto = !fila.dispatchEvent(evento)
+  if (!abierto) encargoSuprimir = false
+}
+
+/** Si la tecla del menú se acaba de pulsar: lo que venga ahora es su eco. */
+export function recienPedidoPorTeclado(): boolean {
+  return performance.now() - pedidoPorTeclado < 600
+}
+
 export function MenuContextual({
   x,
   y,
@@ -78,6 +119,41 @@ export function MenuContextual({
 }): ReactNode {
   const caja = useRef<HTMLDivElement>(null)
   const [sitio, setSitio] = useState({ x, y })
+  // Dónde estaba el foco antes de abrirlo: la fila, casi siempre.
+  const antes = useRef(document.activeElement as HTMLElement | null)
+
+  /*
+   * Pedido con Supr: se elige la de borrar y el menú se va sin haberse visto.
+   *
+   * Y sin tocar el foco: si llegara a enfocar su primer botón de camino a la
+   * salida, la pregunta de borrar apuntaría ese botón como el sitio al que
+   * volver, y al contestar que no el foco se perdería en vez de volver a la fila.
+   */
+  const deVisita = useRef(false)
+  useLayoutEffect(() => {
+    if (!encargoSuprimir) return
+    encargoSuprimir = false
+    deVisita.current = true
+    const borrar = opciones.find((opcion) => opcion.suprimir)
+    onCerrar()
+    borrar?.onElegir()
+    // Solo al montarse: es el encargo de quien lo abrió, no algo que se repita.
+  }, [])
+
+  /*
+   * Al cerrarse, el foco vuelve a la fila.
+   *
+   * Si no, se quedaría en el aire —el botón que lo tenía ya no existe— y la
+   * siguiente flecha no sabría de dónde partir. Solo si nadie se lo ha llevado:
+   * una opción que abre una ficha la enfoca ella, y esa manda.
+   */
+  useEffect(() => {
+    const previo = antes.current
+    return () => {
+      const suelto = !document.activeElement || document.activeElement === document.body
+      if (suelto && previo?.isConnected) previo.focus({ preventScroll: true })
+    }
+  }, [])
 
   /*
    * Colocado tras medirlo y antes de que se vea.
@@ -100,6 +176,7 @@ export function MenuContextual({
   // El primero enfocado —o el marcado, si lo hay—: así Escape y las flechas
   // funcionan sin tocar el ratón, y se arranca desde lo que ya está puesto.
   useEffect(() => {
+    if (deVisita.current) return
     const marcada = caja.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')
     ;(marcada ?? caja.current?.querySelector('button'))?.focus()
   }, [])

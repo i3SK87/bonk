@@ -234,6 +234,9 @@ function Party({
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape' || event.key === 'Enter') onClose()
+      // El único botón es el de cerrar, que ya tiene el foco: tabular solo
+      // podría llevárselo a la lista de detrás del velo.
+      if (event.key === 'Tab') event.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

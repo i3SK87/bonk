@@ -120,6 +120,7 @@ export function DebtsView(): ReactNode {
       etiqueta: 'Eliminar',
       icono: 'trash',
       peligrosa: true,
+      suprimir: true,
       onElegir: () => setBorrando(debt)
     })
     return lista
@@ -373,6 +374,8 @@ function DebtCard({
     <div
       className={`tarjeta-clicable${marcada ? ' marcada' : ''}`}
       role="button"
+      tabIndex={0}
+      data-fila
       onClick={onAdjust}
       onContextMenu={(event) => {
         if (!onMenu) return

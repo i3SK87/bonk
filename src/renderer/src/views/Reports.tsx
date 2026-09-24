@@ -271,6 +271,7 @@ function TarjetaPresupuestos({
                   key={presupuesto.categoryId}
                   role="button"
                   tabIndex={0}
+                  data-fila
                   title={`${presupuesto.name}: cambiar el presupuesto`}
                   onClick={() => onAbrir(presupuesto.categoryId)}
                   onKeyDown={(evento) => {
@@ -986,6 +987,10 @@ export function ReportsView(): ReactNode {
                             className={`${openable ? 'expandable' : ''}${
                               menu?.categoria.id === row.categoryId ? ' marcada' : ''
                             }`.trim() || undefined}
+                            // Todas se alcanzan con el teclado, se abran o no: la
+                            // que no tiene desglose sigue teniendo su menú.
+                            tabIndex={0}
+                            data-fila
                             onContextMenu={(event) => {
                               // «Sin categoría» no es una categoría: es el cajón
                               // de los que no tienen ninguna, y no hay ficha que
@@ -998,7 +1003,6 @@ export function ReportsView(): ReactNode {
                             {...(openable
                               ? {
                                   role: 'button',
-                                  tabIndex: 0,
                                   'aria-expanded': open,
                                   onClick: () => toggle(row.categoryId!),
                                   onKeyDown: (event: KeyboardEvent<HTMLTableRowElement>) => {

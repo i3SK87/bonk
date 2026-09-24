@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useStore } from './lib/store'
 import { useContador } from './lib/contador'
 import { Icon } from './components/Icon'
@@ -14,6 +14,8 @@ import {
   type ResumenMes
 } from './components/Celebration'
 import { CalculadoraModal } from './components/Calculator'
+import { Atajos } from './components/Atajos'
+import { useTeclado } from './lib/teclado'
 import { TransactionsView } from './views/Transactions'
 import { AccountsView } from './views/Accounts'
 import { CategoriesView } from './views/Categories'
@@ -97,6 +99,14 @@ export function App(): ReactNode {
   const [resumen, setResumen] = useState<ResumenMes | null>(null)
   /** Si los murciélagos están cruzando la pantalla ahora mismo. */
   const [murcielagos, setMurcielagos] = useState(false)
+  /** La chuleta de los atajos, con F1. */
+  const [atajos, setAtajos] = useState(false)
+
+  // Ctrl+número, en el orden de la barra lateral; Ctrl+, a Ajustes.
+  const irA = useCallback((indice: number) => setView(NAV[indice].id), [])
+  const irAAjustes = useCallback(() => setView(AJUSTES.id), [])
+  const ayuda = useCallback(() => setAtajos(true), [])
+  useTeclado({ secciones: NAV.length, irA, irAAjustes, ayuda })
 
   // Ctrl+N desde el menú nativo y desde el teclado dentro de la ventana.
   useEffect(() => {
@@ -146,17 +156,6 @@ export function App(): ReactNode {
         setComposing(true)
       }
     }
-    /*
-     * Aquí no se tabula.
-     *
-     * BONK se lleva con el ratón, y el tabulador iba dejando el recuadro del
-     * foco en botones e iconos que no se estaban usando. En captura, para
-     * llegar antes que cualquier campo o diálogo.
-     */
-    const sinTabulador = (event: KeyboardEvent): void => {
-      if (event.key === 'Tab') event.preventDefault()
-    }
-    window.addEventListener('keydown', sinTabulador, true)
     window.addEventListener('keydown', onKey)
     return () => {
       offNew()
@@ -166,8 +165,6 @@ export function App(): ReactNode {
       offSettled()
       offReached()
       offPasados()
-      offPasados()
-      window.removeEventListener('keydown', sinTabulador, true)
       window.removeEventListener('keydown', onKey)
     }
   }, [toast, refresh])
@@ -475,6 +472,8 @@ export function App(): ReactNode {
           }}
         />
       )}
+
+      {atajos && <Atajos secciones={NAV.map((item) => item.label)} onClose={() => setAtajos(false)} />}
 
       {calculando && (
         <CalculadoraModal

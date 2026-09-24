@@ -506,6 +506,38 @@ export function TransactionForm({
         ? 'var(--accent)'
         : 'var(--positive)'
 
+  /*
+   * Ctrl+Intro guarda, esté donde esté el foco.
+   *
+   * Lo mismo que pulsar «Guardar»: sin él, con el teclado había que tabular
+   * campo a campo hasta el pie. Por una referencia que se rehace en cada
+   * pintado, que el escuchador vive toda la ficha y `save` tiene que leer lo
+   * último que se ha escrito, no lo que había al abrirla.
+   *
+   * Solo si esta ficha es lo de más arriba: con la categoría nueva, el
+   * calendario o el aviso del ahorro abiertos encima, Ctrl+Intro es de ellos.
+   * La calculadora flota sin tapar nada y no cuenta.
+   */
+  const guardarConTeclado = useRef((_seguir: boolean) => {})
+  guardarConTeclado.current = (seguir) => {
+    if (saving) return
+    // Con Mayús, «Guardar y seguir»; solo existe al apuntar uno nuevo, que al
+    // editar no hay siguiente al que seguir.
+    if (seguir && existing) return
+    void save(seguir)
+  }
+  useEffect(() => {
+    const tecla = (event: KeyboardEvent): void => {
+      if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.altKey) return
+      if (document.querySelectorAll('.overlay:not(.flotante)').length > 1) return
+      if (document.querySelector('.calendario-velo, .menu-contextual')) return
+      event.preventDefault()
+      guardarConTeclado.current(event.shiftKey)
+    }
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [])
+
   return (
     <>
       <Modal
@@ -532,12 +564,12 @@ export function TransactionForm({
                 className="btn acento"
                 onClick={() => save(true)}
                 disabled={saving}
-                title="Guarda este movimiento y deja la ficha abierta para el siguiente"
+                title="Guarda este movimiento y deja la ficha abierta para el siguiente · Ctrl+Mayús+Intro"
               >
                 Guardar y seguir
               </button>
             )}
-            <button className="btn primary" onClick={() => save(false)} disabled={saving}>
+            <button className="btn primary" onClick={() => save(false)} disabled={saving} title="Ctrl+Intro">
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </>

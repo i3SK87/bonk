@@ -71,7 +71,7 @@ export function AccountsView(): ReactNode {
               <div key={tipo.value}>
                 <div className="grupo-cuentas">{tipo.label}</div>
                 {cuentas.map((account) => (
-              <button key={account.id} type="button" className="list-row clickable" onClick={() => setEditing(account)}>
+              <button key={account.id} type="button" className="list-row clickable" data-fila onClick={() => setEditing(account)}>
                 <Avatar icon={account.icon} color={account.color} size="large" />
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div className="row tight" style={{ fontWeight: 600 }}>
@@ -136,7 +136,7 @@ export function AccountsView(): ReactNode {
             <div className="card-body small muted">No hay cuentas archivadas.</div>
           ) : (
             archived.map((account) => (
-              <button key={account.id} type="button" className="list-row clickable" onClick={() => setEditing(account)}>
+              <button key={account.id} type="button" className="list-row clickable" data-fila onClick={() => setEditing(account)}>
                 <Avatar icon={account.icon} color={account.color} size="small" />
                 <div style={{ flex: 1 }}>{account.name}</div>
                 <div className="amount muted">{formatMoney(account.balance, account.currency)}</div>
