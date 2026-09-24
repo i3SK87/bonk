@@ -413,7 +413,8 @@ export function registerIpc(
      *
      * De una sola cuenta, los mismos que enseña Informes —«Gasto total» e
      * «Ingreso total»—: `reports.totalFor` mete dentro los traspasos de esa
-     * cuenta, que sí mueven su saldo aunque no muevan el patrimonio. `sumas`
+     * cuenta si es de ahorro o de inversión, que ahí sí se miran aunque no
+     * muevan el patrimonio. `sumas`
      * es el de Movimientos, que se queda para «Exportar todo»: ahí no hay una
      * cuenta de la que salga o entre nada, y un traspaso sigue sin contar.
      */

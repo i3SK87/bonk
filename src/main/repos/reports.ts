@@ -2,6 +2,7 @@ import { getDb } from '../db'
 import { convert } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { getSettings, rateMap } from './settings'
+import { getAccount } from './accounts'
 import type {
   CategoryTotal,
   MonthlyPoint,
@@ -31,6 +32,24 @@ function filtroDeCuenta(accountId: number | null): { sql: string; params: number
  * que la tabla usa para plegar «Sin categoría».
  */
 const FILA_TRASPASOS = -2
+
+/**
+ * Si el informe de esta cuenta cuenta sus traspasos.
+ *
+ * Solo en las de ahorro y en las de inversión: ahí los traspasos son casi lo
+ * único que pasa —lo que se aparta cada mes y lo que se saca—, y sin ellos el
+ * informe sale en blanco. En las demás estorban: pasar dinero a la hucha o
+ * pagar la tarjeta no es gastar, y mezclado con lo gastado tapa justo lo que
+ * se va a mirar. Lo decidió él el 24/09/2026.
+ *
+ * Las tres consultas de aquí preguntan lo mismo y el PDF de una cuenta tira de
+ * `totalFor`, así que la pantalla, la gráfica y el papel no pueden discrepar.
+ */
+function cuentaConTraspasos(accountId: number | null): accountId is number {
+  if (accountId == null) return false
+  const tipo = getAccount(accountId)?.type
+  return tipo === 'savings' || tipo === 'investment'
+}
 
 /**
  * Lo que un traspaso le hace a la cuenta que se está mirando.
@@ -85,8 +104,9 @@ function traspasosDe(
  * Reparto por categorías en un rango. Se agrupa también por divisa de la cuenta
  * para poder convertir cada bloque con su tipo antes de sumar.
  *
- * Con una cuenta elegida entran además sus traspasos, en una fila aparte: en una
- * hucha son lo único que pasa, y sin ellos el informe salía en blanco.
+ * En una cuenta de ahorro o de inversión entran además sus traspasos, en una
+ * fila aparte: ahí son lo único que pasa, y sin ellos el informe salía en
+ * blanco. Ver `cuentaConTraspasos`.
  */
 export function categoryTotals(
   from: string,
@@ -146,7 +166,7 @@ export function categoryTotals(
   }
 
   const list = [...merged.values()]
-  if (accountId != null) {
+  if (cuentaConTraspasos(accountId)) {
     const traspasos = traspasosDe(from, to, kind, accountId, rates, base)
     // Sin ninguno no se enseña la fila: una línea a cero no dice nada.
     if (traspasos.count > 0) {
@@ -334,7 +354,7 @@ export function monthlySeries(
    * de arriba y la gráfica de abajo contarían cosas distintas de la misma
    * pantalla, que es el fallo que ya se arregló una vez en Movimientos.
    */
-  if (accountId != null) {
+  if (cuentaConTraspasos(accountId)) {
     for (const entrando of [false, true]) {
       const lado = entrando ? 't.to_account_id' : 't.account_id'
       const importe = entrando ? 'COALESCE(t.amount_to, t.amount)' : 't.amount'
@@ -397,8 +417,8 @@ export function totalFor(
     (sum, row) => sum + convert(Number(row.total ?? 0), row.currency, base, rates),
     0
   )
-  // Con una cuenta elegida esto ya no es «lo gastado» sino lo que sale de ella,
-  // y de una cuenta también sale lo que se traspasa.
-  if (accountId == null) return propio
+  // En una hucha esto ya no es «lo gastado» sino lo que sale de ella, y de una
+  // hucha también sale lo que se traspasa.
+  if (!cuentaConTraspasos(accountId)) return propio
   return propio + traspasosDe(from, to, type, accountId, rates, base).total
 }

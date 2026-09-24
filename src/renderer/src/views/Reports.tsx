@@ -661,15 +661,15 @@ export function ReportsView(): ReactNode {
 
   const cifras: Dato[] = [
     {
-      // Gasto e ingreso, aunque con una cuenta elegida aquí dentro vayan también
-      // sus traspasos.
+      // Gasto e ingreso, aunque en una cuenta de ahorro o de inversión aquí
+      // dentro vayan también sus traspasos.
       //
       // La 2.24.0 los llamó salidas y entradas por eso mismo, porque un traspaso
       // no es ni una cosa ni la otra: el dinero sigue siendo tuyo y solo cambia
       // de bolsillo. Duró tres días. Leído en la pantalla no ayudaba —«salidas»
       // no es como se piensa el gasto de un mes—, y el matiz que ganaba el
       // rótulo no compensaba lo que costaba entenderlo. La cuenta que hay
-      // debajo no ha cambiado: el traspaso sigue contando.
+      // debajo no ha cambiado: en una hucha, el traspaso sigue contando.
       label: kind === 'expense' ? 'Gasto total' : 'Ingreso total',
       value: euros(total),
       tone: kind === 'expense' ? 'negative' : 'positive',
