@@ -601,9 +601,22 @@ export function TransactionForm({
   useEffect(() => {
     const tecla = (event: KeyboardEvent): void => {
       if (event.defaultPrevented) return
-      const deLaFicha = (): boolean =>
-        document.querySelectorAll('.overlay:not(.flotante)').length <= 1 &&
-        !document.querySelector('.calendario-velo, .menu-contextual')
+      /*
+       * Las teclas son de esta ficha si es el último velo montado.
+       *
+       * Contar velos no valía: el reembolso que se abre desde la ficha del gasto
+       * es otra ficha encima de esta, y con dos velos ninguna de las dos se daba
+       * por aludida. Se mira de quién es el de arriba, como hace el `Modal`.
+       */
+      const deLaFicha = (): boolean => {
+        const velos = document.querySelectorAll('.overlay:not(.flotante)')
+        const mio = importeRef.current?.closest('.overlay')
+        return (
+          mio != null &&
+          velos[velos.length - 1] === mio &&
+          !document.querySelector('.calendario-velo, .menu-contextual')
+        )
+      }
 
       if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
         if (document.activeElement?.matches('textarea, input:not(.amount-input)')) return
