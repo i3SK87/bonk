@@ -42,6 +42,12 @@ interface ModalProps {
    * hay algo que contestar antes de seguir.
    */
   flotante?: boolean
+  /**
+   * Lo que hace Ctrl+Intro: el botón principal del pie, sin ir a buscarlo.
+   *
+   * Solo en el cuadro de más arriba, y no con el calendario o un menú delante.
+   */
+  alConfirmar?: () => void
 }
 
 export function Modal({
@@ -52,7 +58,8 @@ export function Modal({
   wide,
   sobre,
   estrecho,
-  flotante
+  flotante,
+  alConfirmar
 }: ModalProps): ReactNode {
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const [dragging, setDragging] = useState(false)
@@ -109,7 +116,18 @@ export function Modal({
         }
         return
       }
-      if (event.key !== 'Escape') return
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+        if (!alConfirmar || event.defaultPrevented || !esElDeArriba()) return
+        if (document.querySelector('.calendario-velo, .menu-contextual')) return
+        // Marcado como hecho: la ficha de debajo también escucha Ctrl+Intro, y
+        // confirmar el borrado no puede además guardarla.
+        event.preventDefault()
+        alConfirmar()
+        return
+      }
+      // Un campo de dentro que ya lo ha usado —el buscador de la categoría, que
+      // con Esc solo se cierra él— se lo queda.
+      if (event.key !== 'Escape' || event.defaultPrevented) return
       /*
        * Con el calendario delante, Escape es suyo.
        *
@@ -134,7 +152,7 @@ export function Modal({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, flotante])
+  }, [onClose, flotante, alConfirmar])
 
   /*
    * Dónde estaba el foco antes de abrir, apuntado en el primer pintado.
@@ -255,6 +273,7 @@ export function Confirm({
     <Modal
       title={title}
       onClose={onCancel}
+      alConfirmar={onConfirm}
       footer={
         <>
           <button className="btn" onClick={onCancel}>

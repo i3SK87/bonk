@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Modal, Field, AmountInput, Avatar, Segmented, Confirm } from './ui'
-import { Icon } from './Icon'
+import { Icon, normalizarBusqueda } from './Icon'
 import { DateInput } from './DateInput'
 import { useStore } from '../lib/store'
 import { CategoryModal } from './CategoryForm'
@@ -526,11 +526,95 @@ export function TransactionForm({
     if (seguir && existing) return
     void save(seguir)
   }
+
+  /*
+   * La categoría por su nombre, con `/`.
+   *
+   * La barra abre un buscador encima de la rejilla: lo escrito la filtra, la
+   * primera que coincide queda marcada, las flechas cambian cuál, Intro la
+   * elige y Esc lo deja estar. En los dos casos el foco vuelve a donde estaba
+   * —casi siempre el importe—, para que Ctrl+Intro guarde sin más viajes.
+   *
+   * Desde cualquier sitio de la ficha salvo donde la barra se escribe: el
+   * título y la fecha. En el importe no pinta nada, que solo admite cifras.
+   */
+  const [buscaCategoria, setBuscaCategoria] = useState<string | null>(null)
+  const [marcadaEnBusqueda, setMarcadaEnBusqueda] = useState(0)
+  const volverTrasBuscar = useRef<HTMLElement | null>(null)
+  const rejillaCategorias = useRef<HTMLDivElement>(null)
+  const buscada = normalizarBusqueda((buscaCategoria ?? '').trim())
+  /*
+   * Primero las que empiezan por lo escrito —«co» es Comida antes que
+   * Ocio—, luego las que lo llevan dentro, cada grupo en su orden de siempre.
+   */
+  const encontradas = useMemo(() => {
+    if (buscaCategoria == null || !buscada) return visibleCategories
+    const nombre = (category: (typeof visibleCategories)[number]): string => normalizarBusqueda(category.name)
+    const alPrincipio = visibleCategories.filter((category) =>
+      nombre(category).split(/\s+/).some((palabra) => palabra.startsWith(buscada))
+    )
+    const dentro = visibleCategories.filter(
+      (category) => !alPrincipio.includes(category) && nombre(category).includes(buscada)
+    )
+    return [...alPrincipio, ...dentro]
+  }, [buscaCategoria, buscada, visibleCategories])
+  const puedeBuscar = type !== 'transfer' && type !== 'refund'
+
+  const abrirBusqueda = useRef(() => {})
+  abrirBusqueda.current = () => {
+    if (!puedeBuscar) return
+    volverTrasBuscar.current = document.activeElement as HTMLElement | null
+    setMarcadaEnBusqueda(0)
+    setBuscaCategoria('')
+  }
+
+  /** Cierra el buscador, eligiendo antes la marcada si se pide. */
+  const cerrarBusqueda = (elegir: boolean): void => {
+    const elegida = encontradas[marcadaEnBusqueda]
+    if (elegir && elegida) setCategoryId(elegida.id)
+    setBuscaCategoria(null)
+    const volver = volverTrasBuscar.current
+    ;(volver?.isConnected ? volver : importeRef.current)?.focus()
+  }
+
+  /*
+   * Ctrl+Intro desde el buscador elige y guarda. Guardar en el mismo paso
+   * leería la categoría de antes —el estado aún no se ha puesto—, así que se
+   * encarga y se hace en cuanto está.
+   */
+  const [guardarTrasElegir, setGuardarTrasElegir] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (guardarTrasElegir == null) return
+    setGuardarTrasElegir(null)
+    guardarConTeclado.current(guardarTrasElegir)
+  }, [guardarTrasElegir])
+
+  /** Las flechas por la rejilla filtrada: a los lados de una en una, arriba y abajo de fila en fila. */
+  const moverEnBusqueda = (tecla: string): void => {
+    const columnas = rejillaCategorias.current
+      ? getComputedStyle(rejillaCategorias.current).gridTemplateColumns.split(' ').length
+      : 1
+    const paso = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columnas, ArrowDown: columnas }[tecla] ?? 0
+    setMarcadaEnBusqueda((actual) => Math.max(0, Math.min(encontradas.length - 1, actual + paso)))
+  }
+
   useEffect(() => {
     const tecla = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented) return
+      const deLaFicha = (): boolean =>
+        document.querySelectorAll('.overlay:not(.flotante)').length <= 1 &&
+        !document.querySelector('.calendario-velo, .menu-contextual')
+
+      if (event.key === '/' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        if (document.activeElement?.matches('textarea, input:not(.amount-input)')) return
+        if (!deLaFicha()) return
+        event.preventDefault()
+        abrirBusqueda.current()
+        return
+      }
+
       if (event.key !== 'Enter' || !(event.ctrlKey || event.metaKey) || event.altKey) return
-      if (document.querySelectorAll('.overlay:not(.flotante)').length > 1) return
-      if (document.querySelector('.calendario-velo, .menu-contextual')) return
+      if (!deLaFicha()) return
       event.preventDefault()
       guardarConTeclado.current(event.shiftKey)
     }
@@ -829,14 +913,60 @@ export function TransactionForm({
         {/* El reembolso no elige categoría: se queda con la del gasto que devuelve. */}
         {type !== 'transfer' && type !== 'refund' && (
           <Field label="Categoría">
-            <div className="icon-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(74px, 1fr))', maxHeight: 190 }}>
-              {visibleCategories.map((category) => (
+            {buscaCategoria != null && (
+              <input
+                className="input buscador-categoria"
+                autoFocus
+                value={buscaCategoria}
+                placeholder="Buscar categoría…"
+                onChange={(event) => {
+                  setBuscaCategoria(event.target.value)
+                  setMarcadaEnBusqueda(0)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    // Elige y guarda: se encarga, que el estado aún no está.
+                    event.preventDefault()
+                    const seguir = event.shiftKey
+                    cerrarBusqueda(true)
+                    setGuardarTrasElegir(seguir)
+                  } else if (event.key === 'Enter') {
+                    event.preventDefault()
+                    cerrarBusqueda(true)
+                  } else if (event.key === 'Escape') {
+                    // Marcado como hecho: el Escape de la ficha lo respeta y no la cierra.
+                    event.preventDefault()
+                    cerrarBusqueda(false)
+                  } else if (event.key.startsWith('Arrow')) {
+                    event.preventDefault()
+                    moverEnBusqueda(event.key)
+                  }
+                }}
+              />
+            )}
+            <div
+              ref={rejillaCategorias}
+              className="icon-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(74px, 1fr))', maxHeight: 190 }}
+            >
+              {encontradas.map((category, indice) => (
                 <button
                   key={category.id}
                   type="button"
-                  className={category.id === categoryId ? 'active' : undefined}
+                  className={
+                    [
+                      category.id === categoryId ? 'active' : '',
+                      buscaCategoria != null && indice === marcadaEnBusqueda ? 'buscada' : ''
+                    ]
+                      .filter(Boolean)
+                      .join(' ') || undefined
+                  }
                   style={{ aspectRatio: 'auto', padding: '8px 4px', flexDirection: 'column', gap: 4, display: 'flex', alignItems: 'center' }}
-                  onClick={() => setCategoryId(category.id === categoryId ? null : category.id)}
+                  onClick={() => {
+                    setCategoryId(category.id === categoryId ? null : category.id)
+                    // Con el ratón también vale: elegida una, el buscador ya no hace falta.
+                    if (buscaCategoria != null) setBuscaCategoria(null)
+                  }}
                   title={category.name}
                 >
                   <Avatar icon={category.icon} color={category.color} size="small" />
@@ -845,6 +975,12 @@ export function TransactionForm({
                   </span>
                 </button>
               ))}
+
+              {buscaCategoria != null && encontradas.length === 0 && (
+                <p className="icon-picker-empty" style={{ gridColumn: '1 / -1' }}>
+                  Ninguna categoría se llama así.
+                </p>
+              )}
 
               {/* La categoría que falta se crea aquí mismo: salir a Categorías
                   obligaba a tirar el movimiento a medio escribir. */}

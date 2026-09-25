@@ -4882,3 +4882,14 @@ a:focus-visible,
   line-height: 1.3;
   text-align: center;
 }
+
+/* ---------- El buscador de la categoría, con / ---------- */
+
+.buscador-categoria { margin-bottom: 8px; }
+
+/* La que elegiría Intro. Con cerco, como la fila elegida con las flechas: la
+   que ya está puesta lleva el fondo, y hay que distinguir las dos. */
+.icon-grid button.buscada {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

@@ -34,8 +34,10 @@ const grupos = (secciones: string[]): Array<{ titulo: string; atajos: Atajo[] }>
     titulo: 'En un formulario',
     atajos: [
       [[['Tab'], ['Mayús', 'Tab']], 'Campo siguiente o anterior'],
+      [[['/']], 'Buscar la categoría por su nombre'],
       [[['Ctrl', 'Intro']], 'Guardar el movimiento'],
       [[['Ctrl', 'Mayús', 'Intro']], 'Guardar y seguir con otro'],
+      [[['Ctrl', 'Intro']], 'En una pregunta, aceptarla (también eliminar)'],
       [[['Esc']], 'Cerrar sin guardar']
     ]
   }
