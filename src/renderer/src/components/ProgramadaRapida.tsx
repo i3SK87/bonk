@@ -123,8 +123,12 @@ export function FechasProgramadas({
    * La programación nacería agotada: el primer repaso la sellaría por haberse
    * acabado sin haber generado ni una. Se avisa antes en vez de dejar guardar
    * algo que se deshace solo.
+   *
+   * La de una vez no cuenta: guarda como fin su propio día, y ese fin no se
+   * enseña ni se elige. Al moverla hacia delante quedaba atrás y bloqueaba el
+   * guardado; el repositorio ya lo rehace igual a la fecha nueva.
    */
-  const alReves = endDate !== '' && endDate < nextDate
+  const alReves = row.freq !== 'once' && endDate !== '' && endDate < nextDate
 
   return (
     <Modal
