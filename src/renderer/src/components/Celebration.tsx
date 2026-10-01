@@ -1,9 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { Avatar } from './ui'
+import { Avatar, BarraCuotas } from './ui'
 import { formatMoney } from '@shared/money'
-import { today as todayISO } from '@shared/dates'
+import { today as todayISO, addMonths } from '@shared/dates'
+import { findLender } from '@shared/lenders'
 import { porcentajeDePresupuesto, AVISO_CERCA } from '@shared/presupuestos'
-import type { Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
+import type { Settlement, GoalReached, PresupuestoPasado, DebtProgress } from '@shared/types'
 
 /**
  * La enhorabuena por una deuda saldada.
@@ -401,12 +402,14 @@ export function PresupuestoPasadoAviso({
   )
 }
 
-/** Una categoría dentro del resumen del mes. */
-export interface LineaResumen {
+/** Una categoría de gasto que ha subido frente al mes de antes. */
+export interface LineaSubida {
   name: string
-  total: number
   icon: string
   color: string
+  total: number
+  /** Lo que se gastó en ella el mes anterior; cero si no hubo nada. */
+  antes: number
 }
 
 /** Un presupuesto dentro del resumen del mes: lo que te pusiste y lo que gastaste. */
@@ -424,18 +427,20 @@ export interface ResumenMes {
   mes: string
   ingresos: number
   gastos: number
+  /** Todo lo que entró en las cuentas de ahorro. */
+  ahorrado: number
   balance: number
   currency: string
-  /** Lo que queda por pagar de las deudas a plazos, a día de hoy. */
-  deudaRestante: number
-  /** Lo mismo el mes de antes, para decir si has subido o bajado. */
+  /** Lo mismo el mes de antes, para decir cuánto has subido o bajado. */
   gastosAntes: number
   ingresosAntes: number
-  /** Hasta cinco de cada, de mayor a menor. */
-  porGasto: LineaResumen[]
-  porIngreso: LineaResumen[]
+  ahorradoAntes: number
+  /** Las categorías de gasto que más han subido frente al mes de antes, hasta cuatro. */
+  subidas: LineaSubida[]
   /** Los presupuestos que tenías puestos, y cómo salió el mes con ellos. */
   presupuestos: LineaPresupuesto[]
+  /** Las deudas a plazos que quedan por pagar, a día de hoy. */
+  deudas: DebtProgress[]
 }
 
 /** «Julio», y con el año si no es el de ahora. */
@@ -448,68 +453,69 @@ function nombreDelMes(iso: string): string {
   return anio === todayISO().slice(0, 4) ? conMayuscula : `${conMayuscula} de ${anio}`
 }
 
+/** «agosto», para decir contra qué se compara. Sin año: es el mes de justo antes. */
+function mesAnterior(iso: string): string {
+  return new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(
+    new Date(`${addMonths(iso, -1)}T12:00:00`)
+  )
+}
+
+/** «5 oct», para la próxima cuota. */
+function diaCorto(iso: string): string {
+  return new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' })
+    .format(new Date(`${iso}T12:00:00`))
+    .replace('.', '')
+}
+
+/** «marzo de 2027», para cuándo se acaba una deuda. */
+function mesYAnio(iso: string): string {
+  return new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' }).format(
+    new Date(`${iso}T12:00:00`)
+  )
+}
+
 /**
- * Una columna del resumen: gastos o ingresos, con sus cinco mayores.
- *
- * La barra mide contra la mayor de su propia columna y no contra el total: si se
- * midiera contra el total, cinco categorías repartidas saldrían todas planas y
- * no se vería cuál pesa.
+ * Una de las cifras grandes de arriba, y cuánto se ha movido en euros frente al
+ * mes de antes. En euros y no en tanto por ciento: lo que se quiere saber es
+ * cuánto dinero, no cuánto de proporción.
  */
-function Columna({
+function Total({
   titulo,
   total,
   antes,
-  lineas,
+  mes,
   currency,
-  kind
+  subirEsBueno,
+  tono
 }: {
   titulo: string
   total: number
   antes: number
-  lineas: LineaResumen[]
+  mes: string
   currency: string
-  kind: 'expense' | 'income'
+  /** Gastar más es malo; ingresar o ahorrar más es bueno. El color sigue al significado. */
+  subirEsBueno: boolean
+  /** El color de la cifra. */
+  tono: 'negative' | 'positive' | 'accent'
 }): ReactNode {
-  const mayor = Math.max(1, ...lineas.map((l) => l.total))
   const delta = total - antes
-  // Gastar más es malo; ingresar más es bueno. El color sigue al significado.
-  const tono = delta === 0 ? 'muted' : delta > 0 === (kind === 'expense') ? 'negative' : 'positive'
+  const cambio = delta > 0 === subirEsBueno ? 'positive' : 'negative'
 
   return (
-    <div className="resumen-columna">
-      <div className="resumen-columna-cabecera">
-        <span className="label">{titulo}</span>
-        <strong className={`amount ${kind === 'expense' ? 'negative' : 'positive'}`}>
-          {formatMoney(total, currency)}
-        </strong>
-        {antes > 0 && delta !== 0 && (
-          <span
-            className={`cambio ${tono}`}
-            title={`${formatMoney(total, currency)} este mes · ${formatMoney(antes, currency)} el anterior`}
-          >
-            {delta > 0 ? '▲' : '▼'} {Math.abs(Math.round((delta / antes) * 100))}%
+    <div className="resumen-total">
+      <span className="resumen-rotulo">{titulo}</span>
+      <strong className={`amount ${tono}`}>{formatMoney(total, currency)}</strong>
+      {antes > 0 &&
+        (delta === 0 ? (
+          <span className="cambio muted">Igual que en {mesAnterior(mes)}</span>
+        ) : (
+          <span className={`cambio ${cambio}`}>
+            {delta > 0 ? '▲' : '▼'} {formatMoney(Math.abs(delta), currency)}{' '}
+            <span className="muted">
+              {delta > 0 ? 'más' : 'menos'} que en {mesAnterior(mes)}
+            </span>
           </span>
-        )}
-      </div>
-
-      {lineas.length === 0 ? (
-        <p className="small muted" style={{ margin: 0 }}>
-          Nada este mes.
-        </p>
-      ) : (
-        <ul className="resumen-lista">
-          {lineas.map((linea) => (
-            <li key={linea.name}>
-              <Avatar icon={linea.icon} color={linea.color} size="small" />
-              <span className="resumen-nombre">{linea.name}</span>
-              <span className="amount">{formatMoney(linea.total, currency)}</span>
-              <div className="resumen-barra">
-                <div style={{ width: `${(linea.total / mayor) * 100}%`, background: linea.color }} />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+        ))}
     </div>
   )
 }
@@ -517,8 +523,8 @@ function Columna({
 /**
  * Cómo fue el mes que acaba de cerrarse.
  *
- * Sale una vez al mes, y a lo ancho: lo que se cuenta son dos listas de cinco
- * categorías, y eso no cabe en la caja estrecha de una enhorabuena.
+ * Sale una vez al mes, y a lo ancho: lo que se cuenta son varias listas, y eso
+ * no cabe en la caja estrecha de una enhorabuena.
  *
  * Lleva estrellas en vez de papelillo. El papelillo es de la deuda saldada, que
  * es un premio; esto es un parte, y unos meses saldrán bien y otros no. Las
@@ -532,6 +538,12 @@ export function MonthlySummary({
   onClose: () => void
 }): ReactNode {
   const enPositivo = resumen.balance >= 0
+  const { currency } = resumen
+  // La barra de las subidas mide contra la mayor cifra de las dos que se
+  // comparan, la de este mes o la del anterior, para que la raya de antes quepa.
+  const escala = Math.max(1, ...resumen.subidas.flatMap((linea) => [linea.total, linea.antes]))
+  const restante = resumen.deudas.reduce((suma, deuda) => suma + Math.max(0, deuda.left ?? 0), 0)
+  const alMes = resumen.deudas.reduce((suma, deuda) => suma + deuda.monthlyCost, 0)
 
   return (
     <Party
@@ -539,8 +551,8 @@ export function MonthlySummary({
       title={`${nombreDelMes(resumen.mes)}, en resumen`}
       lede={
         enPositivo
-          ? `Balance positivo de ${formatMoney(resumen.balance, resumen.currency)}.`
-          : `Balance negativo de ${formatMoney(Math.abs(resumen.balance), resumen.currency)}.`
+          ? `Balance positivo de ${formatMoney(resumen.balance, currency)}.`
+          : `Balance negativo de ${formatMoney(Math.abs(resumen.balance), currency)}.`
       }
       adorno="estrellas"
       tono={enPositivo ? 'buena' : 'neutra'}
@@ -553,36 +565,80 @@ export function MonthlySummary({
       }
       onClose={onClose}
     >
-      <div className="resumen-columnas">
-        <Columna
+      <div className="resumen-totales">
+        <Total
           titulo="Gastos"
           total={resumen.gastos}
           antes={resumen.gastosAntes}
-          lineas={resumen.porGasto}
-          currency={resumen.currency}
-          kind="expense"
+          mes={resumen.mes}
+          currency={currency}
+          subirEsBueno={false}
+          tono="negative"
         />
-        <Columna
+        <Total
           titulo="Ingresos"
           total={resumen.ingresos}
           antes={resumen.ingresosAntes}
-          lineas={resumen.porIngreso}
-          currency={resumen.currency}
-          kind="income"
+          mes={resumen.mes}
+          currency={currency}
+          subirEsBueno
+          tono="positive"
+        />
+        <Total
+          titulo="Ahorrado"
+          total={resumen.ahorrado}
+          antes={resumen.ahorradoAntes}
+          mes={resumen.mes}
+          currency={currency}
+          subirEsBueno
+          tono="accent"
         />
       </div>
 
       {/*
-        Cómo fue el mes con lo que te habías puesto.
-        Va debajo de las dos columnas y no dentro de la de gastos: un presupuesto no
-        es una categoría más del reparto, es la raya que tú pusiste, y la
-        gracia de verlo aquí es el mes ya cerrado —ni ritmo ni proyección, lo
-        que pasó—. Sin presupuestos puestos, ni sale.
+        No todas las categorías: las que más han subido, que es lo que hay que
+        mirar. La barra es lo de este mes y la rayita, dónde estaba el anterior.
+      */}
+      {resumen.subidas.length > 0 && (
+        <section className="resumen-bloque">
+          <div className="resumen-bloque-cabecera">
+            <span className="resumen-rotulo">Lo que más ha subido</span>
+            <span className="small muted">frente a {mesAnterior(resumen.mes)}</span>
+          </div>
+          <ul className="resumen-lista">
+            {resumen.subidas.map((linea) => (
+              <li key={linea.name} className="resumen-subida">
+                <Avatar icon={linea.icon} color={linea.color} size="small" />
+                <span className="resumen-nombre">{linea.name}</span>
+                <span className="small muted">
+                  {linea.antes > 0 ? formatMoney(linea.antes, currency) : 'nada'} →
+                </span>
+                <span className="amount">{formatMoney(linea.total, currency)}</span>
+                <span className="cambio negative">+{formatMoney(linea.total - linea.antes, currency)}</span>
+                <div className="resumen-barra resumen-barra-comparada">
+                  <div style={{ width: `${(linea.total / escala) * 100}%`, background: linea.color }} />
+                  {linea.antes > 0 && (
+                    <span className="resumen-antes" style={{ left: `${(linea.antes / escala) * 100}%` }} />
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/*
+        Cómo fue el mes con lo que te habías puesto, en dos columnas para que
+        ocupe poco. Un presupuesto no es una categoría más del reparto, es la
+        raya que tú pusiste, y la gracia de verlo aquí es el mes ya cerrado —ni
+        ritmo ni proyección, lo que pasó—. Sin presupuestos puestos, ni sale.
       */}
       {resumen.presupuestos.length > 0 && (
-        <div className="resumen-presupuestos">
-          <span className="label">Presupuestos</span>
-          <ul className="resumen-lista">
+        <section className="resumen-bloque">
+          <div className="resumen-bloque-cabecera">
+            <span className="resumen-rotulo">Presupuestos</span>
+          </div>
+          <div className="resumen-presupuestos">
             {resumen.presupuestos.map((presupuesto) => {
               const delta = presupuesto.spent - presupuesto.limit
               const pasado = delta > 0
@@ -593,27 +649,20 @@ export function MonthlySummary({
               // que corregir, es un parte de cómo fue.
               const exceso = lleno > AVISO_CERCA ? lleno - AVISO_CERCA : 0
               return (
-                <li key={presupuesto.name}>
+                <div key={presupuesto.name} className="resumen-presupuesto">
                   <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
-                  <span className="resumen-nombre">
-                    {presupuesto.name}
+                  <div className="resumen-texto">
+                    <span className="resumen-nombre">{presupuesto.name}</span>
                     <span className="small muted">
-                      {' '}
-                      de {formatMoney(presupuesto.limit, resumen.currency)}
+                      {formatMoney(presupuesto.spent, currency)} de{' '}
+                      {formatMoney(presupuesto.limit, currency)}
                     </span>
-                  </span>
-                  <span className="amount">
-                    {formatMoney(presupuesto.spent, resumen.currency)}
-                    {delta !== 0 && (
-                      <span
-                        className={`cambio ${pasado ? 'negative' : 'positive'}`}
-                        title={`${formatMoney(presupuesto.spent, resumen.currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, resumen.currency)}`}
-                      >
-                        {' '}
-                        {pasado ? '▲' : '▼'} {formatMoney(Math.abs(delta), resumen.currency)}
-                      </span>
-                    )}
-                  </span>
+                  </div>
+                  {delta !== 0 && (
+                    <span className={`cambio ${pasado ? 'negative' : 'positive'}`}>
+                      {pasado ? '▲' : '▼'} {formatMoney(Math.abs(delta), currency)}
+                    </span>
+                  )}
                   {/* La misma barra que en Informes: el color se planta en la
                       raya, lo de más allá es rojo, y la raya negra dice dónde
                       estaba el límite. Sin latido, que el mes ya pasó. */}
@@ -630,17 +679,71 @@ export function MonthlySummary({
                     )}
                     <div className="progress-marca" style={{ left: `${AVISO_CERCA}%` }} />
                   </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/*
+        Las deudas vivas, cada una con lo que hace falta para saber cómo va: quién
+        la cobra, la cuota, cuándo toca la próxima, cuándo se acaba y lo que
+        falta. La barra es la de Deudas, cuota a cuota.
+      */}
+      {resumen.deudas.length > 0 && (
+        <section className="resumen-bloque">
+          <div className="resumen-bloque-cabecera">
+            <span className="resumen-rotulo">Deudas</span>
+            <span className="small muted">
+              <strong className="amount negative">{formatMoney(restante, currency)}</strong> por
+              pagar · {formatMoney(alMes, currency)}/mes
+            </span>
+          </div>
+          <ul className="resumen-lista">
+            {resumen.deudas.map((deuda) => {
+              const quienCobra = findLender(deuda.lender)
+              return (
+                <li key={deuda.scheduledId} className="resumen-deuda">
+                  <Avatar
+                    icon={deuda.categoryIcon ?? 'debt'}
+                    color={deuda.categoryColor ?? '#8E8E93'}
+                    size="small"
+                  />
+                  <div className="resumen-texto">
+                    <span className="row tight">
+                      <span className="resumen-nombre">{deuda.title}</span>
+                      {quienCobra && (
+                        <span className="pill">
+                          <img src={quienCobra.logo} alt="" />
+                          {quienCobra.name}
+                        </span>
+                      )}
+                    </span>
+                    <span className="small muted">
+                      {formatMoney(deuda.installment, currency)}/{deuda.cadence} · próxima el{' '}
+                      {diaCorto(deuda.nextDate)}
+                      {deuda.endDate ? ` · acaba en ${mesYAnio(deuda.endDate)}` : ''}
+                    </span>
+                  </div>
+                  <div className="resumen-falta">
+                    <span className="amount">Faltan {formatMoney(deuda.left ?? 0, currency)}</span>
+                    {deuda.leftCount != null && (
+                      <span className="small muted">
+                        {deuda.leftCount === 1 ? 'Queda 1 cuota' : `Quedan ${deuda.leftCount} cuotas`}
+                      </span>
+                    )}
+                  </div>
+                  {deuda.leftCount != null && (
+                    <div className="resumen-cuotas">
+                      <BarraCuotas pagadas={deuda.paidCount} restantes={deuda.leftCount} />
+                    </div>
+                  )}
                 </li>
               )
             })}
           </ul>
-        </div>
-      )}
-
-      {resumen.deudaRestante > 0 && (
-        <p className="resumen-deuda">
-          Deuda restante: <strong>{formatMoney(resumen.deudaRestante, resumen.currency)}</strong>
-        </p>
+        </section>
       )}
     </Party>
   )

@@ -815,6 +815,42 @@ export function Segmented<T extends string>({ value, options, onChange }: Segmen
   )
 }
 
+/**
+ * La barra de una deuda, cuota a cuota.
+ *
+ * Una barra continua dice un porcentaje, y de una deuda no se piensa en
+ * porcentajes: se piensa en cuántas van y cuántas quedan. Partida en tramos,
+ * cada uno es una cuota y se cuentan de un vistazo.
+ *
+ * En verde, que es lo pagado: lo que sube es lo bueno. Con muchas cuotas los
+ * tramos se estrechan hasta que dejan de leerse, así que a partir de sesenta se
+ * vuelve a una barra de una pieza.
+ */
+export function BarraCuotas({ pagadas, restantes }: { pagadas: number; restantes: number }): ReactNode {
+  const total = pagadas + restantes
+  if (total === 0) return null
+
+  if (total > 60) {
+    return (
+      <div style={{ marginTop: 10 }}>
+        <ProgressBar percent={(pagadas / total) * 100} color="var(--positive)" />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="cuotas"
+      role="img"
+      aria-label={`${pagadas} de ${total} cuotas pagadas`}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className={i < pagadas ? 'cuota pagada' : 'cuota'} />
+      ))}
+    </div>
+  )
+}
+
 /* ---------- Barra de progreso ---------- */
 
 export function ProgressBar({

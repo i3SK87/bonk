@@ -10,7 +10,7 @@ import {
   GoalCelebration,
   PresupuestoPasadoAviso,
   MonthlySummary,
-  type LineaResumen,
+  type LineaSubida,
   type ResumenMes
 } from './components/Celebration'
 import { CalculadoraModal } from './components/Calculator'
@@ -27,7 +27,7 @@ import { SettingsView } from './views/Settings'
 import { formatMoney, formatMoneyBreve, cabeEntero } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
 import { useActualizacion, hayNovedad } from './lib/actualizacion'
-import type { CategoryTotal, Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
+import type { Settlement, GoalReached, PresupuestoPasado } from '@shared/types'
 import { Murcielagos, MarcaCalabaza } from './components/Halloween'
 import { Niebla } from './components/Niebla'
 import { esHalloween, esDiaDeNiebla } from '@shared/halloween'
@@ -218,8 +218,11 @@ export function App(): ReactNode {
     Promise.all([
       window.bonk.transactions.totals({ from: mes, to: fin }),
       window.bonk.reports.categories(mes, fin, 'expense'),
-      window.bonk.reports.categories(mes, fin, 'income'),
+      window.bonk.reports.categories(anterior, endOfMonth(anterior), 'expense'),
       window.bonk.transactions.totals({ from: anterior, to: endOfMonth(anterior) }),
+      // Lo ahorrado es todo lo que entra en las cuentas de ahorro.
+      window.bonk.reports.ahorrado(mes, fin),
+      window.bonk.reports.ahorrado(anterior, endOfMonth(anterior)),
       // Lo que queda por pagar es de hoy, no del mes contado: una deuda no se
       // cierra a final de mes, se cierra cuando se acaba.
       window.bonk.scheduled.debts(),
@@ -227,35 +230,41 @@ export function App(): ReactNode {
       // se puso a mitad de camino, lo que cuenta es la raya que hay hoy.
       window.bonk.categories.presupuestos(mes.slice(0, 7))
     ])
-      .then(([sumas, gastos, ingresos, sumasAntes, deudas, presupuestos]) => {
+      .then(([sumas, gastos, gastosAntes, sumasAntes, ahorrado, ahorradoAntes, deudas, presupuestos]) => {
         if (cancelado) return
         if (sumas.count === 0) {
           updateSettings({ lastMonthlySummary: mes.slice(0, 7) })
           return
         }
-        // Cinco de cada, de mayor a menor: más no se leen de un vistazo.
-        const cinco = (lista: CategoryTotal[]): LineaResumen[] =>
-          [...lista]
-            .sort((a, b) => b.total - a.total)
-            .slice(0, 5)
-            .map((item) => ({
-              name: item.name,
-              total: item.total,
-              icon: item.icon,
-              color: item.color
-            }))
+        // Las categorías de gasto que más han subido frente al mes de antes, y
+        // solo cuatro: es un vistazo, no el reparto entero. Las que no tuvieron
+        // gasto el mes anterior entran con lo de antes a cero.
+        const antes = new Map(gastosAntes.map((item) => [item.categoryId, item.total]))
+        const subidas: LineaSubida[] = gastos
+          .map((item) => ({
+            name: item.name,
+            icon: item.icon,
+            color: item.color,
+            total: item.total,
+            antes: antes.get(item.categoryId) ?? 0
+          }))
+          .filter((linea) => linea.total > linea.antes)
+          .sort((a, b) => b.total - b.antes - (a.total - a.antes))
+          .slice(0, 4)
 
         setResumen({
           mes,
           ingresos: sumas.income,
           gastos: sumas.expense,
+          ahorrado,
           balance: sumas.net,
           currency: settings.baseCurrency,
-          deudaRestante: deudas.reduce((suma, deuda) => suma + Math.max(0, deuda.left ?? 0), 0),
           gastosAntes: sumasAntes.expense,
           ingresosAntes: sumasAntes.income,
-          porGasto: cinco(gastos),
-          porIngreso: cinco(ingresos),
+          ahorradoAntes,
+          subidas,
+          // Solo las que quedan por pagar: una saldada ya no tiene nada que contar.
+          deudas: deudas.filter((deuda) => (deuda.left ?? 0) > 0),
           // Los pasados primero, que es lo que se ha venido a mirar; y de esos,
           // el que más se pasó.
           presupuestos: [...presupuestos]

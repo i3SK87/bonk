@@ -195,9 +195,7 @@ function Cambio({
 function TarjetaPresupuestos({
   presupuestos,
   mes,
-  referencia,
   currency,
-  variasCuentas,
   marcada,
   onAbrir,
   onMenu,
@@ -205,9 +203,7 @@ function TarjetaPresupuestos({
 }: {
   presupuestos: EstadoPresupuesto[]
   mes: string
-  referencia: string
   currency: string
-  variasCuentas: boolean
   /** La categoría cuyo menú está abierto, para dejar su tarjeta encendida. */
   marcada: number | null
   onAbrir: (categoryId: number) => void
@@ -233,22 +229,11 @@ function TarjetaPresupuestos({
         <h2>Presupuestos</h2>
         <div className="spacer" />
         {/*
-          El informe es de una cuenta; el presupuesto, de todas.
-          Un presupuesto es lo que te pusiste de gastar al mes, no lo que te pusiste
-          de gastar desde CaixaBank, así que cuenta todo. Con una sola cuenta
-          esto no hace falta decirlo.
-        */}
-        <span className="small muted">
-          {nombreDeMes(`${mes}-01`, referencia)}
-          {variasCuentas && ' · de todas tus cuentas'}
-        </span>
-        {/*
           Poner uno nuevo se pide desde aquí y no desde el clic derecho: el menú
           se abre sobre una tarjeta, y para estrenar el primero no hay ninguna
           sobre la que pulsar.
         */}
-        <button className="btn small ghost" onClick={onNuevo} style={{ marginLeft: 10 }}>
-          <Icon name="plus" size={14} />
+        <button className="btn small primary" onClick={onNuevo}>
           Nuevo presupuesto
         </button>
       </div>
@@ -869,9 +854,7 @@ export function ReportsView(): ReactNode {
             <TarjetaPresupuestos
               presupuestos={presupuestos}
               mes={mesDeLosPresupuestos}
-              referencia={range.from}
               currency={currency}
-              variasCuentas={accounts.length > 1}
               marcada={menuPresupuesto?.categoria.id ?? null}
               onAbrir={(categoryId) => {
                 const categoria = categoriaDelPresupuesto(categoryId)

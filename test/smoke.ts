@@ -684,6 +684,8 @@ try {
   // que al cambio guardado son los 10.000 euros que salieron.
   equal('en una de inversión, lo que entra en otra divisa se cuenta al cambio', reports.totalFor('income', monthStart, day, dollars.id), 10000)
   equal('y una cuenta que solo recibe no reparte gasto', reports.categoryTotals(monthStart, day, 'expense', dollars.id).length, 0)
+  // Lo ahorrado es lo que entra en las de ahorro, y la de inversión no lo es.
+  equal('lo ahorrado es lo que entró en la hucha', reports.ahorrado(monthStart, day), 5000)
   equal('el banco sigue sin contar lo que les mandó', reports.totalFor('expense', monthStart, day, bank.id), 0)
   accounts.saveAccount(cash)
   accounts.saveAccount(dollars)

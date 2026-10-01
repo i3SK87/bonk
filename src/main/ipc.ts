@@ -61,6 +61,7 @@ const SOLO_LEEN = new Set([
   'reports:categories',
   'reports:monthly',
   'reports:span',
+  'reports:ahorrado',
   'attachments:list',
   'attachments:open',
   'attachments:pick',
@@ -326,6 +327,7 @@ export function registerIpc(
     reports.monthlySeries(months, accountId)
   )
   handle('reports:span', (accountId: number | null) => reports.transactionsSpan(accountId))
+  handle('reports:ahorrado', (from: string, to: string) => reports.ahorrado(from, to))
 
   // — Adjuntos —
   handle('attachments:list', (transactionId: number) => attachments.listAttachments(transactionId))

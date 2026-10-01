@@ -156,7 +156,9 @@ const api = {
     monthly: (months = 12, accountId: number | null = null) =>
       call<MonthlyPoint[]>('reports:monthly', months, accountId),
     span: (accountId: number | null = null) =>
-      call<{ from: string; to: string } | null>('reports:span', accountId)
+      call<{ from: string; to: string } | null>('reports:span', accountId),
+    /** Todo lo que entró en las cuentas de ahorro en el tramo. */
+    ahorrado: (from: string, to: string) => call<number>('reports:ahorrado', from, to)
   },
   attachments: {
     list: (transactionId: number) => call<Attachment[]>('attachments:list', transactionId),

@@ -422,3 +422,31 @@ export function totalFor(
   if (!cuentaConTraspasos(accountId)) return propio
   return propio + traspasosDe(from, to, type, accountId, rates, base).total
 }
+
+/**
+ * Lo que se ha ahorrado en un tramo: todo lo que entra en las cuentas de ahorro.
+ *
+ * Entra por dos sitios: un traspaso que llega desde otra cuenta que no es de
+ * ahorro —mover de una hucha a otra no es ahorrar más— y un ingreso apuntado
+ * directamente en la hucha. Lo que sale de ella no se resta: aquí se cuenta lo
+ * que se metió, no cómo quedó el saldo. El traspaso se cuenta con lo que de
+ * verdad llega, que en otra divisa es `amount_to`.
+ */
+export function ahorrado(from: string, to: string): number {
+  const rates = rateMap()
+  const base = getSettings().baseCurrency
+  const rows = getDb()
+    .prepare(
+      `SELECT d.currency AS currency,
+              SUM(CASE WHEN t.type = 'transfer' THEN COALESCE(t.amount_to, t.amount) ELSE t.amount END) AS total
+         FROM transactions t
+         JOIN accounts o ON o.id = t.account_id
+         JOIN accounts d ON d.id = CASE WHEN t.type = 'transfer' THEN t.to_account_id ELSE t.account_id END
+        WHERE t.date >= ? AND t.date <= ?
+          AND d.type = 'savings'
+          AND ((t.type = 'transfer' AND o.type <> 'savings') OR t.type = 'income')
+        GROUP BY d.currency`
+    )
+    .all(from, to) as unknown as Array<{ currency: string; total: number }>
+  return rows.reduce((sum, row) => sum + convert(Number(row.total ?? 0), row.currency, base, rates), 0)
+}
