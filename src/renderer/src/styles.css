@@ -1923,6 +1923,76 @@ p { margin: 0; }
   color: var(--fg-subtle);
 }
 
+/* ---------- Movimientos en fichas ----------
+
+   La otra vista de la lista: cada movimiento, una ficha, y las de un mismo día
+   llenan el ancho en rejilla. Son las mismas filas con otra colocación —la
+   misma clase `.tx-row`, los mismos gestos—, así que aquí solo se recoloca. Va
+   después de las reglas de la fila para poder corregirlas sin subir de fuerza. */
+.fichas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px;
+  padding: 2px 6px 6px;
+}
+
+.tx-row.ficha {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 12px;
+  min-width: 0;
+  background: var(--bg-sunken);
+  border-color: var(--border);
+}
+
+.tx-row.ficha:hover,
+.tx-row.ficha.marcada {
+  background: var(--bg-sunken);
+  border-color: var(--border-strong);
+}
+
+/* La familia se enciende junta, como en la lista; aquí con el borde, que el
+   fondo ya es el hundido. Y sin las esquinas cuadradas de la lista, que allí
+   sirven para soldar dos filas y aquí las fichas van sueltas. */
+.tx-row.ficha.linked-active,
+.tx-row.ficha.linked-active:hover {
+  border-color: var(--accent);
+  border-radius: var(--radius);
+}
+
+/* Lo que cuelga de otra —un reembolso, un ahorro— no tiene codo en la
+   rejilla: se distingue por el borde de rayas. */
+.tx-row.ficha.hija {
+  border-style: dashed;
+}
+
+.tx-row.ficha .tx-main {
+  flex: none;
+}
+
+.ficha-arriba {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ficha-arriba .tx-amount {
+  margin-left: auto;
+}
+
+/* El interruptor de la vista: solo iconos, así que más estrecho que el
+   conmutador de siempre y a la altura de los botones pequeños de al lado. */
+.segmented.vista-lista {
+  padding: 2px;
+  gap: 2px;
+}
+
+.segmented.vista-lista button {
+  padding: 4px 7px;
+}
+
 /* ---------- Iconos redondos de categoría y cuenta ---------- */
 
 /* El aro interior le da canto a los extremos de la paleta: un avatar blanco

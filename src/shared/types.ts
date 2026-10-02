@@ -460,6 +460,11 @@ export interface Settings {
      * mismos datos, y quien prefiere los euros los prefiere siempre.
      */
   balanceEn: UnidadCambio
+  /**
+   * Cómo se pinta la lista de Movimientos: en filas o en fichas. Se guarda por
+   * lo mismo que `balanceEn`: no cambia qué se ve, solo cómo.
+   */
+  vistaMovimientos: 'lista' | 'fichas'
 
   /* — El widget del escritorio — */
   /** En pantalla o escondido. Se apaga desde su menú y se enciende en Ajustes. */

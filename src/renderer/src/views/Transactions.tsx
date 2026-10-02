@@ -112,6 +112,15 @@ function nestProjected(
   )
 }
 
+/**
+ * Los movimientos de un día: sueltos, uno debajo de otro, en la lista; dentro
+ * de una rejilla, en fichas. En la lista no se envuelven en nada para no romper
+ * lo que la hoja espera de ellos, que son hermanos de la cabecera del día.
+ */
+function Rejilla({ fichas, children }: { fichas: boolean; children: ReactNode }): ReactNode {
+  return fichas ? <div className="fichas">{children}</div> : <>{children}</>
+}
+
 export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) => void }): ReactNode {
   const {
     accounts,
@@ -124,8 +133,10 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     ponFiltros,
     refresh,
     fail,
-    setFocusedAccountId
+    setFocusedAccountId,
+    updateSettings
   } = useStore()
+  const fichas = settings.vistaMovimientos === 'fichas'
 
   /*
    * Los filtros no son de esta pantalla, son de la sesión.
@@ -1373,6 +1384,30 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
               <Icon name="calendar" size={15} />
               Programados
             </button>
+
+            {/* Cómo se pinta la lista, en dos iconos que hacen de interruptor:
+                el que manda, encendido; el otro, en gris. No filtra nada, así
+                que va al final y separado como Programados. */}
+            <span className="divisoria" />
+            <div className="segmented vista-lista" role="group" aria-label="Vista de la lista">
+              {(
+                [
+                  ['lista', 'list', 'Ver en lista'],
+                  ['fichas', 'fichas', 'Ver en fichas']
+                ] as const
+              ).map(([vista, icono, rotulo]) => (
+                <button
+                  key={vista}
+                  className={settings.vistaMovimientos === vista ? 'active' : undefined}
+                  aria-pressed={settings.vistaMovimientos === vista}
+                  title={rotulo}
+                  aria-label={rotulo}
+                  onClick={() => void updateSettings({ vistaMovimientos: vista })}
+                >
+                  <Icon name={icono} size={15} />
+                </button>
+              ))}
+            </div>
           </div>
 
           {eligiendoTramo && (
@@ -1547,6 +1582,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       {formatMoney(dayTotal, settings.baseCurrency, { sign: true })}
                     </span>
                   </div>
+                  <Rejilla fichas={fichas}>
                   {nestRefunds(items.real).map(({ row, nested, last }) => {
                     const family = families.byRow.get(row.id)
                     return (
@@ -1577,6 +1613,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                         destino={destino === row.id}
                         nested={nested}
                         lastChild={last}
+                        ficha={fichas}
                       />
                     )
                   })}
@@ -1589,6 +1626,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       sentido={sentidoDelTraspaso(item)}
                       nested={nested}
                       lastChild={last}
+                      ficha={fichas}
                       onRegister={
                         item.isNext
                           ? async () => {
@@ -1599,6 +1637,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       }
                     />
                   ))}
+                  </Rejilla>
                 </div>
               )
             })}
@@ -1797,7 +1836,8 @@ function ProjectedRow({
   sentido,
   onRegister,
   nested,
-  lastChild
+  lastChild,
+  ficha
 }: {
   row: ProjectedTransaction
   /** De qué lado del traspaso queda la cuenta que se está mirando. */
@@ -1805,6 +1845,8 @@ function ProjectedRow({
   onRegister?: () => void
   nested?: boolean
   lastChild?: boolean
+  /** Se pinta como ficha de la rejilla y no como fila de la lista. */
+  ficha?: boolean
 }): ReactNode {
   const isTransfer = row.type === 'transfer'
   const title = isTransfer
@@ -1836,67 +1878,97 @@ function ProjectedRow({
         sign: true
       })
 
+  const avatar = (
+    <Avatar
+      icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'calendar')}
+      color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
+    />
+  )
+  const texto = (
+    <div className="tx-main">
+      {/*
+        La marca va al lado del título y no en el subtexto.
+
+        Abajo compartía renglón con la nota y la cuenta, y con el filtro de
+        programadas puesto —cuando media lista son previsiones— había que
+        leerse el subtexto entero de cada fila para saber cuál era una previsión
+        y cuál no. Arriba, a la altura del título, se ve de un barrido.
+      */}
+      <div className="tx-title tx-title-con-marca">
+        <span className="truncate">{title}</span>
+        {/* El mismo calendario que el botón que las trae a la lista: la
+            marca de la fila y el mando que la enciende hablan de lo mismo, y
+            con dos dibujos distintos no se ve que están relacionados. */}
+        <span className="pill">
+          <Icon name="calendar" size={11} />
+          Programado
+        </span>
+      </div>
+      {/* Sin nota y siendo un traspaso no queda nada que poner debajo: el
+          renglón vacío separaba el título del siguiente por nada. */}
+      {(detail || !isTransfer) && (
+        <div className="tx-sub">
+          {detail && <span className="truncate">{detail}</span>}
+          {!isTransfer && (
+            <span>
+              {detail ? '· ' : ''}
+              {row.accountName}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+  const registrar = onRegister && (
+    <button
+      className="btn small ghost"
+      title="Registrarlo ahora sin esperar a la fecha"
+      onClick={(event) => {
+        event.stopPropagation()
+        onRegister()
+      }}
+    >
+      <Icon name="check" size={15} />
+    </button>
+  )
+  const cifra = (
+    <div className="tx-amount">
+      {/* Lo mismo que en las de verdad: saliendo, en gris y con el menos;
+          llegando, en verde con el más. Ver la nota de TransactionRow. */}
+      <span className={`amount ${claseImporte}`}>{importe}</span>
+    </div>
+  )
+
   return (
     <div
-      className={`tx-row projected${nested ? ' nested' : ''}${nested && !lastChild ? ' nested-continues' : ''}`}
+      className={[
+        'tx-row projected',
+        ficha ? 'ficha' : '',
+        nested && ficha ? 'hija' : '',
+        nested && !ficha ? 'nested' : '',
+        nested && !ficha && !lastChild ? 'nested-continues' : ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
       title={`Programado para el ${formatDate(row.date)}`}
     >
-      <Avatar
-        icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'calendar')}
-        color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
-      />
-      <div className="tx-main">
-        {/*
-          La marca va al lado del título y no en el subtexto.
-
-          Abajo compartía renglón con la nota y la cuenta, y con el filtro de
-          programadas puesto —cuando media lista son previsiones— había que
-          leerse el subtexto entero de cada fila para saber cuál era una previsión
-          y cuál no. Arriba, a la altura del título, se ve de un barrido.
-        */}
-        <div className="tx-title tx-title-con-marca">
-          <span className="truncate">{title}</span>
-          {/* El mismo calendario que el botón que las trae a la lista: la
-              marca de la fila y el mando que la enciende hablan de lo mismo, y
-              con dos dibujos distintos no se ve que están relacionados. */}
-          <span className="pill">
-            <Icon name="calendar" size={11} />
-            Programado
-          </span>
-        </div>
-        {/* Sin nota y siendo un traspaso no queda nada que poner debajo: el
-            renglón vacío separaba el título del siguiente por nada. */}
-        {(detail || !isTransfer) && (
-          <div className="tx-sub">
-            {detail && <span className="truncate">{detail}</span>}
-            {!isTransfer && (
-              <span>
-                {detail ? '· ' : ''}
-                {row.accountName}
-              </span>
-            )}
+      {ficha ? (
+        <>
+          <div className="ficha-arriba">
+            {avatar}
+            {registrar}
+            {cifra}
           </div>
-        )}
-      </div>
-
-      {onRegister && (
-        <button
-          className="btn small ghost"
-          title="Registrarlo ahora sin esperar a la fecha"
-          onClick={(event) => {
-            event.stopPropagation()
-            onRegister()
-          }}
-        >
-          <Icon name="check" size={15} />
-        </button>
+          {texto}
+        </>
+      ) : (
+        <>
+          {avatar}
+          {texto}
+          {registrar}
+          {cifra}
+        </>
       )}
-
-      <div className="tx-amount">
-        {/* Lo mismo que en las de verdad: saliendo, en gris y con el menos;
-            llegando, en verde con el más. Ver la nota de TransactionRow. */}
-        <span className={`amount ${claseImporte}`}>{importe}</span>
-      </div>
     </div>
   )
 }
@@ -1915,7 +1987,8 @@ function TransactionRow({
   arrastrando,
   destino,
   nested,
-  lastChild
+  lastChild,
+  ficha
 }: {
   row: TransactionView
   /** De qué lado del traspaso queda la cuenta que se está mirando. */
@@ -1943,6 +2016,8 @@ function TransactionRow({
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
   lastChild?: boolean
+  /** Se pinta como ficha de la rejilla y no como fila de la lista. */
+  ficha?: boolean
 }): ReactNode {
   const isTransfer = row.type === 'transfer'
 
@@ -2004,6 +2079,46 @@ function TransactionRow({
         sign: true
       })
 
+  // En un traspaso el título ya nombra las dos cuentas, y un reembolso cuelga
+  // de su gasto, que la dice justo encima: repetirla era llenar la línea de la
+  // misma palabra tres veces.
+  const avatar = (
+    <Avatar
+      icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'tag')}
+      color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
+    />
+  )
+  const texto = (
+    <div className="tx-main">
+      <div className="tx-title">{title}</div>
+      <div className="tx-sub">
+        {row.type === 'refund' && <span className="pill reembolso">Reembolso</span>}
+        {/* Lo que se apartó solo, dicho por su nombre: «Traspaso» era el cómo
+            y no el qué, y sin nombre es un traspaso más del que no se entiende
+            por qué cuelga del ingreso. */}
+        {row.savedFromId != null && <span className="pill ahorro">Ahorro</span>}
+        {detail && <span className="tx-note">{detail}</span>}
+        {detail && muestraCuenta && <span>·</span>}
+        {muestraCuenta && <span>{row.accountName}</span>}
+        {row.attachmentCount > 0 && <Icon name="paperclip" size={12} />}
+      </div>
+    </div>
+  )
+  const cifra = (
+    <div className="tx-amount">
+      <span className={`amount ${claseImporte}`}>{importe}</span>
+      {/* Mirando el destino, lo que llega ya es la cifra grande: repetirlo
+          debajo sería decir dos veces lo mismo. */}
+      {row.amountTo && row.toAccountCurrency && !entra && (
+        <small>→ {formatMoney(row.amountTo, row.toAccountCurrency)}</small>
+      )}
+      {/* En un gasto con devoluciones, lo que de verdad ha costado. */}
+      {row.refundedTotal > 0 && row.type === 'expense' && (
+        <small>te cuesta {formatMoney(row.amount - row.refundedTotal, row.accountCurrency)}</small>
+      )}
+    </div>
+  )
+
   return (
     <div
       className={[
@@ -2014,8 +2129,12 @@ function TransactionRow({
         // Anidada ya se ve colgando: la marca del canto sobraría.
         family !== undefined && !nested ? 'linked' : '',
         active ? 'linked-active' : '',
-        nested ? 'nested' : '',
-        nested && !lastChild ? 'nested-continues' : ''
+        // En la rejilla no hay codo que dibujar: la hija se distingue por su
+        // borde, y la familia se sigue encendiendo junta al pasar por encima.
+        ficha ? 'ficha' : '',
+        nested && ficha ? 'hija' : '',
+        nested && !ficha ? 'nested' : '',
+        nested && !ficha && !lastChild ? 'nested-continues' : ''
       ]
         .filter(Boolean)
         .join(' ')}
@@ -2052,39 +2171,23 @@ function TransactionRow({
       onFocus={() => family !== undefined && onFamily?.(family)}
       onBlur={() => family !== undefined && onFamily?.(null)}
     >
-      {/* En un traspaso el título ya nombra las dos cuentas, y un reembolso cuelga
-          de su gasto, que la dice justo encima: repetirla era llenar la línea de
-          la misma palabra tres veces. */}
-      <Avatar
-        icon={isTransfer ? 'transfer' : (row.categoryIcon ?? 'tag')}
-        color={isTransfer ? '#0A84FF' : (row.categoryColor ?? '#8E8E93')}
-      />
-      <div className="tx-main">
-        <div className="tx-title">{title}</div>
-        <div className="tx-sub">
-          {row.type === 'refund' && <span className="pill reembolso">Reembolso</span>}
-          {/* Lo que se apartó solo, dicho por su nombre: «Traspaso» era el cómo
-              y no el qué, y sin nombre es un traspaso más del que no se entiende
-              por qué cuelga del ingreso. */}
-          {row.savedFromId != null && <span className="pill ahorro">Ahorro</span>}
-          {detail && <span className="tx-note">{detail}</span>}
-          {detail && muestraCuenta && <span>·</span>}
-          {muestraCuenta && <span>{row.accountName}</span>}
-          {row.attachmentCount > 0 && <Icon name="paperclip" size={12} />}
-        </div>
-      </div>
-      <div className="tx-amount">
-        <span className={`amount ${claseImporte}`}>{importe}</span>
-        {/* Mirando el destino, lo que llega ya es la cifra grande: repetirlo
-            debajo sería decir dos veces lo mismo. */}
-        {row.amountTo && row.toAccountCurrency && !entra && (
-          <small>→ {formatMoney(row.amountTo, row.toAccountCurrency)}</small>
-        )}
-        {/* En un gasto con devoluciones, lo que de verdad ha costado. */}
-        {row.refundedTotal > 0 && row.type === 'expense' && (
-          <small>te cuesta {formatMoney(row.amount - row.refundedTotal, row.accountCurrency)}</small>
-        )}
-      </div>
+      {/* La ficha lleva lo mismo que la fila, recolocado: el icono y la cifra
+          arriba, y debajo lo que dice qué es. */}
+      {ficha ? (
+        <>
+          <div className="ficha-arriba">
+            {avatar}
+            {cifra}
+          </div>
+          {texto}
+        </>
+      ) : (
+        <>
+          {avatar}
+          {texto}
+          {cifra}
+        </>
+      )}
     </div>
   )
 }

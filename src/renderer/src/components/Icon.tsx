@@ -279,6 +279,15 @@ const PATHS: Record<string, JSX.Element> = {
       <circle cx="3.8" cy="18" r="1.2" />
     </>
   ),
+  // La lista de Movimientos en fichas: cuatro iguales, como las que pinta.
+  fichas: (
+    <>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" />
+    </>
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3.2" />

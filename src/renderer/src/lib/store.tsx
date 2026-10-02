@@ -129,6 +129,7 @@ const FALLBACK_SETTINGS: Settings = {
   closeToTray: false,
   remindersEnabled: false,
   balanceEn: 'porcentaje',
+  vistaMovimientos: 'lista',
   widgetVisible: false,
   widgetAnchor: 'bottomRight',
   widgetOpacity: 0.92,
@@ -149,6 +150,7 @@ const SOLO_ASPECTO: Array<keyof Settings> = [
   'theme',
   'palette',
   'balanceEn',
+  'vistaMovimientos',
   'ultimaCategoriaDeCompra',
   // La marca de que los murciélagos ya salieron hoy: no cambia ningún dato.
   'ultimoHalloween'
