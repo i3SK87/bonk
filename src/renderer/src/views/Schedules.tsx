@@ -477,8 +477,10 @@ export function SchedulesView(): ReactNode {
               </div>
 
               {/* Como los mandos de arriba: hace lo suyo y para el clic, que si
-                  no abriría además la ficha por detrás. */}
-              {!row.isDebt && (
+                  no abriría además la ficha por detrás. La de una vez no se
+                  reanuda: para que vuelva a pasar se le pone otra fecha en su
+                  ficha. */}
+              {!row.isDebt && row.freq !== 'once' && (
                 <button
                   className="btn ghost icon"
                   title="Reanudar: vuelve a generar movimientos"

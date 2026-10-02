@@ -457,7 +457,10 @@ export function importCsv(sourcePath: string, options: ImportOptions = {}): Impo
           categoryId,
           amount: Math.abs(amount),
           note: nota,
-          place: record.place?.trim() || null
+          place: record.place?.trim() || null,
+          // Lo importado es historia: si se apartó algo, el archivo ya trae ese
+          // traspaso, y aplicar la regla lo inventaba —o lo duplicaba—.
+          apartarEn: false
         })
         result.imported++
       } catch (error) {

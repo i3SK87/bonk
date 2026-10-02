@@ -3818,6 +3818,155 @@ try {
   transactions.deleteTransaction(sueltoDeDosMeses.id)
   transactions.deleteTransaction(viejo.id)
   scheduled.deleteScheduled(serie.id)
+
+
+  section('El repaso del 02/10/2026')
+  {
+    const hoyR = today()
+    const cuentaR = (nombre: string, tipo: 'bank' | 'savings', inicial = 0) =>
+      accounts.saveAccount({
+        name: nombre,
+        type: tipo,
+        currency: 'EUR',
+        initialBalance: inicial,
+        icon: 'bank',
+        color: '#000000',
+        excludeFromTotal: false
+      })
+    const saldoR = (id: number): number =>
+      accounts.listAccountsWithBalance(true).find((cuenta) => cuenta.id === id)!.balance
+    const deLaProgramada = (id: number): number =>
+      transactions.listTransactions({ limit: 5000 }).filter((t) => t.scheduledId === id).length
+    const gastosR = categories.listCategories().filter((c) => c.kind === 'expense')
+    const bancoR = cuentaR('Banco del repaso', 'bank', 1_000_000)
+
+    // Una de una vez ya pasada: reanudarla le quitaba el fin y se repetía a diario.
+    const unaVez = scheduled.saveScheduled({
+      type: 'expense',
+      accountId: bancoR.id,
+      amount: 1000,
+      freq: 'once',
+      interval: 1,
+      nextDate: addDays(hoyR, -10),
+      autoPost: true
+    } as never)
+    scheduled.postDue()
+    let rechazoUnaVez = ''
+    try {
+      scheduled.resumeScheduled(unaVez.id)
+    } catch (error) {
+      rechazoUnaVez = (error as Error).message
+    }
+    check('una de una vez no se reanuda', rechazoUnaVez.includes('no se reanuda'), rechazoUnaVez)
+    scheduled.postDue()
+    equal('y sigue con su único movimiento', deLaProgramada(unaVez.id), 1)
+
+    // Pausada cinco meses: al encenderla no se cobra de golpe lo de en medio.
+    const pausada = scheduled.saveScheduled({
+      type: 'expense',
+      accountId: bancoR.id,
+      categoryId: gastosR[0].id,
+      amount: 999,
+      freq: 'monthly',
+      interval: 1,
+      nextDate: addMonths(hoyR, -5),
+      autoPost: true
+    } as never)
+    scheduled.setScheduledActive(pausada.id, false)
+    scheduled.setScheduledActive(pausada.id, true)
+    check('reanudar salta lo que venció en la pausa', scheduled.getScheduled(pausada.id)!.nextDate >= hoyR)
+    scheduled.postDue()
+    check('y como mucho registra la de hoy', deLaProgramada(pausada.id) <= 1, String(deLaProgramada(pausada.id)))
+
+    // Finalizada hace meses y reanudada desde Finalizadas: lo mismo.
+    scheduled.finishScheduled(pausada.id, addMonths(hoyR, -4))
+    getDb().prepare('UPDATE scheduled SET next_date = ? WHERE id = ?').run(addMonths(hoyR, -4), pausada.id)
+    const antesR = deLaProgramada(pausada.id)
+    scheduled.resumeScheduled(pausada.id)
+    scheduled.postDue()
+    check('reanudar una finalizada tampoco cobra los meses parados', deLaProgramada(pausada.id) - antesR <= 1)
+
+    // El reembolso sigue a su gasto cuando a este se le cambia la categoría.
+    const diaR = addDays(hoyR, -1)
+    const compra = transactions.saveTransaction({
+      type: 'expense',
+      date: diaR,
+      accountId: bancoR.id,
+      categoryId: gastosR[0].id,
+      amount: 5000
+    })
+    const devuelto = transactions.saveTransaction({
+      type: 'refund',
+      date: diaR,
+      accountId: bancoR.id,
+      refundForId: compra.id,
+      amount: 2000
+    })
+    transactions.saveTransaction({ ...compra, categoryId: gastosR[1].id, tagIds: undefined })
+    equal('desde la ficha, el reembolso cambia con él', transactions.getTransaction(devuelto.id)!.categoryId, gastosR[1].id)
+    transactions.bulkSetCategory([compra.id], gastosR[2].id)
+    equal('y en bloque también', transactions.getTransaction(devuelto.id)!.categoryId, gastosR[2].id)
+    transactions.bulkSetCategory([devuelto.id], gastosR[0].id)
+    equal('el reembolso suelto no se separa de su gasto', transactions.getTransaction(devuelto.id)!.categoryId, gastosR[2].id)
+    check(
+      'ninguna categoría queda en negativo',
+      reports.categoryTotals(diaR, diaR, 'expense').every((fila) => fila.total >= 0)
+    )
+    transactions.deleteTransaction(compra.id)
+
+    // Borrar una cuenta no se lleva el ahorro que ya llegó a la hucha.
+    const huchaR = cuentaR('Hucha del repaso', 'savings')
+    const otraR = cuentaR('Cuenta que se borra', 'bank')
+    const nominaR = categories.saveCategory({
+      name: 'Nómina del repaso',
+      kind: 'income',
+      icon: 'tag',
+      color: '#000000',
+      savePercent: 10,
+      saveAccountId: huchaR.id
+    } as never)
+    const diaB = addDays(hoyR, -3)
+    transactions.saveTransaction({
+      type: 'income',
+      date: diaB,
+      accountId: otraR.id,
+      categoryId: nominaR.id,
+      amount: 100_000
+    })
+    const gastoBorrado = transactions.saveTransaction({
+      type: 'expense',
+      date: diaB,
+      accountId: otraR.id,
+      categoryId: gastosR[3].id,
+      amount: 3000
+    })
+    transactions.saveTransaction({
+      type: 'refund',
+      date: diaB,
+      accountId: bancoR.id,
+      refundForId: gastoBorrado.id,
+      amount: 3000
+    })
+    const bancoAntes = saldoR(bancoR.id)
+    accounts.deleteAccount(otraR.id)
+    equal('la hucha conserva lo que se apartó', saldoR(huchaR.id), 10_000)
+    equal('el reembolso de otra cuenta se queda en su saldo', saldoR(bancoR.id), bancoAntes)
+    check(
+      'y no deja su categoría en negativo',
+      reports.categoryTotals(diaB, diaB, 'expense').every((fila) => fila.total >= 0)
+    )
+
+    // Importar no aparta: lo apartado, si lo hubo, ya viene en el archivo.
+    const csvR = join(dir, 'repaso.csv')
+    writeFileSync(
+      csvR,
+      'Fecha;Cuenta;Categoría;Importe;Concepto\n01/01/2026;Banco del repaso;Nómina del repaso;1500,00;Enero\n'
+    )
+    const huchaAntes = saldoR(huchaR.id)
+    const importado = csv.importCsv(csvR, {})
+    equal('importa la nómina', importado.imported, 1)
+    equal('sin inventarse el traspaso a la hucha', saldoR(huchaR.id), huchaAntes)
+  }
 } finally {
   closeDatabase()
   rmSync(dir, { recursive: true, force: true })

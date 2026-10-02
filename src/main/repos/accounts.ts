@@ -252,6 +252,34 @@ function saveAccountInner(input: AccountInput): Account {
 export function deleteAccount(id: number): void {
   const db = getDb()
   atomic(() => {
+    /*
+     * El ahorro automático se suelta de su ingreso antes de nada.
+     *
+     * Cuelga de él con `ON DELETE CASCADE`, y el ingreso se va con la cuenta: el
+     * traspaso que llegó a la hucha —ya convertido en ingreso suyo por el paso de
+     * abajo— desaparecía con él, y la hucha perdía un dinero que sí entró.
+     */
+    db.prepare(
+      `UPDATE transactions
+          SET saved_from_id = NULL
+        WHERE saved_from_id IN (SELECT id FROM transactions WHERE account_id = ?)`
+    ).run(id)
+
+    /*
+     * Y los reembolsos de sus gastos que entraron en otra cuenta, igual.
+     *
+     * El dinero volvió de verdad a esa cuenta, así que se quedan, pero como
+     * ingreso sin categoría: como reembolso seguían restando gasto en una
+     * categoría que ya no tenía el gasto, y la dejaban en negativo. Es lo mismo
+     * que se hace con los traspasos: lo que de verdad pasó con ese dinero.
+     */
+    db.prepare(
+      `UPDATE transactions
+          SET type = 'income', refund_for_id = NULL, category_id = NULL
+        WHERE type = 'refund' AND account_id <> ?
+          AND refund_for_id IN (SELECT id FROM transactions WHERE account_id = ?)`
+    ).run(id, id)
+
     // Salía de la cuenta borrada: para el destino sigue siendo un ingreso.
     db.prepare(
       `UPDATE transactions

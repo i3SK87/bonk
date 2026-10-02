@@ -753,6 +753,11 @@ export function saveTransaction(input: TransactionInput): TransactionView {
         )
       }
 
+      // Sus devoluciones van con él: heredan la categoría al crearse, y si no
+      // la siguen, restan en la vieja —que se queda en negativo— y la nueva sale
+      // inflada.
+      if (previous && previous.categoryId !== categoryId) heredarCategoria(id, categoryId)
+
       /*
        * Cambiarle la fecha es llegar a otro día, y quien llega se pone arriba.
        *
@@ -1015,15 +1020,33 @@ export function deleteTransactions(ids: number[]): number {
   })
 }
 
-/** Reasigna la categoría de varios movimientos de una tacada. */
+/** Pone a las devoluciones de un gasto la categoría que tiene él. */
+function heredarCategoria(gastoId: number, categoryId: number | null): void {
+  getDb()
+    .prepare(
+      `UPDATE transactions SET category_id = ?, updated_at = ? WHERE type = 'refund' AND refund_for_id = ?`
+    )
+    .run(bind(categoryId), nowISO(), gastoId)
+}
+
+/**
+ * Reasigna la categoría de varios movimientos de una tacada.
+ *
+ * Una devolución enganchada a su gasto no se toca por su cuenta: su categoría es
+ * la del gasto, y la sigue cuando se cambia la de él.
+ */
 export function bulkSetCategory(ids: number[], categoryId: number | null): number {
   if (ids.length === 0) return 0
   return atomic(() => {
     const stmt = getDb().prepare(
-      `UPDATE transactions SET category_id = ?, updated_at = ? WHERE id = ? AND type <> 'transfer'`
+      `UPDATE transactions SET category_id = ?, updated_at = ?
+        WHERE id = ? AND type <> 'transfer' AND NOT (type = 'refund' AND refund_for_id IS NOT NULL)`
     )
     const now = nowISO()
-    for (const id of ids) stmt.run(bind(categoryId), now, id)
+    for (const id of ids) {
+      stmt.run(bind(categoryId), now, id)
+      heredarCategoria(id, categoryId)
+    }
     return ids.length
   })
 }

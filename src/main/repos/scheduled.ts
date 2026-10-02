@@ -369,9 +369,17 @@ export function deleteScheduled(id: number): void {
  */
 export function setScheduledActive(id: number, active: boolean): void {
   if (active) {
+    const fila = getScheduled(id)
+    // Solo al encender una apagada: sobre una que ya estaba en marcha, saltar
+    // fechas se comería las que esperan a registrarse a mano.
+    const proxima = fila && !fila.active ? sinVueltasPasadas(fila) : (fila?.nextDate ?? null)
     getDb()
-      .prepare('UPDATE scheduled SET active = 1, settled_at = NULL, settled_notified = 0 WHERE id = ?')
-      .run(id)
+      .prepare(
+        `UPDATE scheduled
+            SET active = 1, settled_at = NULL, settled_notified = 0, next_date = COALESCE(?, next_date)
+          WHERE id = ?`
+      )
+      .run(bind(proxima), id)
     return
   }
   getDb().prepare('UPDATE scheduled SET active = 0 WHERE id = ?').run(id)
@@ -406,25 +414,63 @@ export function resumeScheduled(id: number, endDate: string | null = null): void
   if (!fila) throw new Error('La programación ya no existe')
 
   /*
+   * La de una vez no se reanuda.
+   *
+   * Lo que la acaba es su fecha de fin, igual a su día, y reanudar se la quita:
+   * sin fin, su «siguiente vez» es el día de después, y se registraba a diario
+   * para siempre. Para que vuelva a pasar se le pone otra fecha desde su ficha.
+   */
+  if (fila.freq === 'once') {
+    throw new Error('Una programada de una vez no se reanuda: abre su ficha y ponle otra fecha.')
+  }
+
+  // Lo que venció mientras estaba parada no se paga ahora de golpe.
+  const proxima = sinVueltasPasadas(fila)
+
+  /*
    * La fecha nueva tiene que dejar sitio a algo.
    *
    * Con una anterior a la próxima cuota, el plan nace agotado: el primer repaso
    * la vuelve a sellar y el botón parece que no ha hecho nada. Mejor decirlo
    * aquí que dejar que se deshaga solo a los cinco minutos.
    */
-  if (endDate && endDate < fila.nextDate) {
+  if (endDate && endDate < proxima) {
     throw new Error(
-      `La fecha de fin no puede ser anterior a la próxima cuota, que es el ${formatDate(fila.nextDate)}.`
+      `La fecha de fin no puede ser anterior a la próxima cuota, que es el ${formatDate(proxima)}.`
     )
   }
 
   getDb()
     .prepare(
       `UPDATE scheduled
-          SET active = 1, end_date = ?, settled_at = NULL, settled_notified = 0
+          SET active = 1, end_date = ?, next_date = ?, settled_at = NULL, settled_notified = 0
         WHERE id = ?`
     )
-    .run(bind(endDate || null), id)
+    .run(bind(endDate || null), proxima, id)
+}
+
+/**
+ * La próxima fecha de una programación que vuelve a arrancar, sin las que
+ * vencieron mientras estaba parada.
+ *
+ * Pausar es dejar de pagar: la suscripción que se paró en mayo y se reanuda en
+ * octubre no se cobró esos meses. Sin esto, el primer repaso registraba de golpe
+ * todas las vueltas de en medio. La de hoy sí se queda, que todavía toca.
+ *
+ * La de una vez se deja como está: no tiene vueltas que saltar, y saltarse la
+ * única que tiene sería perderla sin decir nada.
+ */
+function sinVueltasPasadas(fila: ScheduledView): string {
+  if (fila.freq === 'once') return fila.nextDate
+  const hoy = today()
+  const ancla = anclaDeCadencia(fila.nextDate, fila.lastPosted)
+  let proxima = fila.nextDate
+  let guarda = 0
+  while (proxima < hoy && guarda < 4000) {
+    proxima = nextOccurrence(proxima, fila.freq, fila.interval, ancla)
+    guarda++
+  }
+  return proxima
 }
 
 /**
