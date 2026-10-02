@@ -3,10 +3,12 @@ import {
   useEffect,
   useMemo,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode
 } from 'react'
 import { useStore, usePreferredAccountId } from '../lib/store'
+import { useEntrada } from '../lib/animaciones'
 import { Icon } from '../components/Icon'
 import { Segmented, Loading, EmptyState, Avatar, ProgressBar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
@@ -324,6 +326,8 @@ export function ReportsView(): ReactNode {
     useStore()
   const [period, setPeriod] = useState<RangoId>('month')
   const [kind, setKind] = useState<CategoryKind>('expense')
+  /** Las barras del reparto crecen al asomar, y al cambiar de periodo van de un largo al otro. */
+  const [entradaReparto, estadoReparto] = useEntrada<HTMLTableElement>()
   /*
    * De qué cuenta va el informe.
    *
@@ -940,7 +944,7 @@ export function ReportsView(): ReactNode {
                   message="Cambia el periodo o registra algún movimiento."
                 />
               ) : (
-                <table className="table breakdown">
+                <table className="table breakdown" ref={entradaReparto} data-entrada={estadoReparto}>
                   <thead>
                     <tr>
                       <th>Concepto</th>
@@ -957,7 +961,7 @@ export function ReportsView(): ReactNode {
                     </tr>
                   </thead>
                   <tbody>
-                    {filas.map(({ row, antes: gastoAntes }) => {
+                    {filas.map(({ row, antes: gastoAntes }, indice) => {
                       const key = row.categoryId ?? 'none'
                       const openable = hasBreakdown(row)
                       const open = expanded.has(row.categoryId ?? -1)
@@ -1006,10 +1010,14 @@ export function ReportsView(): ReactNode {
                               </div>
                               <div className="cat-bar">
                                 <div
-                                  style={{
-                                    width: `${Math.max(0, row.total / widest) * 100}%`,
-                                    background: row.color
-                                  }}
+                                  style={
+                                    {
+                                      width: `${Math.max(0, row.total / widest) * 100}%`,
+                                      background: row.color,
+                                      // El turno en la cola: crecen una detrás de otra.
+                                      '--i': indice
+                                    } as CSSProperties
+                                  }
                                 />
                               </div>
                             </td>

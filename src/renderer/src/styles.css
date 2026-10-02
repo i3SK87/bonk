@@ -2665,6 +2665,100 @@ p { margin: 0; }
 .cat-bar > div {
   height: 100%;
   border-radius: 3px;
+  transform-origin: left;
+  /* Al cambiar de periodo o de gastos a ingresos, cada barra va de su largo al nuevo. */
+  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/*
+ * Los gráficos de Informes, dibujándose al asomar.
+ *
+ * Esperan encogidos con `data-entrada="espera"` hasta que `useEntrada` ve que
+ * han asomado, y entonces crecen: las barras del reparto desde la izquierda,
+ * las columnas desde la base y la línea del balance de izquierda a derecha,
+ * con sus puntos apareciendo a su paso. Cada una con su turno (`--i`).
+ */
+[data-entrada='espera'] .cat-bar > div {
+  transform: scaleX(0);
+}
+
+[data-entrada='ya'] .cat-bar > div {
+  animation: crece-a-lo-ancho 0.52s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms);
+}
+
+.barra-serie,
+.linea-punto {
+  transform-box: fill-box;
+}
+
+.barra-serie {
+  transform-origin: bottom;
+}
+
+.linea-punto {
+  transform-origin: center;
+}
+
+[data-entrada='espera'] .barra-serie {
+  transform: scaleY(0);
+}
+
+[data-entrada='ya'] .barra-serie {
+  animation: crece-a-lo-alto 0.48s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(60ms + var(--i, 0) * 30ms);
+}
+
+[data-entrada='espera'] .linea-trazo {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+[data-entrada='ya'] .linea-trazo {
+  stroke-dasharray: 1;
+  animation: se-dibuja 0.8s 0.1s ease-in-out both;
+}
+
+[data-entrada='espera'] .linea-punto {
+  opacity: 0;
+}
+
+/* Cada punto sale cuando la línea pasa por él. */
+[data-entrada='ya'] .linea-punto {
+  animation: asoma-punto 0.26s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+  animation-delay: calc(100ms + 800ms * (var(--i, 0) + 0.5) / var(--n, 1));
+}
+
+@keyframes crece-a-lo-ancho {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes crece-a-lo-alto {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes se-dibuja {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes asoma-punto {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-entrada] .cat-bar > div,
+  [data-entrada] .barra-serie,
+  [data-entrada] .linea-trazo,
+  [data-entrada] .linea-punto {
+    animation: none;
+  }
+  .cat-bar > div {
+    transition: none;
+  }
 }
 
 /* ---------- Presupuestos de gasto ---------- */

@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEntrada } from '../lib/animaciones'
 import { formatMoney, toMajor } from '@shared/money'
 import { formatShortMonth, formatMonth } from '@shared/dates'
 import type { MonthlyPoint } from '@shared/types'
@@ -95,6 +96,7 @@ export function MonthlyBars({
 }): ReactNode {
   const [ref, width] = useWidth()
   const [hover, setHover] = useState<number | null>(null)
+  const [entrada, estado] = useEntrada<SVGSVGElement>()
 
   // Sin datos, un eje repitiendo ceros no dice nada: mejor explicarlo con palabras.
   const hasData = points.some((point) => point.income > 0 || point.expense > 0)
@@ -126,7 +128,8 @@ export function MonthlyBars({
 
   return (
     <div ref={ref} style={{ position: 'relative', width: '100%' }}>
-      <svg width={width} height={height} role="img" aria-label="Ingresos y gastos por mes">
+      {/* Las columnas suben desde la base cuando el gráfico asoma; ver `useEntrada`. */}
+      <svg ref={entrada} data-entrada={estado} width={width} height={height} role="img" aria-label="Ingresos y gastos por mes">
         {ticks.map((tick) => {
           const y = padding.top + plotHeight - scale(tick)
           return (
@@ -175,11 +178,15 @@ export function MonthlyBars({
                 onMouseLeave={() => setHover(null)}
               />
               <path
+                className="barra-serie"
+                style={{ '--i': index } as CSSProperties}
                 d={barPath(centre - barWidth - gap / 2, baseline - incomeHeight, barWidth, incomeHeight)}
                 fill="var(--series-income)"
                 pointerEvents="none"
               />
               <path
+                className="barra-serie"
+                style={{ '--i': index } as CSSProperties}
                 d={barPath(centre + gap / 2, baseline - expenseHeight, barWidth, expenseHeight)}
                 fill="var(--series-expense)"
                 pointerEvents="none"
@@ -280,6 +287,7 @@ export function NetLine({
 }): ReactNode {
   const [ref, width] = useWidth()
   const [hover, setHover] = useState<number | null>(null)
+  const [entrada, estado] = useEntrada<SVGSVGElement>()
 
   const padding = { top: 16, right: 14, bottom: 24, left: 56 }
   const plotWidth = Math.max(60, width - padding.left - padding.right)
@@ -307,7 +315,8 @@ export function NetLine({
 
   return (
     <div ref={ref} style={{ position: 'relative', width: '100%' }}>
-      <svg width={width} height={height} role="img" aria-label="Balance mensual">
+      {/* La línea se dibuja de izquierda a derecha cuando asoma; ver `useEntrada`. */}
+      <svg ref={entrada} data-entrada={estado} width={width} height={height} role="img" aria-label="Balance mensual">
         <line
           x1={padding.left}
           x2={padding.left + plotWidth}
@@ -331,7 +340,17 @@ export function NetLine({
           </text>
         ))}
 
-        <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        {/* Medida en uno, para que la hoja de estilos la dibuje sin saber cuánto mide de verdad. */}
+        <path
+          className="linea-trazo"
+          pathLength={1}
+          d={path}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
 
         {points.map((point, index) => {
           const cx = padding.left + step * index
@@ -339,7 +358,16 @@ export function NetLine({
           const active = hover === index
           return (
             <g key={point.month}>
-              <circle cx={cx} cy={cy} r={active ? 5 : 4} fill="var(--accent)" stroke="var(--bg-elevated)" strokeWidth={2} />
+              <circle
+                className="linea-punto"
+                style={{ '--i': index, '--n': points.length } as CSSProperties}
+                cx={cx}
+                cy={cy}
+                r={active ? 5 : 4}
+                fill="var(--accent)"
+                stroke="var(--bg-elevated)"
+                strokeWidth={2}
+              />
               <rect
                 x={cx - step / 2}
                 y={padding.top}
