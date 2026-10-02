@@ -750,6 +750,12 @@ export function ScheduleModal({
   async function save(): Promise<void> {
     if (amount <= 0) return setError('El importe tiene que ser mayor que cero')
     if (type === 'transfer' && !toAccountId) return setError('Elige la cuenta de destino')
+    // Lo mismo que avisa «Editar fechas»: sin esto nacía agotada y se iba sola a
+    // Finalizadas sin decir por qué. Una ya terminada se puede retocar sin
+    // tocarle el fin: seguir terminada es lo suyo.
+    if (freq !== 'once' && endDate && endDate < nextDate && !schedule?.settledAt) {
+      return setError('La fecha de fin cae antes que la próxima: así no queda ninguna por delante.')
+    }
 
     const saved = await onSave({
       id: schedule?.id,

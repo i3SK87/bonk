@@ -167,6 +167,11 @@ interface ScheduledInput {
   /** Si el plan es una deuda a plazos: lo que sale en la pestaña Deudas. */
   isDebt?: boolean
   remind?: boolean
+  /**
+   * El movimiento que es la primera vuelta de la serie, cuando nace de marcar
+   * uno como cíclico. Solo al crear.
+   */
+  desdeMovimiento?: number | null
 }
 
 /**
@@ -295,7 +300,25 @@ export function saveScheduled(input: ScheduledInput): ScheduledView {
       bind(input.lender?.trim() || null),
       input.isDebt ? 1 : 0
     )
-  return getScheduled(Number(result.lastInsertRowid))!
+  const nuevaId = Number(result.lastInsertRowid)
+
+  /*
+   * El movimiento del que nace se engancha como su primera vuelta.
+   *
+   * Es lo que hace `repeatTransaction`, y aquí hacía la misma falta: sin
+   * `last_posted`, la serie no sabe de qué día viene. Una cuota del 31 de enero
+   * tenía la próxima el 28 de febrero, y desde ahí se quedaba en el 28 para
+   * siempre; la del 31 de agosto, en el 30.
+   */
+  if (input.desdeMovimiento != null) {
+    db.prepare(
+      'UPDATE transactions SET scheduled_id = ?, updated_at = ? WHERE id = ? AND scheduled_id IS NULL'
+    ).run(nuevaId, nowISO(), input.desdeMovimiento)
+    db.prepare(
+      'UPDATE scheduled SET last_posted = (SELECT date FROM transactions WHERE id = ?) WHERE id = ?'
+    ).run(input.desdeMovimiento, nuevaId)
+  }
+  return getScheduled(nuevaId)!
 }
 
 /** Lo que se programa a partir de un movimiento, con su cadencia si la lleva. */

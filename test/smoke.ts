@@ -3966,6 +3966,33 @@ try {
     const importado = csv.importCsv(csvR, {})
     equal('importa la nómina', importado.imported, 1)
     equal('sin inventarse el traspaso a la hucha', saldoR(huchaR.id), huchaAntes)
+
+    // Marcado como cíclico el día 31: la serie no se queda en el 28.
+    const delTreintaYUno = transactions.saveTransaction({
+      type: 'expense',
+      date: '2026-01-31',
+      accountId: bancoR.id,
+      amount: 100
+    })
+    const ciclica = scheduled.saveScheduled({
+      type: 'expense',
+      accountId: bancoR.id,
+      amount: 100,
+      freq: 'monthly',
+      interval: 1,
+      nextDate: nextOccurrence('2026-01-31', 'monthly', 1),
+      autoPost: true,
+      desdeMovimiento: delTreintaYUno.id
+    })
+    equal('el movimiento queda como su primera vuelta', transactions.getTransaction(delTreintaYUno.id)!.scheduledId, ciclica.id)
+    scheduled.postDue('2026-04-30')
+    const diasCiclica = transactions
+      .listTransactions({ limit: 5000 })
+      .filter((t) => t.scheduledId === ciclica.id)
+      .map((t) => t.date)
+      .sort()
+    equal('y vuelve al 31 cuando el mes lo tiene', diasCiclica.join(' '), '2026-01-31 2026-02-28 2026-03-31 2026-04-30')
+    scheduled.deleteScheduled(ciclica.id)
   }
 } finally {
   closeDatabase()

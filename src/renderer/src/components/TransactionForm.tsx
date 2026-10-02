@@ -474,7 +474,9 @@ export function TransactionForm({
             autoPost: true,
             remind: true,
             isDebt: esDeuda && type === 'expense',
-            lender: esDeuda && type === 'expense' ? lender || null : null
+            lender: esDeuda && type === 'expense' ? lender || null : null,
+            // Este movimiento es su primera vuelta: así sabe de qué día viene.
+            desdeMovimiento: saved.id
           }),
         'Repetición programada'
       )

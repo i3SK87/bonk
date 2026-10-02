@@ -569,6 +569,9 @@ export function AmountInput({
           setText(pasado ? alTope() : cleaned)
           if (pasado) onChange(cabe(parsed))
           else if (parsed != null) onChange(signed ? parsed : Math.abs(parsed))
+          // Vaciado vale cero: si no, seguía valiendo la última cifra tecleada y
+          // Ctrl+Intro guardaba un importe que ya no se veía en el campo.
+          else if (cleaned.trim() === '') onChange(0)
         }}
       />
       <span
