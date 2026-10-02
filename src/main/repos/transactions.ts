@@ -1,5 +1,6 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { convert, currencyDecimals } from '@shared/money'
+import { today } from '@shared/dates'
 import { getSettings, rateMap } from './settings'
 import { assertNoOverdraft } from './accounts'
 import { tagsForTransactions } from './tags'
@@ -375,6 +376,17 @@ export function moveTransactionToDay(id: number, date: string, orden: number[]):
       | { date: string }
       | undefined
     if (!fila) throw new Error('Ese movimiento ya no existe')
+    /*
+     * A un día que aún no ha llegado, no.
+     *
+     * En la lista hay cabeceras de días futuros —las de las previsiones— y se
+     * podía soltar ahí un movimiento. El saldo suma todo sin mirar la fecha, así
+     * que lo descontaba antes de tiempo: lo mismo que la ficha evita mandando lo
+     * futuro a Programados.
+     */
+    if (fila.date !== date && date > today()) {
+      throw new Error('Un movimiento no puede pasar a un día que aún no ha llegado: lo que va a pasar se programa.')
+    }
     if (fila.date !== date) {
       const ahora = nowISO()
       db.prepare(

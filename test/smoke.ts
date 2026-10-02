@@ -3993,6 +3993,16 @@ try {
       .sort()
     equal('y vuelve al 31 cuando el mes lo tiene', diasCiclica.join(' '), '2026-01-31 2026-02-28 2026-03-31 2026-04-30')
     scheduled.deleteScheduled(ciclica.id)
+
+    // Arrastrado a un día futuro: se rechaza, y el movimiento se queda donde estaba.
+    let rechazoFuturo = ''
+    try {
+      transactions.moveTransactionToDay(delTreintaYUno.id, addDays(hoyR, 2), [delTreintaYUno.id])
+    } catch (error) {
+      rechazoFuturo = (error as Error).message
+    }
+    check('no se arrastra a un día que no ha llegado', rechazoFuturo.includes('aún no ha llegado'), rechazoFuturo)
+    equal('y sigue en su día', transactions.getTransaction(delTreintaYUno.id)!.date, '2026-01-31')
   }
 } finally {
   closeDatabase()

@@ -1592,8 +1592,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                       onRegister={
                         item.isNext
                           ? async () => {
-                              await run(() => api.scheduled.postNow(item.scheduledId))
-                              toast('Movimiento registrado', 'success')
+                              // El aviso, de `run`: solo si ha entrado. Suelto salía también tras un error.
+                              await run(() => api.scheduled.postNow(item.scheduledId), 'Movimiento registrado')
                             }
                           : undefined
                       }
