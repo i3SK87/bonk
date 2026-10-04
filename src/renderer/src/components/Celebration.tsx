@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { Avatar, BarraCuotas } from './ui'
+import { useEntrada } from '../lib/animaciones'
 import { formatMoney } from '@shared/money'
 import { today as todayISO, addMonths } from '@shared/dates'
 import { findLender } from '@shared/lenders'
@@ -544,6 +545,9 @@ export function MonthlySummary({
   const escala = Math.max(1, ...resumen.subidas.flatMap((linea) => [linea.total, linea.antes]))
   const restante = resumen.deudas.reduce((suma, deuda) => suma + Math.max(0, deuda.left ?? 0), 0)
   const alMes = resumen.deudas.reduce((suma, deuda) => suma + deuda.monthlyCost, 0)
+  // Las barras de cada bloque crecen al asomar, como las de Informes.
+  const [entradaSubidas, estadoSubidas] = useEntrada<HTMLUListElement>()
+  const [entradaPresupuestos, estadoPresupuestos] = useEntrada<HTMLDivElement>()
 
   return (
     <Party
@@ -605,8 +609,8 @@ export function MonthlySummary({
             <span className="resumen-rotulo">Lo que más ha subido</span>
             <span className="small muted">frente a {mesAnterior(resumen.mes)}</span>
           </div>
-          <ul className="resumen-lista">
-            {resumen.subidas.map((linea) => (
+          <ul className="resumen-lista" ref={entradaSubidas} data-entrada={estadoSubidas}>
+            {resumen.subidas.map((linea, indice) => (
               <li key={linea.name} className="resumen-subida">
                 <Avatar icon={linea.icon} color={linea.color} size="small" />
                 <span className="resumen-nombre">{linea.name}</span>
@@ -615,8 +619,11 @@ export function MonthlySummary({
                 </span>
                 <span className="amount">{formatMoney(linea.total, currency)}</span>
                 <span className="cambio negative">+{formatMoney(linea.total - linea.antes, currency)}</span>
-                <div className="resumen-barra resumen-barra-comparada">
-                  <div style={{ width: `${(linea.total / escala) * 100}%`, background: linea.color }} />
+                <div className="resumen-barra resumen-barra-comparada" style={{ '--i': indice } as CSSProperties}>
+                  <div
+                    className="resumen-relleno"
+                    style={{ width: `${(linea.total / escala) * 100}%`, background: linea.color }}
+                  />
                   {linea.antes > 0 && (
                     <span className="resumen-antes" style={{ left: `${(linea.antes / escala) * 100}%` }} />
                   )}
@@ -638,8 +645,8 @@ export function MonthlySummary({
           <div className="resumen-bloque-cabecera">
             <span className="resumen-rotulo">Presupuestos</span>
           </div>
-          <div className="resumen-presupuestos">
-            {resumen.presupuestos.map((presupuesto) => {
+          <div className="resumen-presupuestos" ref={entradaPresupuestos} data-entrada={estadoPresupuestos}>
+            {resumen.presupuestos.map((presupuesto, indice) => {
               const delta = presupuesto.spent - presupuesto.limit
               const pasado = delta > 0
               const porcentaje = porcentajeDePresupuesto(presupuesto.spent, presupuesto.limit)
@@ -666,9 +673,9 @@ export function MonthlySummary({
                   {/* La misma barra que en Informes: el color se planta en la
                       raya, lo de más allá es rojo, y la raya negra dice dónde
                       estaba el límite. Sin latido, que el mes ya pasó. */}
-                  <div className="resumen-barra">
+                  <div className="resumen-barra" style={{ '--i': indice } as CSSProperties}>
                     <div
-                      className={exceso > 0 ? 'a-escuadra' : undefined}
+                      className={exceso > 0 ? 'resumen-relleno a-escuadra' : 'resumen-relleno'}
                       style={{ width: `${Math.min(lleno, AVISO_CERCA)}%`, background: presupuesto.color }}
                     />
                     {exceso > 0 && (
@@ -701,7 +708,7 @@ export function MonthlySummary({
             </span>
           </div>
           <ul className="resumen-lista">
-            {resumen.deudas.map((deuda) => {
+            {resumen.deudas.map((deuda, indice) => {
               const quienCobra = findLender(deuda.lender)
               return (
                 <li key={deuda.scheduledId} className="resumen-deuda">
@@ -736,7 +743,7 @@ export function MonthlySummary({
                   </div>
                   {deuda.leftCount != null && (
                     <div className="resumen-cuotas">
-                      <BarraCuotas pagadas={deuda.paidCount} restantes={deuda.leftCount} />
+                      <BarraCuotas pagadas={deuda.paidCount} restantes={deuda.leftCount} turno={indice} />
                     </div>
                   )}
                 </li>

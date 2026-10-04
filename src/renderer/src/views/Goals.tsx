@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
+import { useEntrada } from '../lib/animaciones'
 import { Icon, PALETTE, ALL_ICONS } from '../components/Icon'
 import { DateInput } from '../components/DateInput'
 import { MenuContextual } from '../components/MenuContextual'
@@ -141,10 +142,11 @@ export function GoalsView(): ReactNode {
           <>
             <div className="card-body col" style={{ gap: 20 }}>
 
-              {open.map((goal) => (
+              {open.map((goal, indice) => (
                 <GoalCard
                   key={goal.id}
                   goal={goal}
+                  turno={indice}
                   currency={settings.baseCurrency}
                   techo={Math.min(goal.targetAmount, goal.reserved + porRepartir)}
                   onAchieve={() => setComprando(goal)}
@@ -337,7 +339,8 @@ function GoalCard({
   onReserve,
   marcada,
   onMenu,
-  onAbrir
+  onAbrir,
+  turno
 }: {
   goal: GoalProgress
   currency: string
@@ -350,8 +353,16 @@ function GoalCard({
   onMenu?: (x: number, y: number) => void
   /** Abrir la ficha. La ficha se abre pulsando la tarjeta, ver abajo. */
   onAbrir?: () => void
+  /** Su puesto en la lista, para que las barras arranquen una detrás de otra. */
+  turno?: number
 }): ReactNode {
   const [reserva, setReserva] = useState(goal.reserved)
+  /*
+   * El deslizador crece al asomar, como las barras: el relleno sube desde cero
+   * y el mando aparece al llegar. El mando no viaja con él porque su sitio es
+   * el valor del campo, y moverlo sería tocar lo que se guarda.
+   */
+  const [entrada, estado] = useEntrada<HTMLDivElement>()
 
   /*
    * Mientras se arrastra manda el mando y no lo guardado.
@@ -480,7 +491,12 @@ function GoalCard({
           Ahora llegar al final significa llegar, y el dedo se para solo donde se
           acaba la hucha. Se guarda al soltar. */}
       {onReserve ? (
-        <div className="reserva">
+        <div
+          className="reserva"
+          ref={entrada}
+          data-entrada={estado}
+          style={{ '--i': turno ?? 0 } as CSSProperties}
+        >
           <input
             type="range"
             min={0}
@@ -534,7 +550,7 @@ function GoalCard({
           />
         </div>
       ) : (
-        <ProgressBar percent={goal.percent} color={color} />
+        <ProgressBar percent={goal.percent} color={color} turno={turno} />
       )}
 
 

@@ -11,6 +11,7 @@ import { Icon, PALETTE, ICON_GROUPS, ICON_LABELS, ICON_SEARCH, normalizarBusqued
 import { formatMoney, parseAmount, currencySymbol, toMajor } from '@shared/money'
 import { keepNumericChars } from '@shared/numbers'
 import { useStore } from '../lib/store'
+import { useEntrada } from '../lib/animaciones'
 
 /* ---------- Modal ---------- */
 
@@ -829,26 +830,45 @@ export function Segmented<T extends string>({ value, options, onChange }: Segmen
  * tramos se estrechan hasta que dejan de leerse, así que a partir de sesenta se
  * vuelve a una barra de una pieza.
  */
-export function BarraCuotas({ pagadas, restantes }: { pagadas: number; restantes: number }): ReactNode {
+export function BarraCuotas({
+  pagadas,
+  restantes,
+  turno
+}: {
+  pagadas: number
+  restantes: number
+  /** Su puesto en la lista: las de más abajo arrancan un poco después. */
+  turno?: number
+}): ReactNode {
+  // Las cuotas pagadas se encienden en cascada al asomar; ver `useEntrada`.
+  const [entrada, estado] = useEntrada<HTMLDivElement>()
   const total = pagadas + restantes
   if (total === 0) return null
 
   if (total > 60) {
     return (
       <div style={{ marginTop: 10 }}>
-        <ProgressBar percent={(pagadas / total) * 100} color="var(--positive)" />
+        <ProgressBar percent={(pagadas / total) * 100} color="var(--positive)" turno={turno} />
       </div>
     )
   }
 
   return (
     <div
+      ref={entrada}
+      data-entrada={estado}
       className="cuotas"
       role="img"
       aria-label={`${pagadas} de ${total} cuotas pagadas`}
+      // Medio segundo para la cascada entera, tenga las cuotas que tenga.
+      style={{ '--i': turno ?? 0, '--paso': `${Math.min(45, 500 / Math.max(1, pagadas))}ms` } as CSSProperties}
     >
       {Array.from({ length: total }, (_, i) => (
-        <span key={i} className={i < pagadas ? 'cuota pagada' : 'cuota'} />
+        <span
+          key={i}
+          className={i < pagadas ? 'cuota pagada' : 'cuota'}
+          style={i < pagadas ? ({ '--j': i } as CSSProperties) : undefined}
+        />
       ))}
     </div>
   )
@@ -861,7 +881,8 @@ export function ProgressBar({
   color,
   pacePercent,
   rojoDesde,
-  late
+  late,
+  turno
 }: {
   percent: number
   color: string
@@ -874,7 +895,11 @@ export function ProgressBar({
   rojoDesde?: number
   /** Y si ese tramo rojo late. */
   late?: boolean
+  /** Su puesto en la lista: las de más abajo arrancan un poco después. */
+  turno?: number
 }): ReactNode {
+  // Crece al asomar: el relleno, luego lo rojo y al final la marca del ritmo.
+  const [entrada, estado] = useEntrada<HTMLDivElement>()
   const tope = Math.min(100, Math.max(0, percent))
   /*
    * El color se planta en la raya y no sigue por debajo del rojo.
@@ -887,7 +912,12 @@ export function ProgressBar({
   const exceso = rojoDesde != null && tope > rojoDesde ? tope - rojoDesde : 0
 
   return (
-    <div className="progress">
+    <div
+      ref={entrada}
+      data-entrada={estado}
+      className="progress"
+      style={turno != null ? ({ '--i': turno } as CSSProperties) : undefined}
+    >
       <div
         className={exceso > 0 ? 'progress-fill a-escuadra' : 'progress-fill'}
         style={{ width: `${lleno}%`, background: color }}

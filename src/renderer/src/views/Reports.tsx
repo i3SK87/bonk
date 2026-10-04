@@ -251,7 +251,7 @@ function TarjetaPresupuestos({
           />
         ) : (
           <div className="tira-presupuestos">
-            {presupuestos.map((presupuesto) => {
+            {presupuestos.map((presupuesto, indice) => {
               return (
                 <div
                   className={`tarjeta-presupuesto${marcada === presupuesto.categoryId ? ' marcada' : ''}`}
@@ -300,6 +300,7 @@ function TarjetaPresupuestos({
                     color={presupuesto.color}
                     rojoDesde={AVISO_CERCA}
                     late={enCurso}
+                    turno={indice}
                   />
 
                   {/* Lo gastado y el presupuesto. Lo que queda ya lo dice la flecha de

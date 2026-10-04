@@ -193,10 +193,11 @@ export function DebtsView(): ReactNode {
           />
         ) : (
           <div className="card-body col" style={{ gap: 2 }}>
-            {abiertas.map((debt) => (
+            {abiertas.map((debt, indice) => (
               <DebtCard
                 key={debt.scheduledId}
                 debt={debt}
+                turno={indice}
                 currency={settings.baseCurrency}
                 onAdjust={() => setAdjusting(debt)}
                 marcada={menu?.debt.scheduledId === debt.scheduledId}
@@ -358,11 +359,14 @@ function DebtCard({
   currency,
   onAdjust,
   marcada,
-  onMenu
+  onMenu,
+  turno
 }: {
   debt: DebtProgress
   currency: string
   onAdjust: () => void
+  /** Su puesto en la lista, para que las barras arranquen una detrás de otra. */
+  turno?: number
   /** Su menú está abierto: se queda encendida para saber sobre cuál se pulsó. */
   marcada?: boolean
   onMenu?: (x: number, y: number) => void
@@ -425,11 +429,11 @@ function DebtCard({
       {/* Sin fecha de fin no hay barra: no se puede medir contra un total que no
           existe. Lo pagado se sigue diciendo, que es lo que se sabe. */}
       {debt.leftCount != null ? (
-        <BarraCuotas pagadas={debt.paidCount} restantes={debt.leftCount} />
+        <BarraCuotas pagadas={debt.paidCount} restantes={debt.leftCount} turno={turno} />
       ) : (
         debt.percent != null && (
           <div style={{ marginTop: 10 }}>
-            <ProgressBar percent={debt.percent} color={'var(--positive)'} />
+            <ProgressBar percent={debt.percent} color={'var(--positive)'} turno={turno} />
           </div>
         )
       )}
