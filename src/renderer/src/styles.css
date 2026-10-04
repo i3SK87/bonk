@@ -1942,21 +1942,23 @@ p { margin: 0; }
   gap: 2px;
   padding: 12px;
   min-width: 0;
-  background: var(--bg-sunken);
   border-color: var(--border);
 }
 
+/* En reposo, la ficha es solo su borde sobre la tarjeta; el fondo hundido sale
+   al pasar por encima, igual que en una fila de la lista. */
 .tx-row.ficha:hover,
 .tx-row.ficha.marcada {
   background: var(--bg-sunken);
   border-color: var(--border-strong);
 }
 
-/* La familia se enciende junta, como en la lista; aquí con el borde, que el
-   fondo ya es el hundido. Y sin las esquinas cuadradas de la lista, que allí
+/* La familia se enciende junta, como en la lista: con el mismo fondo, y además
+   el borde de acento. Y sin las esquinas cuadradas de la lista, que allí
    sirven para soldar dos filas y aquí las fichas van sueltas. */
 .tx-row.ficha.linked-active,
 .tx-row.ficha.linked-active:hover {
+  background: var(--bg-sunken);
   border-color: var(--accent);
   border-radius: var(--radius);
 }
@@ -2153,7 +2155,9 @@ p { margin: 0; }
 .progress-fill {
   height: 100%;
   border-radius: var(--radius-pill);
-  transition: width 0.3s ease;
+  transform-origin: left;
+  /* La misma curva que las del reparto de Informes cuando cambia el dato. */
+  transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /*
@@ -2757,6 +2761,134 @@ p { margin: 0; }
     animation: none;
   }
   .cat-bar > div {
+    transition: none;
+  }
+}
+
+/*
+ * Y todas las demás barras, igual: presupuestos, planes de ahorro, deudas y
+ * el resumen del mes.
+ *
+ * Mismo `useEntrada` y misma curva. El relleno crece desde la izquierda; lo
+ * rojo de un presupuesto sale de la raya cuando el relleno ya ha llegado a
+ * ella, y solo después empieza a latir; la marca del ritmo y la rayita del mes
+ * anterior aparecen al final. Las cuotas de una deuda no crecen: las pagadas
+ * se encienden una tras otra, en medio segundo tenga las que tenga (`--paso`).
+ */
+.progress-exceso,
+.resumen-relleno {
+  transform-origin: left;
+}
+
+[data-entrada='espera'] .progress-fill,
+[data-entrada='espera'] .progress-exceso,
+[data-entrada='espera'] .resumen-relleno {
+  transform: scaleX(0);
+}
+
+[data-entrada='ya'] .progress-fill,
+[data-entrada='ya'] .resumen-relleno {
+  animation: crece-a-lo-ancho 0.52s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms);
+}
+
+[data-entrada='ya'] .progress-exceso {
+  animation: crece-a-lo-ancho 0.3s ease-out both;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms + 0.45s);
+}
+
+[data-entrada='ya'] .progress-exceso.late {
+  animation:
+    crece-a-lo-ancho 0.3s ease-out both,
+    latido-presupuesto 2.5s ease-in-out infinite;
+  animation-delay:
+    calc(60ms + var(--i, 0) * 35ms + 0.45s),
+    calc(60ms + var(--i, 0) * 35ms + 0.75s);
+}
+
+[data-entrada='espera'] .progress-pace,
+[data-entrada='espera'] .resumen-antes {
+  opacity: 0;
+}
+
+[data-entrada='ya'] .progress-pace,
+[data-entrada='ya'] .resumen-antes {
+  animation: aparece 0.3s ease-out backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms + 0.5s);
+}
+
+@keyframes aparece {
+  from { opacity: 0; }
+}
+
+[data-entrada='espera'] .cuota.pagada {
+  background: var(--bg-sunken);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+[data-entrada='ya'] .cuota.pagada {
+  animation: cuota-se-enciende 0.28s ease-out both;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms + var(--j, 0) * var(--paso, 40ms));
+}
+
+@keyframes cuota-se-enciende {
+  from {
+    background: var(--bg-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transform: scaleY(0.6);
+  }
+}
+
+/*
+ * El deslizador de un plan: crece su relleno, que es una variable del
+ * degradado. Registrada para que se pueda animar —sin registrar, una variable
+ * salta de un valor a otro—. Lo de esperar va con `!important` porque el valor
+ * de verdad lo pone React en línea. El mando aparece cuando el relleno llega.
+ */
+@property --relleno {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+.reserva[data-entrada='espera'] input[type='range'] {
+  --relleno: 0% !important;
+}
+
+.reserva[data-entrada='ya'] input[type='range'] {
+  animation: relleno-crece 0.52s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms);
+}
+
+@keyframes relleno-crece {
+  from { --relleno: 0%; }
+}
+
+.reserva[data-entrada='espera'] input[type='range']::-webkit-slider-thumb {
+  opacity: 0;
+}
+
+.reserva[data-entrada='ya'] input[type='range']::-webkit-slider-thumb {
+  animation: aparece 0.2s ease-out backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 35ms + 0.45s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-entrada='ya'] .progress-fill,
+  [data-entrada='ya'] .resumen-relleno,
+  [data-entrada='ya'] .progress-exceso,
+  [data-entrada='ya'] .progress-pace,
+  [data-entrada='ya'] .resumen-antes,
+  [data-entrada='ya'] .cuota.pagada,
+  .reserva[data-entrada='ya'] input[type='range'],
+  .reserva[data-entrada='ya'] input[type='range']::-webkit-slider-thumb {
+    animation: none;
+  }
+  /* El rojo deja de crecer y deja de latir, como ya hacía sin animaciones. */
+  [data-entrada='ya'] .progress-exceso.late {
+    animation: none;
+  }
+  .progress-fill {
     transition: none;
   }
 }
