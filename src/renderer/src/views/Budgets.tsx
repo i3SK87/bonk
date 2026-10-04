@@ -7,6 +7,7 @@ import { PresupuestoRapido } from '../components/PresupuestoRapido'
 import { NuevoPresupuesto } from '../components/NuevoPresupuesto'
 import { Cambio } from './Reports'
 import { formatMoney } from '@shared/money'
+import { byName } from '@shared/text'
 import { addMonths, formatMonth, startOfMonth, today } from '@shared/dates'
 import { AVISO_CERCA } from '@shared/presupuestos'
 import type { Category, EstadoPresupuesto } from '@shared/types'
@@ -43,7 +44,8 @@ export function BudgetsView(): ReactNode {
   useEffect(() => {
     api.categories
       .presupuestos(mes.slice(0, 7))
-      .then(setPresupuestos)
+      // Por nombre, para encontrar cada uno siempre en el mismo sitio.
+      .then((lista) => setPresupuestos([...lista].sort((a, b) => byName.compare(a.name, b.name))))
       .catch(fail('los presupuestos'))
       .finally(() => setCargado(true))
   }, [mes, revision])
