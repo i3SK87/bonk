@@ -23,6 +23,7 @@ import { GoalsView } from './views/Goals'
 import { SchedulesView } from './views/Schedules'
 import { DebtsView } from './views/Debts'
 import { ReportsView } from './views/Reports'
+import { BudgetsView } from './views/Budgets'
 import { SettingsView } from './views/Settings'
 import { formatMoney, formatMoneyBreve, cabeEntero } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
@@ -40,6 +41,7 @@ type ViewId =
   | 'goals'
   | 'schedules'
   | 'debts'
+  | 'budgets'
   | 'reports'
   | 'settings'
 
@@ -53,6 +55,7 @@ const NAV: Array<{ id: ViewId; label: string; icon: string }> = [
   // y esa marca ya no existe.
   { id: 'debts', label: 'Deudas', icon: 'invest' },
   { id: 'goals', label: 'Planes Ahorro', icon: 'piggy' },
+  { id: 'budgets', label: 'Presupuestos', icon: 'target' },
   { id: 'accounts', label: 'Cuentas', icon: 'wallet' },
   { id: 'categories', label: 'Categorías', icon: 'tag' },
   { id: 'reports', label: 'Informes', icon: 'chart' }
@@ -77,6 +80,7 @@ const TITLES: Record<ViewId, string> = {
   categories: 'Categorías',
   goals: 'Planes Ahorro',
   debts: 'Deudas',
+  budgets: 'Presupuestos',
   schedules: 'Movimientos programados',
   reports: 'Informes',
   settings: 'Ajustes'
@@ -461,6 +465,7 @@ export function App(): ReactNode {
               {view === 'accounts' && <AccountsView />}
               {view === 'categories' && <CategoriesView />}
               {view === 'goals' && <GoalsView />}
+              {view === 'budgets' && <BudgetsView />}
               {view === 'debts' && <DebtsView />}
               {view === 'schedules' && <SchedulesView />}
               {view === 'reports' && <ReportsView />}

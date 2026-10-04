@@ -10,11 +10,10 @@ import {
 import { useStore, usePreferredAccountId } from '../lib/store'
 import { useEntrada } from '../lib/animaciones'
 import { Icon } from '../components/Icon'
-import { Segmented, Loading, EmptyState, Avatar, ProgressBar } from '../components/ui'
+import { Segmented, Loading, EmptyState, Avatar } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
 import { PresupuestoRapido } from '../components/PresupuestoRapido'
-import { NuevoPresupuesto } from '../components/NuevoPresupuesto'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
 import { today, daysBetween, formatDate } from '@shared/dates'
@@ -31,8 +30,7 @@ import {
   type RangoId
 } from '@shared/rangos'
 import { repartoComparado } from '@shared/reparto'
-import { AVISO_CERCA } from '@shared/presupuestos'
-import type { Category, CategoryKind, CategoryTotal, MonthlyPoint, EstadoPresupuesto } from '@shared/types'
+import type { Category, CategoryKind, CategoryTotal, MonthlyPoint } from '@shared/types'
 
 const api = window.bonk
 
@@ -103,7 +101,7 @@ function tonoDe(delta: number, kind: CategoryKind): string {
  * palabra: «=» cuando no ha cambiado y «-» cuando no hay con qué comparar. Una
  * palabra al lado de una cifra pesa más que la cifra.
  */
-function Cambio({
+export function Cambio({
   ahora,
   antes,
   kind,
@@ -187,138 +185,6 @@ function Cambio({
   )
 }
 
-/**
- * Los presupuestos del mes, cada uno con lo que llevas gastado.
- *
- * Solo sale en las pastillas de un mes, porque un presupuesto es mensual: en «Este
- * año» o en un tramo a mano no significa nada. Con el mes pasado elegido
- * también vale, y entonces cuenta lo que pasó, no lo que va a pasar.
- */
-function TarjetaPresupuestos({
-  presupuestos,
-  mes,
-  currency,
-  marcada,
-  onAbrir,
-  onMenu,
-  onNuevo
-}: {
-  presupuestos: EstadoPresupuesto[]
-  mes: string
-  currency: string
-  /** La categoría cuyo menú está abierto, para dejar su tarjeta encendida. */
-  marcada: number | null
-  onAbrir: (categoryId: number) => void
-  onMenu: (categoryId: number, x: number, y: number) => void
-  onNuevo: () => void
-}): ReactNode {
-  /*
-   * Lo rojo late solo mientras el mes siga abierto: en uno cerrado es un parte
-   * de lo que pasó, y no hay nada que hacer con él.
-   */
-  const enCurso = mes === today().slice(0, 7)
-
-  return (
-    <div className="card">
-      <div className="card-header">
-        {/*
-          «Presupuestos» a secas, sin el mes.
-          El presupuesto no es de septiembre: es la raya que te pusiste y sigue ahí
-          mes tras mes hasta que la cambies. De qué mes son las cifras lo dice
-          la pastilla del periodo, que está dos dedos más arriba, y ponerlo
-          también aquí hacía parecer que cada mes se empieza de nuevo.
-        */}
-        <h2>Presupuestos</h2>
-        <div className="spacer" />
-        {/*
-          Poner uno nuevo se pide desde aquí y no desde el clic derecho: el menú
-          se abre sobre una tarjeta, y para estrenar el primero no hay ninguna
-          sobre la que pulsar.
-        */}
-        <button className="btn small primary" onClick={onNuevo}>
-          Nuevo presupuesto
-        </button>
-      </div>
-
-      <div className="card-body">
-        {/* Sin ninguno puesto la tarjeta se queda igualmente, que es lo que deja
-            el botón a mano; lo que se va es la tira. */}
-        {presupuestos.length === 0 ? (
-          <EmptyState
-            icon="target"
-            title="Aún no tienes presupuestos"
-            message="Ponle una raya al mes a una categoría de gasto y aquí verás cuánto llevas gastado de ella."
-          />
-        ) : (
-          <div className="tira-presupuestos">
-            {presupuestos.map((presupuesto, indice) => {
-              return (
-                <div
-                  className={`tarjeta-presupuesto${marcada === presupuesto.categoryId ? ' marcada' : ''}`}
-                  key={presupuesto.categoryId}
-                  role="button"
-                  tabIndex={0}
-                  data-fila
-                  title={`${presupuesto.name}: cambiar el presupuesto`}
-                  onClick={() => onAbrir(presupuesto.categoryId)}
-                  onKeyDown={(evento) => {
-                    if (evento.key !== 'Enter' && evento.key !== ' ') return
-                    evento.preventDefault()
-                    onAbrir(presupuesto.categoryId)
-                  }}
-                  onContextMenu={(evento) => {
-                    evento.preventDefault()
-                    onMenu(presupuesto.categoryId, evento.clientX, evento.clientY)
-                  }}
-                >
-                  <div className="row tight">
-                    <Avatar icon={presupuesto.icon} color={presupuesto.color} size="small" />
-                    <span className="truncate" style={{ flex: 1, fontWeight: 550 }}>
-                      {presupuesto.name}
-                    </span>
-                    {/*
-                      Cuánto te falta o cuánto te has pasado, en dinero y con la
-                      misma insignia que el resto del informe. El porcentaje ya lo
-                      dice la barra: repetirlo en cifra era decir dos veces lo
-                      mismo y ninguna de las dos en euros, que es lo que se gasta.
-                    */}
-                    <Cambio
-                      ahora={presupuesto.spent}
-                      antes={presupuesto.limit}
-                      kind="expense"
-                      unidad="valor"
-                      formatea={(valor) => formatMoney(valor, currency)}
-                      pista={`${formatMoney(presupuesto.spent, currency)} gastados · presupuesto de ${formatMoney(presupuesto.limit, currency)}`}
-                    />
-                  </div>
-
-                  {/* Rojo a partir del 80 %, que es la misma raya en la que salta
-                      el aviso: lo que hay pasado de ahí es el margen que te has
-                      comido, y se ve tal cual de grande que es. */}
-                  <ProgressBar
-                    percent={presupuesto.percent}
-                    color={presupuesto.color}
-                    rojoDesde={AVISO_CERCA}
-                    late={enCurso}
-                    turno={indice}
-                  />
-
-                  {/* Lo gastado y el presupuesto. Lo que queda ya lo dice la flecha de
-                      arriba, y decirlo otra vez aquí era la misma cifra dos
-                      veces en la misma tarjeta. */}
-                  <span className="small subtle">
-                    {formatMoney(presupuesto.spent, currency)} de {formatMoney(presupuesto.limit, currency)}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 export function ReportsView(): ReactNode {
   // El catálogo de categorías, con su ficha completa. Se llama así y no
   // `categories` porque ese nombre ya lo lleva aquí el desglose del periodo,
@@ -344,14 +210,6 @@ export function ReportsView(): ReactNode {
   const [categories, setCategories] = useState<CategoryTotal[]>([])
   const [monthly, setMonthly] = useState<MonthlyPoint[]>([])
   /*
-   * Los presupuestos del mes que se está mirando.
-   *
-   * No son parte del reparto ni se piden con él: el reparto es de una cuenta y
-   * de un periodo cualquiera, y un presupuesto es de todas las cuentas y solo de un
-   * mes. Se piden aparte, y en los periodos que no son un mes ni se piden.
-   */
-  const [presupuestos, setPresupuestos] = useState<EstadoPresupuesto[]>([])
-  /*
    * Solo se enseña el cargando la primera vez.
    *
    * Cualquier recarga posterior —cambiar de periodo, mover una categoría—
@@ -373,20 +231,8 @@ export function ReportsView(): ReactNode {
    */
   const [menu, setMenu] = useState<{ categoria: Category; x: number; y: number } | null>(null)
   const [moviendo, setMoviendo] = useState<{ categoria: Category; ids: number[] } | null>(null)
-  /*
-   * La categoría a la que se le está poniendo presupuesto.
-   *
-   * Aquí es donde se ve que un presupuesto aprieta de más o se queda corto —la
-   * tarjeta de arriba lo está diciendo—, así que es donde tiene que poder
-   * cambiarse, sin irse a Categorías a buscar la ficha.
-   */
+  /** La categoría a la que se le está poniendo presupuesto desde su clic derecho. */
   const [poniendoPresupuesto, setPoniendoPresupuesto] = useState<Category | null>(null)
-  /** Si está abierto el cuadro de estrenar un presupuesto en una categoría sin él. */
-  const [nuevoPresupuesto, setNuevoPresupuesto] = useState(false)
-  /** El menú del botón derecho sobre una tarjeta de presupuesto. */
-  const [menuPresupuesto, setMenuPresupuesto] = useState<{ categoria: Category; x: number; y: number } | null>(
-    null
-  )
   /*
    * En qué se miden las diferencias: la columna Balance y la cinta de arriba.
    *
@@ -486,38 +332,6 @@ export function ReportsView(): ReactNode {
       .catch(fail('los informes'))
       .finally(() => setCargado(true))
   }, [range, kind, comparacion, cuenta, revision])
-
-  /*
-   * Y los presupuestos del mes mirado, si lo que se mira es un mes.
-   *
-   * Solo en gastos: no hay presupuesto que pasarse en los ingresos. Si falla, la
-   * tarjeta no sale y el informe se ve igual —los presupuestos son un añadido, no
-   * son de lo que se viene a ver aquí—.
-   */
-  const mesDeLosPresupuestos = esDeUnMes(period) && kind === 'expense' ? range.from.slice(0, 7) : null
-  useEffect(() => {
-    if (!mesDeLosPresupuestos) return setPresupuestos([])
-    api.categories
-      .presupuestos(mesDeLosPresupuestos)
-      .then(setPresupuestos)
-      .catch(() => setPresupuestos([]))
-  }, [mesDeLosPresupuestos, revision])
-
-  /** La ficha de la categoría de un presupuesto, que es lo que se guarda y se edita. */
-  const categoriaDelPresupuesto = (categoryId: number): Category | undefined =>
-    catalogo.find((item) => item.id === categoryId)
-
-  /*
-   * Quitar el presupuesto es guardar la categoría sin él.
-   *
-   * No borra nada más: la categoría se queda con su nombre, su color y sus
-   * movimientos, y lo único que se va es la raya. De ahí que se llame «quitar
-   * el presupuesto» y no «eliminar», que al lado de una categoría suena a otra cosa
-   * bastante peor.
-   */
-  const quitarPresupuesto = async (categoria: Category): Promise<void> => {
-    await run(() => api.categories.save({ ...categoria, spendLimit: null }), 'Presupuesto quitado')
-  }
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
@@ -852,27 +666,6 @@ export function ReportsView(): ReactNode {
         <>
           <Teletipo datos={cifras} />
 
-          {/* Antes del reparto: lo que te pusiste se mira antes que en qué se
-              ha ido el mes. La tarjeta sale aunque no haya ninguno puesto, que es
-              desde donde se pone el primero. */}
-          {mesDeLosPresupuestos && (
-            <TarjetaPresupuestos
-              presupuestos={presupuestos}
-              mes={mesDeLosPresupuestos}
-              currency={currency}
-              marcada={menuPresupuesto?.categoria.id ?? null}
-              onAbrir={(categoryId) => {
-                const categoria = categoriaDelPresupuesto(categoryId)
-                if (categoria) setPoniendoPresupuesto(categoria)
-              }}
-              onMenu={(categoryId, x, y) => {
-                const categoria = categoriaDelPresupuesto(categoryId)
-                if (categoria) setMenuPresupuesto({ categoria, x, y })
-              }}
-              onNuevo={() => setNuevoPresupuesto(true)}
-            />
-          )}
-
           <div className="card">
             <div className="card-header">
               {/* «Del periodo» y no «por categorías»: los traspasos entran aquí
@@ -1145,31 +938,6 @@ export function ReportsView(): ReactNode {
           onCerrar={() => setMenu(null)}
         />
       )}
-
-      {menuPresupuesto && (
-        <MenuContextual
-          x={menuPresupuesto.x}
-          y={menuPresupuesto.y}
-          opciones={
-            [
-              {
-                etiqueta: 'Cambiar el presupuesto',
-                icono: 'chart',
-                onElegir: () => setPoniendoPresupuesto(menuPresupuesto.categoria)
-              },
-              {
-                etiqueta: 'Quitar el presupuesto',
-                icono: 'trash',
-                peligrosa: true,
-                onElegir: () => void quitarPresupuesto(menuPresupuesto.categoria)
-              }
-            ] satisfies OpcionMenu[]
-          }
-          onCerrar={() => setMenuPresupuesto(null)}
-        />
-      )}
-
-      {nuevoPresupuesto && <NuevoPresupuesto onClose={() => setNuevoPresupuesto(false)} />}
 
       {poniendoPresupuesto && (
         <PresupuestoRapido category={poniendoPresupuesto} onClose={() => setPoniendoPresupuesto(null)} />

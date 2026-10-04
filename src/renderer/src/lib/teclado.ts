@@ -66,7 +66,7 @@ function enfocar(fila: HTMLElement | undefined): void {
  *
  * Por posición y no por orden en la página: así la misma flecha vale en una
  * lista de movimientos, en la rejilla de Categorías y en la tira de
- * presupuestos de Informes. Hacia abajo, la más cercana de la siguiente línea
+ * Presupuestos. Hacia abajo, la más cercana de la siguiente línea
  * y, dentro de esa línea, la que más a plomo cae; a los lados, la de la misma
  * línea que tenga más pegada.
  */
