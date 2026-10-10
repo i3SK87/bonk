@@ -445,7 +445,11 @@ export interface Settings {
   startWithWindows: boolean
   /** El aspa esconde la ventana en la bandeja en vez de cerrar la aplicación. */
   closeToTray: boolean
-  /** Avisa por notificación de Windows el día antes de cada programación. */
+  /**
+   * La casilla «Avisos de Windows»: deja salir o calla todas las notificaciones
+   * de Windows de BONK. Lo que se ve dentro de la ventana no depende de ella.
+   * Conserva el nombre de cuando solo era el aviso del día antes.
+   */
   remindersEnabled: boolean
   /**
    * El último mes cuyo resumen ya se ha visto, como «2026-07». Es lo que impide

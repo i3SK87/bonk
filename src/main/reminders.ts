@@ -125,7 +125,28 @@ function clearStrayShortcut(): void {
   }
 }
 
+/**
+ * Un aviso de Windows, si la casilla de Ajustes los deja salir.
+ *
+ * Es una sola casilla para todos: programados, presupuestos, saldo bajo,
+ * deudas, planes y ahorro automático. Lo que se apaga es que BONK te hable
+ * desde fuera de su ventana; lo que se ve dentro de ella sale siempre, que es
+ * parte de cómo funciona la aplicación.
+ *
+ * Se pregunta aquí y no en cada aviso para que ninguno se escape: hasta la
+ * 2.45.1 solo la miraban el del día antes y el del 80 %, y el de «te has
+ * pasado» de dentro de la ventana la miraba sin deber.
+ */
 function notify(
+  icon: Electron.NativeImage | string | null,
+  onClick: () => void,
+  options: { title: string; body: string }
+): void {
+  if (!getSettings().remindersEnabled) return
+  mostrar(icon, onClick, options)
+}
+
+function mostrar(
   icon: Electron.NativeImage | string | null,
   onClick: () => void,
   options: { title: string; body: string }
@@ -315,11 +336,13 @@ export function checkSpendLimits(
    * la propia aplicación. Los que se devuelven son los que la ventana va a
    * contar, así que aquí se callan; el del 80 % sigue saliendo por Windows,
    * que ese no merece pararte lo que estás haciendo.
+   *
+   * Los de la ventana no miran la casilla de los avisos: esa apaga los de
+   * Windows, y estos son parte de la aplicación. Las marcas se llevan igual
+   * con la casilla apagada, para que encenderla no suelte de golpe lo atrasado.
    */
   enPantalla = false
 ): PresupuestoPasado[] {
-  if (!getSettings().remindersEnabled) return []
-
   const mes = today().slice(0, 7)
   const marcas = marcasDePresupuesto()
   const base = getSettings().baseCurrency
@@ -565,13 +588,18 @@ export function anunciarApartados(
   }
 }
 
-/** Aviso de prueba, para comprobar que Windows los deja pasar. */
+/**
+ * Aviso de prueba, para comprobar que Windows los deja pasar.
+ *
+ * Sale aunque la casilla esté apagada: lo pide quien pulsa el botón, y lo que
+ * se prueba es el permiso de Windows, no la casilla.
+ */
 export function sendTestNotification(icon: string, onClick: () => void): boolean {
   if (!Notification.isSupported()) return false
   // Con el icono de una categoría cualquiera: el de prueba tiene que enseñar
   // cómo va a quedar el de verdad, y el de verdad lleva el de su categoría.
   const sample = drawnIcons.values().next().value
-  notify(sample ? nativeImage.createFromDataURL(sample) : categoryImage(icon, null), onClick, {
+  mostrar(sample ? nativeImage.createFromDataURL(sample) : categoryImage(icon, null), onClick, {
     title: 'Mañana: Alquiler',
     body: '−753,00 € · BartBank'
   })

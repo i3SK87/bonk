@@ -142,8 +142,8 @@ export function SettingsView(): ReactNode {
           <Checkbox
             checked={settings.remindersEnabled}
             onChange={(value) => updateSettings({ remindersEnabled: value })}
-            label="Avisarme el día antes de cada movimiento programado"
-            hint="Notificación de Windows con el importe y la cuenta. Hace falta que BONK esté abierta o en la bandeja."
+            label="Avisos de Windows"
+            hint="El día antes de cada programado, los presupuestos, el saldo bajo, las deudas que acabas, los planes que cumples y lo que aparta el ahorro automático. Hace falta que BONK esté abierta o en la bandeja."
           />
 
 
