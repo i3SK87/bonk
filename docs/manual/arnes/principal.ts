@@ -24,6 +24,7 @@ type Paso =
   | ['escribir', string, string]
   | ['desplazar', string, number]
   | ['esperar', number]
+  | ['tecla', string]
 
 interface Escena {
   nombre: string
@@ -52,8 +53,11 @@ const ESCENAS: Escena[] = [
   { nombre: 'b14-ajustes-datos', w: 1100, h: 1000, pasos: [['pulsar', '.nav-item', 'Ajustes'], ['desplazar', '.main', 5000]] },
   { nombre: 'b15-calculadora', w: 1100, h: 760, pasos: [['pulsar', '.nav-item', 'Calculadora']] },
   // Las estrellas de la celebración tardan en irse: se espera a que caigan.
-  { nombre: 'b16-resumen', w: 1100, h: 860, resumenVisto: false, pasos: [['esperar', 5000]] },
-  { nombre: 'b17-widget', html: 'widget.html', w: 380, h: 330, pasos: [] }
+  { nombre: 'b16-resumen', w: 1100, h: 1180, resumenVisto: false, pasos: [['esperar', 5000]] },
+  { nombre: 'b17-widget', html: 'widget.html', w: 380, h: 330, pasos: [] },
+  { nombre: 'b18-presupuestos', w: 1100, h: 640, pasos: [['pulsar', '.nav-item', 'Presupuestos']] },
+  { nombre: 'b19-fichas', w: 1100, h: 1000, pasos: [['pulsar', 'button[title="Ver en fichas"]']] },
+  { nombre: 'b20-atajos', w: 1100, h: 1400, pasos: [['tecla', 'F1'], ['esperar', 400]] }
 ]
 
 const RAIZ = join(__dirname, '..', '..')
@@ -104,6 +108,13 @@ app.whenReady().then(async () => {
   for (const paso of escena.pasos) {
     if (paso[0] === 'esperar') {
       await espera(paso[1])
+      continue
+    }
+    if (paso[0] === 'tecla') {
+      ventana.webContents.focus()
+      ventana.webContents.sendInputEvent({ type: 'keyDown', keyCode: paso[1] })
+      ventana.webContents.sendInputEvent({ type: 'keyUp', keyCode: paso[1] })
+      await espera(700)
       continue
     }
     const hecho = new Promise<boolean>((r) => ipcMain.once('arnes:hecho', (_e, ok: boolean) => r(ok)))

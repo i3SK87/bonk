@@ -33,7 +33,7 @@ const { version } = JSON.parse(readFileSync(join(raiz, 'package.json'), 'utf8'))
 writeFileSync(join(salida, 'package.json'), JSON.stringify({ name: 'bonk', productName: 'BONK', version, main: 'principal.cjs' }))
 
 const electron = createRequire(import.meta.url)(join(raiz, 'node_modules', 'electron'))
-const TODAS = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17']
+const TODAS = ['b01', 'b02', 'b03', 'b04', 'b05', 'b06', 'b07', 'b08', 'b09', 'b10', 'b11', 'b12', 'b13', 'b14', 'b15', 'b16', 'b17', 'b18', 'b19', 'b20']
 const pedidas = process.argv.slice(2).length ? process.argv.slice(2) : TODAS
 for (const escena of pedidas) {
   const r = spawnSync(electron, [salida, `--escena=${escena}`], { encoding: 'utf8', timeout: 90_000 })

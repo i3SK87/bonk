@@ -98,6 +98,11 @@ export function sembrar(opciones: { resumenVisto: boolean }): void {
   const nomina = cats.get('Nómina')!
   categories.saveCategory({ ...nomina, savePercent: 10, saveAmount: null, saveAccountId: hucha.id, saveGoalId: null } as never)
 
+  // — Presupuestos: uno holgado, uno justo y uno que ya se ha pasado —
+  for (const [nombre, raya] of [['Alimentación', 32000], ['Restaurantes', 9000], ['Ocio', 6000], ['Combustible', 7000]] as const) {
+    categories.saveCategory({ ...cats.get(nombre)!, spendLimit: raya } as never)
+  }
+
   // — Programados: se dan de alta con la primera vuelta en el pasado y se
   // ponen al día solos, como al abrir BONK después de unos meses —
   const haceUnAno = startOfMonth(addMonths(today(), -11))
@@ -113,10 +118,10 @@ export function sembrar(opciones: { resumenVisto: boolean }): void {
   scheduled.saveScheduled({ name: 'Sofá', type: 'expense', accountId: banco.id, categoryId: cat('Vivienda'), amount: 6250, freq: 'monthly', interval: 1, nextDate: addDays(inicioDeudas, 20), endDate: addMonths(addDays(inicioDeudas, 20), 5), autoPost: true, isDebt: true, lender: 'sequra', note: 'Sofá' } as never)
   scheduled.postDue()
 
-  // — Ajustes: tema claro y Grafito, que es lo que mejor sale en papel —
+  // — Ajustes: oscuro y Ghost, que es como se usa BONK en casa —
   settings.updateSettings({
-    theme: 'light',
-    palette: 'grafito',
+    theme: 'dark',
+    palette: 'ghost',
     lastMonthlySummary: opciones.resumenVisto ? startOfMonth(addMonths(today(), -1)).slice(0, 7) : '',
     lastBackupAt: new Date().toISOString(),
     widgetAccountIds: []

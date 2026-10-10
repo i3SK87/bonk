@@ -123,7 +123,7 @@ const html = `<!doctype html>
   /* ---------- Índice ---------- */
   .indice { page-break-after: always; }
   .indice ol { list-style: none; padding: 0; margin: 4mm 0 0; counter-reset: cap; }
-  .indice li { counter-increment: cap; display: grid; grid-template-columns: 10mm 1fr; gap: 0 2mm; padding: 0.8mm 0; border-bottom: 0.25mm solid var(--borde); break-inside: avoid; }
+  .indice li { counter-increment: cap; display: grid; grid-template-columns: 10mm 1fr; gap: 0 2mm; padding: 0.5mm 0; border-bottom: 0.25mm solid var(--borde); break-inside: avoid; }
   .indice li::before { content: counter(cap); font-weight: 700; color: var(--acento); font-size: 12pt; }
   .indice li strong { display: block; font-size: 10.5pt; }
   .indice li span { color: var(--atenuado); font-size: 9.2pt; line-height: 1.4; }
@@ -146,7 +146,7 @@ const html = `<!doctype html>
   .entradilla { font-size: 11.5pt; color: var(--atenuado); margin-bottom: 5mm; max-width: 160mm; }
 
   figure { margin: 4mm 0 5mm; break-inside: avoid; }
-  figure img { display: block; width: auto; max-width: 100%; max-height: 92mm; margin: 0 auto; border: 0.25mm solid var(--borde); border-radius: 2.4mm; box-shadow: 0 1mm 3mm rgba(16,24,40,.08); }
+  figure img { display: block; width: auto; max-width: 100%; max-height: 92mm; margin: 0 auto; border: 0.25mm solid var(--noche); border-radius: 2.4mm; box-shadow: 0 0.5mm 2mm rgba(16,24,40,.16); }
   figure.estrecha img { max-height: 72mm; }
   figcaption { font-size: 8.8pt; color: var(--sutil); margin-top: 2mm; text-align: center; }
   .pareja { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; align-items: center; break-inside: avoid; }
@@ -154,11 +154,11 @@ const html = `<!doctype html>
   .pareja figure img { max-height: 110mm; }
 
   /* Un trozo de una captura grande. */
-  .recorte { position: relative; overflow: hidden; margin: 0 auto; border: 0.25mm solid var(--borde); border-radius: 2.4mm; box-shadow: 0 1mm 3mm rgba(16,24,40,.08); }
+  .recorte { position: relative; overflow: hidden; margin: 0 auto; border: 0.25mm solid var(--noche); border-radius: 2.4mm; box-shadow: 0 0.5mm 2mm rgba(16,24,40,.16); }
   .recorte img { position: absolute; border: none; border-radius: 0; box-shadow: none; max-width: none; max-height: none !important; }
   /* El widget, recortado a su tarjeta: la sombra de la captura se corta en seco
      en el borde de la ventana, así que se le pone una aquí, con su mismo radio (18 px). */
-  .recorte.suelto { border: none; border-radius: 8.7% / 8.3%; box-shadow: 0 1.5mm 5mm rgba(16,24,40,.16); }
+  .recorte.suelto { border: none; border-radius: 8.7% / 8.3%; box-shadow: 0 1.5mm 5mm rgba(16,24,40,.24); }
 
   ol.pasos { list-style: none; counter-reset: paso; padding: 0; margin: 3mm 0 4mm; }
   ol.pasos > li { counter-increment: paso; position: relative; padding: 0 0 0 10mm; margin-bottom: 3mm; min-height: 7mm; }
@@ -202,7 +202,7 @@ const html = `<!doctype html>
   <h1>Cómo usar BONK</h1>
   <p class="sub">Las cuentas de casa, en tu ordenador y en ningún otro sitio. Del primer movimiento a los informes, paso a paso.</p>
   <div class="pie">
-    <span>Versión ${version} · septiembre de 2026</span>
+    <span>Versión ${version} · octubre de 2026</span>
     <span>De la misma casa que CLAC</span>
   </div>
 </div>
@@ -212,20 +212,21 @@ const html = `<!doctype html>
   <ol>
     <li><div><strong>Antes de empezar</strong><span>Qué es BONK y cómo dejarla a tu medida el primer día.</span></div></li>
     <li><div><strong>Instalarla</strong><span>El aviso azul de Windows, la bandeja y cómo se actualiza.</span></div></li>
-    <li><div><strong>Movimientos</strong><span>La pantalla de cada día: saldos, periodos, búsqueda y filtros.</span></div></li>
+    <li><div><strong>Movimientos</strong><span>La pantalla de cada día: saldos, periodos, búsqueda, filtros, lista o fichas.</span></div></li>
     <li><div><strong>Apuntar un movimiento</strong><span>Gastos, ingresos, traspasos y reembolsos, en una sola ficha.</span></div></li>
     <li><div><strong>El clic derecho y los reembolsos</strong><span>Corregir sin abrir la ficha, y lo que te devuelven.</span></div></li>
     <li><div><strong>Programados</strong><span>Recibos, nómina y suscripciones que se apuntan solos.</span></div></li>
     <li><div><strong>Deudas</strong><span>Compras a plazos: lo pagado, lo que falta y cuándo se acaban.</span></div></li>
     <li><div><strong>Planes de ahorro</strong><span>Metas con fecha, lo que hay que apartar y el ahorro automático.</span></div></li>
+    <li><div><strong>Presupuestos</strong><span>Una raya al mes por categoría, y el aviso cuando te acercas o te pasas.</span></div></li>
     <li><div><strong>Cuentas</strong><span>Banco, efectivo, tarjeta, hucha… y el patrimonio total.</span></div></li>
     <li><div><strong>Categorías</strong><span>En qué se va el dinero, con su icono y su color.</span></div></li>
-    <li><div><strong>Informes</strong><span>El reparto del periodo, la comparación con el mes anterior y las gráficas.</span></div></li>
-    <li><div><strong>El resumen del mes</strong><span>Lo que sale al abrir BONK en un mes nuevo.</span></div></li>
+    <li><div><strong>Informes</strong><span>El reparto del periodo de una cuenta, la comparación con otro mes y las gráficas.</span></div></li>
+    <li><div><strong>El resumen del mes</strong><span>Lo que sale al abrir BONK en un mes nuevo: gastado, ingresado y ahorrado.</span></div></li>
     <li><div><strong>La calculadora y el widget</strong><span>Cuentas de servilleta y el patrimonio en el escritorio.</span></div></li>
     <li><div><strong>Ajustes</strong><span>Avisos, bandeja, aspecto, datos y versiones nuevas.</span></div></li>
     <li><div><strong>Copias, CSV y cambiar de ordenador</strong><span>Dónde están tus datos, cómo se guardan y cómo traerte los de fuera.</span></div></li>
-    <li><div><strong>Atajos y gestos</strong><span>Todos, en una tabla.</span></div></li>
+    <li><div><strong>El teclado</strong><span>BONK entera sin ratón, y los gestos que sí lo usan.</span></div></li>
     <li><div><strong>Preguntas frecuentes</strong><span>Lo que más se pregunta, con respuesta corta.</span></div></li>
   </ol>
   <p class="nota-ejemplo">Las capturas de este manual usan datos inventados (Banco Ejemplo, el viaje a Japón, la cena de cumpleaños…): no son de nadie.</p>
@@ -240,7 +241,7 @@ const html = `<!doctype html>
   <h2>Lo que BONK no hace</h2>
   <ul>
     <li><strong>No te pide cuenta ni registro</strong>, y no hay nube: los datos viven en un archivo dentro de tu equipo.</li>
-    <li><strong>No se conecta a tu banco.</strong> Lo que entra y sale lo apuntas tú, o lo traes de un extracto en CSV (capítulo 15). Es a propósito: al apuntarlo, te enteras.</li>
+    <li><strong>No se conecta a tu banco.</strong> Lo que entra y sale lo apuntas tú, o lo traes de un extracto en CSV (capítulo 16). Es a propósito: al apuntarlo, te enteras.</li>
     <li><strong>No sale a internet</strong> salvo para una cosa, que puedes apagar: mirar al abrir si hay una versión nueva (capítulo 2).</li>
   </ul>
 
@@ -282,22 +283,25 @@ const html = `<!doctype html>
   <p class="entradilla">La pantalla con la que se abre BONK, y la de uso diario: todo lo que entra y sale de una cuenta, día a día.</p></div>
   ${figura('b01-movimientos', 'La cuenta principal, «Banco Ejemplo», este mes. El reembolso de la cena resta de lo que te costó: «te cuesta 32,00 €».')}
   <h2>Arriba: el saldo y las cuentas</h2>
-  <p>A la izquierda, el <strong>saldo</strong> de la cuenta que estás mirando; a la derecha, una pastilla por cuenta con el suyo, y el <strong>total</strong> de todas. Se mira <strong>una cuenta cada vez</strong>: pulsa otra pastilla y la lista cambia a esa. Al abrir, sale la que tengas marcada como <strong>principal</strong> (capítulo 9).</p>
+  <p>A la izquierda, el <strong>saldo</strong> de la cuenta que estás mirando; a la derecha, una pastilla por cuenta con el suyo, y el <strong>total</strong> de todas. Se mira <strong>una cuenta cada vez</strong>: pulsa otra pastilla y la lista cambia a esa. Al abrir, sale la que tengas marcada como <strong>principal</strong> (capítulo 10).</p>
   <p>Si una cuenta tiene puesto un aviso de saldo bajo, aquí mismo sale una franja cuando se está quedando sin fondos.</p>
   <h2>El periodo, la búsqueda y la cinta</h2>
   <ul>
     <li><strong>Este mes</strong>, <strong>Mes pasado</strong>, <strong>Últimos 3 meses</strong>, <strong>Este año</strong>, <strong>Todo</strong> o <strong>Personalizado</strong>, con las fechas que quieras.</li>
-    <li><strong>Buscar</strong> mira en títulos, categorías, cuentas y etiquetas; «reembolso» trae las devoluciones. <kbd>Esc</kbd> borra la búsqueda.</li>
+    <li><strong>Buscar</strong> mira en títulos, categorías, cuentas y etiquetas; «reembolso» trae las devoluciones. ${k('Ctrl', 'F')} te lleva al buscador desde cualquier pantalla y <kbd>Esc</kbd> borra la búsqueda.</li>
     <li>Debajo, una <strong>cinta</strong> que pasa sola con las cifras del periodo: gasto medio al día, ingresos, gastos, balance y número de movimientos.</li>
   </ul>
   <h2>La lista</h2>
   <p>Los movimientos van agrupados por días, con lo que sube o baja cada día a la derecha. Cada fila lleva el icono de su categoría, el título que le pusiste y la cuenta. <strong>Pulsa una fila para abrir su ficha</strong> y cambiar lo que quieras.</p>
-  <p><strong>Arrastra una fila</strong> para recolocarla: dentro de su día cambia el orden (apuntaste la cena y luego te acordaste del taxi de antes); soltada en otro día, le cambia la fecha. BONK te lo confirma con un aviso.</p>
+  <p><strong>Arrastra una fila</strong> para recolocarla: dentro de su día cambia el orden (apuntaste la cena y luego te acordaste del taxi de antes); soltada en otro día, le cambia la fecha. Un gasto se muda con lo que le cuelga ese mismo día: sus reembolsos y el traspaso del ahorro automático. A un día que aún no ha llegado no se puede arrastrar: lo que va a pasar, se programa. BONK te lo confirma con un aviso.</p>
   <h2>Filtros</h2>
   ${recorte('b04-filtros', [1100, 860], [262, 230, 802, 460], 'Filtros por tipo, por categoría y por importe. Se combinan entre sí y con la búsqueda.')}
   <p>Pulsa lo que quieras ver y se marca; vuelve a pulsarlo para quitarlo. <strong>Sin categoría</strong> saca lo que se quedó sin clasificar. <strong>Limpiar</strong> los quita todos de golpe.</p>
   <h2>El botón «Programados»</h2>
   <p>Enseña en la lista, en otro tono, lo que <strong>todavía está por llegar</strong> dentro del periodo (el alquiler del día 1, la nómina del 28…) y cómo dejaría los totales: el saldo y el balance pasan a ser <strong>previstos</strong>. Vuelve a pulsarlo para ver solo las cifras reales. Cada fila prevista tiene un botón para <strong>registrarla ya</strong>, sin esperar a su fecha.</p>
+  <h2>Lista o fichas</h2>
+  ${recorte('b19-fichas', [1100, 1000], [262, 430, 802, 520], 'Los mismos movimientos, en fichas. Las de un mismo día se reparten a lo ancho.')}
+  <p>Al final de la barra de filtros, dos iconos cambian entre <strong>lista</strong> y <strong>fichas</strong>. En fichas cada movimiento es una tarjeta, y se hace todo igual que en la lista: pulsar para abrir, clic derecho, arrastrar. BONK recuerda la que elegiste.</p>
 </section>
 
 <!-- 4 -->
@@ -320,13 +324,13 @@ const html = `<!doctype html>
   </ul>
   <h2>Los campos</h2>
   <ul>
-    <li><strong>Importe</strong>, siempre en positivo: el tipo ya dice si entra o sale. Para repartir un gasto, la calculadora (capítulo 13).</li>
+    <li><strong>Importe</strong>, siempre en positivo: el tipo ya dice si entra o sale. Para repartir un gasto, la calculadora (capítulo 14).</li>
     <li><strong>Título</strong>: el comercio o lo que quieras recordar («Mercadona», «Cena de cumpleaños»). Es lo que sale en la lista bajo la categoría.</li>
     <li><strong>Cuenta</strong> y <strong>Fecha</strong> (hoy, si no la cambias).</li>
-    <li><strong>Categoría</strong>: pulsa su icono. Si no está, <strong>Nueva</strong> la crea sin salir de la ficha.</li>
+    <li><strong>Categoría</strong>: pulsa su icono, o pulsa <kbd>/</kbd> y escribe su nombre: la rejilla se filtra al momento, sin importar mayúsculas ni tildes, e <kbd>Intro</kbd> elige la marcada. Si no está, <strong>Nueva</strong> la crea sin salir de la ficha.</li>
     <li><strong>Facturas</strong>: aparece en las categorías que tengan marcado «Adjuntar facturas». Guarda el recibo o la foto del tique con el movimiento.</li>
   </ul>
-  <p><strong>Guardar</strong> cierra la ficha. <strong>Guardar y seguir</strong> la deja abierta y vacía para el siguiente: es lo cómodo cuando vuelves del súper con cinco tiques.</p>
+  <p><strong>Guardar</strong> (${k('Ctrl', 'Intro')}) cierra la ficha. <strong>Guardar y seguir</strong> (${k('Ctrl', 'Mayús', 'Intro')}) la deja abierta y vacía para el siguiente: es lo cómodo cuando vuelves del súper con cinco tiques.</p>
   <div class="caja-nota importante"><strong>Si tienes ahorro automático</strong>Al guardar un ingreso de una categoría con regla de ahorro (por ejemplo, el 10 % de la nómina), la ficha te enseña cuánto se va a apartar y a dónde. <strong>Apartar y guardar</strong> hace el traspaso a la hucha; <strong>Esta vez no</strong> guarda el ingreso sin apartar nada, solo esta vez. Se configura en Planes de ahorro (capítulo 8).</div>
 </section>
 
@@ -338,7 +342,7 @@ const html = `<!doctype html>
   ${recorte('b03-menu', [1100, 760], [262, 432, 802, 330], 'Clic derecho en un gasto de la lista.')}
   <ul>
     <li><strong>Editar importe</strong> y <strong>Cambiar categoría</strong>: lo que más se corrige, sin abrir la ficha entera.</li>
-    <li><strong>Registrar reembolso</strong>: abre un reembolso ya enganchado a este gasto.</li>
+    <li><strong>Registrar reembolso</strong>: abre un reembolso ya enganchado a este gasto. Las cuotas de una deuda a plazos no lo tienen: esas no se devuelven.</li>
     <li><strong>Programar</strong>: convierte el movimiento en uno que se repite, con el ritmo que elijas. Si ya viene de una programación, sale <strong>Editar programación</strong>.</li>
     <li><strong>Eliminar</strong>: lo borra, con sus facturas. Pide confirmación.</li>
   </ul>
@@ -352,7 +356,7 @@ const html = `<!doctype html>
     <span>Bizum de Marcos</span><span class="dinero-mas">+32,00 €</span>
     <span class="total">Te cuesta</span><span class="total">32,00 €</span>
   </div>
-  <p>Hay dos formas de apuntarlo: <strong>clic derecho en el gasto ▸ Registrar reembolso</strong>, o <strong>Nuevo movimiento ▸ Reembolso</strong> y elegir en <strong>Gasto que te devuelven</strong> de cuál es (salen los que tienen algo pendiente). En la lista, el gasto dice lo que te acaba costando, y en Informes cuenta solo eso.</p>
+  <p>Hay dos formas de apuntarlo: <strong>clic derecho en el gasto ▸ Registrar reembolso</strong>, o <strong>Nuevo movimiento ▸ Reembolso</strong> y elegir en <strong>Gasto que te devuelven</strong> de cuál es (salen los que tienen algo pendiente). En la lista, el gasto dice lo que te acaba costando, y en Informes cuenta solo eso. Si le cambias la categoría al gasto, sus reembolsos cambian con él.</p>
 </section>
 
 <!-- 6 -->
@@ -366,18 +370,19 @@ const html = `<!doctype html>
   <ul>
     <li><strong>Repetición</strong>: <strong>Una vez</strong>, <strong>Diaria</strong>, <strong>Semanal</strong>, <strong>Mensual</strong>, <strong>Semestral</strong> (la de las pagas extra), <strong>Anual</strong> u <strong>Otro</strong> («cada 3 meses», «cada 2 semanas»…).</li>
     <li><strong>Próxima fecha</strong> y, si tiene final, <strong>Termina el</strong>. Déjalo vacío si no se acaba.</li>
-    <li><strong>Avisarme el día antes</strong>: una notificación de Windows con el importe y la cuenta. Hace falta tener los avisos encendidos en Ajustes y BONK abierta o en la bandeja.</li>
+    <li><strong>Avisarme el día antes</strong>: una notificación de Windows con el importe y la cuenta. Hace falta tener encendidos los <strong>Avisos de Windows</strong> en Ajustes, y BONK abierta o en la bandeja.</li>
     <li><strong>Deuda a plazos</strong>: la hace salir también en la pestaña Deudas.</li>
   </ul>
   <div class="caja-nota importante"><strong>Cuándo se apuntan</strong>Cuando BONK está abierta o en la bandeja, el mismo día. Si la tuviste cerrada, <strong>al abrirla se ponen al día</strong> todas las que vencieron mientras tanto, aunque hayan pasado meses.</div>
   <h2>Lista y calendario</h2>
   <p>Arriba a la derecha cambias entre la <strong>Lista</strong> y el <strong>Calendario</strong>, que enseña el mes con lo que cae cada día y, arriba, cuántos movimientos quedan y el neto del mes.</p>
-  ${figura('b06-calendario', 'Septiembre en el calendario: lo ya apuntado, atenuado; lo que viene, en firme.')}
+  ${figura('b06-calendario', 'El mes en el calendario: lo ya apuntado, atenuado; lo que viene, en firme.')}
   <h2>Pausar, corregir, terminar</h2>
   <ul>
-    <li><strong>Pausar</strong> detiene una programación sin borrarla; <strong>Reanudar</strong> la vuelve a poner en marcha desde la fecha que digas.</li>
+    <li><strong>Pausar</strong> detiene una programación sin borrarla; <strong>Reanudar</strong> la vuelve a poner en marcha desde su próxima fecha, sin apuntar de golpe lo que venció mientras estaba parada.</li>
     <li>El clic derecho tiene <strong>Editar importe</strong> (sube Netflix), <strong>Editar fechas</strong>, <strong>Registrar reembolso</strong> y <strong>Eliminar</strong>. Al eliminar una, lo ya apuntado se queda; solo deja de repetirse.</li>
-    <li>Las que llegan a su fecha de fin pasan a <strong>Finalizadas</strong>, al final de la lista.</li>
+    <li><strong>Editar fechas</strong> sirve también para aplazar una: muévela al día que toque. Si la fecha de fin cae antes que la próxima, la ficha te avisa.</li>
+    <li>Las que llegan a su fecha de fin pasan a <strong>Finalizadas</strong>, al final de la lista. Las de <strong>una vez</strong> no se reanudan desde ahí: para que vuelva a pasar, ábrela y ponle otra fecha.</li>
   </ul>
 </section>
 
@@ -424,6 +429,37 @@ const html = `<!doctype html>
 <!-- 9 -->
 <section class="capitulo">
   <div class="cabeza"><div class="num">9</div>
+  <h1>Presupuestos</h1>
+  <p class="entradilla">Una raya al mes por categoría de gasto: «no más de 300 € en el súper». BONK cuenta lo que llevas y te avisa antes de llegar.</p></div>
+  ${recorte('b18-presupuestos', [1100, 640], [232, 0, 869, 400], 'El mes en curso: dos presupuestos ya pasados y dos con margen.')}
+  <h2>La pantalla</h2>
+  <p>Arranca en el <strong>mes en curso</strong>. Con las flechas vas a los meses anteriores para ver cómo cerraron, y <strong>Hoy</strong> te devuelve al actual. Las tarjetas van por orden alfabético, para encontrar cada una siempre en el mismo sitio.</p>
+  <ul>
+    <li>Arriba a la derecha de cada tarjeta, <strong>cuánto te queda</strong> (▼, en verde) o <strong>cuánto te has pasado</strong> (▲, en rojo), en euros.</li>
+    <li>La barra lleva una raya en el <strong>80 %</strong>. Lo que pasa de ella va en rojo y late mientras el mes siga abierto; en un mes cerrado se queda quieto.</li>
+    <li>Debajo, lo gastado y el presupuesto: «340,54 € de 320,00 €».</li>
+  </ul>
+  <h2>Cómo cuenta</h2>
+  <ul>
+    <li>Suma <strong>todas las cuentas</strong>: el súper cuenta igual si lo pagaste con la tarjeta que en efectivo.</li>
+    <li>Cuenta <strong>neto</strong>, como Informes: un reembolso rebaja lo gastado en su categoría.</li>
+    <li>Solo en categorías de gasto. Las archivadas no cuentan, y cada mes empieza de cero.</li>
+  </ul>
+  <h2>Ponerlos, cambiarlos y quitarlos</h2>
+  <ul>
+    <li><strong>Nuevo presupuesto</strong>, arriba: eliges una categoría de gasto que aún no tenga y le pones la cifra.</li>
+    <li><strong>Pulsa una tarjeta</strong> para cambiar la cifra. Con el clic derecho, <strong>Cambiar el presupuesto</strong> o <strong>Quitar el presupuesto</strong>; quitarlo solo borra la raya, la categoría se queda como estaba.</li>
+    <li>También desde la ficha de la categoría (<strong>Presupuesto mensual</strong>) o con el clic derecho sobre ella, en Categorías y en Informes.</li>
+  </ul>
+  <h2>Los avisos</h2>
+  <p>Al llegar al <strong>80 %</strong>, un aviso de Windows con lo que te queda. Al <strong>pasarte</strong>, el aviso sale dentro de BONK, encima de la pantalla en la que estés, justo al guardar el movimiento que cruza la raya: lo gastado, el presupuesto y cuánto te has pasado. No te pregunta nada antes de guardar. Si la raya se cruza sola —una programada que entra mientras BONK está en la bandeja—, ese aviso también llega por Windows.</p>
+  <p>Cada aviso sale una vez. Si una devolución te deja otra vez por debajo, se rearma: volver a pasarte vuelve a avisar.</p>
+  <div class="caja-nota truco"><strong>Los de Windows se apagan en Ajustes</strong>Los avisos que llegan por Windows dependen de <strong>Avisos de Windows</strong>, en <strong>Ajustes ▸ General</strong> (capítulo 15). El de dentro de BONK sale siempre.</div>
+</section>
+
+<!-- 10 -->
+<section class="capitulo">
+  <div class="cabeza"><div class="num">10</div>
   <h1>Cuentas</h1>
   <p class="entradilla">Todos los sitios donde tienes dinero, agrupados por tipo, y abajo el patrimonio total.</p></div>
   ${figura('b09-cuentas', 'Cuatro cuentas. La tarjeta en negativo es lo que se ha gastado con ella y todavía no se ha pagado desde el banco.', 'estrecha')}
@@ -438,9 +474,9 @@ const html = `<!doctype html>
   <div class="caja-nota peligro"><strong>Eliminar no es archivar</strong>Eliminar una cuenta borra todos sus movimientos. Los traspasos con otras cuentas se conservan como gasto o ingreso en la otra, para que su saldo no cambie. Si solo quieres dejar de verla, archívala.</div>
 </section>
 
-<!-- 10 -->
+<!-- 11 -->
 <section class="capitulo">
-  <div class="cabeza"><div class="num">10</div>
+  <div class="cabeza"><div class="num">11</div>
   <h1>Categorías</h1>
   <p class="entradilla">En qué se va el dinero y de dónde viene. Dos pestañas: <strong>Gastos</strong> e <strong>Ingresos</strong>.</p></div>
   ${figura('b10-categorias', 'Las categorías de gasto que trae BONK. Todas se pueden cambiar.', 'estrecha')}
@@ -449,44 +485,53 @@ const html = `<!doctype html>
     <li><strong>Icono</strong>: más de cien, en nueve familias (dinero, casa, comida, transporte…). Escribe en el buscador para encontrar el que quieres.</li>
     <li><strong>Color</strong>: el del cuadrado del icono, y el de su barra en los informes.</li>
     <li><strong>Adjuntar facturas</strong>: sus movimientos llevan un hueco para guardar el recibo.</li>
+    <li><strong>Presupuesto mensual</strong>, en las de gasto: la raya del capítulo 9. A cero, sin presupuesto.</li>
     <li><strong>Desglose en la pestaña Informes</strong>: en Informes, la categoría se despliega por el título de cada movimiento («Alimentación» se abre en Mercadona, Lidl, la frutería…).</li>
     <li><strong>Archivar la categoría</strong>: deja de salir al crear movimientos, pero lo ya apuntado la conserva.</li>
   </ul>
   <p>Al eliminar una categoría, sus movimientos pasan a <strong>Sin categoría</strong>. Si quieres conservar el histórico ordenado, mejor archivarla.</p>
 </section>
 
-<!-- 11 -->
+<!-- 12 -->
 <section class="capitulo">
-  <div class="cabeza"><div class="num">11</div>
+  <div class="cabeza"><div class="num">12</div>
   <h1>Informes</h1>
   <p class="entradilla">En qué se ha ido el dinero, comparado con el periodo anterior, y cómo va mes a mes.</p></div>
-  ${figura('b11-informes', 'Los gastos de este mes en Banco Ejemplo, frente a agosto.')}
+  ${figura('b11-informes', 'Los gastos de este mes en Banco Ejemplo, frente a septiembre.')}
   <h2>Qué estás mirando</h2>
-  <p>Como en Movimientos, <strong>una cuenta cada vez</strong> y el periodo de arriba. Los traspasos cuentan como salidas o entradas de esa cuenta, en gris, porque para ella sí es dinero que se va o que llega. <strong>Descargar PDF</strong> guarda el informe que ves.</p>
+  <p>Como en Movimientos, <strong>una cuenta cada vez</strong> y el periodo de arriba. <strong>Descargar PDF</strong> guarda el informe que ves.</p>
+  <p>Los <strong>traspasos</strong> solo cuentan en las cuentas de <strong>ahorro</strong> e <strong>inversión</strong>, en una fila gris aparte: en una hucha es casi lo único que pasa. En el banco, el efectivo o la tarjeta no cuentan, porque pasar dinero a la hucha o pagar la tarjeta no es gastar.</p>
   <p>La cinta de cifras (gasto total, movimientos, media diaria…) lleva al lado cuánto ha cambiado respecto al periodo anterior.</p>
   <h2>Reparto del periodo</h2>
   <ul>
-    <li><strong>Gastos</strong> o <strong>Ingresos</strong>, a la derecha; en <strong>%</strong> o en <strong>€</strong>, en el centro.</li>
-    <li><strong>frente a</strong>: el mes con el que se compara. La columna <strong>Balance</strong> dice si esa categoría ha subido (▲, en rojo si es gasto) o bajado (▼) respecto a él.</li>
+    <li>Los mandos van juntos a la derecha: <strong>frente a</strong> (el mes con el que se compara), <strong>%</strong> o <strong>€</strong>, y <strong>Gastos</strong> o <strong>Ingresos</strong>.</li>
+    <li>La columna <strong>Balance</strong> dice si esa categoría ha subido (▲, en rojo si es gasto) o bajado (▼) respecto al mes elegido.</li>
+    <li>Solo salen las categorías que han tenido algún movimiento en el periodo.</li>
     <li>Las categorías con desglose llevan una flecha: <strong>púlsala</strong> y se abren por el título de cada movimiento.</li>
-    <li>Clic derecho en una fila ▸ <strong>Cambiar categoría</strong>, para recolocar de golpe lo que estaba mal clasificado.</li>
+    <li>Clic derecho en una fila ▸ <strong>Cambiar categoría</strong>, para recolocar de golpe lo que estaba mal clasificado. En las de gasto, también <strong>Poner un presupuesto</strong> o cambiarlo (capítulo 9).</li>
   </ul>
   <h2>Las gráficas</h2>
   ${recorte('b12-informes-grafica', [1100, 1000], [262, 592, 802, 364], 'Un año de ingresos y gastos, y lo que sube o baja la cuenta cada mes. Este mes aún no ha entrado la nómina.')}
 </section>
 
-<!-- 12 -->
-<section class="capitulo">
-  <div class="cabeza"><div class="num">12</div>
-  <h1>El resumen del mes</h1>
-  <p class="entradilla">La primera vez que abres BONK en un mes nuevo, te cuenta cómo fue el anterior.</p></div>
-  ${figura('b16-resumen', 'Agosto, en resumen: las cinco categorías que más gastaron y las que más ingresaron.')}
-  <p>Gastos e ingresos del mes, con cuánto han cambiado respecto al anterior, el <strong>balance</strong> y lo que te queda de <strong>deuda</strong>. Sale una sola vez por mes; <strong>Continuar</strong> lo cierra. Si el mes no tuvo ningún movimiento, no sale.</p>
-</section>
-
 <!-- 13 -->
 <section class="capitulo">
   <div class="cabeza"><div class="num">13</div>
+  <h1>El resumen del mes</h1>
+  <p class="entradilla">La primera vez que abres BONK en un mes nuevo, te cuenta cómo fue el anterior.</p></div>
+  ${recorte('b16-resumen', [1100, 1180], [191, 118, 720, 942], 'El resumen del mes pasado.', { ancho: '74%' })}
+  <ul>
+    <li>Arriba, en grande, lo <strong>gastado</strong>, lo <strong>ingresado</strong> y lo <strong>ahorrado</strong>, cada uno con cuánto ha cambiado frente al mes anterior, en euros. Lo ahorrado es todo lo que entra en tus cuentas de ahorro: los traspasos que les llegan y los ingresos apuntados en ellas.</li>
+    <li><strong>Lo que más ha subido</strong>: las categorías de gasto que más han crecido frente al mes anterior, hasta cuatro, con lo de antes, lo de ahora y la diferencia.</li>
+    <li>Tus <strong>presupuestos</strong>, tal como cerraron el mes (capítulo 9).</li>
+    <li>Tus <strong>deudas</strong>: quién la cobra, la cuota, la próxima fecha, cuándo acaba, lo que falta y la barra cuota a cuota.</li>
+  </ul>
+  <p>Sale una sola vez por mes; <strong>Continuar</strong> lo cierra. Si el mes no tuvo ningún movimiento, no sale.</p>
+</section>
+
+<!-- 14 -->
+<section class="capitulo">
+  <div class="cabeza"><div class="num">14</div>
   <h1>La calculadora y el widget</h1>
   <p class="entradilla">Dos ayudas pequeñas: una para echar cuentas y otra para ver tu dinero sin abrir BONK.</p></div>
   <h2>La calculadora</h2>
@@ -508,9 +553,9 @@ const html = `<!doctype html>
   </div>
 </section>
 
-<!-- 14 -->
+<!-- 15 -->
 <section class="capitulo">
-  <div class="cabeza"><div class="num">14</div>
+  <div class="cabeza"><div class="num">15</div>
   <h1>Ajustes</h1>
   <p class="entradilla">Cinco tarjetas: General, Apariencia, Widget del escritorio, Datos y Acerca de.</p></div>
   ${figura('b13-ajustes', 'General y Apariencia.')}
@@ -518,14 +563,15 @@ const html = `<!doctype html>
   <ul>
     <li><strong>Primer día de la semana</strong>: lunes o domingo, para el calendario.</li>
     <li><strong>Arrancar con Windows, en la bandeja</strong> y <strong>Al cerrar la ventana, seguir en la bandeja</strong> (capítulo 2).</li>
-    <li><strong>Avisarme el día antes de cada movimiento programado</strong>. <strong>Probar el aviso</strong> manda uno de prueba; si no llega, mira el permiso en Windows ▸ Sistema ▸ Notificaciones y el asistente de concentración.</li>
+    <li><strong>Avisos de Windows</strong>: una sola casilla para todas las notificaciones de BONK. El día antes de cada programado, los presupuestos, el saldo bajo, las deudas que acabas, los planes que cumples y lo que aparta el ahorro automático. Los avisos que salen dentro de la ventana no dependen de ella: esos salen siempre.</li>
+    <li><strong>Probar el aviso</strong> manda uno de prueba, aunque la casilla esté apagada; si no llega, mira el permiso en Windows ▸ Sistema ▸ Notificaciones y el asistente de concentración.</li>
   </ul>
   <h2>Apariencia</h2>
   <p><strong>Claro</strong>, <strong>Oscuro</strong> o <strong>Según Windows</strong>, y nueve paletas de color, cada una en claro y en oscuro. El verde y el rojo del dinero no cambian con la paleta: significan algo.</p>
   ${recorte('b14-ajustes-datos', [1100, 1000], [262, 422, 802, 534], 'Datos y Acerca de.')}
   <h2>Datos</h2>
   <ul>
-    <li><strong>Importar CSV</strong>: traer movimientos de un extracto (capítulo 15).</li>
+    <li><strong>Importar CSV</strong>: traer movimientos de un extracto (capítulo 16).</li>
     <li><strong>Exportar todo a PDF</strong>: todos tus movimientos, en un documento.</li>
     <li><strong>Copia de seguridad</strong>: una copia ahora mismo. <strong>Abrir carpeta de datos</strong> te lleva a donde están.</li>
     <li><strong>Vaciar movimientos</strong>: borra todos los movimientos y conserva cuentas, categorías y planes. No se puede deshacer, salvo tirando de una copia.</li>
@@ -534,9 +580,9 @@ const html = `<!doctype html>
   <p>La versión que tienes y el interruptor de <strong>Buscar versiones nuevas</strong>, con <strong>Buscar ahora</strong> para mirarlo en el momento.</p>
 </section>
 
-<!-- 15 -->
+<!-- 16 -->
 <section class="capitulo">
-  <div class="cabeza"><div class="num">15</div>
+  <div class="cabeza"><div class="num">16</div>
   <h1>Copias, CSV y cambiar de ordenador</h1>
   <p class="entradilla">Todo BONK es un archivo, <code>bonk.db</code>, en <code>%APPDATA%\\BONK</code>.</p></div>
   <h2>Copias automáticas</h2>
@@ -561,31 +607,66 @@ const html = `<!doctype html>
   <p>Al terminar te dice cuántos ha importado, cuántos se ha saltado, qué cuentas y categorías ha creado y qué filas han dado problemas.</p>
 </section>
 
-<!-- 16 -->
+<!-- 17 -->
 <section class="capitulo">
-  <div class="cabeza"><div class="num">16</div>
-  <h1>Atajos y gestos</h1></div>
+  <div class="cabeza"><div class="num">17</div>
+  <h1>El teclado</h1>
+  <p class="entradilla">BONK se puede usar entera sin tocar el ratón.</p></div>
+  <div class="pareja">
+    <div>
+      <p>Pulsa <kbd>F1</kbd> en cualquier momento y BONK te enseña la chuleta con todos los atajos, agrupados por dónde sirven. <kbd>Esc</kbd> la cierra.</p>
+      <p>Las secciones van por número, en el orden de la barra lateral: ${k('Ctrl', '1')} es Movimientos y ${k('Ctrl', '8')}, Informes.</p>
+      <p>En una lista, las flechas pasan de una fila a otra e <kbd>Intro</kbd> la abre. Con el foco en una fila, <kbd>Supr</kbd> la borra (preguntando antes) y la tecla <kbd>Menú</kbd> abre su clic derecho.</p>
+      <p>Abajo, todos, por si prefieres tenerlos en papel.</p>
+    </div>
+    ${recorte('b20-atajos', [1100, 1400], [271, 178, 560, 1042], 'La chuleta de F1.', { ancho: '80%' })}
+  </div>
+  <h2>En toda la aplicación</h2>
   <table>
-    <tr><th>Dónde</th><th>Atajo o gesto</th><th>Qué hace</th></tr>
-    <tr><td>Cualquier pantalla</td><td>${k('Ctrl', 'N')}</td><td>Nuevo movimiento</td></tr>
-    <tr><td>Cualquier pantalla</td><td>${k('Ctrl', '+')} · ${k('Ctrl', '−')} · ${k('Ctrl', '0')}</td><td>Acercar · alejar · tamaño normal</td></tr>
-    <tr><td>Cualquier pantalla</td><td><kbd>F11</kbd></td><td>Pantalla completa</td></tr>
+    <tr><th>Atajo</th><th>Qué hace</th></tr>
+    <tr><td>${k('Ctrl', '1')} … ${k('Ctrl', '8')}</td><td>Ir a cada sección, en el orden de la barra lateral: Movimientos, Programados, Deudas, Planes Ahorro, Presupuestos, Cuentas, Categorías e Informes</td></tr>
+    <tr><td>${k('Ctrl', ',')}</td><td>Ajustes</td></tr>
+    <tr><td>${k('Ctrl', 'N')}</td><td>Nuevo movimiento</td></tr>
+    <tr><td>${k('Ctrl', 'F')}</td><td>Buscar, en Movimientos; <kbd>↓</kbd> baja a los resultados</td></tr>
+    <tr><td><kbd>F1</kbd></td><td>La chuleta de atajos</td></tr>
+    <tr><td>${k('Ctrl', '+')} · ${k('Ctrl', '−')} · ${k('Ctrl', '0')}</td><td>Acercar · alejar · tamaño normal</td></tr>
+    <tr><td><kbd>F11</kbd></td><td>Pantalla completa</td></tr>
+  </table>
+  <h2>En una lista</h2>
+  <table>
+    <tr><th>Atajo</th><th>Qué hace</th></tr>
+    <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Pasar de una fila a otra; <kbd>←</kbd> <kbd>→</kbd> en rejillas y tiras</td></tr>
+    <tr><td><kbd>Inicio</kbd> · <kbd>Fin</kbd></td><td>La primera o la última</td></tr>
+    <tr><td><kbd>RePág</kbd> · <kbd>AvPág</kbd></td><td>Saltar de diez en diez</td></tr>
+    <tr><td><kbd>Intro</kbd></td><td>Abrir la fila</td></tr>
+    <tr><td><kbd>Supr</kbd></td><td>Eliminarla, preguntando antes</td></tr>
+    <tr><td><kbd>Menú</kbd> · ${k('Mayús', 'F10')}</td><td>Su menú del clic derecho; dentro, <kbd>↑</kbd> <kbd>↓</kbd> para moverse y <kbd>Esc</kbd> para cerrarlo</td></tr>
+  </table>
+  <h2>En una ficha o una pregunta</h2>
+  <table>
+    <tr><th>Atajo</th><th>Qué hace</th></tr>
+    <tr><td><kbd>Tab</kbd> · ${k('Mayús', 'Tab')}</td><td>Campo siguiente o anterior; dentro de un diálogo no se escapa a lo de detrás</td></tr>
+    <tr><td><kbd>/</kbd></td><td>Buscar la categoría por su nombre (capítulo 4)</td></tr>
+    <tr><td>${k('Ctrl', 'Intro')}</td><td>Guardar el movimiento; en una pregunta, aceptarla (también la de eliminar)</td></tr>
+    <tr><td>${k('Ctrl', 'Mayús', 'Intro')}</td><td>Guardar y seguir con otro</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Cerrar sin guardar; en un buscador, borrar lo escrito</td></tr>
+    <tr><td><kbd>Intro</kbd> o <kbd>=</kbd></td><td>En la calculadora, resolver la cuenta y dejarla para seguir</td></tr>
+  </table>
+  <h2>Con el ratón</h2>
+  <table>
+    <tr><th>Dónde</th><th>Gesto</th><th>Qué hace</th></tr>
     <tr><td>Casi cualquier fila</td><td>Clic derecho</td><td>Su menú: editar importe, cambiar categoría, eliminar…</td></tr>
-    <tr><td>Movimientos</td><td>Pulsar una fila</td><td>Abre su ficha para editarla</td></tr>
     <tr><td>Movimientos</td><td>Arrastrar una fila</td><td>Cambia el orden dentro del día, o la fecha si la sueltas en otro</td></tr>
     <tr><td>Movimientos</td><td>Pulsar una cuenta</td><td>Ver solo esa cuenta</td></tr>
-    <tr><td>Búsquedas</td><td><kbd>Esc</kbd></td><td>Borra lo escrito</td></tr>
-    <tr><td>Menús</td><td><kbd>↑</kbd> <kbd>↓</kbd> · <kbd>Esc</kbd></td><td>Moverse por el menú · cerrarlo</td></tr>
     <tr><td>Planes de ahorro</td><td>Arrastrar el punto de la barra</td><td>Asigna más o menos de la hucha (también con las flechas)</td></tr>
-    <tr><td>Calculadora</td><td><kbd>Intro</kbd> o <kbd>=</kbd></td><td>Resuelve la cuenta y la deja para seguir</td></tr>
     <tr><td>Widget</td><td>Arrastrar · doble clic</td><td>Colocarlo · abrir BONK</td></tr>
     <tr><td>Bandeja</td><td>Clic · clic derecho</td><td>Abrir BONK · Salir</td></tr>
   </table>
 </section>
 
-<!-- 17 -->
+<!-- 18 -->
 <section class="capitulo preguntas pagina-nueva">
-  <div class="num">17</div>
+  <div class="num">18</div>
   <h1>Preguntas frecuentes</h1>
   <h3>El saldo de BONK no cuadra con el del banco.</h3>
   <p>Falta algo por apuntar, o sobra algo. Si no lo encuentras, edita la cuenta y escribe en <strong>Saldo actual</strong> el del banco: BONK ajusta el saldo inicial para que cuadre.</p>
@@ -595,12 +676,12 @@ const html = `<!doctype html>
   <p>Cada compra con la tarjeta, como gasto en la cuenta «Tarjeta». Cuando el banco la cobra, un traspaso del banco a la tarjeta. Así cada compra está en su categoría y no cuentas el gasto dos veces.</p>
   <h3>Un programado no se ha apuntado.</h3>
   <p>Se apuntan con BONK abierta o en la bandeja; si estaba cerrada, se apuntan al abrirla. Si aun así falta, mira en Programados que no esté en pausa ni finalizada.</p>
-  <h3>No me llegan los avisos del día antes.</h3>
-  <p>Mira que estén encendidos en <strong>Ajustes ▸ General</strong>, que BONK esté abierta o en la bandeja, y usa <strong>Probar el aviso</strong>. Si el de prueba tampoco llega, el permiso está apagado en Windows ▸ Sistema ▸ Notificaciones, o el asistente de concentración lo está silenciando.</p>
+  <h3>No me llegan los avisos de Windows.</h3>
+  <p>Mira que esté marcado <strong>Avisos de Windows</strong> en <strong>Ajustes ▸ General</strong>, que BONK esté abierta o en la bandeja, y usa <strong>Probar el aviso</strong>. Si el de prueba tampoco llega, el permiso está apagado en Windows ▸ Sistema ▸ Notificaciones, o el asistente de concentración lo está silenciando.</p>
   <h3>¿Se conecta a internet?</h3>
   <p>Solo para mirar si hay una versión nueva, al abrir. Si desmarcas <strong>Buscar versiones nuevas</strong> en Ajustes, no se conecta a nada.</p>
   <h3>He borrado algo sin querer.</h3>
-  <p>Vuelve a la copia del día anterior (capítulo 15). Ten en cuenta que perderás lo que apuntaste después de esa copia.</p>
+  <p>Vuelve a la copia del día anterior (capítulo 16). Ten en cuenta que perderás lo que apuntaste después de esa copia.</p>
   <h3>¿Qué pasa si desinstalo BONK?</h3>
   <p>Tus datos se quedan en <code>%APPDATA%\\BONK</code>. Si vuelves a instalarla, aparecen tal cual.</p>
 </section>
