@@ -2573,12 +2573,12 @@ p { margin: 0; }
 }
 
 /*
- * La media al mes, en gris: es una cifra de apoyo, y la que manda en la fila
- * sigue siendo el total. Bajo su título, en pequeño y sin mayúsculas, los meses
- * que cuenta.
+ * La media al mes, en el ámbar de los avisos de saldo: lo pidió él, para que
+ * se distinga del total de al lado de un vistazo. Bajo su título, en pequeño y
+ * sin mayúsculas, los meses que cuenta.
  */
 .table.breakdown td.media-al-mes {
-  color: var(--fg-muted);
+  color: var(--warning);
 }
 
 /* En un renglón: partido, «Media al / mes» descolocaba toda la cabecera. */
