@@ -31,6 +31,7 @@ import {
   esDeUnMes,
   mesesAnteriores,
   nombreDeMes,
+  mesesCerrados,
   NOMBRES_DE_RANGO,
   type RangoId
 } from '../src/shared/rangos'
@@ -342,6 +343,44 @@ try {
   // Y en enero, el mes pasado es diciembre del año anterior.
   equal('en enero, el mes pasado es del año anterior', rangoDe('prev', '2026-01-10')!.from, '2025-12-01')
   equal('tres meses en enero cruzan el año', rangoDe('quarter', '2026-01-10')!.from, '2025-11-01')
+
+  /*
+   * La media al mes de Informes: solo los meses enteros y ya acabados. El día se
+   * pasa a mano, como arriba.
+   */
+  section('Meses cerrados de un periodo')
+  // `equal` compara con `Object.is`, así que el objeto va escrito.
+  const cerrados = (rango: { from: string; to: string }, hoy: string): string =>
+    JSON.stringify(mesesCerrados(rango, hoy))
+  const enOctubre = '2026-10-19'
+  equal(
+    'este año en octubre son de enero a septiembre',
+    cerrados(rangoDe('year', enOctubre)!, enOctubre),
+    JSON.stringify({ from: '2026-01-01', to: '2026-09-30', meses: 9 })
+  )
+  equal(
+    'tres meses en octubre dejan fuera el mes en curso',
+    cerrados(rangoDe('quarter', enOctubre)!, enOctubre),
+    JSON.stringify({ from: '2026-08-01', to: '2026-09-30', meses: 2 })
+  )
+  equal('el mes pasado solo es uno: no hay media', cerrados(rangoDe('prev', enOctubre)!, enOctubre), 'null')
+  equal('este mes no tiene ninguno cerrado', cerrados(rangoDe('month', enOctubre)!, enOctubre), 'null')
+  equal('este año en febrero tampoco: solo enero', cerrados(rangoDe('year', '2026-02-10')!, '2026-02-10'), 'null')
+  equal(
+    '«Todo» empieza en el primer mes entero, no en el del primer movimiento',
+    cerrados({ from: '2025-08-14', to: '2026-10-18' }, enOctubre),
+    JSON.stringify({ from: '2025-09-01', to: '2026-09-30', meses: 13 })
+  )
+  equal(
+    'un tramo que acaba a medio mes deja ese mes fuera',
+    cerrados({ from: '2026-03-01', to: '2026-06-15' }, enOctubre),
+    JSON.stringify({ from: '2026-03-01', to: '2026-05-31', meses: 3 })
+  )
+  equal(
+    'un tramo que empieza el 31 no se salta el mes siguiente',
+    cerrados({ from: '2026-01-31', to: '2026-04-30' }, enOctubre),
+    JSON.stringify({ from: '2026-02-01', to: '2026-04-30', meses: 3 })
+  )
 
   const PERIODOS: RangoId[] = ['month', 'prev', 'quarter', 'year', 'prevYear', 'all', 'custom']
   check('todos los periodos tienen nombre', PERIODOS.every((id) => NOMBRES_DE_RANGO[id].length > 0))

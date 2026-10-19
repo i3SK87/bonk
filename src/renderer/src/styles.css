@@ -2572,6 +2572,29 @@ p { margin: 0; }
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * La media al mes, en gris: es una cifra de apoyo, y la que manda en la fila
+ * sigue siendo el total. Bajo su título, en pequeño y sin mayúsculas, los meses
+ * que cuenta.
+ */
+.table.breakdown td.media-al-mes {
+  color: var(--fg-muted);
+}
+
+/* En un renglón: partido, «Media al / mes» descolocaba toda la cabecera. */
+.table.breakdown th.media-al-mes {
+  white-space: nowrap;
+}
+
+.table.breakdown th .meses-de-la-media {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 /* La columna del nombre carga con la barra de reparto, así que se lleva el ancho. */
 .table.breakdown td:first-child,
 .table.breakdown th:first-child {

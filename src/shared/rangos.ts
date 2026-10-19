@@ -184,3 +184,34 @@ export function nombreDeMes(mes: string, mirado: string): string {
   const nombre = nombreDeMesFmt.format(new Date(`${mes.slice(0, 10)}T12:00:00`))
   return mes.slice(0, 4) === mirado.slice(0, 4) ? nombre : `${nombre} de ${mes.slice(0, 4)}`
 }
+
+/**
+ * Los meses enteros y ya acabados de un periodo: los que reparte la media al mes.
+ *
+ * Solo los cerrados, a elección suya. El mes en curso a medias tira la media
+ * abajo justo en lo que más se mira —el alquiler y las facturas, que se pagan a
+ * primeros—, y un mes recortado por el principio, como el primero de «Todo» o el
+ * de un tramo que empieza el 15, hace lo mismo por el otro lado. Así que un mes
+ * entra si cabe entero en el periodo y ya ha terminado.
+ *
+ * `null` con menos de dos: con uno, la media es el total del mes repetido, y en
+ * «Este mes» y «Mes pasado» sería una columna que copia la de al lado.
+ */
+export function mesesCerrados(
+  rango: { from: string; to: string },
+  hoy = today()
+): { from: string; to: string; meses: number } | null {
+  const from =
+    rango.from === startOfMonth(rango.from) ? rango.from : addMonths(startOfMonth(rango.from), 1)
+  const finDelRango =
+    rango.to === endOfMonth(rango.to) ? rango.to : endOfMonth(addMonths(startOfMonth(rango.to), -1))
+  const finDelUltimoCerrado = endOfMonth(addMonths(startOfMonth(hoy), -1))
+  const to = finDelRango < finDelUltimoCerrado ? finDelRango : finDelUltimoCerrado
+  if (to < from) return null
+  const meses =
+    (Number(to.slice(0, 4)) - Number(from.slice(0, 4))) * 12 +
+    Number(to.slice(5, 7)) -
+    Number(from.slice(5, 7)) +
+    1
+  return meses >= 2 ? { from, to, meses } : null
+}

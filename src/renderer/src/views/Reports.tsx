@@ -16,7 +16,7 @@ import { CategoriaRapida } from '../components/CategoriaRapida'
 import { PresupuestoRapido } from '../components/PresupuestoRapido'
 import { MonthlyBars, NetLine } from '../components/charts'
 import { formatMoney, currencySymbol } from '@shared/money'
-import { today, daysBetween, formatDate } from '@shared/dates'
+import { today, daysBetween, formatDate, formatShortMonth } from '@shared/dates'
 import { CalendarioDeTramo } from '../components/DateInput'
 import { Teletipo, type Dato } from '../components/Teletipo'
 import {
@@ -26,6 +26,7 @@ import {
   comparacionDelMes,
   esDeUnMes,
   mesesAnteriores,
+  mesesCerrados,
   nombreDeMes,
   type RangoId
 } from '@shared/rangos'
@@ -249,6 +250,8 @@ export function ReportsView(): ReactNode {
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null)
   /** El mismo reparto, del periodo de antes: es contra lo que se compara. */
   const [antes, setAntes] = useState<CategoryTotal[]>([])
+  /** El reparto de los meses cerrados del periodo: de él sale la media al mes. */
+  const [cerrado, setCerrado] = useState<CategoryTotal[]>([])
   /*
    * El tramo de «Personalizado», o `null` mientras no se haya elegido ninguno.
    *
@@ -314,6 +317,11 @@ export function ReportsView(): ReactNode {
   // En el rótulo de al pasar por encima va detrás de una cifra: «399 € en julio».
   const contraEnPista = mesElegido ? `en ${contra}` : contra
   const currency = settings.baseCurrency
+  /*
+   * Los meses que reparte la media al mes: los enteros y ya acabados. Sin dos de
+   * ellos no hay columna. Ver `mesesCerrados`.
+   */
+  const cerrados = useMemo(() => mesesCerrados(range), [range])
 
   useEffect(() => {
     Promise.all([
@@ -323,15 +331,19 @@ export function ReportsView(): ReactNode {
       comparacion
         ? api.reports.categories(comparacion.from, comparacion.to, kind, cuenta)
         : Promise.resolve([] as CategoryTotal[]),
+      cerrados
+        ? api.reports.categories(cerrados.from, cerrados.to, kind, cuenta)
+        : Promise.resolve([] as CategoryTotal[])
     ])
-      .then(([nextCategories, nextMonthly, nextAntes]) => {
+      .then(([nextCategories, nextMonthly, nextAntes, nextCerrado]) => {
         setCategories(nextCategories)
         setMonthly(nextMonthly)
         setAntes(nextAntes)
+        setCerrado(nextCerrado)
       })
       .catch(fail('los informes'))
       .finally(() => setCargado(true))
-  }, [range, kind, comparacion, cuenta, revision])
+  }, [range, kind, comparacion, cerrados, cuenta, revision])
 
   const total = categories.reduce((sum, item) => sum + item.total, 0)
   const totalAntes = antes.reduce((sum, item) => sum + item.total, 0)
@@ -341,6 +353,20 @@ export function ReportsView(): ReactNode {
    * a cero las que solo salen en el anterior.
    */
   const filas = useMemo(() => repartoComparado(categories, antes), [categories, antes])
+  /** Lo de cada categoría en los meses cerrados, para dividirlo entre ellos. */
+  const totalCerrado = useMemo(
+    () => new Map(cerrado.map((item) => [item.categoryId, item.total])),
+    [cerrado]
+  )
+  /*
+   * Qué meses cuenta la media, escrito bajo su título: «ene – sep». Con el año
+   * cuando el tramo cruza uno, que «sep – sep» no dice nada.
+   */
+  const mesesDeLaMedia = cerrados
+    ? cerrados.from.slice(0, 4) === cerrados.to.slice(0, 4)
+      ? `${formatShortMonth(cerrados.from)} – ${formatShortMonth(cerrados.to)}`
+      : `${formatShortMonth(cerrados.from)} ${cerrados.from.slice(0, 4)} – ${formatShortMonth(cerrados.to)} ${cerrados.to.slice(0, 4)}`
+    : ''
 
   /*
    * Los movimientos que se van a mudar de categoría.
@@ -745,6 +771,17 @@ export function ReportsView(): ReactNode {
                       <th className="num">Movimientos</th>
                       <th className="num">Porcentaje</th>
                       <th className="num">Total</th>
+                      {/* Solo con dos meses cerrados o más: en «Este mes» y «Mes
+                          pasado» repetiría el total. */}
+                      {cerrados && (
+                        <th
+                          className="num media-al-mes"
+                          title={`Lo de ${mesesDeLaMedia} entre ${cerrados.meses} meses. El mes en curso no entra hasta que acabe.`}
+                        >
+                          Media al mes
+                          <span className="meses-de-la-media">{mesesDeLaMedia}</span>
+                        </th>
+                      )}
                       {/* Solo si hay con qué comparar: «Todo» no tiene un antes
                           y una columna entera vacía no la quiere nadie. */}
                       {comparacion && (
@@ -818,6 +855,14 @@ export function ReportsView(): ReactNode {
                             <td className="num muted">{row.count}</td>
                             <td className="num muted">{row.percent.toFixed(1)}%</td>
                             <td className="num amount">{formatMoney(row.total, currency)}</td>
+                            {cerrados && (
+                              <td className="num amount media-al-mes">
+                                {formatMoney(
+                                  Math.round((totalCerrado.get(row.categoryId) ?? 0) / cerrados.meses),
+                                  currency
+                                )}
+                              </td>
+                            )}
                             {comparacion && (
                               <td className="balance">
                                 <Cambio
@@ -851,6 +896,8 @@ export function ReportsView(): ReactNode {
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
+                                {/* Ni la media: va por categoría. */}
+                                {cerrados && <td />}
                                 {/* El desglose por concepto no se compara: no
                                     hay un «antes» suyo que consultar. */}
                                 {comparacion && <td />}
