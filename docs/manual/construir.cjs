@@ -328,7 +328,6 @@ const html = `<!doctype html>
     <li><strong>Título</strong>: el comercio o lo que quieras recordar («Mercadona», «Cena de cumpleaños»). Es lo que sale en la lista bajo la categoría.</li>
     <li><strong>Cuenta</strong> y <strong>Fecha</strong> (hoy, si no la cambias).</li>
     <li><strong>Categoría</strong>: pulsa su icono, o pulsa <kbd>/</kbd> y escribe su nombre: la rejilla se filtra al momento, sin importar mayúsculas ni tildes, e <kbd>Intro</kbd> elige la marcada. Si no está, <strong>Nueva</strong> la crea sin salir de la ficha.</li>
-    <li><strong>Facturas</strong>: aparece en las categorías que tengan marcado «Adjuntar facturas». Guarda el recibo o la foto del tique con el movimiento.</li>
   </ul>
   <p><strong>Guardar</strong> (${k('Ctrl', 'Intro')}) cierra la ficha. <strong>Guardar y seguir</strong> (${k('Ctrl', 'Mayús', 'Intro')}) la deja abierta y vacía para el siguiente: es lo cómodo cuando vuelves del súper con cinco tiques.</p>
   <div class="caja-nota importante"><strong>Si tienes ahorro automático</strong>Al guardar un ingreso de una categoría con regla de ahorro (por ejemplo, el 10 % de la nómina), la ficha te enseña cuánto se va a apartar y a dónde. <strong>Apartar y guardar</strong> hace el traspaso a la hucha; <strong>Esta vez no</strong> guarda el ingreso sin apartar nada, solo esta vez. Se configura en Planes de ahorro (capítulo 8).</div>
@@ -344,7 +343,7 @@ const html = `<!doctype html>
     <li><strong>Editar importe</strong> y <strong>Cambiar categoría</strong>: lo que más se corrige, sin abrir la ficha entera.</li>
     <li><strong>Registrar reembolso</strong>: abre un reembolso ya enganchado a este gasto. Las cuotas de una deuda a plazos no lo tienen: esas no se devuelven.</li>
     <li><strong>Programar</strong>: convierte el movimiento en uno que se repite, con el ritmo que elijas. Si ya viene de una programación, sale <strong>Editar programación</strong>.</li>
-    <li><strong>Eliminar</strong>: lo borra, con sus facturas. Pide confirmación.</li>
+    <li><strong>Eliminar</strong>: lo borra. Pide confirmación.</li>
   </ul>
 
   <h2>Los reembolsos</h2>
@@ -484,12 +483,11 @@ const html = `<!doctype html>
   <ul>
     <li><strong>Icono</strong>: más de cien, en nueve familias (dinero, casa, comida, transporte…). Escribe en el buscador para encontrar el que quieres.</li>
     <li><strong>Color</strong>: el del cuadrado del icono, y el de su barra en los informes.</li>
-    <li><strong>Adjuntar facturas</strong>: sus movimientos llevan un hueco para guardar el recibo.</li>
     <li><strong>Presupuesto mensual</strong>, en las de gasto: la raya del capítulo 9. A cero, sin presupuesto.</li>
     <li><strong>Desglose en la pestaña Informes</strong>: en Informes, la categoría se despliega por el título de cada movimiento («Alimentación» se abre en Mercadona, Lidl, la frutería…).</li>
-    <li><strong>Archivar la categoría</strong>: deja de salir al crear movimientos, pero lo ya apuntado la conserva.</li>
+    <li><strong>Comparar cada nota</strong>: con el desglose puesto, cada título lleva en Informes su flecha frente al mes de comparación y su media al mes. Sirve para los recibos que se repiten («Suministros» se abre en luz, agua y gas, y la luz se compara con la luz); en una categoría donde cada título es una compra distinta, sobra. Sale desmarcada.</li>
   </ul>
-  <p>Al eliminar una categoría, sus movimientos pasan a <strong>Sin categoría</strong>. Si quieres conservar el histórico ordenado, mejor archivarla.</p>
+  <p>Al eliminar una categoría, sus movimientos pasan a <strong>Sin categoría</strong>.</p>
 </section>
 
 <!-- 12 -->
