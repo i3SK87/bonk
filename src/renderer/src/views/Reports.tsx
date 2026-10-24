@@ -792,7 +792,7 @@ export function ReportsView(): ReactNode {
                     </tr>
                   </thead>
                   <tbody>
-                    {filas.map(({ row, antes: gastoAntes }, indice) => {
+                    {filas.map(({ row, antes: gastoAntes, notasAntes }, indice) => {
                       const key = row.categoryId ?? 'none'
                       const openable = hasBreakdown(row)
                       const open = expanded.has(row.categoryId ?? -1)
@@ -878,7 +878,7 @@ export function ReportsView(): ReactNode {
                           </tr>
 
                           {open &&
-                            row.notes.map((note) => (
+                            row.notes.map((note, posicion) => (
                               <tr className="subrow" key={`${key}-${note.note}`}>
                                 <td>
                                   <span className="note-name">{note.note}</span>
@@ -898,9 +898,21 @@ export function ReportsView(): ReactNode {
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
                                 {/* Ni la media: va por categoría. */}
                                 {cerrados && <td />}
-                                {/* El desglose por concepto no se compara: no
-                                    hay un «antes» suyo que consultar. */}
-                                {comparacion && <td />}
+                                {/* Cada nota contra ella misma en el otro
+                                    periodo: la luz contra la luz, no contra
+                                    todo Suministros. */}
+                                {comparacion && (
+                                  <td className="balance">
+                                    <Cambio
+                                      ahora={note.total}
+                                      antes={notasAntes[posicion]}
+                                      kind={kind}
+                                      unidad={balanceEn}
+                                      formatea={euros}
+                                      pista={`${formatMoney(note.total, currency)} ahora · ${formatMoney(notasAntes[posicion], currency)} entre el ${formatDate(comparacion.from)} y el ${formatDate(comparacion.to)}`}
+                                    />
+                                  </td>
+                                )}
                               </tr>
                             ))}
                         </Fragment>

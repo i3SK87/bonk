@@ -489,6 +489,18 @@ try {
     'las que solo tuvo el otro periodo se quedan fuera',
     !comparado.some((f) => ['Ropa', 'Bienestar', 'Vacía'].includes(f.row.name))
   )
+  equal('y cada nota con lo suyo', comparado[1].notasAntes.join(), '68729')
+  const conNotas = (id: number, notas: [string, number][]): CategoryTotal => ({
+    ...fila(id, 'Suministros', notas.reduce((sum, [, total]) => sum + total, 0)),
+    notes: notas.map(([note, total]) => ({ note, total, count: 1, percent: 0 }))
+  })
+  const suministros = repartoComparado(
+    [conNotas(6, [['Luz', 6200], ['Agua', 2100], ['Gas', 1500]])],
+    [conNotas(6, [['agua', 1900], ['luz ', 5400]])]
+  )[0]
+  // Cada nota contra ella misma, se escriba como se escriba, y a cero la que antes no estaba.
+  equal('la luz contra la luz, el agua contra el agua', suministros.notasAntes.join(), '5400,1900,0')
+  equal('sin la categoría antes, sus notas a cero', repartoComparado([conNotas(7, [['Luz', 100]])], [])[0].notasAntes.join(), '0')
   equal('sin comparación sale lo mismo', repartoComparado([fila(1, 'Alquiler', 37600)], []).length, 1)
   equal('y sin nada que mirar, nada', repartoComparado([], [fila(3, 'Ropa', 6099)]).length, 0)
 

@@ -1,6 +1,7 @@
 import { getDb } from '../db'
 import { convert } from '@shared/money'
 import { today, startOfMonth, endOfMonth, addMonths } from '@shared/dates'
+import { noteKey } from '@shared/reparto'
 import { getSettings, rateMap } from './settings'
 import { getAccount } from './accounts'
 import type {
@@ -202,11 +203,6 @@ export function categoryTotals(
     item.notes = byNote.get(item.categoryId) ?? []
   }
   return list
-}
-
-/** Clave con la que dos notas cuentan como la misma: sin mayúsculas ni espacios de más. */
-function noteKey(note: string): string {
-  return note.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
 /**
