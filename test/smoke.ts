@@ -819,6 +819,18 @@ try {
   equal('apagar el desglose no cambia el total', flat.total, debtRow.total)
   categories.saveCategory({ ...debt, breakdownByNote: true })
 
+  // «Comparar cada nota»: apagada de salida, y colgada del desglose.
+  const filaDeDeuda = (): CategoryTotal =>
+    reports.categoryTotals(monthStart, day, 'expense').find((row) => row.categoryId === debt.id)!
+  check('las notas no se comparan hasta que se le diga', debt.compareNotes === false && filaDeDeuda().compareNotes === false)
+  check('la casilla de comparar se guarda', categories.saveCategory({ ...debt, compareNotes: true }).compareNotes)
+  check('y el informe la trae en su fila', filaDeDeuda().compareNotes === true)
+  check(
+    'sin desglose no se queda marcada',
+    categories.saveCategory({ ...debt, breakdownByNote: false, compareNotes: true }).compareNotes === false
+  )
+  categories.saveCategory({ ...debt, breakdownByNote: true, compareNotes: false })
+
   section('Planes de ahorro')
   const bote = accounts.saveAccount({
     name: 'Bote', type: 'savings', currency: 'EUR', initialBalance: 30000,

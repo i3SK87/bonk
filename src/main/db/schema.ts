@@ -819,5 +819,16 @@ export const MIGRATIONS: string[] = [
   `
   ALTER TABLE categories ADD COLUMN spend_limit INTEGER;
   ALTER TABLE categories ADD COLUMN limit_warned TEXT;
+  `,
+
+  // v35 — comparar cada nota del desglose, categoría a categoría.
+  //
+  // Desde la 2.47 las notas llevaban flecha de Balance y media al mes en todas
+  // las categorías con desglose. En Facturas es lo que se quiere —la luz contra
+  // la luz—, pero en Compras cada nota es una cosa que se compró una vez y
+  // compararla con el mes pasado no dice nada. Apagada de salida: se enciende
+  // donde haga falta.
+  `
+  ALTER TABLE categories ADD COLUMN compare_notes INTEGER NOT NULL DEFAULT 0;
   `
 ]

@@ -898,7 +898,12 @@ export function ReportsView(): ReactNode {
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
-                                {cerrados && (
+                                {/* La media y la flecha, solo donde la
+                                    categoría lo pide («Comparar cada nota»):
+                                    en Facturas la luz contra la luz; en Compras
+                                    cada nota es una cosa comprada una vez. */}
+                                {cerrados && !row.compareNotes && <td />}
+                                {cerrados && row.compareNotes && (
                                   <td className="num amount media-al-mes">
                                     {formatMoney(
                                       Math.round(enCerrados[indice].notasAntes[posicion] / cerrados.meses),
@@ -906,10 +911,8 @@ export function ReportsView(): ReactNode {
                                     )}
                                   </td>
                                 )}
-                                {/* Cada nota contra ella misma en el otro
-                                    periodo: la luz contra la luz, no contra
-                                    todo Suministros. */}
-                                {comparacion && (
+                                {comparacion && !row.compareNotes && <td />}
+                                {comparacion && row.compareNotes && (
                                   <td className="balance">
                                     <Cambio
                                       ahora={note.total}

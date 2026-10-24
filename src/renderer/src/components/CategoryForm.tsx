@@ -38,6 +38,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [color, setColor] = useState(category?.color ?? PALETTE[0])
   const [archived, setArchived] = useState(category?.archived ?? false)
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
+  const [compareNotes, setCompareNotes] = useState(category?.compareNotes ?? false)
   const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
   const [spendLimit, setSpendLimit] = useState(category?.spendLimit ?? 0)
   const [error, setError] = useState<string | null>(null)
@@ -60,6 +61,7 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       color,
       archived,
       breakdownByNote,
+      compareNotes: breakdownByNote && compareNotes,
       keepsInvoices,
       // En las de ingreso ni se pregunta ni se manda: un ingreso no se pasa de
       // ningún presupuesto, y el que hubiera quedado de cuando era de gasto se va con
@@ -170,6 +172,17 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
             onChange={setBreakdownByNote}
             label="Desglose en la pestaña Informes"
             hint="La categoría se abre por la nota de cada movimiento."
+          />
+
+          {/* Va debajo del desglose porque cuelga de él: sin notas no hay nada
+              que comparar, así que con el desglose apagado se ve desmarcada y
+              sin tocarse. */}
+          <Checkbox
+            checked={breakdownByNote && compareNotes}
+            onChange={setCompareNotes}
+            disabled={!breakdownByNote}
+            label="Comparar cada nota"
+            hint="Cada nota lleva su flecha de Balance y su media al mes."
           />
 
           {category && (

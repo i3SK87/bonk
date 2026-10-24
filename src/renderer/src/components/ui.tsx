@@ -344,12 +344,19 @@ interface CheckboxProps {
   onChange: (value: boolean) => void
   label: string
   hint?: string
+  /** Se ve pero no se puede tocar: depende de otra casilla de la misma ficha. */
+  disabled?: boolean
 }
 
-export function Checkbox({ checked, onChange, label, hint }: CheckboxProps): ReactNode {
+export function Checkbox({ checked, onChange, label, hint, disabled }: CheckboxProps): ReactNode {
   return (
-    <label className="checkbox">
-      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+    <label className={`checkbox${disabled ? ' apagada' : ''}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+      />
       <span className="checkbox-text">
         {label}
         {hint && <small>{hint}</small>}

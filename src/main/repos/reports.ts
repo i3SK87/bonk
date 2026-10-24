@@ -129,6 +129,7 @@ export function categoryTotals(
               COALESCE(c.name, 'Sin categoría') AS name,
               COALESCE(c.icon, 'tag')  AS icon,
               COALESCE(c.color, '#8E8E93') AS color,
+              COALESCE(c.compare_notes, 0) AS compareNotes,
               a.currency               AS currency,
               SUM(CASE WHEN t.type = 'refund' THEN -t.amount ELSE t.amount END) AS total,
               SUM(CASE WHEN t.type = 'refund' THEN 0 ELSE 1 END) AS count
@@ -143,6 +144,7 @@ export function categoryTotals(
     name: string
     icon: string
     color: string
+    compareNotes: number
     currency: string
     total: number
     count: number
@@ -159,7 +161,8 @@ export function categoryTotals(
       total: 0,
       count: 0,
       percent: 0,
-      notes: []
+      notes: [],
+      compareNotes: Number(row.compareNotes) === 1
     }
     existing.total += convert(Number(row.total ?? 0), row.currency, base, rates)
     existing.count += Number(row.count ?? 0)

@@ -17,6 +17,7 @@ interface CategoryRow {
   archived: number
   sort_order: number
   breakdown_by_note: number
+  compare_notes: number
   keeps_invoices: number
   save_percent: number | null
   save_amount: number | null
@@ -37,6 +38,7 @@ function mapCategory(row: CategoryRow): Category {
     archived: row.archived === 1,
     sortOrder: row.sort_order,
     breakdownByNote: row.breakdown_by_note === 1,
+    compareNotes: row.compare_notes === 1,
     keepsInvoices: row.keeps_invoices === 1,
     savePercent: row.save_percent,
     saveAmount: row.save_amount,
@@ -77,6 +79,7 @@ interface CategoryInput {
   color: string
   archived?: boolean
   breakdownByNote?: boolean
+  compareNotes?: boolean
   keepsInvoices?: boolean
   /** La regla de ahorro, solo si es de ingreso. */
   savePercent?: number | null
@@ -95,6 +98,8 @@ export function saveCategory(input: CategoryInput): Category {
 
   const db = getDb()
   const regla = reglaDeCategoria(input)
+  // Sin desglose no hay notas que comparar: la casilla no se queda marcada debajo.
+  const comparaNotas = input.breakdownByNote !== false && input.compareNotes ? 1 : 0
   if (input.id) {
     // Una categoría no puede colgar de sí misma.
     const parentId = input.parentId === input.id ? null : (input.parentId ?? null)
@@ -113,7 +118,7 @@ export function saveCategory(input: CategoryInput): Category {
     db.prepare(
       `UPDATE categories
           SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?,
-              breakdown_by_note = ?, keeps_invoices = ?,
+              breakdown_by_note = ?, compare_notes = ?, keeps_invoices = ?,
               save_percent = ?, save_amount = ?, save_account_id = ?, save_goal_id = ?,
               spend_limit = ?, limit_warned = CASE WHEN ? = 1 THEN NULL ELSE limit_warned END
         WHERE id = ?`
@@ -125,6 +130,7 @@ export function saveCategory(input: CategoryInput): Category {
       input.color,
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
+      comparaNotas,
       input.keepsInvoices ? 1 : 0,
       regla?.modo === 'porciento' ? regla.valor : null,
       regla?.modo === 'cifra' ? regla.valor : null,
@@ -143,9 +149,9 @@ export function saveCategory(input: CategoryInput): Category {
   const result = db
     .prepare(
       `INSERT INTO categories
-         (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, keeps_invoices,
-          save_percent, save_amount, save_account_id, save_goal_id, spend_limit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, compare_notes,
+          keeps_invoices, save_percent, save_amount, save_account_id, save_goal_id, spend_limit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name.trim(),
@@ -155,6 +161,7 @@ export function saveCategory(input: CategoryInput): Category {
       input.color,
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
+      comparaNotas,
       input.keepsInvoices ? 1 : 0,
       regla?.modo === 'porciento' ? regla.valor : null,
       regla?.modo === 'cifra' ? regla.valor : null,

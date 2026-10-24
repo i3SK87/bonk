@@ -1367,6 +1367,20 @@ p { margin: 0; }
   font-size: 12px;
 }
 
+/* La que depende de otra que está desmarcada: se lee, pero no invita a pulsarla. */
+.checkbox.apagada,
+.checkbox.apagada input {
+  cursor: default;
+}
+
+.checkbox.apagada {
+  opacity: 0.45;
+}
+
+.checkbox.apagada:hover input {
+  border-color: var(--border-strong);
+}
+
 .segmented {
   display: inline-flex;
   background: var(--bg-sunken);

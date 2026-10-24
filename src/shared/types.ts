@@ -95,6 +95,8 @@ export interface Category {
   sortOrder: number
   /** Si el informe abre la categoría en sus notas (Deuda → 4Geeks, PC, Kindle). */
   breakdownByNote: boolean
+  /** Si cada nota del desglose lleva su flecha de Balance y su media al mes (Facturas sí, Compras no). */
+  compareNotes: boolean
   /** Si sus movimientos pueden llevar facturas adjuntas. */
   keepsInvoices: boolean
   /**
@@ -695,6 +697,8 @@ export interface CategoryTotal {
   percent: number
   /** Desglose por nota; vacío en las categorías fijas o sin notas. */
   notes: NoteTotal[]
+  /** Si sus notas se comparan una a una. Ver `Category.compareNotes`. */
+  compareNotes?: boolean
 }
 
 export interface MonthlyPoint {
