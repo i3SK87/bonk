@@ -18,19 +18,9 @@ const ACCOUNT_TYPES: Array<{ value: AccountType; label: string; icon: string }> 
 ]
 
 export function AccountsView(): ReactNode {
-  const { accounts, settings, revision, run, fail } = useStore()
+  const { accounts, settings, revision, run } = useStore()
   const [editing, setEditing] = useState<AccountWithBalance | null>(null)
   const [creating, setCreating] = useState(false)
-  const [archived, setArchived] = useState<AccountWithBalance[]>([])
-  const [showArchived, setShowArchived] = useState(false)
-
-  useEffect(() => {
-    if (!showArchived) return
-    api.accounts
-      .withBalance(true)
-      .then((list) => setArchived(list.filter((account) => account.archived)))
-      .catch(fail('las cuentas archivadas'))
-  }, [showArchived, accounts])
 
   const total = accounts
     .filter((account) => !account.excludeFromTotal)
@@ -120,31 +110,8 @@ export function AccountsView(): ReactNode {
               total.
             </div>
           )}
-          <div className="spacer" />
-          <button className="link small" onClick={() => setShowArchived((value) => !value)}>
-            {showArchived ? 'Ocultar archivadas' : 'Ver cuentas archivadas'}
-          </button>
         </div>
       </div>
-
-      {showArchived && (
-        <div className="card flush">
-          <div className="card-header">
-            <h3>Archivadas</h3>
-          </div>
-          {archived.length === 0 ? (
-            <div className="card-body small muted">No hay cuentas archivadas.</div>
-          ) : (
-            archived.map((account) => (
-              <button key={account.id} type="button" className="list-row clickable" data-fila onClick={() => setEditing(account)}>
-                <Avatar icon={account.icon} color={account.color} size="small" />
-                <div style={{ flex: 1 }}>{account.name}</div>
-                <div className="amount muted">{formatMoney(account.balance, account.currency)}</div>
-              </button>
-            ))
-          )}
-        </div>
-      )}
 
       {(creating || editing) && (
         <AccountModal
@@ -188,7 +155,8 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
   const [color, setColor] = useState(account?.color ?? '#0A84FF')
   const [excludeFromTotal, setExclude] = useState(account?.excludeFromTotal ?? false)
   const [lowBalance, setLowBalance] = useState(account?.lowBalanceThreshold ?? 0)
-  const [archived, setArchived] = useState(account?.archived ?? false)
+  // Ya no se archiva desde la ficha (2.50.0): la que lo estuviera, sigue igual.
+  const archived = account?.archived ?? false
   // La nota ya no se edita —el título dice lo que hay que decir—, pero la que
   // tuviera una cuenta de antes viaja intacta al guardar en vez de borrarse sola.
   const note = account?.note ?? ''
@@ -332,14 +300,10 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           {/* Una sola en toda la aplicación, no una por tipo: la marca dice con
               qué cuenta abre Movimientos y nada más. */}
           <Checkbox
-            checked={isPrimary && !archived}
+            checked={isPrimary}
             onChange={setIsPrimary}
             label="Usar como cuenta principal"
-            hint={
-              archived
-                ? 'Archivada no puede ser la principal.'
-                : 'Es la que sale elegida al abrir Movimientos. Solo una.'
-            }
+            hint="Es la que sale elegida al abrir Movimientos. Solo una."
           />
 
           <Checkbox
@@ -348,15 +312,6 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
             label="Excluir del patrimonio total"
             hint="Dinero de terceros, o que no cuentas como tuyo."
           />
-
-          {account && (
-            <Checkbox
-              checked={archived}
-              onChange={setArchived}
-              label="Archivar la cuenta"
-              hint="No sale en los desplegables; conserva su histórico."
-            />
-          )}
         </div>
       </Modal>
 
@@ -365,7 +320,7 @@ function AccountModal({ account, onClose, onSave, onDelete }: AccountModalProps)
           title="Eliminar cuenta"
           message={
             linked > 0
-              ? `Esta cuenta tiene ${linked} movimientos y se eliminarán con ella. Los traspasos con otras cuentas se conservan como gasto o ingreso en la cuenta que sobrevive, para que su saldo no cambie. Si solo quieres dejar de verla, archívala en vez de borrarla.`
+              ? `Esta cuenta tiene ${linked} movimientos y se eliminarán con ella. Los traspasos con otras cuentas se conservan como gasto o ingreso en la cuenta que sobrevive, para que su saldo no cambie.`
               : 'La cuenta se eliminará definitivamente.'
           }
           confirmLabel="Eliminar"

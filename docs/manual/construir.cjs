@@ -250,7 +250,7 @@ const html = `<!doctype html>
   <ol class="pasos">
     <li>Ve a <strong>Cuentas</strong> y cámbiales el nombre a las que traiga. Crea las que falten: una tarjeta, una hucha…</li>
     <li>En cada cuenta, escribe en <strong>Saldo actual</strong> el dinero que tiene hoy. A partir de ahí, BONK lo lleva al día con lo que apuntes.</li>
-    <li>En <strong>Categorías</strong>, borra o archiva las que no te sirvan y crea las tuyas.</li>
+    <li>En <strong>Categorías</strong>, borra las que no te sirvan y crea las tuyas.</li>
     <li>En <strong>Programados</strong>, da de alta lo que se repite: la nómina, el alquiler, las suscripciones. Desde ese momento se apuntan solos.</li>
   </ol>
   <div class="caja-nota truco"><strong>El hábito que hace que funcione</strong>Apuntar cada gasto cuando lo haces, o todos juntos por la noche. Con <kbd>Ctrl</kbd><span class="mas">+</span><kbd>N</kbd> son diez segundos. Lo que se repite no hace falta apuntarlo: para eso están los programados.</div>
@@ -442,7 +442,7 @@ const html = `<!doctype html>
   <ul>
     <li>Suma <strong>todas las cuentas</strong>: el súper cuenta igual si lo pagaste con la tarjeta que en efectivo.</li>
     <li>Cuenta <strong>neto</strong>, como Informes: un reembolso rebaja lo gastado en su categoría.</li>
-    <li>Solo en categorías de gasto. Las archivadas no cuentan, y cada mes empieza de cero.</li>
+    <li>Solo en categorías de gasto, y cada mes empieza de cero.</li>
   </ul>
   <h2>Ponerlos, cambiarlos y quitarlos</h2>
   <ul>
@@ -468,9 +468,8 @@ const html = `<!doctype html>
     <li><strong>Avisarme si baja de</strong>: una cifra por debajo de la cual te avisa en Movimientos. En cero no avisa nunca.</li>
     <li><strong>Usar como cuenta principal</strong>: la que sale elegida al abrir Movimientos. Solo puede haber una.</li>
     <li><strong>Excluir del patrimonio total</strong>: para dinero que tienes pero no es tuyo (un bote común, lo de un familiar).</li>
-    <li><strong>Archivar la cuenta</strong>: deja de salir en los desplegables, pero conserva su historia. Las archivadas se ven con <strong>Ver cuentas archivadas</strong>.</li>
   </ul>
-  <div class="caja-nota peligro"><strong>Eliminar no es archivar</strong>Eliminar una cuenta borra todos sus movimientos. Los traspasos con otras cuentas se conservan como gasto o ingreso en la otra, para que su saldo no cambie. Si solo quieres dejar de verla, archívala.</div>
+  <div class="caja-nota peligro"><strong>Eliminar borra sus movimientos</strong>Eliminar una cuenta borra todos sus movimientos. Los traspasos con otras cuentas se conservan como gasto o ingreso en la otra, para que su saldo no cambie.</div>
 </section>
 
 <!-- 11 -->
