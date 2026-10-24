@@ -11,7 +11,7 @@ import {
   ResumenRepeticion,
   type CampoRepeticion
 } from './DetallesRepeticion'
-import type { Attachment, Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
+import type { Frequency, GoalProgress, TransactionView, TxType } from '@shared/types'
 
 const api = window.bonk
 
@@ -115,10 +115,6 @@ export function TransactionForm({
   const [interval, setInterval] = useState(1)
   const [endDate, setEndDate] = useState('')
   const [lender, setLender] = useState('')
-  const [attachments, setAttachments] = useState<Attachment[]>([])
-  /** Facturas elegidas que aún no se han copiado: esperan a que el movimiento exista. */
-  const [pending, setPending] = useState<Array<{ path: string; name: string }>>([])
-  const [previews, setPreviews] = useState<Record<number, string>>({})
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   /*
@@ -183,10 +179,6 @@ export function TransactionForm({
 
   const account = accounts.find((item) => item.id === accountId)
   const currency = account?.currency ?? settings.baseCurrency
-  // Las facturas solo salen donde tienen sentido: lo decide la categoría.
-  const keepsInvoices = categories.some(
-    (category) => category.id === categoryId && category.keepsInvoices
-  )
 
   const visibleCategories = useMemo(
     () => categories.filter((category) => category.kind === (type === 'income' ? 'income' : 'expense')),
@@ -279,43 +271,12 @@ export function TransactionForm({
   }, [cuentaQueRecibe, goals])
 
 
-  useEffect(() => {
-    if (!existing) return
-    api.attachments.list(existing.id).then(setAttachments).catch(fail('las facturas'))
-  }, [existing])
-
   // Un gasto puede tener varias devoluciones: la suscripción compartida entre
   // cuatro son tres reembolsos sobre el mismo cobro.
   useEffect(() => {
     if (!existing || existing.type !== 'expense') return
     api.transactions.refundsFor(existing.id).then(setRefunds).catch(fail('los reembolsos'))
   }, [existing, refunding])
-
-  // Solo depende de la lista de adjuntos: si dependiera también de las
-  // miniaturas ya cargadas, se volvería a ejecutar entero con cada imagen.
-  useEffect(() => {
-    for (const attachment of attachments) {
-      if (!attachment.mime?.startsWith('image/')) continue
-      api.attachments
-        .data(attachment.id)
-        .then((data) => {
-          if (!data) return
-          setPreviews((current) => (current[attachment.id] ? current : { ...current, [attachment.id]: data }))
-        })
-        // Una miniatura que no carga no merece interrumpir: el archivo sigue ahí.
-        .catch(() => undefined)
-    }
-  }, [attachments])
-
-  /**
-   * Elegir la factura no depende de que el movimiento exista: se apunta el
-   * archivo y se copia al guardar. Así se sube en el mismo gesto en que se
-   * registra la compra, sin el paso intermedio de guardar y volver a entrar.
-   */
-  async function pickInvoices(): Promise<void> {
-    const picked = await run(() => api.attachments.pick())
-    if (picked && picked.length) setPending((current) => [...current, ...picked])
-  }
 
   /**
    * Lo que se hace después de guardar, salga movimiento o programada.
@@ -327,9 +288,6 @@ export function TransactionForm({
     if (keepOpen) {
       setAmount(0)
       setNote('')
-      setAttachments([])
-      setPreviews({})
-      setPending([])
       setEnfocarImporte(true)
       // El siguiente apunte es otro: vuelve a avisar de lo que aparta.
       setDecisionAhorro(null)
@@ -380,14 +338,12 @@ export function TransactionForm({
      * salir de la cuenta. Lo que todavía no ha pasado es algo que va a pasar, y
      * eso ya tiene su sitio: se registra solo el día que le toca.
      *
-     * Dos cosas no pueden hacer el viaje, y por eso se quedan como movimiento:
-     * las facturas cuelgan de un movimiento y se irían con él, y un reembolso
-     * apunta a un gasto concreto que una programada no sabe señalar. En ambos
-     * casos el aviso lo dice, que si no parecería que la regla falla a ratos.
+     * Un reembolso no puede hacer el viaje, y por eso se queda como movimiento:
+     * apunta a un gasto concreto que una programada no sabe señalar. El aviso
+     * lo dice, que si no parecería que la regla falla a ratos.
      */
     const futuro = date > today()
-    const conFacturas = pending.length > 0 || attachments.length > 0
-    if (futuro && type !== 'refund' && !conFacturas) {
+    if (futuro && type !== 'refund') {
       setSaving(true)
       const programada = await run(
         () =>
@@ -435,9 +391,7 @@ export function TransactionForm({
           refundForId
         }),
       futuro
-        ? conFacturas
-          ? 'Lleva facturas, así que se queda como movimiento'
-          : 'Un reembolso no se puede programar: se queda como movimiento'
+        ? 'Un reembolso no se puede programar: se queda como movimiento'
         : existing
           ? 'Movimiento actualizado'
           : 'Movimiento guardado'
@@ -480,16 +434,6 @@ export function TransactionForm({
           }),
         'Repetición programada'
       )
-    }
-
-    if (pending.length > 0) {
-      const added = await run(() => api.attachments.attach(saved.id, pending.map((item) => item.path)))
-      // Si alguna factura falla, el movimiento ya está guardado y el aviso lo
-      // explica: no se deshace nada por un archivo que no se pudo copiar.
-      if (added) {
-        setAttachments((current) => [...current, ...added])
-        setPending([])
-      }
     }
 
     terminar(keepOpen)
@@ -1051,60 +995,6 @@ export function TransactionForm({
           </Field>
         )}
 
-        {keepsInvoices && (
-          <Field label="Facturas">
-            {(attachments.length > 0 || pending.length > 0) && (
-              <div className="chip-row" style={{ marginBottom: 8 }}>
-                {attachments.map((attachment) => (
-                  <div key={attachment.id} className="pill" style={{ paddingRight: 4 }}>
-                    {previews[attachment.id] ? (
-                      <img
-                        src={previews[attachment.id]}
-                        alt={attachment.originalName}
-                        style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover', cursor: 'pointer' }}
-                        onClick={() => api.attachments.open(attachment.id)}
-                      />
-                    ) : (
-                      <Icon name="paperclip" size={13} />
-                    )}
-                    <span className="truncate" style={{ maxWidth: 130 }}>
-                      {attachment.originalName}
-                    </span>
-                    <button
-                      onClick={async () => {
-                        await run(() => api.attachments.remove(attachment.id))
-                        setAttachments((current) => current.filter((item) => item.id !== attachment.id))
-                      }}
-                      aria-label="Quitar factura"
-                    >
-                      <Icon name="close" size={12} />
-                    </button>
-                  </div>
-                ))}
-
-                {/* Las elegidas y aún sin copiar van atenuadas: se guardan con el movimiento. */}
-                {pending.map((item) => (
-                  <div key={item.path} className="pill pending" style={{ paddingRight: 4 }}>
-                    <Icon name="paperclip" size={13} />
-                    <span className="truncate" style={{ maxWidth: 130 }}>
-                      {item.name}
-                    </span>
-                    <button
-                      onClick={() => setPending((current) => current.filter((p) => p.path !== item.path))}
-                      aria-label="Quitar factura"
-                    >
-                      <Icon name="close" size={12} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button className="btn small" onClick={pickInvoices}>
-              <Icon name="paperclip" size={14} />
-              Subir factura
-            </button>
-          </Field>
-        )}
       </Modal>
 
       {detalles && (
@@ -1220,7 +1110,7 @@ export function TransactionForm({
       {confirmDelete && (
         <Confirm
           title="Eliminar movimiento"
-          message="El movimiento y sus adjuntos se borrarán definitivamente."
+          message="El movimiento se borrará definitivamente."
           confirmLabel="Eliminar"
           destructive
           onCancel={() => setConfirmDelete(false)}

@@ -1,5 +1,4 @@
 import { ipcMain, dialog, shell, app, BrowserWindow } from 'electron'
-import { basename } from 'node:path'
 import { writeFileSync } from 'node:fs'
 import { getDataDir, dbPath, makeBackup } from './db'
 import * as settings from './repos/settings'
@@ -9,7 +8,6 @@ import * as transactions from './repos/transactions'
 import * as goals from './repos/goals'
 import * as scheduled from './repos/scheduled'
 import * as reports from './repos/reports'
-import * as attachments from './repos/attachments'
 import * as csv from './repos/csv'
 import { construirInformeHtml } from './repos/informe'
 import { widgetWindow, colocarWidget } from './widget'
@@ -62,10 +60,6 @@ const SOLO_LEEN = new Set([
   'reports:monthly',
   'reports:span',
   'reports:ahorrado',
-  'attachments:list',
-  'attachments:open',
-  'attachments:pick',
-  'attachments:data',
   'csv:pick',
   'updates:estado',
   // Preguntar por una versión nueva no toca ni un dato: el widget no tiene de
@@ -329,38 +323,6 @@ export function registerIpc(
   handle('reports:span', (accountId: number | null) => reports.transactionsSpan(accountId))
   handle('reports:ahorrado', (from: string, to: string) => reports.ahorrado(from, to))
 
-  // — Adjuntos —
-  handle('attachments:list', (transactionId: number) => attachments.listAttachments(transactionId))
-  handle('attachments:delete', (id: number) => attachments.deleteAttachment(id))
-  handle('attachments:data', (id: number) => attachments.readAttachmentData(id))
-  handle('attachments:open', (id: number) => {
-    const path = attachments.attachmentPath(id)
-    if (!path) throw new Error('El archivo adjunto ya no está en el disco')
-    return shell.openPath(path)
-  })
-  // Elegir el archivo y adjuntarlo son dos pasos separados porque un movimiento
-  // nuevo todavía no tiene id: se escoge la factura mientras se rellena el
-  // formulario y se copia en cuanto el movimiento existe.
-  handle('attachments:pick', async () => {
-    const window = getWindow()
-    if (!window) throw new Error('No hay ventana activa')
-    const result = await dialog.showOpenDialog(window, {
-      title: 'Subir factura',
-      buttonLabel: 'Subir',
-      properties: ['openFile', 'multiSelections'],
-      filters: [
-        { name: 'Imágenes y PDF', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'pdf'] },
-        { name: 'Todos los archivos', extensions: ['*'] }
-      ]
-    })
-    if (result.canceled) return []
-    return result.filePaths.map((path) => ({ path, name: basename(path) }))
-  })
-
-  handle('attachments:attach', (transactionId: number, paths: string[]) =>
-    paths.map((path) => attachments.addAttachment(transactionId, path))
-  )
-
   // — Informe en PDF —
   /*
    * Se imprime desde una ventana oculta.
@@ -504,5 +466,4 @@ export function registerIpc(
   handle('updates:instalar', () => instalarActualizacion())
 
   handle('db:clearTransactions', () => csv.clearTransactions())
-  handle('db:pruneAttachments', () => attachments.pruneOrphanAttachments())
 }

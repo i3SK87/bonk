@@ -36,10 +36,8 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
   const [kind, setKind] = useState<CategoryKind>(category?.kind ?? defaultKind)
   const [icon, setIcon] = useState(category?.icon ?? 'tag')
   const [color, setColor] = useState(category?.color ?? PALETTE[0])
-  const [archived, setArchived] = useState(category?.archived ?? false)
   const [breakdownByNote, setBreakdownByNote] = useState(category?.breakdownByNote ?? true)
   const [compareNotes, setCompareNotes] = useState(category?.compareNotes ?? false)
-  const [keepsInvoices, setKeepsInvoices] = useState(category?.keepsInvoices ?? false)
   const [spendLimit, setSpendLimit] = useState(category?.spendLimit ?? 0)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -59,10 +57,10 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
       kind,
       icon,
       color,
-      archived,
+      // Ya no se archiva desde la ficha: la que lo estuviera, sigue igual.
+      archived: category?.archived ?? false,
       breakdownByNote,
       compareNotes: breakdownByNote && compareNotes,
-      keepsInvoices,
       // En las de ingreso ni se pregunta ni se manda: un ingreso no se pasa de
       // ningún presupuesto, y el que hubiera quedado de cuando era de gasto se va con
       // el cambio de tipo.
@@ -155,18 +153,9 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
         )}
 
         {/* Cada casilla con su renglón de ayuda, como las de las demás fichas:
-            dicen qué cambia en otra pantalla —el formulario de movimientos, la
-            pestaña Informes— y desde aquí no se ve. Eran las dos únicas de la
-            aplicación que iban a secas, y a secas cabían a la par: quedaban de
-            adorno al pie de la ficha, sin el aire de las de al lado. */}
+            dicen qué cambia en la pestaña Informes, y desde aquí no se ve.
+            Adjuntar facturas y Archivar se quitaron en la 2.49.0: no se usaban. */}
         <div className="casillas">
-          <Checkbox
-            checked={keepsInvoices}
-            onChange={setKeepsInvoices}
-            label="Adjuntar facturas"
-            hint="Sus movimientos llevan un campo para guardar el recibo."
-          />
-
           <Checkbox
             checked={breakdownByNote}
             onChange={setBreakdownByNote}
@@ -184,15 +173,6 @@ export function CategoryModal({ category, defaultKind, onClose, onSave, onDelete
             label="Comparar cada nota"
             hint="Cada nota lleva su flecha de Balance y su media al mes."
           />
-
-          {category && (
-            <Checkbox
-              checked={archived}
-              onChange={setArchived}
-              label="Archivar la categoría"
-              hint="No sale al crear movimientos; el histórico se conserva."
-            />
-          )}
         </div>
 
         {/*

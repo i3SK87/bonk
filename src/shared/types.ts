@@ -97,8 +97,6 @@ export interface Category {
   breakdownByNote: boolean
   /** Si cada nota del desglose lleva su flecha de Balance y su media al mes (Facturas sí, Compras no). */
   compareNotes: boolean
-  /** Si sus movimientos pueden llevar facturas adjuntas. */
-  keepsInvoices: boolean
   /**
    * Regla de ahorro: qué tanto por ciento se aparta de todo lo que entre en
    * esta categoría, y a dónde. Solo en las de ingreso; `null` es que no hay.
@@ -147,16 +145,6 @@ export interface Tag {
   color: string
 }
 
-export interface Attachment {
-  id: number
-  transactionId: number
-  filename: string
-  originalName: string
-  mime: string | null
-  size: number | null
-  createdAt: string
-}
-
 export interface Transaction {
   id: number
   type: TxType
@@ -202,7 +190,6 @@ export interface TransactionView extends Transaction {
   categoryIcon: string | null
   categoryColor: string | null
   tags: Tag[]
-  attachmentCount: number
   /** Suma de los reembolsos enlazados a este gasto, en su misma divisa. */
   refundedTotal: number
   /** Efecto sobre el patrimonio total, convertido a la divisa base. */

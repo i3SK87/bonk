@@ -18,7 +18,6 @@ interface CategoryRow {
   sort_order: number
   breakdown_by_note: number
   compare_notes: number
-  keeps_invoices: number
   save_percent: number | null
   save_amount: number | null
   save_account_id: number | null
@@ -39,7 +38,6 @@ function mapCategory(row: CategoryRow): Category {
     sortOrder: row.sort_order,
     breakdownByNote: row.breakdown_by_note === 1,
     compareNotes: row.compare_notes === 1,
-    keepsInvoices: row.keeps_invoices === 1,
     savePercent: row.save_percent,
     saveAmount: row.save_amount,
     saveAccountId: row.save_account_id,
@@ -80,7 +78,6 @@ interface CategoryInput {
   archived?: boolean
   breakdownByNote?: boolean
   compareNotes?: boolean
-  keepsInvoices?: boolean
   /** La regla de ahorro, solo si es de ingreso. */
   savePercent?: number | null
   saveAmount?: number | null
@@ -118,7 +115,7 @@ export function saveCategory(input: CategoryInput): Category {
     db.prepare(
       `UPDATE categories
           SET name = ?, kind = ?, parent_id = ?, icon = ?, color = ?, archived = ?,
-              breakdown_by_note = ?, compare_notes = ?, keeps_invoices = ?,
+              breakdown_by_note = ?, compare_notes = ?,
               save_percent = ?, save_amount = ?, save_account_id = ?, save_goal_id = ?,
               spend_limit = ?, limit_warned = CASE WHEN ? = 1 THEN NULL ELSE limit_warned END
         WHERE id = ?`
@@ -131,7 +128,6 @@ export function saveCategory(input: CategoryInput): Category {
       input.archived ? 1 : 0,
       input.breakdownByNote === false ? 0 : 1,
       comparaNotas,
-      input.keepsInvoices ? 1 : 0,
       regla?.modo === 'porciento' ? regla.valor : null,
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,
@@ -150,8 +146,8 @@ export function saveCategory(input: CategoryInput): Category {
     .prepare(
       `INSERT INTO categories
          (name, kind, parent_id, icon, color, sort_order, breakdown_by_note, compare_notes,
-          keeps_invoices, save_percent, save_amount, save_account_id, save_goal_id, spend_limit)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          save_percent, save_amount, save_account_id, save_goal_id, spend_limit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       input.name.trim(),
@@ -162,7 +158,6 @@ export function saveCategory(input: CategoryInput): Category {
       Number(maxOrder.m) + 1,
       input.breakdownByNote === false ? 0 : 1,
       comparaNotas,
-      input.keepsInvoices ? 1 : 0,
       regla?.modo === 'porciento' ? regla.valor : null,
       regla?.modo === 'cifra' ? regla.valor : null,
       regla?.accountId ?? null,

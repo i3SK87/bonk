@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   Account,
   AccountWithBalance,
-  Attachment,
   Goal,
   GoalProgress,
   Category,
@@ -160,15 +159,6 @@ const api = {
     /** Todo lo que entró en las cuentas de ahorro en el tramo. */
     ahorrado: (from: string, to: string) => call<number>('reports:ahorrado', from, to)
   },
-  attachments: {
-    list: (transactionId: number) => call<Attachment[]>('attachments:list', transactionId),
-    pick: () => call<Array<{ path: string; name: string }>>('attachments:pick'),
-    attach: (transactionId: number, paths: string[]) =>
-      call<Attachment[]>('attachments:attach', transactionId, paths),
-    remove: (id: number) => call<void>('attachments:delete', id),
-    data: (id: number) => call<string | null>('attachments:data', id),
-    open: (id: number) => call<string>('attachments:open', id)
-  },
   informe: {
     /** El informe del periodo en PDF. `null` si se cancela el diálogo. */
     exportPdf: (filter: TransactionFilter = {}) =>
@@ -232,8 +222,7 @@ const api = {
       call<{ dataDir: string; dbPath: string; version: string; electron: string; node: string }>('db:info'),
     backup: () => call<string>('db:backup'),
     openFolder: () => call<string>('db:openFolder'),
-    clearTransactions: () => call<number>('db:clearTransactions'),
-    pruneAttachments: () => call<number>('db:pruneAttachments')
+    clearTransactions: () => call<number>('db:clearTransactions')
   },
   updates: {
     estado: () => call<EstadoActualizacion>('updates:estado'),

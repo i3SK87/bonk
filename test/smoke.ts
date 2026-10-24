@@ -752,12 +752,6 @@ try {
     name: 'Deuda', kind: 'expense', icon: 'debt', color: '#FF3B30'
   })
   check('una categoría nueva se desglosa por defecto', debt.breakdownByNote)
-  check('y no guarda facturas hasta que se le diga', debt.keepsInvoices === false)
-  check(
-    'la casilla de facturas se guarda',
-    categories.saveCategory({ ...debt, keepsInvoices: true }).keepsInvoices
-  )
-  categories.saveCategory({ ...debt, keepsInvoices: false })
   const debtTx = (amount: number, note: string): void => {
     transactions.saveTransaction({ type: 'expense', date: day, accountId: bank.id, categoryId: debt.id, amount, note })
   }

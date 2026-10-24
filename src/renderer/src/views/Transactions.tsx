@@ -1727,7 +1727,7 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
       {borrando && (
         <Confirm
           title="Eliminar movimiento"
-          message="El movimiento y sus adjuntos se borrarán definitivamente."
+          message="El movimiento se borrará definitivamente."
           confirmLabel="Eliminar"
           destructive
           onCancel={() => setBorrando(null)}
@@ -2100,7 +2100,6 @@ function TransactionRow({
         {detail && <span className="tx-note">{detail}</span>}
         {detail && muestraCuenta && <span>·</span>}
         {muestraCuenta && <span>{row.accountName}</span>}
-        {row.attachmentCount > 0 && <Icon name="paperclip" size={12} />}
       </div>
     </div>
   )

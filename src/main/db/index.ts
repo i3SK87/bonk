@@ -16,12 +16,6 @@ export function getDataDir(): string {
   return dataDir
 }
 
-export function attachmentsDir(): string {
-  const dir = join(dataDir, 'attachments')
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  return dir
-}
-
 export function dbPath(): string {
   return join(dataDir, 'bonk.db')
 }

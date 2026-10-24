@@ -2129,14 +2129,6 @@ p { margin: 0; }
   color: var(--tag-color, var(--fg-muted));
 }
 
-/* Factura elegida pero todavía sin copiar: el borde punteado dice que aún no
-   está guardada, igual que en las programadas por venir. */
-.pill.pending {
-  background: transparent;
-  border: 1px dashed var(--border-strong);
-  color: var(--fg-subtle);
-}
-
 .pill button {
   border: none;
   background: none;

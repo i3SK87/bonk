@@ -385,9 +385,6 @@ const PATHS: Record<string, JSX.Element> = {
       <path d="M4 20h16" />
     </>
   ),
-  paperclip: (
-    <path d="M20 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.4 3.4 0 0 1 4.8 4.8l-8.8 8.8a1.8 1.8 0 0 1-2.5-2.5l8-8" />
-  ),
   image: (
     <>
       <rect x="3" y="4.5" width="18" height="15" rx="3" />

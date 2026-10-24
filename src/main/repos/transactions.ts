@@ -48,7 +48,6 @@ interface TxViewRow extends TxRow {
   category_name: string | null
   category_icon: string | null
   category_color: string | null
-  attachment_count: number
   is_debt: number | null
 }
 
@@ -155,8 +154,7 @@ const VIEW_SELECT = `
                  AND q.note = t.note
             ) THEN 1
             ELSE 0
-          END) AS is_debt,
-         (SELECT COUNT(*) FROM attachments x WHERE x.transaction_id = t.id) AS attachment_count
+          END) AS is_debt
     FROM transactions t
     JOIN accounts a        ON a.id = t.account_id
     LEFT JOIN accounts d   ON d.id = t.to_account_id
@@ -308,7 +306,6 @@ function toView(
     categoryIcon: row.category_icon,
     categoryColor: row.category_color,
     tags: tags.get(row.id) ?? [],
-    attachmentCount: Number(row.attachment_count ?? 0),
     amountInBase: amountInBase(row, rates, base),
     isDebt: row.is_debt === 1
   }
