@@ -353,11 +353,13 @@ export function ReportsView(): ReactNode {
    * a cero las que solo salen en el anterior.
    */
   const filas = useMemo(() => repartoComparado(categories, antes), [categories, antes])
-  /** Lo de cada categoría en los meses cerrados, para dividirlo entre ellos. */
-  const totalCerrado = useMemo(
-    () => new Map(cerrado.map((item) => [item.categoryId, item.total])),
-    [cerrado]
-  )
+  /**
+   * Lo de cada categoría y de cada nota suya en los meses cerrados, para
+   * dividirlo entre ellos. Es el mismo emparejamiento que el de la comparación,
+   * fila a fila con `filas`: ahí el «antes» es el otro periodo y aquí los meses
+   * cerrados.
+   */
+  const enCerrados = useMemo(() => repartoComparado(categories, cerrado), [categories, cerrado])
   /*
    * Qué meses cuenta la media, escrito bajo su título: «ene – sep». Con el año
    * cuando el tramo cruza uno, que «sep – sep» no dice nada.
@@ -858,7 +860,7 @@ export function ReportsView(): ReactNode {
                             {cerrados && (
                               <td className="num amount media-al-mes">
                                 {formatMoney(
-                                  Math.round((totalCerrado.get(row.categoryId) ?? 0) / cerrados.meses),
+                                  Math.round(enCerrados[indice].antes / cerrados.meses),
                                   currency
                                 )}
                               </td>
@@ -896,8 +898,14 @@ export function ReportsView(): ReactNode {
                                 <td className="num muted">{note.count}</td>
                                 <td className="num muted">{note.percent.toFixed(1)}%</td>
                                 <td className="num amount">{formatMoney(note.total, currency)}</td>
-                                {/* Ni la media: va por categoría. */}
-                                {cerrados && <td />}
+                                {cerrados && (
+                                  <td className="num amount media-al-mes">
+                                    {formatMoney(
+                                      Math.round(enCerrados[indice].notasAntes[posicion] / cerrados.meses),
+                                      currency
+                                    )}
+                                  </td>
+                                )}
                                 {/* Cada nota contra ella misma en el otro
                                     periodo: la luz contra la luz, no contra
                                     todo Suministros. */}
