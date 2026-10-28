@@ -185,6 +185,7 @@ export function previousOccurrence(
 
 const dateFmt = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+const dayMonthFmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' })
 const monthFmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' })
 const shortMonthFmt = new Intl.DateTimeFormat('es-ES', { month: 'short' })
 
@@ -201,13 +202,15 @@ export function formatShortMonth(iso: string): string {
   return shortMonthFmt.format(parseISO(iso)).replace('.', '')
 }
 
-/** Cabecera de grupo en la lista de movimientos: "Hoy", "Ayer" o el día escrito. */
+/**
+ * Cabecera de grupo en la lista de movimientos: "Hoy, 28 de octubre" (y
+ * "Ayer", "Mañana") o el día escrito con su día de la semana.
+ */
 export function formatDayHeading(iso: string): string {
   const t = today()
-  if (iso === t) return 'Hoy'
-  if (iso === addDays(t, -1)) return 'Ayer'
-  if (iso === addDays(t, 1)) return 'Mañana'
-  const text = dayFmt.format(parseISO(iso))
+  const relativo =
+    iso === t ? 'Hoy' : iso === addDays(t, -1) ? 'Ayer' : iso === addDays(t, 1) ? 'Mañana' : null
+  const text = relativo ? `${relativo}, ${dayMonthFmt.format(parseISO(iso))}` : dayFmt.format(parseISO(iso))
   const label = text.charAt(0).toUpperCase() + text.slice(1)
   return iso.slice(0, 4) === t.slice(0, 4) ? label : `${label} de ${iso.slice(0, 4)}`
 }
