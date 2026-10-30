@@ -123,7 +123,7 @@ export function CalculadoraModal({
           ref={inputRef}
           className="input calc-expr"
           value={expr}
-          placeholder="33,99/4"
+          placeholder="0"
           spellCheck={false}
           autoFocus
           onChange={(event) => setExpr(event.target.value)}

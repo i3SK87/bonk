@@ -420,6 +420,20 @@
   --series-income: #4f98cd;
   --series-expense: #b8564f;
 }
+
+/*
+ * El negro de categorías y cuentas (#1C1C1E), de noche en Ghost: es casi la
+ * misma tinta que la tarjeta (#1c1a26), y lo que lo llevara se fundía con ella.
+ * Se oscurece de verdad y se le pone un filo, para que siga siendo negro y se
+ * vea sobre cualquier fondo: el dato guardado no cambia, y los demás temas
+ * tampoco. Llega en línea desde cada sitio —iconos, barras, puntos y el
+ * selector de color—, y el navegador lo escribe siempre en rgb().
+ */
+:root[data-theme="dark"][data-palette="ghost"] [style*="rgb(28, 28, 30)"] {
+  background: #000 !important;
+  box-shadow: inset 0 0 0 1px var(--fg-subtle) !important;
+}
+
 /*
  * Blade Runner 2049 — de noche, que es cuando el mundo azul ocurre.
  *
