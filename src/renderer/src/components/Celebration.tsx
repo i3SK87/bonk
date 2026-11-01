@@ -277,9 +277,11 @@ function Party({
 
         {children}
 
-        <button className="btn primary" onClick={onClose} autoFocus>
-          {boton}
-        </button>
+        <div className="celebration-pie">
+          <button className="btn primary" onClick={onClose} autoFocus>
+            {boton}
+          </button>
+        </div>
       </div>
     </div>
   )
