@@ -15,7 +15,10 @@ const LOGO_KLARNA =
 
 /*
  * Su hermano no tiene logotipo: lleva el mismo dibujo que su categoría,
- * «Brother» (el bebé, en gris), para que se reconozca igual en los dos sitios.
+ * «Almirante» (el bebé, en gris), para que se reconozca igual en los dos sitios.
+ * El nombre también es copia: se llamó «Brother» hasta que él renombró la
+ * categoría, y se cambió a mano para que coincidiera. El id sigue siendo
+ * `brother` porque es lo que guardan las deudas.
  * Es una copia y no un enlace: si la categoría cambia de icono, esto no se
  * entera.
  */
@@ -59,7 +62,7 @@ export const LENDERS: Lender[] = [
   { id: 'sequra', name: 'SeQura', logo: LOGO_SEQURA },
   { id: 'bcas', name: 'Bcas', logo: LOGO_BCAS },
   { id: 'klarna', name: 'Klarna', logo: LOGO_KLARNA },
-  { id: 'brother', name: 'Brother', logo: LOGO_BROTHER }
+  { id: 'brother', name: 'Almirante', logo: LOGO_BROTHER }
 ]
 
 /** El de una deuda, si lo tiene y sigue siendo uno de los de la lista. */
