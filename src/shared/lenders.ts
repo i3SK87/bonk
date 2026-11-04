@@ -13,13 +13,34 @@ const LOGO_BCAS =
 const LOGO_KLARNA =
   'data:image/png;base64,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'
 
+/*
+ * Su hermano no tiene logotipo: lleva el mismo dibujo que su categoría,
+ * «Brother» (el bebé, en gris), para que se reconozca igual en los dos sitios.
+ * Es una copia y no un enlace: si la categoría cambia de icono, esto no se
+ * entera.
+ */
+const LOGO_BROTHER =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+      '<rect width="32" height="32" rx="7" fill="#8E8E93"/>' +
+      '<g transform="translate(4.6 4.6) scale(0.95)" fill="none" stroke="#FFFFFF" ' +
+      'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5"/>' +
+      '<path d="M15 12h.01"/>' +
+      '<path d="M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1"/>' +
+      '<path d="M9 12h.01"/>' +
+      '</g></svg>'
+  )
+
 /**
  * Quién cobra una deuda.
  *
  * Una deuda no se entiende solo por lo que cuesta: «el PC» es una cosa y «el PC
  * con Aplázame» es otra, y al mirar la lista se busca por quién cobra. Es una
  * lista cerrada porque son las cinco financieras con las que se compra a plazos
- * aquí; el hueco vacío vale y no pasa nada.
+ * aquí, más su hermano, con quien se va a medias y luego se le devuelve su
+ * parte; el hueco vacío vale y no pasa nada.
  *
  * Los logotipos van incrustados en el propio archivo: la aplicación no pide nada
  * a Internet, y un icono que no carga es peor que no tener icono. Son los de cada
@@ -37,7 +58,8 @@ export const LENDERS: Lender[] = [
   { id: 'aplazame', name: 'Aplázame', logo: LOGO_APLAZAME },
   { id: 'sequra', name: 'SeQura', logo: LOGO_SEQURA },
   { id: 'bcas', name: 'Bcas', logo: LOGO_BCAS },
-  { id: 'klarna', name: 'Klarna', logo: LOGO_KLARNA }
+  { id: 'klarna', name: 'Klarna', logo: LOGO_KLARNA },
+  { id: 'brother', name: 'Brother', logo: LOGO_BROTHER }
 ]
 
 /** El de una deuda, si lo tiene y sigue siendo uno de los de la lista. */
