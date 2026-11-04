@@ -2085,6 +2085,25 @@ try {
   scheduled.adjustDebt(corta.id, { startDate: '' })
   check('vacía, vuelve a deducirse', verCorta().fixedStart === null)
 
+  // De una vez: lo que se le devuelve a su hermano con la paga. No se repite,
+  // así que ni tiene «cada cuánto» ni cuesta nada «al mes»; salía a «/año».
+  const deHermano = scheduled.saveScheduled({
+    type: 'expense', name: null, note: 'Switch', accountId: bank.id,
+    categoryId: deuda ? deuda.id : food.id,
+    amount: 20000, freq: 'once', interval: 1, isDebt: true,
+    nextDate: addMonths(day, 1), endDate: null, autoPost: false
+  })
+  const verUnaVez = (): DebtProgress =>
+    scheduled.debtProgress(day).find((row) => row.scheduledId === deHermano.id)!
+  check('la de una vez se sabe de una vez', verUnaVez().once)
+  equal('sin «cada cuánto»', verUnaVez().cadence, '')
+  equal('no cuesta nada al mes', verUnaVez().monthlyCost, 0)
+  equal('y queda una sola cuota', verUnaVez().leftCount, 1)
+  equal('por todo su importe', verUnaVez().left, 20000)
+  check('una mensual no es de una vez', !verCorta().once)
+  equal('y sigue diciendo «mes»', verCorta().cadence, 'mes')
+  scheduled.deleteScheduled(deHermano.id)
+
   // Quién cobra: viaja con la programación y se ve en la deuda.
   scheduled.saveScheduled({
     id: corta.id,

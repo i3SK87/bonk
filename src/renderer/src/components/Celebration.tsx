@@ -730,9 +730,17 @@ export function MonthlySummary({
                       )}
                     </span>
                     <span className="small muted">
-                      {formatMoney(deuda.installment, currency)}/{deuda.cadence} · próxima el{' '}
-                      {diaCorto(deuda.nextDate)}
-                      {deuda.endDate ? ` · acaba en ${mesYAnio(deuda.endDate)}` : ''}
+                      {deuda.once ? (
+                        <>
+                          {formatMoney(deuda.installment, currency)} · el {diaCorto(deuda.nextDate)}
+                        </>
+                      ) : (
+                        <>
+                          {formatMoney(deuda.installment, currency)}/{deuda.cadence} · próxima el{' '}
+                          {diaCorto(deuda.nextDate)}
+                          {deuda.endDate ? ` · acaba en ${mesYAnio(deuda.endDate)}` : ''}
+                        </>
+                      )}
                     </span>
                   </div>
                   <div className="resumen-falta">

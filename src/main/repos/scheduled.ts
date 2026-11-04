@@ -663,6 +663,9 @@ export function debtSummary(id: number): DebtSummary {
  * aproximaciones, pero es la cifra que se busca.
  */
 function monthlyCost(amount: number, freq: Frequency, interval: number): number {
+  // Una de una vez no se paga «al mes»: se paga un día y se acaba. Repartirla
+  // en doce, como si fuera anual, le sumaba al mes una cuota que no existe.
+  if (freq === 'once') return 0
   const veces =
     freq === 'daily' ? 30 : freq === 'weekly' ? 4.348 : freq === 'monthly' ? 1 : 1 / 12
   return Math.round((amount * veces) / Math.max(1, interval))
@@ -730,8 +733,13 @@ export function debtProgress(reference = today()): DebtProgress[] {
       accountName: debt.accountName,
       currency: debt.accountCurrency,
       installment: debt.amount,
+      once: debt.freq === 'once',
+      // De una vez no tiene «cada cuánto»: se queda vacía y la pantalla dice el
+      // día. Antes caía en «año» y la de su hermano salía a «200,00 €/año».
       cadence:
-        debt.interval !== 1
+        debt.freq === 'once'
+          ? ''
+          : debt.interval !== 1
           ? 'cuota'
           : debt.freq === 'daily'
             ? 'día'

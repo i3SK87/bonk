@@ -586,6 +586,8 @@ export interface DebtProgress {
    * cae en una palabra —cada dos meses—, vale «cuota», que nunca miente.
    */
   cadence: string
+  /** De una vez: un solo pago un día, sin «cada cuánto» (`cadence` va vacía). */
+  once: boolean
   /** Cuántas cuotas se han pagado ya y cuánto suman, con lo de antes incluido. */
   paidCount: number
   paid: number

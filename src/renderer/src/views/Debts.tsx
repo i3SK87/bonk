@@ -410,8 +410,11 @@ function DebtCard({
           <div className="small muted truncate">
             {/* Dos piezas y ya: cuánto es una cuota y cuándo se acaba. La cuenta de
                 la que sale no cambia nada de lo que se viene a mirar aquí. */}
-            {formatMoney(debt.installment, currency)}/{debt.cadence}
-            {debt.endDate ? ` · Hasta el ${formatDate(debt.endDate)}` : ' · Sin fecha de fin'}
+            {debt.once
+              ? `${formatMoney(debt.installment, currency)} · El ${formatDate(debt.nextDate)}`
+              : `${formatMoney(debt.installment, currency)}/${debt.cadence}${
+                  debt.endDate ? ` · Hasta el ${formatDate(debt.endDate)}` : ' · Sin fecha de fin'
+                }`}
           </div>
         </div>
         <div className="spacer" />
