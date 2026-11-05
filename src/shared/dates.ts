@@ -183,6 +183,28 @@ export function previousOccurrence(
   }
 }
 
+/**
+ * El día de la última de `count` cuotas que empiezan en `nextDate`.
+ *
+ * Es la fecha de fin que hay que guardar para que salgan justo esas: la deuda
+ * cuenta las que quedan recorriendo la serie hasta el fin, así que el fin tiene
+ * que caer en la última y no un día después. Lleva la misma ancla que usa el
+ * registro de cuotas, o una serie del 31 que pasa por un mes corto acabaría un
+ * día antes de su última cuota y la perdería.
+ */
+export function ultimaCuota(
+  nextDate: string,
+  freq: 'once' | 'daily' | 'weekly' | 'monthly' | 'yearly',
+  count: number,
+  lastPosted?: string | null
+): string {
+  if (freq === 'once' || count <= 1) return nextDate
+  const ancla = anclaDeCadencia(nextDate, lastPosted)
+  let date = nextDate
+  for (let vuelta = 1; vuelta < count; vuelta++) date = nextOccurrence(date, freq, 1, ancla)
+  return date
+}
+
 const dateFmt = new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
 const dayFmt = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
 const dayMonthFmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' })

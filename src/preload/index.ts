@@ -12,6 +12,7 @@ import type {
   ProjectedTransaction,
   ScheduledOccurrence,
   DebtAdjust,
+  DebtInstallments,
   DebtProgress,
   Frequency,
   ScheduledView,
@@ -131,6 +132,9 @@ const api = {
     debts: () => call<DebtProgress[]>('scheduled:debts'),
     adjustDebt: (id: number, patch: DebtAdjust) =>
       call<void>('scheduled:adjustDebt', id, patch),
+    /** Las cuotas que quedan de una deuda: cuántas, de cuánto y desde cuándo. */
+    changeInstallments: (id: number, plan: DebtInstallments) =>
+      call<void>('scheduled:changeInstallments', id, plan),
     /** Cambiarle la categoría sin tocar nada más de la programación. */
     setCategory: (id: number, categoryId: number | null) =>
       call<void>('scheduled:setCategory', id, categoryId),

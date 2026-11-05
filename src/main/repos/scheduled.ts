@@ -4,7 +4,8 @@ import {
   nextOccurrence,
   previousOccurrence,
   anclaDeCadencia,
-  formatDate
+  formatDate,
+  ultimaCuota
 } from '@shared/dates'
 import {
   saveTransaction,
@@ -24,6 +25,7 @@ import type {
   ProjectedTransaction,
   ScheduledOccurrence,
   DebtAdjust,
+  DebtInstallments,
   DebtProgress,
   TxType,
   Frequency
@@ -734,6 +736,8 @@ export function debtProgress(reference = today()): DebtProgress[] {
       currency: debt.accountCurrency,
       installment: debt.amount,
       once: debt.freq === 'once',
+      freq: debt.freq,
+      lastPosted: debt.lastPosted,
       // De una vez no tiene «cada cuánto»: se queda vacía y la pantalla dice el
       // día. Antes caía en «año» y la de su hermano salía a «200,00 €/año».
       cadence:
@@ -769,6 +773,47 @@ export function debtProgress(reference = today()): DebtProgress[] {
       settledAt: debt.settledAt
     }
   })
+}
+
+/**
+ * Cambiar las cuotas que quedan de una deuda: cuántas, de cuánto y desde cuándo.
+ *
+ * Es lo mismo que editar su programación —importe, repetición, próxima y fin—,
+ * pero dicho como se piensa una deuda: «me quedan dos de cien» y no «mensual
+ * hasta el 25 de enero». El fin se calcula para que caigan justo esas.
+ *
+ * Con una sola pasa a ser de una vez, que se paga y se acaba; con más, se
+ * repite. Las cuotas ya pagadas no se tocan: son movimientos hechos.
+ *
+ * Lo que se borra son las dos correcciones de «Ajustar» que hablan de lo que
+ * queda: la última cuota más corta y el total puesto a mano. Las dos describían
+ * el plan de antes, y dejarlas haría que Deudas no dijera lo que se acaba de
+ * escribir. El cuadro avisa antes de guardar. Las cuotas pagadas sin rastro y
+ * la fecha de inicio hablan del pasado, y se quedan.
+ */
+export function changeInstallments(id: number, plan: DebtInstallments): void {
+  const debt = getScheduled(id)
+  if (!debt || !debt.isDebt) throw new Error('Esa deuda ya no existe')
+  if (debt.settledAt) throw new Error('Esa deuda ya está saldada')
+  if (!Number.isInteger(plan.count) || plan.count < 1 || plan.count > 99) {
+    throw new Error('Tienen que quedar entre 1 y 99 cuotas')
+  }
+  if (!Number.isInteger(plan.amount) || plan.amount <= 0) {
+    throw new Error('La cuota tiene que ser mayor que cero')
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(plan.nextDate)) throw new Error('Falta el día de la próxima cuota')
+  if (!['weekly', 'monthly', 'yearly'].includes(plan.freq)) throw new Error('Esa repetición no vale')
+
+  const freq: Frequency = plan.count === 1 ? 'once' : plan.freq
+  const endDate = ultimaCuota(plan.nextDate, freq, plan.count, debt.lastPosted)
+  getDb()
+    .prepare(
+      `UPDATE scheduled
+          SET amount = ?, freq = ?, interval = 1, next_date = ?, end_date = ?, active = 1,
+              reminded_for = NULL, debt_last_amount = NULL, debt_total = NULL
+        WHERE id = ?`
+    )
+    .run(plan.amount, freq, plan.nextDate, endDate, id)
 }
 
 export function pendingSettlements(): ScheduledView[] {

@@ -26,7 +26,13 @@ import {
   checkLowBalance,
   checkSpendLimits
 } from './reminders'
-import type { TransactionFilter, CategoryKind, Settings, DebtAdjust } from '@shared/types'
+import type {
+  TransactionFilter,
+  CategoryKind,
+  Settings,
+  DebtAdjust,
+  DebtInstallments
+} from '@shared/types'
 
 /**
  * Los canales que solo preguntan.
@@ -306,6 +312,9 @@ export function registerIpc(
   handle('scheduled:debts', () => scheduled.debtProgress())
   handle('scheduled:adjustDebt', (id: number, patch: DebtAdjust) =>
     scheduled.adjustDebt(id, patch)
+  )
+  handle('scheduled:changeInstallments', (id: number, plan: DebtInstallments) =>
+    scheduled.changeInstallments(id, plan)
   )
   handle('scheduled:setCategory', (id: number, categoryId: number | null) =>
     scheduled.setScheduledCategory(id, categoryId)

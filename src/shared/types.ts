@@ -569,6 +569,21 @@ export interface DebtAdjust {
   startDate?: string | null
 }
 
+/**
+ * Las cuotas que quedan de una deuda, dichas con números: cuántas, de cuánto y
+ * desde cuándo. De ahí sale la fecha de fin, que es lo que no se sabe decir.
+ */
+export interface DebtInstallments {
+  /** Cuántas quedan, contando la próxima. */
+  count: number
+  /** Lo que se paga en cada una. */
+  amount: number
+  /** El día de la próxima. */
+  nextDate: string
+  /** Cada cuánto, cuando queda más de una; con una sola se paga y se acaba. */
+  freq: 'weekly' | 'monthly' | 'yearly'
+}
+
 export interface DebtProgress {
   scheduledId: number
   title: string
@@ -588,6 +603,10 @@ export interface DebtProgress {
   cadence: string
   /** De una vez: un solo pago un día, sin «cada cuánto» (`cadence` va vacía). */
   once: boolean
+  /** La repetición tal cual, para poder cambiar las cuotas partiendo de ella. */
+  freq: Frequency
+  /** La última cuota que entró, que es de donde la serie saca su día del mes. */
+  lastPosted: string | null
   /** Cuántas cuotas se han pagado ya y cuánto suman, con lo de antes incluido. */
   paidCount: number
   paid: number

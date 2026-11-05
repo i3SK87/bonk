@@ -15,17 +15,19 @@ import {
 import { AccionCabecera, Confirm } from '../components/ui'
 import { MenuContextual, type OpcionMenu } from '../components/MenuContextual'
 import { CategoriaRapida } from '../components/CategoriaRapida'
+import { DateInput } from '../components/DateInput'
 import { formatMoney } from '@shared/money'
 import { findLender } from '@shared/lenders'
-import { formatDate } from '@shared/dates'
+import { formatDate, ultimaCuota } from '@shared/dates'
 import { mayuscula } from '@shared/text'
-import type { DebtProgress } from '@shared/types'
+import type { DebtInstallments, DebtProgress } from '@shared/types'
 
 /**
  * Cómo van tus deudas a plazos.
  *
- * Es una pantalla para mirar, no para tocar: las cuotas se registran solas desde
- * Programados y desde ahí se editan. Aquí se responde a lo único que se pregunta
+ * Es una pantalla para mirar más que para tocar: las cuotas se registran solas
+ * desde Programados. Lo que sí se cambia aquí, por clic derecho, son las cuotas
+ * que quedan, que es lo que cambia cuando se renegocia una deuda. Aquí se responde a lo único que se pregunta
  * de una deuda —cuánto llevo, cuánto queda, cuándo se acaba— sin tener que
  * sumar recibos a mano.
  */
@@ -67,6 +69,8 @@ export function DebtsView(): ReactNode {
   const [borrando, setBorrando] = useState<DebtProgress | null>(null)
   /** La deuda a la que se le está cambiando la categoría. */
   const [recategorizando, setRecategorizando] = useState<DebtProgress | null>(null)
+  /** La deuda a la que se le están cambiando las cuotas que quedan. */
+  const [recuotando, setRecuotando] = useState<DebtProgress | null>(null)
 
 
   useEffect(() => {
@@ -100,6 +104,14 @@ export function DebtsView(): ReactNode {
           )
           if (hecho !== undefined) await refresh()
         }
+      })
+    }
+    // Cambiar lo que queda solo tiene sentido mientras queda algo.
+    if (!debt.settled) {
+      lista.push({
+        etiqueta: 'Cambiar cuotas',
+        icono: 'calendar',
+        onElegir: () => setRecuotando(debt)
       })
     }
     if (debt.left != null && debt.left > 0) {
@@ -339,6 +351,10 @@ export function DebtsView(): ReactNode {
         <AdjustModal debt={adjusting} onClose={() => setAdjusting(null)} />
       )}
 
+      {recuotando && (
+        <CuotasModal debt={recuotando} currency={recuotando.currency} onClose={() => setRecuotando(null)} />
+      )}
+
       {creando && (
         <ScheduleModal
           schedule={null}
@@ -453,6 +469,123 @@ function DebtCard({
         {debt.daysLeft != null && debt.leftCount !== 0 ? ` · ${mayuscula(espera(debt.daysLeft))}` : ''}
       </div>
     </div>
+  )
+}
+
+/** Cada cuánto, en la palabra del desplegable. */
+const CADA: Array<{ value: DebtInstallments['freq']; label: string }> = [
+  { value: 'weekly', label: 'semana' },
+  { value: 'monthly', label: 'mes' },
+  { value: 'yearly', label: 'año' }
+]
+
+/**
+ * Las cuotas que quedan, dichas con números.
+ *
+ * Se pregunta como se piensa una deuda —cuántas quedan, de cuánto, cuándo la
+ * próxima y cada cuánto— y la fecha de fin la pone la aplicación, que es justo
+ * lo que costaba: para dos plazos había que decir «mensual hasta el 25 de
+ * enero» en Programados. Debajo se lee el resultado en una frase antes de
+ * guardar.
+ *
+ * Todas las cuotas son iguales: es como se cobran. Si la deuda tenía una última
+ * más corta o un total puesto a mano en «Ajustar», se avisa de que dejan de
+ * contar, porque hablaban del plan de antes.
+ */
+function CuotasModal({
+  debt,
+  currency,
+  onClose
+}: {
+  debt: DebtProgress
+  currency: string
+  onClose: () => void
+}): ReactNode {
+  const { run } = useStore()
+  const [count, setCount] = useState(Math.max(1, debt.leftCount ?? 1))
+  const [amount, setAmount] = useState(debt.installment)
+  const [nextDate, setNextDate] = useState(debt.nextDate)
+  // Una de una vez no dice cada cuánto: si pasa a tener más, lo normal es al mes.
+  const [freq, setFreq] = useState<DebtInstallments['freq']>(
+    debt.freq === 'weekly' || debt.freq === 'yearly' ? debt.freq : 'monthly'
+  )
+
+  const valido = count >= 1 && count <= 99 && amount > 0 && nextDate !== ''
+  const ultima = valido
+    ? ultimaCuota(nextDate, count === 1 ? 'once' : freq, count, debt.lastPosted)
+    : null
+  const pierde = [
+    debt.lastInstallment != null &&
+      `la última cuota más corta (${formatMoney(debt.lastInstallment, currency)})`,
+    debt.fixedTotal != null && `el total puesto a mano (${formatMoney(debt.fixedTotal, currency)})`
+  ].filter(Boolean)
+
+  return (
+    <Modal
+      title={`Cambiar cuotas · ${debt.title}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="btn primary"
+            disabled={!valido}
+            onClick={async () => {
+              const hecho = await run(
+                () =>
+                  api.scheduled.changeInstallments(debt.scheduledId, {
+                    count,
+                    amount,
+                    nextDate,
+                    freq
+                  }),
+                'Cuotas cambiadas'
+              )
+              if (hecho !== null) onClose()
+            }}
+          >
+            Guardar
+          </button>
+        </>
+      }
+    >
+      <div className="grid cols-2">
+        <Field label="Cuotas que quedan">
+          <NumberInput value={count} onChange={setCount} min={1} max={99} />
+        </Field>
+        <Field label="Importe de cada una">
+          <AmountInput value={amount} currency={currency} onChange={setAmount} />
+        </Field>
+        <Field label="La próxima">
+          <DateInput value={nextDate} onChange={setNextDate} />
+        </Field>
+        <Field label="Cada" hint={count === 1 ? 'Con una sola, se paga y se acaba.' : undefined}>
+          <select
+            className="select"
+            value={freq}
+            disabled={count === 1}
+            onChange={(event) => setFreq(event.target.value as DebtInstallments['freq'])}
+          >
+            {CADA.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      {ultima && (
+        <p className="small muted" style={{ marginTop: 12 }}>
+          {count === 1
+            ? `Queda ${formatMoney(amount, currency)}, de una vez, el ${formatDate(ultima)}.`
+            : `Quedan ${formatMoney(amount * count, currency)}: ${count} cuotas de ${formatMoney(amount, currency)}, la última el ${formatDate(ultima)}.`}
+          {pierde.length > 0 && ` Deja de contar ${pierde.join(' y ')}.`}
+        </p>
+      )}
+    </Modal>
   )
 }
 

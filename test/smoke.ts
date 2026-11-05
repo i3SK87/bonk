@@ -23,7 +23,7 @@ import { LENDERS, findLender } from '../src/shared/lenders'
 import { parseAmount, formatMoney, formatMoneyBreve, cabeEntero, convert, toMinor } from '../src/shared/money'
 import { keepNumericChars } from '../src/shared/numbers'
 import { evaluate } from '../src/shared/calc'
-import { addMonths, addDays, nextOccurrence, previousOccurrence, anclaDeCadencia, startOfMonth, endOfMonth, today, msHastaElCambioDeDia } from '../src/shared/dates'
+import { addMonths, addDays, nextOccurrence, previousOccurrence, anclaDeCadencia, startOfMonth, endOfMonth, today, msHastaElCambioDeDia, ultimaCuota } from '../src/shared/dates'
 import {
   rangoDe,
   comparacionDe,
@@ -2102,6 +2102,65 @@ try {
   equal('por todo su importe', verUnaVez().left, 20000)
   check('una mensual no es de una vez', !verCorta().once)
   equal('y sigue diciendo «mes»', verCorta().cadence, 'mes')
+
+  // Cambiar cuotas: lo que queda dicho con números, y el fin lo pone la cuenta.
+  // Es el caso de su hermano: los 200 € de una vez pasan a dos plazos de 100.
+  const primerPlazo = addMonths(day, 1)
+  scheduled.changeInstallments(deHermano.id, {
+    count: 2, amount: 10000, nextDate: primerPlazo, freq: 'monthly'
+  })
+  equal('dos plazos son dos cuotas pendientes', verUnaVez().leftCount, 2)
+  equal('que suman lo mismo', verUnaVez().left, 20000)
+  check('y ya no es de una vez', !verUnaVez().once)
+  equal('se repite al mes', verUnaVez().freq, 'monthly')
+  equal('y acaba en la segunda, no un día después', verUnaVez().endDate, addMonths(primerPlazo, 1))
+  scheduled.changeInstallments(deHermano.id, {
+    count: 1, amount: 20000, nextDate: primerPlazo, freq: 'monthly'
+  })
+  check('con una sola vuelve a ser de una vez', verUnaVez().once)
+  equal('y acaba el mismo día', verUnaVez().endDate, primerPlazo)
+
+  // Lo de «Ajustar» que hablaba del plan de antes deja de contar.
+  scheduled.adjustDebt(deHermano.id, { lastAmount: 5000, total: 99900 })
+  scheduled.changeInstallments(deHermano.id, {
+    count: 3, amount: 5000, nextDate: primerPlazo, freq: 'weekly'
+  })
+  check('la última corta se olvida', verUnaVez().lastInstallment === null)
+  check('y el total puesto a mano también', verUnaVez().fixedTotal === null)
+  equal('lo que falta sale de las cuotas nuevas', verUnaVez().left, 15000)
+  equal('semanales, tres semanas', verUnaVez().endDate, addDays(primerPlazo, 14))
+
+  // Una serie del 31 que pasa por febrero: la última tiene que ser la tercera.
+  equal('el fin respeta el 31', ultimaCuota('2027-01-31', 'monthly', 3), '2027-03-31')
+  scheduled.changeInstallments(deHermano.id, {
+    count: 3, amount: 5000, nextDate: '2027-01-31', freq: 'monthly'
+  })
+  equal('y salen las tres', verUnaVez().leftCount, 3)
+
+  const rechaza = (plan: Parameters<typeof scheduled.changeInstallments>[1]): boolean => {
+    try {
+      scheduled.changeInstallments(deHermano.id, plan)
+      return false
+    } catch {
+      return true
+    }
+  }
+  check('sin cuotas no vale', rechaza({ count: 0, amount: 5000, nextDate: primerPlazo, freq: 'monthly' }))
+  check('ni con importe cero', rechaza({ count: 2, amount: 0, nextDate: primerPlazo, freq: 'monthly' }))
+  check('ni sin fecha', rechaza({ count: 2, amount: 5000, nextDate: '', freq: 'monthly' }))
+  check(
+    'a una programada que no es deuda no se le cambian cuotas',
+    (() => {
+      try {
+        scheduled.changeInstallments(corta.id + 100000, {
+          count: 2, amount: 5000, nextDate: primerPlazo, freq: 'monthly'
+        })
+        return false
+      } catch {
+        return true
+      }
+    })()
+  )
   scheduled.deleteScheduled(deHermano.id)
 
   // Quién cobra: viaja con la programación y se ve en la deuda.
