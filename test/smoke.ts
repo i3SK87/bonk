@@ -558,6 +558,42 @@ try {
   // Patrimonio = cartera + banco + 110 USD convertidos de vuelta a 100 EUR.
   equal('el patrimonio suma las divisas convertidas', worth, 12450 + 265000 + 10000)
 
+  section('Patrimonio día a día')
+  {
+    // Un gasto de hace tres días y una cuenta fuera del total; los dos se quitan al acabar.
+    const atras = transactions.saveTransaction({
+      type: 'expense',
+      date: addDays(day, -3),
+      accountId: cash.id,
+      categoryId: food.id,
+      amount: 1000
+    })
+    const fuera = accounts.saveAccount({
+      name: 'Fuera del total',
+      type: 'bank',
+      currency: 'EUR',
+      initialBalance: 77700,
+      icon: 'bank',
+      color: '#888888',
+      excludeFromTotal: true
+    })
+    transactions.saveTransaction({ type: 'income', date: addDays(day, -2), accountId: fuera.id, categoryId: salary.id, amount: 5000 })
+
+    const historia = accounts.netWorthHistory()
+    equal('un punto por día, desde el primer movimiento hasta hoy', historia.length, 4)
+    equal('empieza el día del primer movimiento', historia[0].date, addDays(day, -3))
+    equal('y acaba hoy', historia[historia.length - 1].date, day)
+    equal('el último punto es la cifra del patrimonio', historia[historia.length - 1].value, accounts.netWorth())
+    equal('el primer día ya lleva su gasto', historia[0].value, 10000 + 100000 - 1000)
+    equal('la cuenta fuera del total no mueve la curva', historia[1].value, historia[0].value)
+    // Hoy: −25,50 de comida y +1.800 de nómina; los traspasos no cambian el total.
+    equal('hoy suma lo de hoy, con el dólar al cambio', historia[3].value - historia[2].value, 180000 - 2550)
+
+    accounts.deleteAccount(fuera.id)
+    transactions.deleteTransaction(atras.id)
+    equal('sin movimientos atrás, un solo día', accounts.netWorthHistory().length, 1)
+  }
+
   section('Validaciones')
   let rejected = false
   try {

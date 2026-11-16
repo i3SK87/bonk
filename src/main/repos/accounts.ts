@@ -1,8 +1,8 @@
 import { getDb, transaction as atomic, bind, nowISO } from '../db'
 import { convert, formatMoney } from '@shared/money'
-import { formatDate } from '@shared/dates'
+import { addDays, formatDate, today } from '@shared/dates'
 import { getSettings, rateMap } from './settings'
-import type { Account, AccountWithBalance, AccountType } from '@shared/types'
+import type { Account, AccountWithBalance, AccountType, PuntoPatrimonio } from '@shared/types'
 
 interface AccountRow {
   id: number
@@ -147,6 +147,65 @@ export function listAccountsWithBalance(includeArchived = false): AccountWithBal
       balanceInBase: convert(balance, account.currency, base, rates)
     }
   })
+}
+
+/**
+ * El patrimonio día a día, para la curva de Cuentas: un punto por día desde el
+ * primer movimiento hasta hoy, con las mismas cuentas que `netWorth` —ni las
+ * archivadas ni las excluidas del total—.
+ *
+ * Se acumula cada cuenta en su divisa y se convierte su saldo de cada día, igual
+ * que hace `netWorth` con el de hoy: convertir movimiento a movimiento redondea
+ * en cada uno, y el último punto acababa unos céntimos lejos de la cifra de
+ * arriba. El cambio es el de hoy para todos los días; el de cada día no se
+ * guarda en ningún sitio.
+ *
+ * Un movimiento con fecha posterior a hoy cuenta en el punto de hoy, que es
+ * donde lo cuenta el saldo de la cuenta.
+ */
+export function netWorthHistory(): PuntoPatrimonio[] {
+  const cuentas = listAccounts(false).filter((account) => !account.excludeFromTotal)
+  const rates = rateMap()
+  const base = getSettings().baseCurrency
+  const hoy = today()
+  const enCuenta = (balance: number, currency: string): number => convert(balance, currency, base, rates)
+
+  const filas = getDb()
+    .prepare(
+      `SELECT date, account_id AS id,
+              CASE WHEN type IN ('income','refund') THEN amount ELSE -amount END AS delta
+         FROM transactions
+        UNION ALL
+       SELECT date, to_account_id AS id, COALESCE(amount_to, amount) AS delta
+         FROM transactions
+        WHERE type = 'transfer' AND to_account_id IS NOT NULL`
+    )
+    .all() as unknown as Array<{ date: string; id: number; delta: number }>
+
+  // Lo que mueve cada cuenta cada día.
+  const indice = new Map(cuentas.map((account, i) => [account.id, i]))
+  const porDia = new Map<string, number[]>()
+  for (const fila of filas) {
+    const i = indice.get(fila.id)
+    if (i === undefined) continue
+    const dia = fila.date > hoy ? hoy : fila.date
+    let deltas = porDia.get(dia)
+    if (!deltas) porDia.set(dia, (deltas = cuentas.map(() => 0)))
+    deltas[i] += Number(fila.delta)
+  }
+
+  const saldos = cuentas.map((account) => account.initialBalance)
+  const total = (): number => saldos.reduce((sum, saldo, i) => sum + enCuenta(saldo, cuentas[i].currency), 0)
+  const dias = [...porDia.keys()].sort()
+  if (dias.length === 0) return [{ date: hoy, value: total() }]
+
+  const puntos: PuntoPatrimonio[] = []
+  for (let dia = dias[0]; dia <= hoy; dia = addDays(dia, 1)) {
+    const deltas = porDia.get(dia)
+    if (deltas) deltas.forEach((delta, i) => (saldos[i] += delta))
+    puntos.push({ date: dia, value: total() })
+  }
+  return puntos
 }
 
 export function netWorth(): number {

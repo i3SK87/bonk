@@ -46,6 +46,7 @@ const SOLO_LEEN = new Set([
   'settings:get',
   'accounts:list',
   'accounts:withBalance',
+  'accounts:netWorthHistory',
   'accounts:count',
   'categories:list',
   'categories:count',
@@ -178,6 +179,7 @@ export function registerIpc(
   // — Cuentas —
   handle('accounts:list', (includeArchived: boolean) => accounts.listAccounts(includeArchived))
   handle('accounts:withBalance', (includeArchived: boolean) => accounts.listAccountsWithBalance(includeArchived))
+  handle('accounts:netWorthHistory', () => accounts.netWorthHistory())
   handle('accounts:save', (input) => accounts.saveAccount(input))
   handle('accounts:setPrimary', (id: number, primary: boolean) =>
     accounts.setPrimaryAccount(id, primary)

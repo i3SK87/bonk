@@ -84,6 +84,12 @@ export interface AccountWithBalance extends Account {
   balanceInBase: number
 }
 
+/** El patrimonio al cierre de un día, en la divisa de la aplicación. */
+export interface PuntoPatrimonio {
+  date: string
+  value: number
+}
+
 export interface Category {
   id: number
   name: string

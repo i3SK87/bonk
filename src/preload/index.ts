@@ -9,6 +9,7 @@ import type {
   CategoryTotal,
   EstadoPresupuesto,
   MonthlyPoint,
+  PuntoPatrimonio,
   ProjectedTransaction,
   ScheduledOccurrence,
   DebtAdjust,
@@ -46,6 +47,7 @@ const api = {
   accounts: {
     list: (includeArchived = false) => call<Account[]>('accounts:list', includeArchived),
     withBalance: (includeArchived = false) => call<AccountWithBalance[]>('accounts:withBalance', includeArchived),
+    netWorthHistory: () => call<PuntoPatrimonio[]>('accounts:netWorthHistory'),
     save: (input: unknown) => call<Account>('accounts:save', input),
     setPrimary: (id: number, primary: boolean) =>
       call<void>('accounts:setPrimary', id, primary),

@@ -2791,6 +2791,47 @@ p { margin: 0; }
   to { stroke-dashoffset: 0; }
 }
 
+/* El área bajo la curva del patrimonio aparece mientras la línea se dibuja. */
+[data-entrada='espera'] .patrimonio-relleno {
+  opacity: 0;
+}
+
+[data-entrada='ya'] .patrimonio-relleno {
+  animation: aparece-relleno 0.5s 0.35s ease-out both;
+}
+
+@keyframes aparece-relleno {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ---------- El patrimonio en Cuentas ---------- */
+
+/* La cifra a la izquierda y los periodos a la derecha, a la altura del rótulo. */
+.patrimonio-cabeza {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+/* Fuera de la cinta no hay `--cinta-hueco`: el hueco va aquí. */
+.patrimonio-cabeza .networth {
+  gap: 4px;
+}
+
+.patrimonio-variacion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.patrimonio-variacion .amount {
+  font-weight: 600;
+}
+
 @keyframes asoma-punto {
   from { transform: scale(0); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -2800,7 +2841,8 @@ p { margin: 0; }
   [data-entrada] .cat-bar > div,
   [data-entrada] .barra-serie,
   [data-entrada] .linea-trazo,
-  [data-entrada] .linea-punto {
+  [data-entrada] .linea-punto,
+  [data-entrada] .patrimonio-relleno {
     animation: none;
   }
   .cat-bar > div {

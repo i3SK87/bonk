@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { useEntrada } from '../lib/animaciones'
 import { formatMoney, toMajor } from '@shared/money'
-import { formatShortMonth, formatMonth } from '@shared/dates'
-import type { MonthlyPoint } from '@shared/types'
+import { formatShortMonth, formatMonth, formatDayHeading, parseISO } from '@shared/dates'
+import type { MonthlyPoint, PuntoPatrimonio } from '@shared/types'
 
 /** Mide el ancho real del contenedor para dibujar el SVG a tamaño natural, sin deformar el texto. */
 function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
@@ -405,6 +405,136 @@ export function NetLine({
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>{formatMonth(hovered.month)}</div>
                 <div className={`amount ${hovered.net >= 0 ? 'positive' : 'negative'}`}>
                   {formatMoney(hovered.net, currency, { sign: true })}
+                </div>
+              </>
+            )
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ============================================================
+   El patrimonio día a día (Cuentas)
+   ============================================================ */
+
+const diaCorto = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' })
+
+/**
+ * La curva del patrimonio de un periodo: área bajo la línea y, en discontinua,
+ * el valor con el que empezó, que es contra lo que se mide la subida o bajada
+ * de la cabecera. Sin eje de cifras: la cifra de cada día sale al pasar el
+ * ratón, y la de hoy ya está escrita en grande encima.
+ *
+ * `periodo` solo sirve de clave: al cambiarlo la línea se vuelve a dibujar.
+ */
+export function CurvaPatrimonio({
+  points,
+  currency,
+  periodo,
+  height = 200
+}: {
+  points: PuntoPatrimonio[]
+  currency: string
+  periodo: string
+  height?: number
+}): ReactNode {
+  const [ref, width] = useWidth()
+  const [hover, setHover] = useState<number | null>(null)
+  const [entrada, estado] = useEntrada<SVGSVGElement>()
+
+  if (points.length < 2) {
+    return (
+      <div ref={ref} style={{ height, display: 'grid', placeItems: 'center' }}>
+        <p className="small muted center">Todavía no hay días que dibujar.</p>
+      </div>
+    )
+  }
+
+  const padding = { top: 10, bottom: 22 }
+  const values = points.map((point) => point.value)
+  let min = Math.min(...values)
+  let max = Math.max(...values)
+  // Aire arriba y abajo, para que ni el pico ni el valle toquen el borde.
+  const aire = (max - min || Math.abs(max) || 100) * 0.12
+  min -= aire
+  max += aire
+
+  const bottom = height - padding.bottom
+  const x = (index: number): number => (index / (points.length - 1)) * width
+  const y = (value: number): number => padding.top + (1 - (value - min) / (max - min)) * (bottom - padding.top)
+  const linea = points.map((point, index) => `${index ? 'L' : 'M'}${x(index).toFixed(1)},${y(point.value).toFixed(1)}`).join(' ')
+  const inicio = points[0].value
+
+  const mover = (event: React.MouseEvent<SVGSVGElement>): void => {
+    const box = event.currentTarget.getBoundingClientRect()
+    const index = Math.round(((event.clientX - box.left) / width) * (points.length - 1))
+    setHover(Math.max(0, Math.min(points.length - 1, index)))
+  }
+
+  const hovered = hover != null ? points[hover] : null
+  const diferencia = hovered ? hovered.value - inicio : 0
+
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+      <svg
+        key={periodo}
+        ref={entrada}
+        data-entrada={estado}
+        width={width}
+        height={height}
+        role="img"
+        aria-label="Patrimonio día a día"
+        style={{ display: 'block', overflow: 'visible' }}
+        onMouseMove={mover}
+        onMouseLeave={() => setHover(null)}
+      >
+        <defs>
+          <linearGradient id="patrimonio-relleno" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.22} />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <line x1={0} x2={width} y1={y(inicio)} y2={y(inicio)} stroke="var(--border-strong)" strokeDasharray="3 4" />
+        <path className="patrimonio-relleno" d={`${linea} L${width},${bottom} L0,${bottom} Z`} fill="url(#patrimonio-relleno)" />
+        <path
+          className="linea-trazo"
+          pathLength={1}
+          d={linea}
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+        <text x={0} y={height - 4} fontSize={10.5} fill="var(--fg-subtle)">
+          {diaCorto.format(parseISO(points[0].date)).replace('.', '')}
+        </text>
+        <text x={width} y={height - 4} fontSize={10.5} fill="var(--fg-subtle)" textAnchor="end">
+          Hoy
+        </text>
+
+        {hover != null && hovered && (
+          <g pointerEvents="none">
+            <line x1={x(hover)} x2={x(hover)} y1={padding.top} y2={bottom} stroke="var(--border-strong)" />
+            <circle cx={x(hover)} cy={y(hovered.value)} r={4.5} fill="var(--accent)" stroke="var(--bg-elevated)" strokeWidth={2} />
+          </g>
+        )}
+      </svg>
+
+      {hovered && hover != null && (
+        <TooltipBox
+          width={width}
+          tooltip={{
+            x: x(hover),
+            y: 10,
+            content: (
+              <>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>{formatDayHeading(hovered.date)}</div>
+                <div className="amount">{formatMoney(hovered.value, currency)}</div>
+                <div className={`small amount ${diferencia > 0 ? 'positive' : diferencia < 0 ? 'negative' : 'neutral'}`}>
+                  {formatMoney(diferencia, currency, { sign: true })}
                 </div>
               </>
             )

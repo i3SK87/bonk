@@ -2,11 +2,32 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useStore } from '../lib/store'
 import { useContador } from '../lib/contador'
 import { Icon, ACCOUNT_ICONS } from '../components/Icon'
-import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, Confirm, EmptyState, AccionCabecera } from '../components/ui'
+import { Avatar, Modal, Field, Checkbox, IconPicker, ColorPicker, AmountInput, Confirm, EmptyState, AccionCabecera, Segmented } from '../components/ui'
+import { CurvaPatrimonio } from '../components/charts'
 import { formatMoney } from '@shared/money'
-import type { Account, AccountType, AccountWithBalance } from '@shared/types'
+import { addMonths, today } from '@shared/dates'
+import type { Account, AccountType, AccountWithBalance, PuntoPatrimonio } from '@shared/types'
 
 const api = window.bonk
+
+type Periodo = '1M' | '3M' | '6M' | '1A' | 'Todo'
+
+const PERIODOS: Array<{ value: Periodo; label: string; meses: number; texto: string }> = [
+  { value: '1M', label: '1M', meses: 1, texto: 'último mes' },
+  { value: '3M', label: '3M', meses: 3, texto: 'últimos 3 meses' },
+  { value: '6M', label: '6M', meses: 6, texto: 'últimos 6 meses' },
+  { value: '1A', label: '1A', meses: 12, texto: 'último año' },
+  { value: 'Todo', label: 'Todo', meses: 0, texto: 'desde el principio' }
+]
+
+/** Los días del periodo: desde hoy menos sus meses, o todos si el libro empieza después. */
+function recortar(puntos: PuntoPatrimonio[], periodo: Periodo): PuntoPatrimonio[] {
+  const meses = PERIODOS.find((item) => item.value === periodo)!.meses
+  if (!meses) return puntos
+  const desde = addMonths(today(), -meses)
+  const inicio = puntos.findIndex((punto) => punto.date >= desde)
+  return inicio < 0 ? puntos.slice(-1) : puntos.slice(inicio)
+}
 
 const ACCOUNT_TYPES: Array<{ value: AccountType; label: string; icon: string }> = [
   { value: 'cash', label: 'Efectivo', icon: 'wallet' },
@@ -29,6 +50,18 @@ export function AccountsView(): ReactNode {
   // Sube o baja contando cuando entra o sale dinero; ver `useContador`.
   const contado = useContador(total, revision)
 
+  // La curva se pide entera y el periodo se recorta aquí: cambiar de 1M a Todo
+  // no vuelve a preguntar a la base.
+  const [historia, setHistoria] = useState<PuntoPatrimonio[]>([])
+  const [periodo, setPeriodo] = useState<Periodo>('1M')
+  useEffect(() => {
+    api.accounts.netWorthHistory().then(setHistoria).catch(() => undefined)
+  }, [revision])
+  const tramo = recortar(historia, periodo)
+  const diferencia = tramo.length > 0 ? tramo[tramo.length - 1].value - tramo[0].value : 0
+  const partida = tramo[0]?.value ?? 0
+  const tono = diferencia > 0 ? 'positive' : diferencia < 0 ? 'negative' : 'neutral'
+
   // Solo los tipos que tengas: una lista con seis epígrafes y dos cuentas no
   // ordena nada, solo hace scroll.
   const porTipo = ACCOUNT_TYPES.map((tipo) => ({
@@ -38,6 +71,42 @@ export function AccountsView(): ReactNode {
 
   return (
     <>
+      {/* El patrimonio y cómo ha llegado hasta aquí. La cifra es la de siempre;
+          la subida o bajada es la del periodo elegido, contra su primer día. */}
+      {accounts.length > 0 && (
+        <div className="card">
+          <div className="card-body">
+            <div className="patrimonio-cabeza">
+              <div className="networth suelto">
+                <div className="label">Patrimonio total</div>
+                <div className={`value amount ${total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral'}`}>
+                  {formatMoney(contado, settings.baseCurrency)}
+                </div>
+                {tramo.length > 1 && (
+                  <div className="patrimonio-variacion small">
+                    <span className={`amount ${tono}`}>
+                      {diferencia > 0 ? '↑ ' : diferencia < 0 ? '↓ ' : ''}
+                      {formatMoney(diferencia, settings.baseCurrency, { sign: true })}
+                      {partida !== 0 &&
+                        ` (${((diferencia / Math.abs(partida)) * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 })} %)`}
+                    </span>
+                    <span className="muted">{PERIODOS.find((item) => item.value === periodo)!.texto}</span>
+                  </div>
+                )}
+                {excluded.length > 0 && (
+                  <div className="small subtle">
+                    {excluded.length === 1 ? 'Hay 1 cuenta excluida' : `Hay ${excluded.length} cuentas excluidas`} del
+                    total.
+                  </div>
+                )}
+              </div>
+              <Segmented value={periodo} options={PERIODOS} onChange={setPeriodo} />
+            </div>
+            <CurvaPatrimonio points={tramo} currency={settings.baseCurrency} periodo={periodo} />
+          </div>
+        </div>
+      )}
+
       {/* Sin rayas entre filas, como el resto de la aplicación: el avatar y el
           aire ya separan, y la retícula pesaba más que los datos. */}
       <div className="card flush">
@@ -94,23 +163,6 @@ export function AccountsView(): ReactNode {
           </div>
         )}
 
-        <div
-          className="card-body networth-strip"
-          style={{ borderTop: '1px solid var(--border)' }}
-        >
-          <div className="networth suelto">
-            <div className="label">Patrimonio total</div>
-            <div className={`value amount ${total > 0 ? 'positive' : total < 0 ? 'negative' : 'neutral'}`}>
-              {formatMoney(contado, settings.baseCurrency)}
-            </div>
-          </div>
-          {excluded.length > 0 && (
-            <div className="small subtle" style={{ maxWidth: 300, alignSelf: 'center' }}>
-              {excluded.length === 1 ? 'Hay 1 cuenta excluida' : `Hay ${excluded.length} cuentas excluidas`} del
-              total.
-            </div>
-          )}
-        </div>
       </div>
 
       {(creating || editing) && (
