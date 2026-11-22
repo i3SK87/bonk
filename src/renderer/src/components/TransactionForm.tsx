@@ -279,15 +279,43 @@ export function TransactionForm({
   }, [existing, refunding])
 
   /**
+   * Las cuentas que tocan a cada tipo: lo de diario, en la principal; un
+   * traspaso, de la hucha a la principal.
+   *
+   * Tras un traspaso desde la hucha, «Guardar y seguir» dejaba la hucha puesta,
+   * y el gasto siguiente caía en ella sin que se notara (lo pidió él, el
+   * 22/11/2026). Se aplica al cambiar de tipo y al seguir con otro. Al abrir la
+   * ficha sigue mandando la cuenta que se esté mirando: eso lo eligió él.
+   *
+   * Solo al apuntar uno nuevo: al editar, cambiar de tipo no debe mover el
+   * movimiento de cuenta, y un reembolso va donde fue su gasto.
+   */
+  function ponerCuentasDe(tipo: TxType): void {
+    if (existing || refundFor) return
+    const principal = accounts.find((item) => item.isPrimary)
+    if (tipo !== 'transfer') {
+      if (principal) setAccountId(principal.id)
+      return
+    }
+    // La hucha: la primera cuenta de ahorro que no sea la principal.
+    const hucha = accounts.find((item) => item.type === 'savings' && item.id !== principal?.id)
+    const origen = hucha?.id ?? accountId
+    setAccountId(origen)
+    setToAccountId(principal && principal.id !== origen ? principal.id : null)
+  }
+
+  /**
    * Lo que se hace después de guardar, salga movimiento o programada.
    *
-   * «Guardar y seguir» conserva el contexto —la cuenta, el tipo, la fecha— y
-   * limpia lo que era de ese apunte y no del siguiente.
+   * «Guardar y seguir» conserva el tipo y la fecha, devuelve las cuentas a las
+   * de ese tipo (`ponerCuentasDe`) y limpia lo que era de ese apunte y no del
+   * siguiente.
    */
   function terminar(keepOpen: boolean): void {
     if (keepOpen) {
       setAmount(0)
       setNote('')
+      ponerCuentasDe(type)
       setEnfocarImporte(true)
       // El siguiente apunte es otro: vuelve a avisar de lo que aparta.
       setDecisionAhorro(null)
@@ -655,6 +683,7 @@ export function TransactionForm({
                   setRefunding(true)
                   return
                 }
+                if (elegido !== type) ponerCuentasDe(elegido)
                 setType(elegido)
               }}
               options={[
