@@ -39,6 +39,7 @@ import { repartoComparado } from '../src/shared/reparto'
 import { porcentajeDePresupuesto, escalonDeAviso, repasoDePresupuesto, marcaDeAviso, AVISO_CERCA } from '../src/shared/presupuestos'
 import { esHalloween, esDiaDeNiebla } from '../src/shared/halloween'
 import { semanasDelMes, esDelMes, cabecerasDeSemana, esFinDeSemana } from '../src/shared/calendario'
+import { ordenTrasSoltar } from '../src/shared/recolocar'
 
 let passed = 0
 let failed = 0
@@ -280,6 +281,25 @@ try {
    * rompen: el mes que arranca justo en el primer día de la semana, el que
    * arranca en el último, y febrero de un año no bisiesto.
    */
+  {
+    /*
+     * Recolocar dentro del día: el lado de la fila manda.
+     * El 1 lleva colgando su devolución, el 11.
+     */
+    const dia = [[1, 11], [2], [3]]
+    const soltar = (suyo: number[], sobre: number | null, despues: boolean): string | null =>
+      ordenTrasSoltar(dia, suyo, sobre, despues)?.join(' ') ?? null
+    equal('el primero, a la mitad de abajo del segundo', soltar([1, 11], 2, true), '2 1 11 3')
+    equal('el primero, a la de arriba del segundo, no cambia nada', soltar([1, 11], 2, false), null)
+    equal('el último, encima del primero', soltar([3], 1, false), '3 1 11 2')
+    equal('el último, debajo del primero, salta la devolución', soltar([3], 11, true), '1 11 3 2')
+    equal('el último, debajo del todo, no cambia nada', soltar([3], 3, true), null)
+    equal('sobre lo que le cuelga, no cambia nada', soltar([1, 11], 11, true), null)
+    equal('el segundo, en la cabecera, se pone el primero', soltar([2], null, false), '2 1 11 3')
+    equal('de otro día, debajo del último', soltar([9], 3, true), '1 11 2 3 9')
+    equal('de otro día, en la cabecera', soltar([9], null, false), '9 1 11 2 3')
+  }
+
   const sep2026 = semanasDelMes('2026-09-01')
   equal('septiembre de 2026 ocupa cinco semanas', sep2026.length, 5)
   equal('y arranca el lunes anterior al día 1', sep2026[0][0], '2026-08-31')

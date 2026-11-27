@@ -17,6 +17,7 @@ import { AccionCabecera } from '../components/ui'
 import { currencySymbol, formatMoney, parseAmount } from '@shared/money'
 import { keepNumericChars } from '@shared/numbers'
 import { byName } from '@shared/text'
+import { ordenTrasSoltar } from '@shared/recolocar'
 import { NOMBRES_DE_RANGO, rangoDe, type RangoId } from '@shared/rangos'
 import { today, addMonths, formatDate, formatDayHeading, daysBetween } from '@shared/dates'
 import type {
@@ -242,7 +243,8 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
    * letras: mudar un dato sin contarlo sí sería de mala educación.
    */
   const [arrastrado, setArrastrado] = useState<{ id: number; date: string } | null>(null)
-  const [destino, setDestino] = useState<number | null>(null)
+  /** La fila junto a la que caería, y a qué lado de ella se pinta la raya. */
+  const [destino, setDestino] = useState<{ id: number; despues: boolean } | null>(null)
   /** El día sobre cuya cabecera se está soltando, para marcarla. */
   const [diaDestino, setDiaDestino] = useState<string | null>(null)
 
@@ -293,21 +295,17 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
   /**
    * Deja el día en el orden en que ha quedado tras soltar.
    *
-   * `sobreId` es la fila sobre la que se ha soltado; sin ella, se ha soltado en
-   * la cabecera del día y el movimiento se pone el primero.
+   * `sobreId` es la fila sobre la que se ha soltado y `despues`, a qué lado; sin
+   * fila, se ha soltado en la cabecera del día y el movimiento se pone el primero.
    */
   async function soltarEn(
     movido: { id: number; date: string },
     dia: string,
     reales: TransactionView[],
-    sobreId?: number
+    sobreId: number | null,
+    despues: boolean
   ): Promise<void> {
-    if (movido.id === sobreId) return
-
-    const bloques = bloquesDe(reales)
-    const hasta =
-      sobreId == null ? 0 : bloques.findIndex((bloque) => bloque.some((fila) => fila.id === sobreId))
-    if (hasta < 0) return
+    const bloques = bloquesDe(reales).map((bloque) => bloque.map((fila) => fila.id))
 
     /*
      * Viene de otro día: primero se muda y luego se ordena, de una vez.
@@ -318,28 +316,53 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
      */
     if (movido.date !== dia) {
       const deDondeSale = gruposRef.current.find(([fecha]) => fecha === movido.date)?.[1].real ?? []
-      const suyo = bloquesDe(deDondeSale).find((bloque) => bloque[0].id === movido.id) ?? [
-        { id: movido.id }
-      ]
-      const orden = bloques.map((bloque) => bloque.map((fila) => fila.id))
-      orden.splice(hasta, 0, suyo.map((fila) => fila.id))
+      const suyo = bloquesDe(deDondeSale)
+        .find((bloque) => bloque[0].id === movido.id)
+        ?.map((fila) => fila.id) ?? [movido.id]
+      const orden = ordenTrasSoltar(bloques, suyo, sobreId, despues)
+      if (!orden) return
       await run(
-        () => api.transactions.moveToDay(movido.id, dia, orden.flat()),
+        () => api.transactions.moveToDay(movido.id, dia, orden),
         `Fecha cambiada al ${formatDate(dia)}`
       )
       return
     }
 
-    const desde = bloques.findIndex((bloque) => bloque[0].id === movido.id)
-    if (desde < 0 || desde === hasta) return
+    const suyo = bloques.find((bloque) => bloque[0] === movido.id)
+    if (!suyo) return
+    const orden = ordenTrasSoltar(bloques, suyo, sobreId, despues)
+    if (!orden) return
+    await run(() => api.transactions.reorder(orden), 'Orden del día actualizado')
+  }
 
-    const orden = [...bloques]
-    const [suyo] = orden.splice(desde, 1)
-    orden.splice(hasta, 0, suyo)
-    await run(
-      () => api.transactions.reorder(orden.flat().map((fila) => fila.id)),
-      'Orden del día actualizado'
-    )
+  /*
+   * Junto a qué fila cae lo arrastrado, y a qué lado.
+   *
+   * La mitad de la fila en la que está el puntero decide: la de arriba la pone
+   * delante, la de abajo detrás (en las fichas, izquierda y derecha). Un gasto
+   * con devoluciones cuenta entero: encima de una hija cae detrás del bloque,
+   * que entre medias no se puede. `marca` es la fila donde se pinta la raya.
+   */
+  function caidaSobre(
+    fila: HTMLElement,
+    x: number,
+    y: number
+  ): { sobreId: number; despues: boolean; marca: number } | null {
+    const suyo = gesto.current
+    const id = Number(fila.dataset.txId)
+    const reales = gruposRef.current.find(([fecha]) => fecha === fila.dataset.txDate)?.[1].real ?? []
+    const bloque = bloquesDe(reales).find((filas) => filas.some((f) => f.id === id))
+    if (!suyo || !bloque || bloque[0].id === suyo.id) return null
+    const caja = fila.getBoundingClientRect()
+    const mitadDeDespues = fila.classList.contains('ficha')
+      ? x > caja.left + caja.width / 2
+      : y > caja.top + caja.height / 2
+    const despues = bloque[0].id !== id || mitadDeDespues
+    return {
+      sobreId: bloque[0].id,
+      despues,
+      marca: despues ? bloque[bloque.length - 1].id : bloque[0].id
+    }
   }
 
   /** Lo que hay justo debajo del puntero: una fila, la cabecera de un día o nada. */
@@ -357,8 +380,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     if (!suyo) return
     const { fila, dia } = bajoElPuntero(x, y)
     // Encima de sí misma no se marca nada: soltar ahí no hace nada.
-    if (fila && Number(fila.dataset.txId) !== suyo.id) {
-      setDestino(Number(fila.dataset.txId))
+    const caida = fila ? caidaSobre(fila, x, y) : null
+    if (caida) {
+      setDestino({ id: caida.marca, despues: caida.despues })
       setDiaDestino(null)
       return
     }
@@ -407,10 +431,11 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
     recienSoltado.current = true
     const { fila, dia } = bajoElPuntero(event.clientX, event.clientY)
     const movido = { id: suyo.id, date: suyo.date }
+    const caida = fila ? caidaSobre(fila, event.clientX, event.clientY) : null
     finDelArrastre()
-    if (!dia) return
+    if (!dia || (fila && !caida)) return
     const reales = gruposRef.current.find(([fecha]) => fecha === dia)?.[1].real ?? []
-    void soltarEn(movido, dia, reales, fila ? Number(fila.dataset.txId) : undefined)
+    void soltarEn(movido, dia, reales, caida?.sobreId ?? null, caida?.despues ?? false)
   }
 
   function alCancelarPuntero(): void {
@@ -1610,7 +1635,9 @@ export function TransactionsView({ onNavigate }: { onNavigate?: (view: string) =
                               arrastrado.id ===
                                 (row.type === 'refund' ? row.refundForId : row.savedFromId)))
                         }
-                        destino={destino === row.id}
+                        destino={
+                          destino?.id === row.id ? (destino.despues ? 'despues' : 'antes') : undefined
+                        }
                         nested={nested}
                         lastChild={last}
                         ficha={fichas}
@@ -2010,8 +2037,8 @@ function TransactionRow({
   arrastrable?: boolean
   /** Es la que se está arrastrando ahora mismo. */
   arrastrando?: boolean
-  /** El puntero está encima de ella con algo agarrado: aquí caería. */
-  destino?: boolean
+  /** El puntero está encima de ella con algo agarrado: caería a este lado. */
+  destino?: 'antes' | 'despues'
   /** La devolución cuelga del gasto que tiene justo encima. */
   nested?: boolean
   /** Última devolución de ese gasto: cierra la línea del árbol. */
@@ -2124,7 +2151,7 @@ function TransactionRow({
         'tx-row',
         marcada ? 'marcada' : '',
         arrastrando ? 'arrastrando' : '',
-        destino ? 'destino' : '',
+        destino ? `destino destino-${destino}` : '',
         // Anidada ya se ve colgando: la marca del canto sobraría.
         family !== undefined && !nested ? 'linked' : '',
         active ? 'linked-active' : '',

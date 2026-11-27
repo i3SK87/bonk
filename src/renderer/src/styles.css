@@ -4902,9 +4902,29 @@ body.recolocando * {
    fila. */
 /* La cabecera del día lleva la misma raya: soltando ahí, el movimiento se muda a
    ese día y encabeza la jornada, que es justo donde queda la marca. */
-.tx-row.destino,
-.day-heading.destino {
+/*
+ * La raya va al lado de la fila por el que caería. En las fichas el orden corre
+ * de izquierda a derecha, y la raya también. En la cabecera va debajo: soltar
+ * ahí lo pone el primero de ese día; arriba parecía el final del día anterior.
+ */
+.tx-row.destino-antes {
   box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tx-row.destino-despues {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.tx-row.ficha.destino-antes {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.tx-row.ficha.destino-despues {
+  box-shadow: inset -2px 0 0 var(--accent);
+}
+
+.day-heading.destino {
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* ============================================================
